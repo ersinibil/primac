@@ -13,8 +13,8 @@ function mail_link($subject,$body){
 // Teklif firmaları — logo + web (logo dosyaları kök ve mobile/ içinde mevcut)
 function firm_list(){
     return [
-        'ACANS'  => ['name'=>'ACANS Reklam','logo'=>'logo.png','mark'=>'logo_acans_a.png','web'=>'www.acansreklam.com','c'=>'#cf3030','c2'=>'#1b2431'],
-        'PRIMAC' => ['name'=>'PRIMAC','logo'=>'logo_primac.png','web'=>'www.primac.com.tr','c'=>'#e23b2e','c2'=>'#222831'],
+        'ACANS'  => ['name'=>'ACANS Reklam','logo'=>'logo.png','mark'=>'logo_acans_a.png','web'=>'www.acansreklam.com','c'=>'#cf3030','c2'=>'#1b2431','letterhead'=>'letterhead_acans.png'],
+        'PRIMAC' => ['name'=>'PRIMAC','logo'=>'logo_primac.png','web'=>'www.primac.com.tr','c'=>'#e23b2e','c2'=>'#222831','letterhead'=>'letterhead_primac.png'],
     ];
 }
 function firm_info($k){ $l=firm_list(); return $l[$k] ?? null; }

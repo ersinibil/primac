@@ -68,9 +68,12 @@ if($id){
   @media print{ body *{visibility:hidden!important} #repArea,#repArea *{visibility:visible!important} #repArea{position:absolute;left:0;top:0;width:100%} #repArea>div{min-height:auto!important;border-radius:0!important} .noprint{display:none!important} @page{size:A4;margin:0} }
   .pdfmode .paper{min-height:1131px!important;position:relative!important;border:none!important;border-radius:0!important}
   .pdfmode .qfoot{position:absolute!important;left:0;right:0;bottom:0}
+  .paper.lh{aspect-ratio:210/297;background-size:100% 100%!important;background-repeat:no-repeat!important;background-position:top center!important}
   </style>
+  <?php $lh = ($fi && !empty($fi['letterhead']) && is_file(__DIR__.'/../'.$fi['letterhead'])) ? $fi['letterhead'] : ''; ?>
   <div id="repArea">
-    <div class="paper" style="background:#fff;color:#1f2937;font-family:Arial,Helvetica,sans-serif;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden">
+    <div class="paper<?=$lh?' lh':''?>" style="background:#fff<?php if($lh): ?> url('../<?=htmlspecialchars($lh)?>')<?php endif; ?>;color:#1f2937;font-family:Arial,Helvetica,sans-serif;<?=$lh?'':'border:1px solid #e5e7eb;border-radius:10px;'?>overflow:hidden">
+      <?php if(!$lh): ?>
       <div style="height:5px;background:<?=$col?>"></div>
       <div style="padding:16px 16px 12px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #eef0f2">
         <?php if($fi && !empty($fi['mark'])): ?><div style="display:flex;align-items:center;gap:9px"><span style="background:<?=$col?>;border-radius:7px;padding:5px"><img src="../<?=htmlspecialchars($fi['mark'])?>" alt="logo" style="height:36px;object-fit:contain;display:block"></span><div style="font-weight:800;font-size:14px;color:#1f2937"><?=htmlspecialchars($fi['name'])?></div></div><?php elseif($fi): ?><img src="../<?=htmlspecialchars($fi['logo'])?>" alt="logo" style="height:36px;object-fit:contain;display:block"><?php else: ?><div style="font-weight:800;color:#1f2937">ACANS OTS</div><?php endif; ?>
@@ -79,7 +82,9 @@ if($id){
           <div style="font-size:11px;color:<?=$col?>;font-weight:700"><?=htmlspecialchars($q['quote_no'])?></div>
         </div>
       </div>
-      <div style="padding:16px">
+      <?php endif; ?>
+      <div style="<?=$lh?'padding:15% 7% 9%':'padding:16px'?>">
+        <?php if($lh): ?><div style="display:flex;justify-content:flex-end;margin-bottom:12px"><div style="text-align:right"><div style="font-size:22px;font-weight:900;letter-spacing:1px;color:#1f2937">TEKLİF</div><div style="font-size:11px;color:<?=$col?>;font-weight:700"><?=htmlspecialchars($q['quote_no'])?></div></div></div><?php endif; ?>
         <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px">
           <div><div style="color:<?=$col?>;font-size:11px;font-weight:800">SAYIN</div><div style="font-size:16px;font-weight:700"><?=htmlspecialchars($q['customer_name']?:'—')?></div></div>
           <div style="text-align:right;color:#555;font-size:12px"><div><?=htmlspecialchars($q['quote_date'])?></div><?php if($q['valid_until']): ?><div>Geç: <?=htmlspecialchars($q['valid_until'])?></div><?php endif; ?></div>
@@ -102,9 +107,11 @@ if($id){
         </div>
         <?php if($q['notes']): ?><div style="margin-top:16px;font-size:13px;color:#333;background:#f8f9fb;border-left:4px solid <?=$col?>;padding:9px 12px;border-radius:0 6px 6px 0"><b style="color:<?=$col?>">Not</b><br><?=nl2br(htmlspecialchars($q['notes']))?></div><?php endif; ?>
       </div>
+      <?php if(!$lh): ?>
       <div class="qfoot" style="border-top:2px solid <?=$col?>;background:#f8f9fa;color:#374151;padding:11px 16px;text-align:center;font-size:12px">
         <?php if($fi): ?><b style="color:#1f2937"><?=htmlspecialchars($fi['name'])?></b> · 🌐 <?=htmlspecialchars($fi['web'])?><?php else: ?>ACANS OTS — Online Takip Sistemi<?php endif; ?>
       </div>
+      <?php endif; ?>
     </div>
   </div>
 
