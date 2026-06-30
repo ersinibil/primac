@@ -34,11 +34,99 @@ foreach ([
             $pdo->exec("ALTER TABLE internal_messages ADD COLUMN ".$col." ".$def);
     } catch(Throwable $e){}
 }
+/* --- Grup tabloları güvencesi (mobil sürümle aynı şema) --- */
+try {
+    $pdo->exec("CREATE TABLE IF NOT EXISTS chat_threads(
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        type VARCHAR(20) DEFAULT 'group',
+        title VARCHAR(190) NULL,
+        created_by INT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+} catch(Throwable $e){}
+try {
+    $pdo->exec("CREATE TABLE IF NOT EXISTS chat_thread_members(
+        thread_id INT NOT NULL,
+        user_id INT NOT NULL,
+        last_read_id INT DEFAULT 0,
+        PRIMARY KEY(thread_id,user_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+} catch(Throwable $e){}
+try {
+    if(!$pdo->query("SHOW COLUMNS FROM chat_threads LIKE 'type'")->fetch())
+        $pdo->exec("ALTER TABLE chat_threads ADD COLUMN type VARCHAR(20) DEFAULT 'group'");
+} catch(Throwable $e){}
+try {
+    if(!$pdo->query("SHOW COLUMNS FROM chat_thread_members LIKE 'last_read_id'")->fetch())
+        $pdo->exec("ALTER TABLE chat_thread_members ADD COLUMN last_read_id INT DEFAULT 0");
+} catch(Throwable $e){}
 
-$with  = (int)($_GET['u'] ?? 0);   // konuşulan kişi
-$flash = '';
+$with   = (int)($_GET['u'] ?? 0);        // konuşulan kişi (1-1)
+$thread = (int)($_GET['thread'] ?? 0);   // grup sohbeti
+$flash  = '';
 
-/* --- POST: mesaj gönder (çıktıdan ÖNCE → PRG redirect) --- */
+/* --- POST: grup oluştur (çıktıdan ÖNCE → PRG redirect) --- */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['new_group'])) {
+    $tid = 0;
+    try {
+        $title   = trim((string)($_POST['title'] ?? ''));
+        $members = array_map('intval', (array)($_POST['members'] ?? []));
+        $members = array_values(array_unique(array_filter($members)));
+        if ($title !== '' && count($members) >= 1) {
+            $pdo->prepare("INSERT INTO chat_threads(type,title,created_by) VALUES('group',?,?)")
+                ->execute([$title, $me]);
+            $tid = (int)$pdo->lastInsertId();
+            $ins = $pdo->prepare("INSERT IGNORE INTO chat_thread_members(thread_id,user_id) VALUES(?,?)");
+            $ins->execute([$tid, $me]); // oluşturan dahil
+            foreach ($members as $uid) { if ($uid !== $me) $ins->execute([$tid, $uid]); }
+            // Üyelere push (varsa)
+            if (file_exists(__DIR__.'/push_lib.php')) {
+                require_once __DIR__.'/push_lib.php';
+                $sname = current_user()['name'] ?? current_user()['username'] ?? 'Kullanıcı';
+                foreach ($members as $uid) {
+                    if ($uid !== $me) {
+                        try { push_to_user($uid, '👥 '.$title, $sname.' seni gruba ekledi', 'messages.php?thread='.$tid); } catch(Throwable $e){}
+                    }
+                }
+            }
+        }
+    } catch(Throwable $e){ $tid = 0; }
+    redirect($tid > 0 ? 'messages.php?thread='.$tid : 'messages.php');
+}
+
+/* --- POST: grup mesajı gönder (çıktıdan ÖNCE → PRG redirect) --- */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && (int)($_POST['thread_id'] ?? 0) > 0) {
+    $tid  = (int)$_POST['thread_id'];
+    $body = trim((string)($_POST['message'] ?? ''));
+    if ($body !== '') {
+        try {
+            // Üyelik kontrolü
+            $chk = $pdo->prepare("SELECT 1 FROM chat_thread_members WHERE thread_id=? AND user_id=?");
+            $chk->execute([$tid, $me]);
+            if ($chk->fetch()) {
+                $pdo->prepare("INSERT INTO internal_messages
+                    (sender_user_id, receiver_user_id, thread_id, message, is_read)
+                    VALUES(?,NULL,?,?,0)")->execute([$me, $tid, $body]);
+                // Diğer üyelere push (varsa)
+                if (file_exists(__DIR__.'/push_lib.php')) {
+                    require_once __DIR__.'/push_lib.php';
+                    $sname = current_user()['name'] ?? current_user()['username'] ?? 'Kullanıcı';
+                    $tt = $pdo->prepare("SELECT title FROM chat_threads WHERE id=?");
+                    $tt->execute([$tid]); $trow = $tt->fetch();
+                    $tname = $trow['title'] ?? 'Grup';
+                    $mem = $pdo->prepare("SELECT user_id FROM chat_thread_members WHERE thread_id=? AND user_id<>?");
+                    $mem->execute([$tid, $me]);
+                    foreach ($mem->fetchAll() as $mm) {
+                        try { push_to_user((int)$mm['user_id'], '👥 '.$tname, $sname.': '.mb_substr($body,0,90), 'messages.php?thread='.$tid); } catch(Throwable $e){}
+                    }
+                }
+            }
+        } catch(Throwable $e){ /* tablo/kolon yoksa sessiz geç */ }
+    }
+    redirect('messages.php?thread='.$tid);
+}
+
+/* --- POST: mesaj gönder (1-1, çıktıdan ÖNCE → PRG redirect) --- */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $to   = (int)($_POST['receiver_user_id'] ?? 0);
     $body = trim((string)($_POST['message'] ?? ''));
@@ -66,6 +154,61 @@ if ($with > 0) {
             WHERE receiver_user_id=? AND sender_user_id=?")->execute([$me, $with]);
     } catch(Throwable $e){}
 }
+
+/* --- Üyesi olduğum gruplar (sol listede gösterilir) --- */
+$threads = [];
+try {
+    $thr = $pdo->prepare("
+        SELECT t.id, t.title, t.type,
+          (SELECT m.message FROM internal_messages m
+             WHERE m.thread_id=t.id ORDER BY m.id DESC LIMIT 1) AS last_msg,
+          (SELECT MAX(id) FROM internal_messages m WHERE m.thread_id=t.id) AS last_id,
+          cm.last_read_id
+        FROM chat_threads t
+        JOIN chat_thread_members cm ON cm.thread_id=t.id AND cm.user_id=?
+        ORDER BY COALESCE((SELECT MAX(id) FROM internal_messages m WHERE m.thread_id=t.id),0) DESC, t.id DESC");
+    $thr->execute([$me]);
+    $threads = $thr->fetchAll();
+} catch(Throwable $e){ $threads = []; }
+
+/* --- Seçili grup + mesajları + üye sayısı --- */
+$tgroup = null; $tmsgs = []; $tmembers = 0;
+if ($thread > 0) {
+    try {
+        $tg = $pdo->prepare("SELECT t.id, t.title, t.type
+            FROM chat_threads t
+            JOIN chat_thread_members cm ON cm.thread_id=t.id AND cm.user_id=?
+            WHERE t.id=?");
+        $tg->execute([$me, $thread]); $tgroup = $tg->fetch();
+    } catch(Throwable $e){ $tgroup = null; }
+    if ($tgroup) {
+        try {
+            $cm = $pdo->prepare("SELECT COUNT(*) c FROM chat_thread_members WHERE thread_id=?");
+            $cm->execute([$thread]); $tmembers = (int)($cm->fetch()['c'] ?? 0);
+        } catch(Throwable $e){ $tmembers = 0; }
+        try {
+            $tm = $pdo->prepare("SELECT m.*, u.full_name, u.username
+                FROM internal_messages m
+                LEFT JOIN app_users u ON u.id=m.sender_user_id
+                WHERE m.thread_id=? ORDER BY m.id ASC LIMIT 500");
+            $tm->execute([$thread]); $tmsgs = $tm->fetchAll();
+        } catch(Throwable $e){ $tmsgs = []; }
+        // okundu işaretle (last_read_id)
+        try {
+            $mx = 0; foreach ($tmsgs as $tmm) { $mx = max($mx, (int)$tmm['id']); }
+            $pdo->prepare("UPDATE chat_thread_members SET last_read_id=? WHERE thread_id=? AND user_id=?")
+                ->execute([$mx, $thread, $me]);
+        } catch(Throwable $e){}
+    }
+}
+
+/* --- "Yeni Grup" formu için seçilebilir kullanıcılar --- */
+$allUsers = [];
+try {
+    $au = $pdo->prepare("SELECT id, full_name, username FROM app_users
+        WHERE id<>? AND active=1 ORDER BY full_name, username");
+    $au->execute([$me]); $allUsers = $au->fetchAll();
+} catch(Throwable $e){ $allUsers = []; }
 
 /* --- Sol liste: konuşulan kişiler + (yeni mesaj için) tüm kullanıcılar --- */
 $rows = [];
@@ -146,8 +289,28 @@ function msg_av_color($id){
 
 <div class="msg-wrap">
 
-    <!-- SOL: kişi listesi -->
+    <!-- SOL: gruplar + kişi listesi -->
     <div class="msg-list">
+        <a class="btn" href="messages.php?new=1" style="display:block;text-align:center;margin:4px 6px 10px;text-decoration:none">👥 Yeni Grup</a>
+
+        <?php if($threads): ?>
+            <div class="lbl">Gruplar</div>
+            <?php foreach($threads as $t):
+                $tactive = ($thread === (int)$t['id']);
+                $tunread = ((int)$t['last_id'] > (int)$t['last_read_id']);
+                $ticon = ($t['type']==='job') ? '📋' : (($t['type']==='cari') ? '🏢' : '👥');
+            ?>
+                <a class="msg-row <?=$tactive?'active':''?>" href="messages.php?thread=<?=(int)$t['id']?>">
+                    <div class="av" style="background:<?=msg_av_color((int)$t['id']+99)?>"><?=$ticon?></div>
+                    <div class="meta">
+                        <b><?=h($t['title'])?></b>
+                        <small><?=$t['last_msg'] ? h(mb_substr($t['last_msg'],0,40)) : '<span style="opacity:.6">Yeni grup</span>'?></small>
+                    </div>
+                    <?php if($tunread): ?><span class="badge green">●</span><?php endif; ?>
+                </a>
+            <?php endforeach; ?>
+        <?php endif; ?>
+
         <div class="lbl">Kişiler</div>
         <?php if(!$rows): ?>
             <div style="padding:20px;text-align:center;color:#98a2b3">Mesajlaşılacak kullanıcı yok.</div>
@@ -169,11 +332,84 @@ function msg_av_color($id){
     </div>
 
     <!-- SAĞ: sohbet -->
-    <?php if(!$with): ?>
+    <?php if(isset($_GET['new'])): ?>
+        <!-- YENİ GRUP OLUŞTURMA FORMU -->
+        <div class="chat-panel" style="padding:22px;overflow:auto;display:block">
+            <h2 style="margin:0 0 16px">👥 Yeni Grup</h2>
+            <form method="post">
+                <input type="hidden" name="new_group" value="1">
+                <label style="font-weight:700;display:block;margin-bottom:6px">Grup Adı</label>
+                <input name="title" required placeholder="örn. Üretim Ekibi"
+                       style="width:100%;border:1px solid #d0d5dd;border-radius:12px;padding:11px;margin-bottom:16px;font-size:14px">
+                <label style="font-weight:700;display:block;margin-bottom:8px">Üyeler</label>
+                <div style="display:flex;flex-direction:column;gap:6px;max-height:48vh;overflow:auto">
+                    <?php if(!$allUsers): ?>
+                        <div style="color:#98a2b3">Eklenecek kullanıcı yok.</div>
+                    <?php else: foreach($allUsers as $u): $nm=$u['full_name'] ?: $u['username']; ?>
+                        <label style="display:flex;align-items:center;gap:10px;background:#f2f4f7;border-radius:12px;padding:10px;margin:0;cursor:pointer">
+                            <input type="checkbox" name="members[]" value="<?=(int)$u['id']?>" style="width:auto;margin:0">
+                            <span><?=h($nm)?></span>
+                        </label>
+                    <?php endforeach; endif; ?>
+                </div>
+                <div style="margin-top:16px;display:flex;gap:10px">
+                    <button class="btn" type="submit">👥 Grubu Oluştur</button>
+                    <a class="btn" href="messages.php" style="background:#eef2f6;color:#344054;text-decoration:none">Vazgeç</a>
+                </div>
+            </form>
+        </div>
+    <?php elseif($thread > 0): ?>
+        <?php if(!$tgroup): ?>
+            <div class="no-peer">
+                <div style="font-size:46px">⚠️</div>
+                <h2 style="margin:12px 0 6px">Grup bulunamadı</h2>
+                <p>Grup yok ya da üyesi değilsiniz. <a href="messages.php">Listeye dön</a></p>
+            </div>
+        <?php else:
+            $gicon = ($tgroup['type']==='job') ? '📋' : (($tgroup['type']==='cari') ? '🏢' : '👥');
+        ?>
+            <div class="chat-panel">
+                <div class="chat-head">
+                    <div class="av" style="background:<?=msg_av_color((int)$tgroup['id']+99)?>"><?=$gicon?></div>
+                    <div style="flex:1">
+                        <b style="font-size:16px"><?=h($tgroup['title'])?></b>
+                        <div class="muted"><?=(int)$tmembers?> üye · <?=$tgroup['type']==='job'?'İş sohbeti':($tgroup['type']==='cari'?'Cari sohbeti':'Grup')?></div>
+                    </div>
+                </div>
+
+                <div class="chat-body" id="chatBody">
+                    <?php if(!$tmsgs): ?>
+                        <div class="chat-empty">Henüz mesaj yok.<br>İlk mesajı siz yazın 👇</div>
+                    <?php else: foreach($tmsgs as $m):
+                        $mine = ((int)$m['sender_user_id'] === $me);
+                        $snm  = $m['full_name'] ?: ($m['username'] ?: '?');
+                    ?>
+                        <div class="bubble <?=$mine?'mine':'theirs'?>">
+                            <?php if(!$mine): ?>
+                                <small style="display:block;color:#2563eb;font-weight:700;opacity:1;text-align:left;margin:0 0 2px"><?=h($snm)?></small>
+                            <?php endif; ?>
+                            <?php if(!empty($m['attachment'])): $apath=h($m['attachment']); ?>
+                                <a href="<?=$apath?>" target="_blank" style="color:inherit;text-decoration:underline">📎 Ek dosya</a><br>
+                            <?php endif; ?>
+                            <?=nl2br(h($m['message']))?>
+                            <small><?=h(date('d.m.Y H:i', strtotime($m['created_at'])))?></small>
+                        </div>
+                    <?php endforeach; endif; ?>
+                </div>
+
+                <form method="post" class="composer">
+                    <input type="hidden" name="thread_id" value="<?=(int)$thread?>">
+                    <textarea name="message" placeholder="Gruba yazın…" required
+                        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();this.form.submit();}"></textarea>
+                    <button class="btn" type="submit">➤ Gönder</button>
+                </form>
+            </div>
+        <?php endif; ?>
+    <?php elseif(!$with): ?>
         <div class="no-peer">
             <div style="font-size:46px">💬</div>
-            <h2 style="margin:12px 0 6px">Bir kişi seçin</h2>
-            <p>Soldaki listeden bir kullanıcıya tıklayarak yazışmaya başlayın.</p>
+            <h2 style="margin:12px 0 6px">Bir kişi veya grup seçin</h2>
+            <p>Soldaki listeden bir kullanıcıya ya da gruba tıklayarak yazışmaya başlayın.</p>
         </div>
     <?php elseif(!$peer): ?>
         <div class="no-peer">

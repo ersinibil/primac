@@ -128,7 +128,6 @@ th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;p
         <a href="messages.php">💬 Mesajlar</a>
 
         <?php if(user_can('jobs')): ?>
-        <div class="nav-title">İş Yönetimi</div>
         <details open>
             <summary>📋 İşler</summary>
             <div class="sub">
@@ -145,7 +144,6 @@ th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;p
         <?php endif; ?>
 
         <?php if(user_can('personnel')): ?>
-        <div class="nav-title">Personel</div>
         <details>
             <summary>👥 Personel & Görevler</summary>
             <div class="sub">
@@ -158,22 +156,18 @@ th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;p
         <?php endif; ?>
 
         <?php if(user_can('contacts')): ?>
-        <div class="nav-title">Cari</div>
         <details>
             <summary>👥 Cari Hesaplar</summary>
             <div class="sub">
                 <a href="contacts.php">Tüm Cariler</a>
                 <a href="contact_new.php?type=Müşteri">+ Müşteri</a>
                 <a href="contact_new.php?type=Tedarikçi">+ Tedarikçi</a>
-                <a href="contacts.php?type=Müşteri">Müşteriler</a>
-                <a href="contacts.php?type=Tedarikçi">Tedarikçiler</a>
                 <a href="external.php">Dış Atölyeler</a>
             </div>
         </details>
         <?php endif; ?>
 
         <?php if(user_can('teklif')): ?>
-        <div class="nav-title">Teklif</div>
         <details>
             <summary>📄 Teklifler</summary>
             <div class="sub">
@@ -184,16 +178,11 @@ th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;p
         <?php endif; ?>
 
         <?php if(user_can('finance')): ?>
-        <div class="nav-title">Banka / Kasa</div>
         <details>
             <summary>💰 Finans</summary>
             <div class="sub">
                 <a href="finance.php">Finans Paneli</a>
-                <a href="finance_accounts.php">Banka / Kasa / Kartlar</a>
-                <a href="finance_accounts.php?type=Banka">Banka Hesapları</a>
-                <a href="finance_accounts.php?type=Kasa">Kasalar</a>
-                <a href="finance_accounts.php?type=Kredi Kartı">Kredi Kartları</a>
-                <a href="finance_accounts.php?type=POS">POS / Sanal POS</a>
+                <a href="finance_accounts.php">Banka / Kasa / Kart / POS</a>
                 <a href="finance_new.php?direction=in">+ Tahsilat</a>
                 <a href="finance_new.php?direction=out">+ Ödeme</a>
                 <a href="finance_transfer.php">Hesap Transferi</a>
@@ -202,12 +191,10 @@ th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;p
         <?php endif; ?>
 
         <?php if(user_can('report')): ?>
-        <div class="nav-title">Raporlar</div>
-        <a href="report.php">📊 Raporlar (Yekün + Modül)</a>
+        <a href="report.php">📊 Raporlar</a>
         <?php endif; ?>
 
         <?php if(user_can('stock')): ?>
-        <div class="nav-title">Stok & Satın Alma</div>
         <details>
             <summary>📦 Ürün / Stok</summary>
             <div class="sub">

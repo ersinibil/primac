@@ -218,6 +218,8 @@ remember_check();
 if(is_file(__DIR__.'/activity_lib.php')) require_once __DIR__.'/activity_lib.php';
 // Geciken iş otomatik bildirimi (saatte bir, dosya kilidi ile) — giriş yapılmışsa
 if(!empty($_SESSION['user']) && is_file(__DIR__.'/job_overdue_lib.php')){ require_once __DIR__.'/job_overdue_lib.php'; try{ check_overdue_jobs(db()); }catch(Throwable $e){} }
+// Sabah hatırlatma (09:30 sonrası ilk girişte, günde 1 kez) — kesin 09:30 için cPanel cron → cron.php?key=acans-cron-2026
+if(!empty($_SESSION['user']) && is_file(__DIR__.'/daily_reminder_lib.php')){ require_once __DIR__.'/daily_reminder_lib.php'; try{ check_daily_reminders(db()); }catch(Throwable $e){} }
 
 // ---- Otomatik sayfa koruması: çalışan web sayfası korumalı modüldeyse yetki zorla (admin her şeye yetkili) ----
 $__page = basename($_SERVER['SCRIPT_NAME'] ?? ($_SERVER['PHP_SELF'] ?? ''));

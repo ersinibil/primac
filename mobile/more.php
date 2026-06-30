@@ -22,7 +22,9 @@
 <div style="font-weight:900;margin:16px 4px 8px">💰 Finans</div>
 <div class="grid">
   <?php card('Kasa Durumu','Banka/kasa/kart','🏦','kasa.php','teal');
-  card('Tahsilat','Tahsilat gir','💰','collection.php','yellow'); ?>
+  card('Tahsilat','Tahsilat gir','💰','collection.php','yellow');
+  card('Ödeme / Gider','Gider/ödeme gir','💸','payment.php','red');
+  card('Transfer','Hesaplar arası / karta ödeme','↔️','transfer.php','blue'); ?>
 </div>
 
 <div style="font-weight:900;margin:16px 4px 8px">📊 Raporlar</div>
@@ -42,7 +44,8 @@
 <div style="font-weight:900;margin:16px 4px 8px">👷 Personel & İş</div>
 <div class="grid">
   <?php card('Personel','Ekip listesi','👷','personnel.php','purple'); card('Görev Ata','Personele görev','🎯','task_new.php','teal');
-  card('İşler','İş takibi','📋','jobs.php','green'); card('Üretim','Aşama panosu','🏭','uretim.php','red'); card('Takvim','Termin takvimi','📅','calendar.php','blue'); card('Performans','Personel KPI','🏆','kpi.php','orange'); ?>
+  card('İşler','İş takibi','📋','jobs.php','green'); card('Üretim','Aşama panosu','🏭','uretim.php','red'); card('Takvim','Termin takvimi','📅','calendar.php','blue'); card('Performans','Personel KPI','🏆','kpi.php','orange');
+  card('Talepler','Talep onay merkezi','📨','requests.php','orange'); ?>
 </div>
 
 <div style="font-weight:900;margin:16px 4px 8px">⚙ Sistem</div>
@@ -57,6 +60,8 @@
   card('Cariler','Müşteri/tedarikçi','👥','contacts.php','purple');
   card('Teklif','Teklif hazırla/gönder','📄','teklif.php','blue');
   card('Stok','Ürünleri gör','📦','stock.php','red');
+  card('İşlerim','Bana atanan görevler','✅','mytasks.php','green');
+  card('Talep Aç','Yönetime talep gönder','📨','request_new.php','orange');
   card('Mesajlar','İç yazışma','💬','messages.php','teal');
   card('Profil','Şifre & hesap','👤','profile.php','gray');
   ?>
