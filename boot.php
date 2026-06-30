@@ -123,6 +123,16 @@ function require_permission($permission){
     }
 }
 
+// Admin için "Sil" butonu (POST → sil.php, onaylı). Yetkisizde boş döner.
+function delete_button($type,$id,$label='🗑 Sil'){
+    if(!is_admin() || !$id) return '';
+    return '<form method="post" action="sil.php" style="display:inline-block;margin:0"'
+        .' onsubmit="return confirm(\'Bu kayıt ve bağlı verileri KALICI olarak silinecek. Emin misiniz?\')">'
+        .'<input type="hidden" name="t" value="'.h($type).'">'
+        .'<input type="hidden" name="id" value="'.(int)$id.'">'
+        .'<button class="btn danger" type="submit">'.$label.'</button></form>';
+}
+
 function locked_link($label,$url,$permission){
     if(user_can($permission)){
         return '<a href="'.h($url).'">'.$label.'</a>';

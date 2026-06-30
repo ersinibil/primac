@@ -24,7 +24,19 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['clear_telegram_binding']
 }
 
 
-if($_SERVER['REQUEST_METHOD']==='POST' && !isset($_POST['regen_telegram_code']) && !isset($_POST['clear_telegram_binding'])){
+if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['save_perms'])){
+    try{
+        if(!user_can('users')) throw new Exception('Yetki atama izniniz yok.');
+        $uid=(int)$_POST['perm_user_id'];
+        $perms=$_POST['permissions'] ?? [];
+        if(!is_array($perms)) $perms=[];
+        $pdo->prepare("UPDATE app_users SET permissions=? WHERE id=?")
+            ->execute([json_encode(array_values($perms),JSON_UNESCAPED_UNICODE),$uid]);
+        $ok='Personel yetkileri güncellendi.';
+    }catch(Throwable $e){ $error=$e->getMessage(); }
+}
+
+if($_SERVER['REQUEST_METHOD']==='POST' && !isset($_POST['regen_telegram_code']) && !isset($_POST['clear_telegram_binding']) && !isset($_POST['save_perms'])){
     try{
         $stmt=$pdo->prepare("UPDATE personnel SET
             name=?, role=?, phone=?, email=?, hourly_rate=?, daily_wage=?, active=?, address=?, start_date=?, work_type=?, iban=?, notes=?
@@ -69,8 +81,10 @@ try{
     $ts->execute([$id]);
     $tasks=$ts->fetchAll();
 }catch(Throwable $e){}
-$staffUserId=0;
-try{ $uu=$pdo->prepare("SELECT id FROM app_users WHERE personnel_id=? ORDER BY id LIMIT 1"); $uu->execute([$id]); $staffUserId=(int)($uu->fetch()['id']??0); }catch(Throwable $e){}
+$staffUserId=0; $staffPerms=[]; $staffRole='';
+try{ $uu=$pdo->prepare("SELECT id,permissions,role FROM app_users WHERE personnel_id=? ORDER BY id LIMIT 1"); $uu->execute([$id]);
+    if($su=$uu->fetch()){ $staffUserId=(int)$su['id']; $staffRole=$su['role']??''; $dp=json_decode($su['permissions']??'[]',true); $staffPerms=is_array($dp)?$dp:[]; }
+}catch(Throwable $e){}
 ?>
 
 <div class="panel-head">
@@ -167,6 +181,31 @@ try{ $uu=$pdo->prepare("SELECT id FROM app_users WHERE personnel_id=? ORDER BY i
 </tbody>
 </table>
 </section>
+
+<?php if(user_can('users')): ?>
+<section class="panel">
+<h2>🔐 Yetkiler (Modül Erişimi)</h2>
+<?php if($staffRole==='admin' || $staffRole==='yonetici'): ?>
+  <p class="muted" style="margin:0">Bu personelin giriş rolü <b><?=h($staffRole)?></b> — tüm modüllere yetkili. Kısıtlamak için <a href="users.php">Kullanıcılar</a> ekranından rolünü "Personel" yapın.</p>
+<?php elseif($staffUserId): ?>
+  <p class="muted" style="margin:0 0 10px">İşaretli modülleri görür ve kullanabilir. İşaretsiz modüller bu personelin menüsünde görünmez ve açılamaz.</p>
+  <form method="post">
+  <input type="hidden" name="save_perms" value="1">
+  <input type="hidden" name="perm_user_id" value="<?=$staffUserId?>">
+  <div style="display:grid;grid-template-columns:repeat(2,minmax(170px,1fr));gap:10px">
+  <?php foreach(module_list() as $key=>$label): if($key==='users') continue; ?>
+    <label style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:14px;padding:10px;display:flex;align-items:center;gap:8px">
+      <input type="checkbox" name="permissions[]" value="<?=$key?>" <?=in_array($key,$staffPerms,true)?'checked':''?> style="width:auto"> <?=h($label)?>
+    </label>
+  <?php endforeach; ?>
+  </div>
+  <button class="btn" style="margin-top:12px">🔐 Yetkileri Kaydet</button>
+  </form>
+<?php else: ?>
+  <p class="muted" style="margin:0">Bu personelin giriş hesabı yok. Yetki vermek için önce <a href="users.php">Kullanıcı &amp; Yetki</a> ekranından hesap oluşturup bu personele bağlayın.</p>
+<?php endif; ?>
+</section>
+<?php endif; ?>
 
 <section class="panel">
 <h2>🧾 İşlem Kaydı</h2>

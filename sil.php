@@ -1,0 +1,34 @@
+<?php
+/* Ortak kayıt silme — sadece admin/yönetici. POST + onay ile çağrılır.
+ * Kullanım: <form method="post" action="sil.php"> t=<tür> id=<id> </form>
+ * İlişkili alt kayıtları da temizler. Whitelist dışına çıkamaz (SQL injection güvenli). */
+require_once __DIR__.'/boot.php';
+require_login();
+if(!is_admin()){ http_response_code(403); exit('Bu işlem yalnızca yönetici/admin yetkisiyle yapılabilir.'); }
+$pdo=db();
+
+// tür => [ana tablo, dönüş sayfası, [alt tablo=>foreign key, ...]]
+$map=[
+    'contact'   => ['contacts',          'contacts.php',          ['contact_representatives'=>'contact_id']],
+    'job'       => ['jobs',              'jobs.php',              ['job_stages'=>'job_id','job_files'=>'job_id','job_notes'=>'job_id','tasks'=>'job_id']],
+    'quote'     => ['quotes',            'teklif.php',            ['quote_items'=>'quote_id']],
+    'task'      => ['tasks',             'tasks.php',             []],
+    'product'   => ['stock_items',       'stock.php',             ['stock_movements'=>'stock_item_id']],
+    'personnel' => ['personnel',         'personnel.php',         ['personnel_devices'=>'personnel_id']],
+    'finance'   => ['finance_movements', 'finance.php',           []],
+    'account'   => ['finance_accounts',  'finance_accounts.php',  []],
+];
+
+$t  = $_POST['t'] ?? '';
+$id = (int)($_POST['id'] ?? 0);
+if($_SERVER['REQUEST_METHOD']!=='POST' || !isset($map[$t]) || $id<1){ redirect('dashboard.php'); }
+
+list($table,$back,$children) = $map[$t];
+try{
+    try{ $pdo->exec("SET FOREIGN_KEY_CHECKS=0"); }catch(Throwable $e){}
+    foreach($children as $ct=>$cf){ try{ $pdo->prepare("DELETE FROM `$ct` WHERE `$cf`=?")->execute([$id]); }catch(Throwable $e){} }
+    $pdo->prepare("DELETE FROM `$table` WHERE id=?")->execute([$id]);
+    try{ $pdo->exec("SET FOREIGN_KEY_CHECKS=1"); }catch(Throwable $e){}
+    try{ if(function_exists('activity_log')) activity_log('Silme','Kayıt silindi',$table.' #'.$id,'','admin',null,$back,'🗑'); }catch(Throwable $e){}
+}catch(Throwable $e){ exit('Silinemedi: '.htmlspecialchars($e->getMessage())); }
+redirect($back.'?deleted=1');
