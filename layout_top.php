@@ -8,9 +8,10 @@ try { $notifCount = safe_count("SELECT COUNT(*) c FROM notifications WHERE is_re
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ACANS ERP</title>
+<title>ACANS OTS — Özel Proje</title>
 <style>
 *{box-sizing:border-box}
+html,body{max-width:100%;overflow-x:hidden}
 body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;background:#f5f7fb;color:#101828}
 .app-shell{display:flex;min-height:100vh}
 .sidebar{width:284px;background:#071326;color:#fff;position:fixed;top:0;bottom:0;left:0;overflow:auto;padding:18px 14px}
@@ -65,8 +66,11 @@ th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;p
 .main{margin-left:0;padding:14px}
 .cards,.form-grid{grid-template-columns:1fr}
 .panel{overflow:auto}
-.topbar{display:flex;align-items:center;height:auto;padding:12px;gap:10px}
-.search{min-width:0;flex:1;margin-bottom:0}
+.topbar{display:flex;align-items:center;height:auto;padding:10px;gap:8px}
+.search{display:none}
+.top-actions{flex:1;justify-content:flex-end;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.pill{padding:8px 10px;font-size:13px;white-space:nowrap;flex:0 0 auto}
+.uname{display:none}
 .menu-toggle{display:flex;align-items:center;justify-content:center}
 .nav-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:999}
 .app-shell.nav-open .nav-overlay{display:block}
@@ -231,6 +235,6 @@ th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;p
         <a class="pill <?=$notifCount?'alert-pill':''?>" href="notifications.php">🔔 <?=$notifCount?></a>
         <a class="pill" href="request_new.php">📨 Talep</a>
         <a class="pill" href="job_new.php">+ İş</a>
-        <a class="pill" href="profile.php">👤 <?=h($_SESSION['user']['name'] ?? 'Kullanıcı')?></a>
+        <a class="pill" href="profile.php">👤 <span class="uname"><?=h($_SESSION['user']['name'] ?? 'Kullanıcı')?></span></a>
     </div>
 </header>
