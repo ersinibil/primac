@@ -22,25 +22,18 @@
     var clone = src.cloneNode(true);
     holder.appendChild(clone);
     document.body.appendChild(holder);
-    if(fit){
-      // Belgeyi A4 boyuna sabitle (footer absolute-bottom ile alta otursun) — yalnız PDF için
-      var inner = (clone.children && clone.children.length===1) ? clone.children[0] : clone;
-      var ah = Math.round((W-2*pad)*297/210)+'px';
-      try{ inner.style.height=ah; inner.style.minHeight=ah; inner.style.position='relative'; }catch(e){}
-    }
-
     function done(){ if(btn){ btn.textContent=t; btn.disabled=false; } if(holder.parentNode) holder.parentNode.removeChild(holder); }
 
     html2canvas(holder,{backgroundColor:bg,scale:2,useCORS:true}).then(function(canvas){
       try{
         var pdf = new JsPDF('p','mm','a4');
         var pw=210, ph=297;
-        // TEK SAYFA modu: tüm görseli bir A4'e sığdır (asla ikinci sayfa olmaz)
+        // TEK SAYFA modu: sayfayı İÇERİK BOYUTUNDA üret (boş alan/yarım sayfa imkânsız, tek sayfa)
         if(fit){
-          var iw=pw, ih=canvas.height*(pw/canvas.width);
-          if(ih>ph){ ih=ph; iw=canvas.width*(ph/canvas.height); }
-          pdf.addImage(canvas.toDataURL('image/jpeg',0.95),'JPEG',(pw-iw)/2,0,iw,ih);
-          var blobF=pdf.output('blob'); var fnF=(window.ACANS_REPORT_NAME||'rapor')+'.pdf';
+          var wmm=210, hmm=wmm*canvas.height/canvas.width;
+          var pdfF=new JsPDF({orientation:'p',unit:'mm',format:[wmm,hmm]});
+          pdfF.addImage(canvas.toDataURL('image/jpeg',0.95),'JPEG',0,0,wmm,hmm);
+          var blobF=pdfF.output('blob'); var fnF=(window.ACANS_REPORT_NAME||'rapor')+'.pdf';
           var fileF=new File([blobF],fnF,{type:'application/pdf'});
           if(navigator.canShare && navigator.canShare({files:[fileF]})){ navigator.share({files:[fileF],title:fnF}).catch(function(){}).finally(done); }
           else { var aF=document.createElement('a'); aF.href=URL.createObjectURL(blobF); aF.download=fnF; document.body.appendChild(aF); aF.click(); aF.remove(); done(); }
