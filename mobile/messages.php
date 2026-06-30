@@ -33,6 +33,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && (isset($_POST['del_msg'])||isset($_PO
 /* --- Mesaj gönder (çıktıdan ÖNCE, topx çağrılmadan) --- */
 if ($_SERVER['REQUEST_METHOD']==='POST') {
     $isAjax = !empty($_POST['ajax']);
+    if($isAjax){ @ini_set('display_errors','0'); error_reporting(0); if(!ob_get_level()) ob_start(); } // temiz JSON garantisi
     $resp = ['ok'=>false,'error'=>''];
     $to = (int)($_POST['to'] ?? 0);
     $threadId = (int)($_POST['thread'] ?? 0);
@@ -88,7 +89,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
                 $resp['ok']=true;
             }
         } catch(Throwable $e){ $resp['error']='Kayıt hatası: '.$e->getMessage(); }
-        if($isAjax){ header('Content-Type: application/json; charset=utf-8'); echo json_encode($resp); exit; }
+        if($isAjax){ if(ob_get_level()){@ob_end_clean();} header('Content-Type: application/json; charset=utf-8'); echo json_encode($resp); exit; }
         header('Location: messages.php?thread='.$threadId); exit;
     }
     if ($to && ($body!=='' || $att)) {
@@ -101,7 +102,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
         } catch(Throwable $e){ $resp['error']='Kayıt hatası: '.$e->getMessage(); }
     } elseif(!$resp['error']) { $resp['error']='Mesaj boş.'; }
 
-    if($isAjax){ header('Content-Type: application/json; charset=utf-8'); echo json_encode($resp); exit; }
+    if($isAjax){ if(ob_get_level()){@ob_end_clean();} header('Content-Type: application/json; charset=utf-8'); echo json_encode($resp); exit; }
     header('Location: messages.php?with='.$to); exit;
 }
 
@@ -234,13 +235,13 @@ document.getElementById('msgform').addEventListener('submit',function(e){ e.prev
   var ta=document.querySelector('.composer textarea'); var msg=ta?ta.value.trim():''; if(!msg&&!pendItems.length)return;
   var b=document.getElementById('sendbtn'); b.disabled=true; b.textContent='…';
   var queue=[]; if(pendItems.length){ pendItems.forEach(function(it,idx){ queue.push({msg:(idx===0?msg:''),file:it}); }); } else { queue.push({msg:msg,file:null}); }
-  var failed=0;
+  var failed=0, failMsgs=[];
   function one(q,tries,cb){ var fd=new FormData(); fd.append('thread',THREADID); fd.append('message',q.msg); fd.append('ajax','1'); if(q.file)fd.append('attach',q.file.blob,q.file.name||'foto.jpg');
     fetch('messages.php?thread='+THREADID,{method:'POST',body:fd,credentials:'same-origin'}).then(function(r){return r.json();})
-      .then(function(d){ if(d&&d.ok)cb(true); else if(tries>1)setTimeout(function(){one(q,tries-1,cb);},600); else cb(false); })
-      .catch(function(){ if(tries>1)setTimeout(function(){one(q,tries-1,cb);},600); else cb(false); }); }
-  function run(i){ if(i>=queue.length){ window.location.href='messages.php?thread='+THREADID; return; }
-    if(queue.length>1)lbl.textContent='⬆ '+(i+1)+'/'+queue.length; one(queue[i],3,function(ok){ if(!ok)failed++; setTimeout(function(){run(i+1);},150); }); }
+      .then(function(d){ if(d&&d.ok)cb(true); else if(tries>1)setTimeout(function(){one(q,tries-1,cb);},600); else cb(false,(d&&d.error)||'bağlantı hatası'); })
+      .catch(function(){ if(tries>1)setTimeout(function(){one(q,tries-1,cb);},600); else cb(false,'bağlantı/yükleme hatası'); }); }
+  function run(i){ if(i>=queue.length){ if(failed>0){ b.disabled=false; b.textContent='Gönder'; lbl.textContent='⚠️ '+failed+'/'+queue.length+' gitmedi: '+failMsgs.join(' · '); } else { window.location.href='messages.php?thread='+THREADID; } return; }
+    if(queue.length>1)lbl.textContent='⬆ '+(i+1)+'/'+queue.length; one(queue[i],3,function(ok,err){ if(!ok){failed++; if(err)failMsgs.push(err);} setTimeout(function(){run(i+1);},150); }); }
   run(0);
 });
 // klavye: composer'ı görünür alanın dibine pinle
@@ -445,24 +446,24 @@ document.getElementById('msgform').addEventListener('submit',function(e){
   var queue=[];
   if(pendItems.length){ pendItems.forEach(function(it,idx){ queue.push({msg:(idx===0?msg:''),file:it}); }); }
   else { queue.push({msg:msg,file:null}); }
-  var failed=0;
+  var failed=0, failMsgs=[];
   // Her öğeyi 3 kez dene (600ms backoff), kalıcı hatada durma → sıradakine geç
   function sendWithRetry(q,tries,cb){
     var fd=new FormData(); fd.append('to',TOID); fd.append('message',q.msg); fd.append('ajax','1');
     if(q.file) fd.append('attach',q.file.blob,q.file.name||'foto.jpg');
     fetch('messages.php?with='+TOID,{method:'POST',body:fd,credentials:'same-origin'})
       .then(function(r){ return r.json(); })
-      .then(function(d){ if(d&&d.ok){ cb(true); } else if(tries>1){ setTimeout(function(){sendWithRetry(q,tries-1,cb);},600); } else cb(false); })
-      .catch(function(){ if(tries>1){ setTimeout(function(){sendWithRetry(q,tries-1,cb);},600); } else cb(false); });
+      .then(function(d){ if(d&&d.ok){ cb(true); } else if(tries>1){ setTimeout(function(){sendWithRetry(q,tries-1,cb);},600); } else cb(false,(d&&d.error)||'bağlantı hatası'); })
+      .catch(function(){ if(tries>1){ setTimeout(function(){sendWithRetry(q,tries-1,cb);},600); } else cb(false,'bağlantı/yükleme hatası'); });
   }
   function run(i){
     if(i>=queue.length){
-      if(failed>0){ b.disabled=false; b.textContent='➤'; lbl.textContent='⚠️ '+failed+' dosya gitmedi, tekrar dene'; setTimeout(function(){ window.location.href='messages.php?with='+TOID; },1800); }
+      if(failed>0){ b.disabled=false; b.textContent='➤'; lbl.textContent='⚠️ '+failed+'/'+queue.length+' gitmedi: '+failMsgs.join(' · '); }
       else { window.location.href='messages.php?with='+TOID; }
       return;
     }
     if(queue.length>1) lbl.textContent='⬆ Gönderiliyor '+(i+1)+'/'+queue.length;
-    sendWithRetry(queue[i],3,function(ok){ if(!ok) failed++; setTimeout(function(){ run(i+1); },150); });
+    sendWithRetry(queue[i],3,function(ok,err){ if(!ok){ failed++; if(err)failMsgs.push(err); } setTimeout(function(){ run(i+1); },150); });
   }
   run(0);
 });
