@@ -62,46 +62,53 @@ if($id){
   $items=[]; try{ $it=$pdo->prepare("SELECT * FROM quote_items WHERE quote_id=? ORDER BY id"); $it->execute([$id]); $items=$it->fetchAll(); }catch(Throwable $e){}
   $cphone=preg_replace('/\D/','',$q['customer_id']?($pdo->query("SELECT phone FROM contacts WHERE id=".(int)$q['customer_id'])->fetch()['phone']??''):'');
   $fi=!empty($q['firm'])?firm_info($q['firm']):null;
+  $col=$fi?$fi['c']:'#1d4ed8'; $col2=$fi?$fi['c2']:'#0b1f3a';
 ?>
 <style>@media print{ body *{visibility:hidden!important} #repArea,#repArea *{visibility:visible!important} #repArea{position:absolute;left:0;top:0;width:100%} .noprint{display:none!important} @page{size:A4;margin:12mm} }</style>
 <div class="panel-head"><h1>Teklif <?=h($q['quote_no'])?></h1><a class="btn secondary" href="teklif.php">Liste</a></div>
 
 <div id="repArea" style="max-width:780px;margin:0 auto">
-  <div style="background:#fff;color:#111;padding:30px;font-family:Arial,Helvetica,sans-serif;border:1px solid #e5e7eb;border-radius:8px">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #1d4ed8;padding-bottom:14px;margin-bottom:20px">
-      <div>
-        <?php if($fi): ?><img src="<?=h($fi['logo'])?>" alt="logo" style="height:56px;object-fit:contain"><div style="color:#555;font-size:12px;margin-top:6px;font-weight:700"><?=h($fi['name'])?></div><?php else: ?><div style="font-size:24px;font-weight:900;color:#1d4ed8">TEKLİF</div><?php endif; ?>
-      </div>
-      <div style="text-align:right">
-        <div style="font-size:24px;font-weight:900;color:#111">TEKLİF</div>
-        <div style="color:#555;font-size:13px;margin-top:3px"><?=h($q['quote_no'])?></div>
-        <div style="color:#555;font-size:13px">Tarih: <?=h($q['quote_date'])?></div>
-        <?php if($q['valid_until']): ?><div style="color:#555;font-size:13px">Geçerlilik: <?=h($q['valid_until'])?></div><?php endif; ?>
+  <div style="background:#fff;color:#111;font-family:Arial,Helvetica,sans-serif;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden">
+    <div style="background:<?=$col?>;padding:18px 24px;display:flex;justify-content:space-between;align-items:center">
+      <?php if($fi): ?><div style="background:#fff;border-radius:10px;padding:8px 14px;display:inline-block"><img src="<?=h($fi['logo'])?>" alt="logo" style="height:48px;object-fit:contain;display:block"></div><?php else: ?><div style="color:#fff;font-weight:700;font-size:15px">ACANS OTS</div><?php endif; ?>
+      <div style="text-align:right;color:#fff">
+        <div style="font-size:26px;font-weight:900;letter-spacing:2px">TEKLİF</div>
+        <div style="font-size:12px;opacity:.95;margin-top:2px"><?=h($q['quote_no'])?></div>
       </div>
     </div>
-    <div style="margin-bottom:16px"><span style="color:#888;font-size:11px;letter-spacing:.05em">SAYIN</span><div style="font-size:17px;font-weight:700"><?=h($q['customer_name']?:'—')?></div></div>
-    <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:16px">
-      <tr style="background:#f3f4f6;text-align:left"><th style="padding:9px 8px">Kalem</th><th style="padding:9px 8px;text-align:right">Adet</th><th style="padding:9px 8px;text-align:right">Birim Fiyat</th><th style="padding:9px 8px;text-align:right">Tutar</th></tr>
-      <?php foreach($items as $it): ?>
-      <tr style="border-bottom:1px solid #eee">
-        <td style="padding:9px 8px"><?=h($it['name'])?></td>
-        <td style="padding:9px 8px;text-align:right"><?=rtrim(rtrim(number_format((float)$it['qty'],3,',','.'),'0'),',')?></td>
-        <td style="padding:9px 8px;text-align:right"><?=money($it['unit_price'])?></td>
-        <td style="padding:9px 8px;text-align:right"><?=money($it['line_total'])?></td>
-      </tr>
-      <?php endforeach; ?>
-    </table>
-    <div style="margin-left:auto;width:280px;font-size:14px">
-      <div style="display:flex;justify-content:space-between;padding:3px 0"><span style="color:#555">Ara Toplam</span><b><?=money($q['subtotal'])?></b></div>
-      <div style="display:flex;justify-content:space-between;padding:3px 0"><span style="color:#555">KDV (%<?=rtrim(rtrim(number_format((float)$q['vat_rate'],2,',','.'),'0'),',')?>)</span><b><?=money($q['vat_amount'])?></b></div>
-      <div style="display:flex;justify-content:space-between;font-size:18px;margin-top:6px;border-top:2px solid #1d4ed8;padding-top:8px"><b>GENEL TOPLAM</b><b style="color:#1d4ed8"><?=money($q['total'])?></b></div>
+    <div style="height:5px;background:<?=$col2?>"></div>
+
+    <div style="padding:24px">
+      <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px">
+        <div><div style="color:<?=$col?>;font-size:11px;letter-spacing:.06em;font-weight:800">SAYIN</div><div style="font-size:18px;font-weight:700"><?=h($q['customer_name']?:'—')?></div></div>
+        <div style="text-align:right;color:#555;font-size:13px">
+          <div><b>Tarih:</b> <?=h($q['quote_date'])?></div>
+          <?php if($q['valid_until']): ?><div><b>Geçerlilik:</b> <?=h($q['valid_until'])?></div><?php endif; ?>
+          <div><b>Durum:</b> <?=h($q['status'])?></div>
+        </div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:16px">
+        <tr style="background:<?=$col?>;color:#fff;text-align:left"><th style="padding:10px 9px;border-radius:6px 0 0 0">Kalem</th><th style="padding:10px 9px;text-align:right">Adet</th><th style="padding:10px 9px;text-align:right">Birim Fiyat</th><th style="padding:10px 9px;text-align:right;border-radius:0 6px 0 0">Tutar</th></tr>
+        <?php foreach($items as $i=>$it): ?>
+        <tr style="background:<?=$i%2?'#fafafa':'#fff'?>;border-bottom:1px solid #eee">
+          <td style="padding:9px"><?=h($it['name'])?></td>
+          <td style="padding:9px;text-align:right"><?=rtrim(rtrim(number_format((float)$it['qty'],3,',','.'),'0'),',')?></td>
+          <td style="padding:9px;text-align:right"><?=money($it['unit_price'])?></td>
+          <td style="padding:9px;text-align:right;font-weight:600"><?=money($it['line_total'])?></td>
+        </tr>
+        <?php endforeach; ?>
+      </table>
+      <div style="margin-left:auto;width:290px;font-size:14px">
+        <div style="display:flex;justify-content:space-between;padding:4px 0"><span style="color:#555">Ara Toplam</span><b><?=money($q['subtotal'])?></b></div>
+        <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #eee"><span style="color:#555">KDV (%<?=rtrim(rtrim(number_format((float)$q['vat_rate'],2,',','.'),'0'),',')?>)</span><b><?=money($q['vat_amount'])?></b></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;background:<?=$col?>;color:#fff;padding:10px 12px;border-radius:8px;font-size:17px"><b>GENEL TOPLAM</b><b><?=money($q['total'])?></b></div>
+      </div>
+      <?php if($q['notes']): ?><div style="margin-top:20px;font-size:13px;color:#333;background:#f8f9fb;border-left:4px solid <?=$col?>;padding:10px 14px;border-radius:0 6px 6px 0"><b style="color:<?=$col?>">Not</b><br><?=nl2br(h($q['notes']))?></div><?php endif; ?>
     </div>
-    <?php if($q['notes']): ?><div style="margin-top:18px;font-size:13px;color:#333"><b>Not:</b><br><?=nl2br(h($q['notes']))?></div><?php endif; ?>
-    <?php if($fi): ?>
-    <div style="margin-top:30px;border-top:1px solid #e5e7eb;padding-top:12px;text-align:center;color:#666;font-size:12px">
-      <b style="color:#1d4ed8"><?=h($fi['name'])?></b> · 🌐 <?=h($fi['web'])?>
+
+    <div style="background:<?=$col2?>;color:#fff;padding:12px 24px;text-align:center;font-size:12px">
+      <?php if($fi): ?><b><?=h($fi['name'])?></b> &nbsp;·&nbsp; 🌐 <?=h($fi['web'])?><?php else: ?>ACANS OTS — Online Takip Sistemi<?php endif; ?>
     </div>
-    <?php endif; ?>
   </div>
 </div>
 
