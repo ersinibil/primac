@@ -178,7 +178,10 @@ if(!$j){
 
 <div class="panel-head">
     <h1><?=h($j['job_no'])?> - <?=h($j['title'])?></h1>
+    <div class="actions">
     <a class="btn secondary" href="jobs.php">Liste</a>
+    <?=delete_button('job',$id)?>
+    </div>
 </div>
 
 <?php if($error): ?><div class="alert"><?=h($error)?></div><?php endif; ?>

@@ -84,6 +84,7 @@ $profit=$sales-$cost;
 <a class="btn" href="stock_movement_new.php?type=in&product_id=<?=$id?>">+ Alış / Giriş</a>
 <a class="btn secondary" href="stock_movement_new.php?type=out&product_id=<?=$id?>">+ Satış / Çıkış</a>
 <a class="btn secondary" href="stock.php">Stok Listesi</a>
+<?=delete_button('product',$id)?>
 </div>
 </div>
 

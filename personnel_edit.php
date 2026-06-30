@@ -89,7 +89,10 @@ try{ $uu=$pdo->prepare("SELECT id,permissions,role FROM app_users WHERE personne
 
 <div class="panel-head">
 <h1><?=h($p['name'])?></h1>
+<div class="actions">
 <a class="btn secondary" href="personnel.php">Personel Listesi</a>
+<?=delete_button('personnel',$id)?>
+</div>
 </div>
 
 <?php if($error): ?><div class="alert"><?=h($error)?></div><?php endif; ?>

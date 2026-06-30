@@ -117,6 +117,7 @@ $balance=(float)$c['opening_balance'] + $in - $out;
 <a class="btn secondary" href="finance_new.php?direction=out&contact_id=<?=$id?>">+ Ödeme</a>
 <a class="btn" href="report.php?modul=cari_detay&ref=<?=$id?>">📊 Cari Raporu</a>
 <a class="btn secondary" href="contacts.php">Cari Listesi</a>
+<?=delete_button('contact',$id)?>
 </div>
 </div>
 

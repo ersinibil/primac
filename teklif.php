@@ -75,7 +75,7 @@ if($id){
 .paper.lh>.lhbody{position:relative!important;z-index:1}
 .pdfmode .paper.lh{aspect-ratio:auto}
 </style>
-<div class="panel-head"><h1>Teklif <?=h($q['quote_no'])?></h1><a class="btn secondary" href="teklif.php">Liste</a></div>
+<div class="panel-head"><h1>Teklif <?=h($q['quote_no'])?></h1><div class="actions noprint"><a class="btn secondary" href="teklif.php">Liste</a><?=delete_button('quote',$id)?></div></div>
 
 <?php $lh = ($fi && !empty($fi['letterhead']) && is_file(__DIR__.'/'.$fi['letterhead'])) ? $fi['letterhead'] : ''; ?>
 <div id="repArea" style="max-width:780px;margin:0 auto">
