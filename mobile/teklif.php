@@ -68,11 +68,15 @@ if($id){
   @media print{ body *{visibility:hidden!important} #repArea,#repArea *{visibility:visible!important} #repArea{position:absolute;left:0;top:0;width:100%} #repArea>div{min-height:auto!important;border-radius:0!important} .noprint{display:none!important} @page{size:A4;margin:0} }
   .pdfmode .paper{min-height:1131px!important;position:relative!important;border:none!important;border-radius:0!important}
   .pdfmode .qfoot{position:absolute!important;left:0;right:0;bottom:0}
-  .paper.lh{aspect-ratio:210/297;background-size:100% 100%!important;background-repeat:no-repeat!important;background-position:top center!important}
+  .paper.lh{aspect-ratio:210/297;position:relative!important}
+  .paper.lh>.lhbg{position:absolute!important;top:0;left:0;width:100%!important;height:100%!important;object-fit:fill;z-index:0;display:block}
+  .paper.lh>.lhbody{position:relative!important;z-index:1}
+  .pdfmode .paper.lh{aspect-ratio:auto}
   </style>
   <?php $lh = ($fi && !empty($fi['letterhead']) && is_file(__DIR__.'/../'.$fi['letterhead'])) ? $fi['letterhead'] : ''; ?>
   <div id="repArea">
-    <div class="paper<?=$lh?' lh':''?>" style="background:#fff<?php if($lh): ?> url('../<?=htmlspecialchars($lh)?>')<?php endif; ?>;color:#1f2937;font-family:Arial,Helvetica,sans-serif;<?=$lh?'':'border:1px solid #e5e7eb;border-radius:10px;'?>overflow:hidden">
+    <div class="paper<?=$lh?' lh':''?>" style="background:#fff;color:#1f2937;font-family:Arial,Helvetica,sans-serif;<?=$lh?'':'border:1px solid #e5e7eb;border-radius:10px;'?>overflow:hidden">
+      <?php if($lh): ?><img class="lhbg" src="../<?=htmlspecialchars($lh)?>" alt=""><?php endif; ?>
       <?php if(!$lh): ?>
       <div style="height:5px;background:<?=$col?>"></div>
       <div style="padding:16px 16px 12px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #eef0f2">
@@ -83,7 +87,7 @@ if($id){
         </div>
       </div>
       <?php endif; ?>
-      <div style="<?=$lh?'padding:15% 7% 9%':'padding:16px'?>">
+      <div class="<?=$lh?'lhbody':''?>" style="<?=$lh?'padding:15% 7% 9%':'padding:16px'?>">
         <?php if($lh): ?><div style="display:flex;justify-content:flex-end;margin-bottom:12px"><div style="text-align:right"><div style="font-size:22px;font-weight:900;letter-spacing:1px;color:#1f2937">TEKLİF</div><div style="font-size:11px;color:<?=$col?>;font-weight:700"><?=htmlspecialchars($q['quote_no'])?></div></div></div><?php endif; ?>
         <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px">
           <div><div style="color:<?=$col?>;font-size:11px;font-weight:800">SAYIN</div><div style="font-size:16px;font-weight:700"><?=htmlspecialchars($q['customer_name']?:'—')?></div></div>
