@@ -204,6 +204,7 @@ th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;p
                 <a href="requests.php">Onay Bekleyenler</a>
                 <a href="profile.php">Profilim / Şifre</a>
                 <a href="users.php">Kullanıcılar & Yetkiler</a>
+                <a href="temizle_veri.php" style="color:#fca5a5">🧹 Veri Temizleme (canlıya hazırlık)</a>
                 <a href="install_core_v17.php">Core Kurulum</a>
                 <a href="logout.php">Çıkış</a>
             </div>
