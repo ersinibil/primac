@@ -43,6 +43,11 @@ table.rt th{text-align:left;color:#7f95b2;border-bottom:1px solid #1e3350;paddin
 table.rt td{padding:7px;border-bottom:1px solid #13233b}
 .card{background:#0c1830;border:1px solid #1e3350;border-radius:14px;padding:16px;margin-bottom:14px}
 @media print{.rtabs,.noprint{display:none!important}}
+.rfilter{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+.rfilter>div{display:flex;flex-direction:column}
+.rfilter input[type=date]{min-width:150px;border:1px solid #1e3350;border-radius:10px;padding:9px 11px;background:#0f1d33;color:#e5edf7}
+.rfilter .btn,.rfilter a.btn{flex:0 0 auto}
+@media(max-width:520px){.rfilter input[type=date]{width:100%;min-width:0}.rfilter>div{flex:1 1 100%}}
 </style>
 
 <div class="rtabs noprint">
@@ -50,7 +55,7 @@ table.rt td{padding:7px;border-bottom:1px solid #13233b}
 </div>
 
 <div class="card noprint">
-  <form method="get" style="display:flex;gap:10px;align-items:end;flex-wrap:wrap">
+  <form method="get" class="rfilter">
     <input type="hidden" name="modul" value="<?=htmlspecialchars($modul)?>"><input type="hidden" name="ref" value="<?=$ref?>">
     <div><label style="display:block;color:#7f95b2;font-size:12px">Başlangıç</label><input type="date" name="from" value="<?=$from?>"></div>
     <div><label style="display:block;color:#7f95b2;font-size:12px">Bitiş</label><input type="date" name="to" value="<?=$to?>"></div>

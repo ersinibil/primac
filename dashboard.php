@@ -35,6 +35,17 @@ function cmd_card($title,$value,$desc,$url,$tone='blue'){
 </div>
 </div>
 
+<div class="navtiles">
+<?php if(user_can('jobs')): ?><a class="ntile blue" href="jobs.php"><span class="ic">📋</span><b>İşler</b><small>İş merkezi &amp; takip</small></a><?php endif; ?>
+<?php if(user_can('contacts')): ?><a class="ntile teal" href="contacts.php"><span class="ic">👥</span><b>Cariler</b><small>Müşteri / tedarikçi</small></a><?php endif; ?>
+<?php if(user_can('teklif')): ?><a class="ntile purple" href="teklif.php"><span class="ic">📄</span><b>Teklifler</b><small>Hazırla &amp; gönder</small></a><?php endif; ?>
+<?php if(user_can('finance')): ?><a class="ntile green" href="finance.php"><span class="ic">💰</span><b>Finans</b><small>Kasa / banka / kart</small></a><?php endif; ?>
+<?php if(user_can('stock')): ?><a class="ntile orange" href="stock.php"><span class="ic">📦</span><b>Stok</b><small>Ürün &amp; depo</small></a><?php endif; ?>
+<?php if(user_can('report')): ?><a class="ntile yellow" href="report.php"><span class="ic">📊</span><b>Raporlar</b><small>Yekün &amp; modül</small></a><?php endif; ?>
+<?php if(user_can('personnel')): ?><a class="ntile red" href="personnel.php"><span class="ic">👷</span><b>Personel</b><small>Ekip &amp; görev</small></a><?php endif; ?>
+<a class="ntile gray" href="messages.php"><span class="ic">💬</span><b>Mesajlar</b><small>İç yazışma</small></a>
+</div>
+
 
 <section class="command-grid">
 <?php
