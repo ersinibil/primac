@@ -56,14 +56,20 @@ th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;p
 .notice-card.unread{background:#fff7ed;border-color:#fed7aa}
 .danger-row{background:#fff7ed}.stage-list{display:grid;gap:8px}.stage{display:flex;justify-content:space-between;align-items:center;padding:12px;border:1px solid #eef2f6;border-radius:14px}
 .actions{display:flex;gap:8px;flex-wrap:wrap}.nowrap{white-space:nowrap}
+.menu-toggle{display:none;background:#0b1f3a;color:#fff;border:0;border-radius:12px;width:44px;height:44px;font-size:21px;cursor:pointer;flex:0 0 auto}
+.nav-overlay{display:none}
 @media(max-width:960px){
-.sidebar{position:relative;width:100%;height:auto}
+.sidebar{width:284px;height:auto;transform:translateX(-100%);transition:transform .25s ease;z-index:1000;box-shadow:2px 0 22px rgba(0,0,0,.35)}
+.app-shell.nav-open .sidebar{transform:translateX(0)}
 .app-shell{display:block}
 .main{margin-left:0;padding:14px}
 .cards,.form-grid{grid-template-columns:1fr}
 .panel{overflow:auto}
-.topbar{display:block;height:auto;padding:12px}
-.search{min-width:0;margin-bottom:10px}
+.topbar{display:flex;align-items:center;height:auto;padding:12px;gap:10px}
+.search{min-width:0;flex:1;margin-bottom:0}
+.menu-toggle{display:flex;align-items:center;justify-content:center}
+.nav-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:999}
+.app-shell.nav-open .nav-overlay{display:block}
 }
 
 .brand-link{text-decoration:none;color:#fff}
@@ -215,9 +221,11 @@ th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;p
         </div>
     </nav>
 </aside>
+<div class="nav-overlay" onclick="document.querySelector('.app-shell').classList.remove('nav-open')"></div>
 
 <main class="main">
 <header class="topbar">
+    <button class="menu-toggle" onclick="document.querySelector('.app-shell').classList.toggle('nav-open')" aria-label="Menü">☰</button>
     <div class="search">🔍 İş, müşteri, stok, personel ara...</div>
     <div class="top-actions">
         <a class="pill <?=$notifCount?'alert-pill':''?>" href="notifications.php">🔔 <?=$notifCount?></a>
