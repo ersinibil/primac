@@ -1,7 +1,8 @@
 <?php
 require_once 'common.php';
+require_once __DIR__.'/../share_lib.php';
 block_personel();
-$pdo=db(); $id=(int)($_GET['id']??0); $ok=''; $er='';
+$pdo=db(); $id=(int)($_GET['id']??0); $ok=''; $er=''; $waCred='';
 
 if($_SERVER['REQUEST_METHOD']==='POST'){
     try{
@@ -22,10 +23,12 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             $uid=(int)$pdo->lastInsertId();
             $pdo->prepare("UPDATE personnel SET user_id=?,login_enabled=1 WHERE id=?")->execute([$uid,$id]);
             $ok='Giriş hesabı oluşturuldu.';
+            $waCred=cred_wa($pr['phone']??'',$un,$_POST['password']);
         }
         if(isset($_POST['reset_pw']) && trim($_POST['newpw']??'')!=='' && (int)$_POST['uid']){
             $pdo->prepare("UPDATE app_users SET password_hash=? WHERE id=?")->execute([password_hash($_POST['newpw'],PASSWORD_DEFAULT),(int)$_POST['uid']]);
             $ok='Şifre güncellendi.';
+            try{ $cu=$pdo->prepare("SELECT u.username,p.phone FROM app_users u LEFT JOIN personnel p ON p.id=u.personnel_id WHERE u.id=?"); $cu->execute([(int)$_POST['uid']]); $cr=$cu->fetch(); if($cr) $waCred=cred_wa($cr['phone']??'',$cr['username'],$_POST['newpw']); }catch(Throwable $e){}
         }
     }catch(Throwable $e){ $er=$e->getMessage(); }
 }
@@ -40,6 +43,7 @@ try{
 ?>
 <?php if($ok): ?><div class="notice"><?=htmlspecialchars($ok)?></div><?php endif; ?>
 <?php if($er): ?><div class="err"><?=htmlspecialchars($er)?></div><?php endif; ?>
+<?php if($waCred): ?><a href="<?=htmlspecialchars($waCred)?>" target="_blank" rel="noopener" class="btn" style="display:block;text-align:center;background:#16a34a;color:#fff;padding:12px;margin-bottom:8px">📲 Giriş bilgisini WhatsApp ile gönder</a><?php endif; ?>
 
 <div class="panel">
   <h2 style="margin:0"><?=htmlspecialchars($p['name'])?></h2>

@@ -1,6 +1,7 @@
 <?php
 require_once 'common.php';
 require_once __DIR__.'/../job_stages_lib.php';
+require_once __DIR__.'/../share_lib.php';
 $pdo=db();
 $id=(int)($_GET['id'] ?? 0);
 $me=(int)($_SESSION['user']['id'] ?? 0);
@@ -105,6 +106,12 @@ try{
   <div style="margin-top:4px">👷 Sorumlu: <b><?=htmlspecialchars($j['responsible'] ?: 'Atanmamış')?></b></div>
   <?php if($j['description']): ?><p class="muted" style="margin-top:10px"><?=nl2br(htmlspecialchars($j['description']))?></p><?php endif; ?>
   <a class="btn dark" href="thread_open.php?type=job&ref=<?=$id?>" style="display:block;text-align:center;margin-top:10px">💬 İş Sohbeti</a>
+  <?php
+    $jobPhone=preg_replace('/\D/','',($j['customer_id']?($pdo->query("SELECT phone FROM contacts WHERE id=".(int)$j['customer_id'])->fetch()['phone']??''):''));
+    $jobTxt="📋 İş: ".$j['title']."\nNo: ".($j['job_no']??'')."\nDurum: ".$j['status'].($j['customer']?"\nMüşteri: ".$j['customer']:'').($j['responsible']?"\nSorumlu: ".$j['responsible']:'').($j['due_date']?"\nTermin: ".$j['due_date']:'');
+    echo '<div style="margin-top:6px;font-size:13px;opacity:.85">📤 İşi paylaş:</div>';
+    echo share_buttons($jobTxt,$jobPhone,'İş: '.$j['title']);
+  ?>
 </div>
 
 <details class="panel">

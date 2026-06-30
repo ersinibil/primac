@@ -1,5 +1,6 @@
 <?php
 require_once 'common.php';
+require_once __DIR__.'/../share_lib.php';
 $pdo=db(); $me=(int)($_SESSION['user']['id']??0);
 // Giriş yapan kullanıcının personel id'si
 $pid=(int)($_SESSION['user']['personnel_id']??0);
@@ -32,7 +33,7 @@ try{
   $w = $f==='done' ? "t.status='Tamamlandı'" : "t.status NOT IN ('Tamamlandı','İptal')";
   // Personel: kendi görevleri · Admin: herkesinki
   $cond = $isAdmin ? $w : "$w AND t.personnel_id=".(int)$pid;
-  $rows=$pdo->query("SELECT t.*, j.id job_real, j.job_no, p.name pname FROM tasks t LEFT JOIN jobs j ON j.id=t.job_id LEFT JOIN personnel p ON p.id=t.personnel_id WHERE $cond ORDER BY (t.due_date IS NULL), t.due_date, t.id DESC LIMIT 100")->fetchAll();
+  $rows=$pdo->query("SELECT t.*, j.id job_real, j.job_no, p.name pname, p.phone pphone FROM tasks t LEFT JOIN jobs j ON j.id=t.job_id LEFT JOIN personnel p ON p.id=t.personnel_id WHERE $cond ORDER BY (t.due_date IS NULL), t.due_date, t.id DESC LIMIT 100")->fetchAll();
   if(!$rows) echo '<div class="panel muted" style="text-align:center">'.($f==='done'?'Tamamlanan görev yok.':'Açık görev yok 🎉').'</div>';
   foreach($rows as $t){
     $geç = ($f!=='done' && !empty($t['due_date']) && $t['due_date']<date('Y-m-d'));
@@ -45,6 +46,8 @@ try{
     echo '</small>';
     echo '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">';
     if($t['job_real']) echo '<a class="btn" href="job_view.php?id='.(int)$t['job_real'].'" style="background:#334155;color:#fff;flex:1;text-align:center">İş Detayı</a>';
+    $tTxt="📝 Görev: ".$t['title'].($t['job_no']?"\nİş: ".$t['job_no']:'')."\nDurum: ".$t['status'].($t['due_date']?"\nTermin: ".$t['due_date']:'').($t['description']?"\n".$t['description']:'');
+    echo '<a class="btn" href="'.htmlspecialchars(wa_link($tTxt,$t['pphone']??'')).'" target="_blank" rel="noopener" style="background:#16a34a;color:#fff;flex:1;text-align:center">📲 Gönder</a>';
     if($f!=='done'){
       if($t['status']!=='Devam Ediyor') echo '<form method="post" style="flex:1;margin:0"><input type="hidden" name="tid" value="'.(int)$t['id'].'"><button class="btn" name="task_status" value="Devam Ediyor" style="width:100%;background:#2563eb;color:#fff">▶ Başla</button></form>';
       echo '<form method="post" style="flex:1;margin:0"><input type="hidden" name="tid" value="'.(int)$t['id'].'"><button class="btn" name="task_status" value="Tamamlandı" style="width:100%;background:#16a34a;color:#fff">✓ Tamamla</button></form>';

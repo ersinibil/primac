@@ -184,6 +184,13 @@ if(!$j){
 <?php if($error): ?><div class="alert"><?=h($error)?></div><?php endif; ?>
 <?php if($ok): ?><div class="ok"><?=h($ok)?></div><?php endif; ?>
 
+<?php
+require_once __DIR__.'/share_lib.php';
+$jobPhone=preg_replace('/\D/','',($j['customer_id']?($pdo->query("SELECT phone FROM contacts WHERE id=".(int)$j['customer_id'])->fetch()['phone']??''):''));
+$jobTxt="📋 İş: ".$j['title']."\nNo: ".($j['job_no']??'')."\nDurum: ".$j['status'].($j['customer_name']?"\nMüşteri: ".$j['customer_name']:'').($j['responsible_name']?"\nSorumlu: ".$j['responsible_name']:'').($j['due_date']?"\nTermin: ".$j['due_date']:'');
+echo '<div style="max-width:520px">'.share_buttons($jobTxt,$jobPhone,'İş: '.$j['title']).'</div>';
+?>
+
 <div class="cards">
 <div class="card"><small>Tip</small><strong><?=h(job_type_label($j['job_type']))?></strong></div>
 <div class="card"><small>Durum</small><strong><?=badge($j['status'],status_tone($j['status']))?></strong></div>
