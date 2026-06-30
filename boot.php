@@ -86,7 +86,9 @@ function module_label($key){ $m=module_list(); return $m[$key] ?? $key; }
 // Web sayfası → gerekli modül yetkisi. boot.php sonunda otomatik uygulanır (tek merkezden koruma).
 function page_module_map(){
     return [
-        'jobs.php'=>'jobs','job_new.php'=>'jobs','job_view.php'=>'jobs','job_edit.php'=>'jobs',
+        // NOT: job_view.php / task detayları KORUMASIZ — personel kendine atanan işi/görevi
+        // bildirimden açabilsin diye. Liste/oluşturma sayfaları yetkiye bağlı.
+        'jobs.php'=>'jobs','job_new.php'=>'jobs','job_edit.php'=>'jobs',
         'takvim.php'=>'jobs','production.php'=>'jobs','assembly.php'=>'jobs','external.php'=>'jobs',
         'approval_waiting.php'=>'jobs','work_center.php'=>'jobs',
         'tasks.php'=>'tasks',
@@ -118,7 +120,13 @@ function require_permission($permission){
     require_login();
     if(!user_can($permission)){
         http_response_code(403);
-        echo "<h1>Yetkisiz Alan</h1><p>Bu ekran için yetkiniz yok.</p><p><a href='dashboard.php'>Ana ekrana dön</a></p>";
+        $isMobile = strpos($_SERVER['SCRIPT_NAME'] ?? '', '/mobile/')!==false;
+        $home = base_url().($isMobile ? 'mobile/index.php' : 'dashboard.php');
+        echo "<!doctype html><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>"
+            ."<div style='font-family:-apple-system,Arial,sans-serif;max-width:520px;margin:60px auto;text-align:center;padding:24px'>"
+            ."<div style='font-size:46px'>🔒</div><h1 style='font-size:22px;margin:10px 0'>Bu ekran için yetkiniz yok</h1>"
+            ."<p style='color:#667085'>Erişim gerekiyorsa yöneticinizden bu modül için yetki isteyin.</p>"
+            ."<p><a href='".h($home)."' style='display:inline-block;background:#2563eb;color:#fff;padding:12px 22px;border-radius:12px;text-decoration:none;font-weight:800'>Ana sayfaya dön</a></p></div>";
         exit;
     }
 }

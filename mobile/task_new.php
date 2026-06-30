@@ -13,8 +13,13 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         // Personel adı + bağlı kullanıcı
         $pn=$pdo->prepare("SELECT name FROM personnel WHERE id=?"); $pn->execute([$pid]); $pname=$pn->fetch()['name']??'';
         $uu=$pdo->prepare("SELECT id FROM app_users WHERE personnel_id=? AND active=1 LIMIT 1"); $uu->execute([$pid]); $urow=$uu->fetch();
-        // KİŞİSEL bildirim (uygulama içi + push) — sadece atanan personele
-        if($urow && function_exists('notify_user')) notify_user((int)$urow['id'],'📋 Yeni görev: '.$title,($pname?$pname.' · ':'').($_POST['description']??''),'jobs.php');
+        // KİŞİSEL bildirim (uygulama içi + push) + iç mesaj (Mesajlar ekranında görünür) — sadece atanan personele
+        if($urow){
+            $ruid=(int)$urow['id'];
+            $msgText='📋 Yeni görev: '.$title.($_POST['due_date']?"\n📅 Termin: ".$_POST['due_date']:'').(trim($_POST['description']??'')?"\n".trim($_POST['description']):'');
+            if(function_exists('notify_user')) notify_user($ruid,'📋 Yeni görev: '.$title,($pname?$pname.' · ':'').($_POST['description']??''),'mytasks.php');
+            try{ $sid=$_SESSION['user']['id']??null; $pdo->prepare("INSERT INTO internal_messages(sender_user_id,receiver_user_id,message,is_read) VALUES(?,?,?,0)")->execute([$sid,$ruid,$msgText]); }catch(Throwable $e){}
+        }
         try{ if(function_exists('activity_log')) activity_log('Görev','Atama',$pname.' · '.$title,'','task',$tid,'jobs.php','📋'); }catch(Throwable $e){}
         $ok='Görev atandı, '.($pname?:'personele').' bildirim gönderildi.';
     }catch(Throwable $e){ $er=$e->getMessage(); }
