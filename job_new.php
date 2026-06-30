@@ -100,6 +100,24 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             );
         }catch(Throwable $e){}
 
+        // İş atanan personele iç mesaj + bildirim + push (Mesajlar ekranında görünür)
+        if(!empty($_POST['responsible_personnel_id'])){
+            try{
+                $ru=$pdo->prepare("SELECT id FROM app_users WHERE personnel_id=? AND active=1 LIMIT 1");
+                $ru->execute([$_POST['responsible_personnel_id']]);
+                $ruid=(int)($ru->fetch()['id'] ?? 0);
+                if($ruid){
+                    $senderId=$_SESSION['user']['id'] ?? null;
+                    $msgText="🆕 Yeni iş atandı: ".$jobNo." — ".trim($_POST['title'])
+                        .($_POST['due_date']?"\n📅 Termin: ".$_POST['due_date']:'')
+                        .($customerName!=='-'?"\n👤 Müşteri: ".$customerName:'');
+                    try{ $pdo->prepare("INSERT INTO internal_notifications(title,message,target_user_id,is_read) VALUES(?,?,?,0)")->execute(['Yeni İş Atandı',$msgText,$ruid]); }catch(Throwable $e){}
+                    try{ $pdo->prepare("INSERT INTO internal_messages(sender_user_id,receiver_user_id,message,is_read) VALUES(?,?,?,0)")->execute([$senderId,$ruid,$msgText]); }catch(Throwable $e){}
+                    if(function_exists('push_to_user')){ try{ push_to_user($ruid,'Yeni İş Atandı',$jobNo.' — '.trim($_POST['title']),'job_view.php?id='.$jobId); }catch(Throwable $e){} }
+                }
+            }catch(Throwable $e){}
+        }
+
         header("Location: job_view.php?id=".$jobId);
         exit;
 
