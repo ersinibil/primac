@@ -140,8 +140,8 @@ if($new){
     <select name="customer_id"><option value="">— Cari seç (veya alta yaz) —</option><?php foreach($cs as $c): ?><option value="<?=$c['id']?>"><?=htmlspecialchars($c['name'])?></option><?php endforeach; ?></select>
     <input name="customer_name" placeholder="veya müşteri adı yaz">
     <div style="display:flex;gap:10px">
-      <div style="flex:1"><label>Geçerlilik</label><input type="date" name="valid_until"></div>
-      <div style="flex:1"><label>KDV %</label><input name="vat_rate" inputmode="decimal" value="20"></div>
+      <div style="flex:1;min-width:0"><label>Geçerlilik</label><input type="date" name="valid_until" style="width:100%;box-sizing:border-box"></div>
+      <div style="flex:1;min-width:0"><label>KDV %</label><input name="vat_rate" inputmode="decimal" value="20" style="width:100%;box-sizing:border-box"></div>
     </div>
 
     <label style="margin-top:10px">Kalemler</label>

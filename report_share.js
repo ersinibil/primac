@@ -28,11 +28,15 @@
         var ratio = pw / canvas.width;          // mm / px
         var pageHpx = Math.floor(ph / ratio);    // bir A4 sayfasına sığan px yüksekliği
         var cctx = canvas.getContext('2d');
-        // Bir satır tamamen koyu arka plan mı (kartlar arası boşluk)? → güvenli kesim noktası
+        // Arka plan rengini gerçek köşe pikselinden al (beyaz teklif de koyu rapor da çalışsın)
+        var bp; try{ bp = cctx.getImageData(2,2,1,1).data; }catch(e){ bp=[11,18,32,255]; }
+        // Bir satır tamamen arka plan rengi mi (içerik boşluğu)? → güvenli kesim noktası
         function rowIsBg(yy){
           try{
             var d = cctx.getImageData(0, yy, canvas.width, 1).data;
-            for(var i=0;i<d.length;i+=32){ if(!(d[i]<32 && d[i+1]<40 && d[i+2]<55)) return false; }
+            for(var i=0;i<d.length;i+=32){
+              if(Math.abs(d[i]-bp[0])>14 || Math.abs(d[i+1]-bp[1])>14 || Math.abs(d[i+2]-bp[2])>14) return false;
+            }
             return true;
           }catch(e){ return false; }
         }
