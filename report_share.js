@@ -20,6 +20,7 @@
     var holder = document.createElement('div');
     holder.style.cssText = 'position:fixed;left:-10000px;top:0;width:'+W+'px;background:'+bg+';padding:'+pad+'px;color:'+fg;
     var clone = src.cloneNode(true);
+    if(fit){ clone.style.maxWidth='none'; clone.style.width='100%'; clone.style.margin='0'; }
     holder.appendChild(clone);
     document.body.appendChild(holder);
     function done(){ if(btn){ btn.textContent=t; btn.disabled=false; } if(holder.parentNode) holder.parentNode.removeChild(holder); }

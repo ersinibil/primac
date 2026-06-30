@@ -68,17 +68,17 @@ if($id){
 <div class="panel-head"><h1>Teklif <?=h($q['quote_no'])?></h1><a class="btn secondary" href="teklif.php">Liste</a></div>
 
 <div id="repArea" style="max-width:780px;margin:0 auto">
-  <div style="background:#fff;color:#111;font-family:Arial,Helvetica,sans-serif;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;border:1px solid #e5e7eb">
-    <div style="background:<?=$col?>;padding:18px 24px;display:flex;justify-content:space-between;align-items:center">
-      <?php if($fi && !empty($fi['mark'])): ?><div style="display:flex;align-items:center;gap:12px"><img src="<?=h($fi['mark'])?>" alt="logo" style="height:60px;object-fit:contain"><div style="color:#fff;font-weight:800;font-size:16px;letter-spacing:.5px"><?=h($fi['name'])?></div></div><?php elseif($fi): ?><div style="background:#fff;border-radius:10px;padding:8px 14px;display:inline-block"><img src="<?=h($fi['logo'])?>" alt="logo" style="height:48px;object-fit:contain;display:block"></div><?php else: ?><div style="color:#fff;font-weight:700;font-size:15px">ACANS OTS</div><?php endif; ?>
-      <div style="text-align:right;color:#fff">
-        <div style="font-size:26px;font-weight:900;letter-spacing:2px">TEKLİF</div>
-        <div style="font-size:12px;opacity:.95;margin-top:2px"><?=h($q['quote_no'])?></div>
+  <div style="background:#fff;color:#1f2937;font-family:Arial,Helvetica,sans-serif;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden">
+    <div style="height:6px;background:<?=$col?>"></div>
+    <div style="padding:22px 24px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #eef0f2">
+      <?php if($fi && !empty($fi['mark'])): ?><div style="display:flex;align-items:center;gap:12px"><span style="background:<?=$col?>;border-radius:8px;padding:6px"><img src="<?=h($fi['mark'])?>" alt="logo" style="height:44px;object-fit:contain;display:block"></span><div style="font-weight:800;font-size:17px;color:#1f2937"><?=h($fi['name'])?></div></div><?php elseif($fi): ?><img src="<?=h($fi['logo'])?>" alt="logo" style="height:46px;object-fit:contain;display:block"><?php else: ?><div style="font-weight:800;font-size:16px;color:#1f2937">ACANS OTS</div><?php endif; ?>
+      <div style="text-align:right">
+        <div style="font-size:28px;font-weight:900;letter-spacing:2px;color:#1f2937">TEKLİF</div>
+        <div style="font-size:12px;color:<?=$col?>;font-weight:700;margin-top:2px"><?=h($q['quote_no'])?></div>
       </div>
     </div>
-    <div style="height:5px;background:<?=$col2?>"></div>
 
-    <div style="padding:24px">
+    <div style="padding:22px 24px">
       <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px">
         <div><div style="color:<?=$col?>;font-size:11px;letter-spacing:.06em;font-weight:800">SAYIN</div><div style="font-size:18px;font-weight:700"><?=h($q['customer_name']?:'—')?></div></div>
         <div style="text-align:right;color:#555;font-size:13px">
@@ -106,8 +106,8 @@ if($id){
       <?php if($q['notes']): ?><div style="margin-top:20px;font-size:13px;color:#333;background:#f8f9fb;border-left:4px solid <?=$col?>;padding:10px 14px;border-radius:0 6px 6px 0"><b style="color:<?=$col?>">Not</b><br><?=nl2br(h($q['notes']))?></div><?php endif; ?>
     </div>
 
-    <div style="background:<?=$col2?>;color:#fff;padding:12px 24px;text-align:center;font-size:12px">
-      <?php if($fi): ?><b><?=h($fi['name'])?></b> &nbsp;·&nbsp; 🌐 <?=h($fi['web'])?><?php else: ?>ACANS OTS — Online Takip Sistemi<?php endif; ?>
+    <div style="border-top:2px solid <?=$col?>;background:#f8f9fa;color:#374151;padding:12px 24px;text-align:center;font-size:12px">
+      <?php if($fi): ?><b style="color:#1f2937"><?=h($fi['name'])?></b> &nbsp;·&nbsp; 🌐 <?=h($fi['web'])?><?php else: ?>ACANS OTS — Online Takip Sistemi<?php endif; ?>
     </div>
   </div>
 </div>
@@ -115,8 +115,7 @@ if($id){
 <section class="panel noprint" style="max-width:780px">
   <b>📤 Teklifi gönder / yazdır</b>
   <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
-    <button onclick="shareReportPDF(this)" class="btn" style="background:#16a34a">📄 PDF Paylaş</button>
-    <button onclick="window.print()" class="btn" style="background:#475569">🖨 Yazdır (A4)</button>
+    <button onclick="shareReportPDF(this)" class="btn" style="background:#16a34a">📄 PDF İndir / Paylaş</button>
   </div>
   <?php
     $txt="📄 Teklif ".$q['quote_no']."\nMüşteri: ".$q['customer_name']."\nTutar: ".money($q['total']).($q['valid_until']?"\nGeçerlilik: ".$q['valid_until']:'');
