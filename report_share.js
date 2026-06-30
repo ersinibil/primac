@@ -20,7 +20,12 @@
     var holder = document.createElement('div');
     holder.style.cssText = 'position:fixed;left:-10000px;top:0;width:'+W+'px;background:'+bg+';padding:'+pad+'px;color:'+fg;
     var clone = src.cloneNode(true);
-    if(fit){ clone.style.maxWidth='none'; clone.style.width='100%'; clone.style.margin='0'; holder.classList.add('pdfmode'); }
+    if(fit){
+      clone.style.maxWidth='none'; clone.style.width='100%'; clone.style.margin='0'; holder.classList.add('pdfmode');
+      // Antetli/A4 belge: SABİT piksel yükseklik (W=800 → A4=1131px). iOS Safari min-height/aspect-ratio'ya güvenme.
+      var paper = (clone.classList && clone.classList.contains('paper')) ? clone : clone.querySelector('.paper');
+      if(paper){ paper.style.minHeight='1131px'; paper.style.height='1131px'; paper.style.boxSizing='border-box'; }
+    }
     holder.appendChild(clone);
     document.body.appendChild(holder);
     function done(){ if(btn){ btn.textContent=t; btn.disabled=false; } if(holder.parentNode) holder.parentNode.removeChild(holder); }

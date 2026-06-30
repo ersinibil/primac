@@ -73,6 +73,34 @@ function is_admin(){
     return $u && (($u['role'] ?? '')==='admin' || ($u['role'] ?? '')==='yonetici' || !empty($u['is_admin']));
 }
 
+// Tüm yetkilendirilebilir modüller — menü, users.php ve sayfa koruması ortak kullanır.
+function module_list(){
+    return [
+        'dashboard'=>'Komuta Merkezi','jobs'=>'İşler (üretim/montaj/dış tedarik/takvim)','tasks'=>'Görevler',
+        'contacts'=>'Cari Hesaplar','teklif'=>'Teklifler','finance'=>'Finans',
+        'stock'=>'Stok / Ürün / Satın Alma','report'=>'Raporlar','personnel'=>'Personel','users'=>'Kullanıcı / Yetki',
+    ];
+}
+function module_label($key){ $m=module_list(); return $m[$key] ?? $key; }
+
+// Web sayfası → gerekli modül yetkisi. boot.php sonunda otomatik uygulanır (tek merkezden koruma).
+function page_module_map(){
+    return [
+        'jobs.php'=>'jobs','job_new.php'=>'jobs','job_view.php'=>'jobs','job_edit.php'=>'jobs',
+        'takvim.php'=>'jobs','production.php'=>'jobs','assembly.php'=>'jobs','external.php'=>'jobs',
+        'approval_waiting.php'=>'jobs','work_center.php'=>'jobs',
+        'tasks.php'=>'tasks',
+        'contacts.php'=>'contacts','contact_new.php'=>'contacts','contact_view.php'=>'contacts','contacts_report.php'=>'contacts',
+        'teklif.php'=>'teklif',
+        'finance.php'=>'finance','finance_new.php'=>'finance','finance_accounts.php'=>'finance','finance_transfer.php'=>'finance',
+        'stock.php'=>'stock','product_new.php'=>'stock','stock_movement_new.php'=>'stock',
+        'product_categories.php'=>'stock','product_taxonomy.php'=>'stock','purchase.php'=>'stock',
+        'report.php'=>'report',
+        'personnel.php'=>'personnel','personnel_new.php'=>'personnel','personnel_view.php'=>'personnel',
+        'users.php'=>'users',
+    ];
+}
+
 function user_can($permission){
     $u=current_user();
     if(!$u) return false;
@@ -172,4 +200,11 @@ remember_check();
 if(is_file(__DIR__.'/activity_lib.php')) require_once __DIR__.'/activity_lib.php';
 // Geciken iş otomatik bildirimi (saatte bir, dosya kilidi ile) — giriş yapılmışsa
 if(!empty($_SESSION['user']) && is_file(__DIR__.'/job_overdue_lib.php')){ require_once __DIR__.'/job_overdue_lib.php'; try{ check_overdue_jobs(db()); }catch(Throwable $e){} }
+
+// ---- Otomatik sayfa koruması: çalışan web sayfası korumalı modüldeyse yetki zorla (admin her şeye yetkili) ----
+$__page = basename($_SERVER['SCRIPT_NAME'] ?? ($_SERVER['PHP_SELF'] ?? ''));
+$__pmap = page_module_map();
+if($__page !== '' && isset($__pmap[$__page])){
+    require_permission($__pmap[$__page]);
+}
 ?>

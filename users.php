@@ -6,17 +6,7 @@ $pdo=db();
 $error='';
 $ok='';
 
-$permLabels=[
-    'dashboard'=>'Komuta Merkezi',
-    'jobs'=>'İşler',
-    'tasks'=>'Görevler',
-    'contacts'=>'Cari Hesaplar',
-    'finance'=>'Finans',
-    'stock'=>'Stok / Ürün',
-    'personnel'=>'Personel',
-    'telegram'=>'Telegram',
-    'users'=>'Kullanıcı / Yetki'
-];
+$permLabels=module_list();
 
 if($_SERVER['REQUEST_METHOD']==='POST'){
     try{

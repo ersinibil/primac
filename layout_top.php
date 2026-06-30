@@ -117,6 +117,7 @@ th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;p
     <nav class="nav">
         <a href="dashboard.php">🏛 Komuta Merkezi</a>
 
+        <?php if(user_can('jobs')): ?>
         <div class="nav-title">İş Yönetimi</div>
         <details open>
             <summary>📋 İşler</summary>
@@ -131,7 +132,9 @@ th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;p
                 <a href="assembly.php">Montaj</a>
             </div>
         </details>
+        <?php endif; ?>
 
+        <?php if(user_can('personnel')): ?>
         <div class="nav-title">Personel</div>
         <details>
             <summary>👥 Personel & Görevler</summary>
@@ -142,7 +145,9 @@ th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;p
                 <a href="requests.php">Personel Talepleri</a>
             </div>
         </details>
+        <?php endif; ?>
 
+        <?php if(user_can('contacts')): ?>
         <div class="nav-title">Cari</div>
         <details>
             <summary>👥 Cari Hesaplar</summary>
@@ -155,7 +160,9 @@ th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;p
                 <a href="external.php">Dış Atölyeler</a>
             </div>
         </details>
+        <?php endif; ?>
 
+        <?php if(user_can('teklif')): ?>
         <div class="nav-title">Teklif</div>
         <details>
             <summary>📄 Teklifler</summary>
@@ -164,7 +171,9 @@ th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;p
                 <a href="teklif.php?new=1">+ Yeni Teklif</a>
             </div>
         </details>
+        <?php endif; ?>
 
+        <?php if(user_can('finance')): ?>
         <div class="nav-title">Banka / Kasa</div>
         <details>
             <summary>💰 Finans</summary>
@@ -180,10 +189,14 @@ th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;p
                 <a href="finance_transfer.php">Hesap Transferi</a>
             </div>
         </details>
+        <?php endif; ?>
 
+        <?php if(user_can('report')): ?>
         <div class="nav-title">Raporlar</div>
         <a href="report.php">📊 Raporlar (Yekün + Modül)</a>
+        <?php endif; ?>
 
+        <?php if(user_can('stock')): ?>
         <div class="nav-title">Stok & Satın Alma</div>
         <details>
             <summary>📦 Ürün / Stok</summary>
@@ -197,6 +210,7 @@ th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;p
                 <a href="purchase.php">Satın Alma İşleri</a>
             </div>
         </details>
+        <?php endif; ?>
 
         <div class="nav-title">Sistem</div>
         <details>
@@ -207,6 +221,7 @@ th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;p
             </div>
         </details>
 
+        <?php if(user_can('users')): ?>
         <details>
             <summary>⚙ Yönetim</summary>
             <div class="sub">
@@ -218,6 +233,17 @@ th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;p
                 <a href="logout.php">Çıkış</a>
             </div>
         </details>
+        <?php endif; ?>
+        <?php if(!user_can('users')): ?>
+        <details>
+            <summary>⚙ Hesabım</summary>
+            <div class="sub">
+                <a href="profile.php">Profilim / Şifre</a>
+                <a href="request_new.php">Talep Oluştur</a>
+                <a href="logout.php">Çıkış</a>
+            </div>
+        </details>
+        <?php endif; ?>
 
         <div class="sidebar-footer">
             <a href="logout.php">🚪 Çıkış</a>
