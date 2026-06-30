@@ -70,7 +70,7 @@ if($id){
 <div id="repArea" style="max-width:780px;margin:0 auto">
   <div style="background:#fff;color:#111;font-family:Arial,Helvetica,sans-serif;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;display:flex;flex-direction:column">
     <div style="background:<?=$col?>;padding:18px 24px;display:flex;justify-content:space-between;align-items:center">
-      <?php if($fi): ?><div style="background:#fff;border-radius:10px;padding:8px 14px;display:inline-block"><img src="<?=h($fi['logo'])?>" alt="logo" style="height:48px;object-fit:contain;display:block"></div><?php else: ?><div style="color:#fff;font-weight:700;font-size:15px">ACANS OTS</div><?php endif; ?>
+      <?php if($fi && !empty($fi['mark'])): ?><div style="display:flex;align-items:center;gap:12px"><img src="<?=h($fi['mark'])?>" alt="logo" style="height:60px;object-fit:contain"><div style="color:#fff;font-weight:800;font-size:16px;letter-spacing:.5px"><?=h($fi['name'])?></div></div><?php elseif($fi): ?><div style="background:#fff;border-radius:10px;padding:8px 14px;display:inline-block"><img src="<?=h($fi['logo'])?>" alt="logo" style="height:48px;object-fit:contain;display:block"></div><?php else: ?><div style="color:#fff;font-weight:700;font-size:15px">ACANS OTS</div><?php endif; ?>
       <div style="text-align:right;color:#fff">
         <div style="font-size:26px;font-weight:900;letter-spacing:2px">TEKLİF</div>
         <div style="font-size:12px;opacity:.95;margin-top:2px"><?=h($q['quote_no'])?></div>

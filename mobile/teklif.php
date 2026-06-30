@@ -68,7 +68,7 @@ if($id){
   <div id="repArea">
     <div style="background:#fff;color:#111;font-family:Arial,Helvetica,sans-serif;border-radius:10px;overflow:hidden;display:flex;flex-direction:column">
       <div style="background:<?=$col?>;padding:14px 16px;display:flex;justify-content:space-between;align-items:center">
-        <?php if($fi): ?><div style="background:#fff;border-radius:8px;padding:6px 10px;display:inline-block"><img src="../<?=htmlspecialchars($fi['logo'])?>" alt="logo" style="height:38px;object-fit:contain;display:block"></div><?php else: ?><div style="color:#fff;font-weight:700">ACANS OTS</div><?php endif; ?>
+        <?php if($fi && !empty($fi['mark'])): ?><div style="display:flex;align-items:center;gap:9px"><img src="../<?=htmlspecialchars($fi['mark'])?>" alt="logo" style="height:48px;object-fit:contain"><div style="color:#fff;font-weight:800;font-size:14px"><?=htmlspecialchars($fi['name'])?></div></div><?php elseif($fi): ?><div style="background:#fff;border-radius:8px;padding:6px 10px;display:inline-block"><img src="../<?=htmlspecialchars($fi['logo'])?>" alt="logo" style="height:38px;object-fit:contain;display:block"></div><?php else: ?><div style="color:#fff;font-weight:700">ACANS OTS</div><?php endif; ?>
         <div style="text-align:right;color:#fff">
           <div style="font-size:22px;font-weight:900;letter-spacing:1px">TEKLİF</div>
           <div style="font-size:11px;opacity:.95"><?=htmlspecialchars($q['quote_no'])?></div>
