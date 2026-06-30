@@ -66,7 +66,7 @@ $accounts=$pdo->query("SELECT * FROM finance_accounts WHERE active=1 ORDER BY ac
 <select name="to_account_id" required>
 <option value="">Seçiniz</option>
 <?php foreach($accounts as $a): ?>
-<option value="<?=$a['id']?>"><?=h($a['account_type'].' - '.$a['name'].' / '.money($a['current_balance']))?></option>
+<option value="<?=$a['id']?>" <?=(int)($_GET['to']??0)===(int)$a['id']?'selected':''?>><?=h($a['account_type'].' - '.$a['name'].' / '.money($a['current_balance']))?></option>
 <?php endforeach; ?>
 </select>
 </label>

@@ -134,7 +134,7 @@ if($type){
 <section class="panel">
 <h2>Hesaplar</h2>
 <table>
-<thead><tr><th>Hesap</th><th>Tip</th><th>Banka</th><th>IBAN/Kart</th><th>Bakiye</th><th>Durum</th></tr></thead>
+<thead><tr><th>Hesap</th><th>Tip</th><th>Banka</th><th>IBAN/Kart</th><th>Bakiye</th><th>Durum</th><th>İşlem</th></tr></thead>
 <tbody>
 <?php
 try{
@@ -143,17 +143,18 @@ $st->execute($params);
 $rows=$st->fetchAll();
 foreach($rows as $a){
     echo "<tr>";
-    echo "<td><b>".h($a['name'])."</b></td>";
+    echo "<td><a href='finance_account_view.php?id=".(int)$a['id']."'><b>".h($a['name'])."</b></a></td>";
     echo "<td>".h($a['account_type'])."</td>";
     echo "<td>".h($a['bank_name'] ?: '-')."</td>";
     echo "<td>".h($a['iban'] ?: ($a['card_last4'] ? '**** '.$a['card_last4'] : '-'))."</td>";
     echo "<td>".money($a['current_balance'])."</td>";
     echo "<td>".($a['active']?badge('Aktif','green'):badge('Pasif','gray'))."</td>";
+    echo "<td><a class='btn small secondary' href='finance_account_view.php?id=".(int)$a['id']."'>📄 Ekstre</a></td>";
     echo "</tr>";
 }
-if(!$rows) echo "<tr><td colspan='6' class='muted'>Hesap yok.</td></tr>";
+if(!$rows) echo "<tr><td colspan='7' class='muted'>Hesap yok.</td></tr>";
 }catch(Throwable $e){
-echo "<tr><td colspan='6'><div class='alert'>".h($e->getMessage())."</div></td></tr>";
+echo "<tr><td colspan='7'><div class='alert'>".h($e->getMessage())."</div></td></tr>";
 }
 ?>
 </tbody>

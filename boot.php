@@ -92,7 +92,7 @@ function page_module_map(){
         'tasks.php'=>'tasks',
         'contacts.php'=>'contacts','contact_new.php'=>'contacts','contact_view.php'=>'contacts','contacts_report.php'=>'contacts',
         'teklif.php'=>'teklif',
-        'finance.php'=>'finance','finance_new.php'=>'finance','finance_accounts.php'=>'finance','finance_transfer.php'=>'finance',
+        'finance.php'=>'finance','finance_new.php'=>'finance','finance_accounts.php'=>'finance','finance_transfer.php'=>'finance','finance_account_view.php'=>'finance',
         'stock.php'=>'stock','product_new.php'=>'stock','stock_movement_new.php'=>'stock',
         'product_categories.php'=>'stock','product_taxonomy.php'=>'stock','purchase.php'=>'stock',
         'report.php'=>'report',
