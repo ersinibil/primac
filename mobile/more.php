@@ -22,7 +22,7 @@
 <div style="font-weight:900;margin:16px 4px 8px">💰 Finans</div>
 <div class="grid">
   <?php card('Kasa Durumu','Banka/kasa/kart','🏦','kasa.php','teal');
-  card('Son İşlemler','Aktivite akışı','🕘','activity.php','gray'); ?>
+  card('Tahsilat','Tahsilat gir','💰','collection.php','yellow'); ?>
 </div>
 
 <div style="font-weight:900;margin:16px 4px 8px">📊 Raporlar</div>
@@ -47,7 +47,7 @@
 
 <div style="font-weight:900;margin:16px 4px 8px">⚙ Sistem</div>
 <div class="grid">
-  <?php card('Web Sürümü','Masaüstü ERP','🖥','../dashboard.php','gray'); card('Profil','Şifre & hesap','👤','profile.php','blue'); ?>
+  <?php card('Son İşlemler','Aktivite akışı','🕘','activity.php','gray'); card('Web Sürümü','Masaüstü ERP','🖥','../dashboard.php','gray'); card('Profil','Şifre & hesap','👤','profile.php','blue'); ?>
 </div>
 <?php else: ?>
 <div class="grid">
