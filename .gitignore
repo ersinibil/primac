@@ -1,0 +1,22 @@
+# Credentials / yapılandırma
+config.php
+config*.php
+!config.sample.php
+
+# Composer bağımlılıkları
+vendor/
+
+# Kullanıcı yüklemeleri
+uploads/
+
+# Paketler / loglar / sistem
+*.zip
+*.log
+.DS_Store
+
+# Tanı/kurulum çöpleri
+install_*.php
+kontrol.php
+iz.php
+bak.php
+kaynak.php

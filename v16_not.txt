@@ -1,0 +1,7 @@
+ACANS OS v16
+1. install_dashboard_v16.php çalıştır.
+2. Sol üst ACANS ERP alanı dashboard.php'ye gider.
+3. uploads/company_logo.png varsa logo görünür.
+4. dashboard.php üzerinde Son İşlemler alanı görünür.
+5. activity.php tüm son işlemleri listeler.
+6. Yeni işlemleri kaydetmek için kod içinde activity_log(...) kullanılabilir.

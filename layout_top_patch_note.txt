@@ -1,0 +1,1 @@
+Sol menüye elle eklenmesi gereken link: <a href="work_center.php">📋 İş Motoru</a>

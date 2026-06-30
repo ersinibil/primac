@@ -1,0 +1,1 @@
+Sol menüye öneri: Cari altında Alış/Satış Belgeleri linki, Finans/Stok altında trade_documents.php linki eklenebilir.

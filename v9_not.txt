@@ -1,0 +1,5 @@
+Sol menüde Finans altına şunları eklemek iyi olur:
+<a href="finance_accounts.php">Banka / Kasa / Kartlar</a>
+<a href="finance_transfer.php">Hesap Transferi</a>
+
+Cari Hesaplar contacts.php artık profil sayfalarına bağlanır.
