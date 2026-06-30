@@ -35,8 +35,9 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['save_quote'])){
     $firm=in_array($_POST['firm']??'',['ACANS','PRIMAC'],true)?$_POST['firm']:null;
     $vatAmt=$sub*$vat/100; $tot=$sub+$vatAmt; $no=next_quote_no();
     try{ $pdo->exec("ALTER TABLE quotes ADD COLUMN firm VARCHAR(20) DEFAULT NULL"); }catch(Throwable $e){}
-    $pdo->prepare("INSERT INTO quotes(quote_no,firm,customer_id,customer_name,quote_date,valid_until,vat_rate,subtotal,vat_amount,total,notes,status,created_by,created_by_name) VALUES(?,?,?,?,?,?,?,?,?,?,?,'Taslak',?,?)")
-      ->execute([$no,$firm,$cid,$cname,date('Y-m-d'),($_POST['valid_until']??'')?:null,$vat,$sub,$vatAmt,$tot,trim($_POST['notes']??''),$me,$meName]);
+    try{ $pdo->exec("ALTER TABLE quotes ADD COLUMN intro_note TEXT NULL"); }catch(Throwable $e){}
+    $pdo->prepare("INSERT INTO quotes(quote_no,firm,customer_id,customer_name,intro_note,quote_date,valid_until,vat_rate,subtotal,vat_amount,total,notes,status,created_by,created_by_name) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,'Taslak',?,?)")
+      ->execute([$no,$firm,$cid,$cname,trim($_POST['intro_note']??''),date('Y-m-d'),($_POST['valid_until']??'')?:null,$vat,$sub,$vatAmt,$tot,trim($_POST['notes']??''),$me,$meName]);
     $qid=(int)$pdo->lastInsertId();
     $ins=$pdo->prepare("INSERT INTO quote_items(quote_id,name,qty,unit_price,line_total) VALUES(?,?,?,?,?)");
     foreach($lines as $l){ $ins->execute([$qid,$l[0],$l[1],$l[2],$l[3]]); }
@@ -93,6 +94,7 @@ if($id){
           <div><div style="color:<?=$col?>;font-size:11px;font-weight:800">SAYIN</div><div style="font-size:16px;font-weight:700"><?=htmlspecialchars($q['customer_name']?:'—')?></div></div>
           <div style="text-align:right;color:#555;font-size:12px"><div><?=htmlspecialchars($q['quote_date'])?></div><?php if($q['valid_until']): ?><div>Geç: <?=htmlspecialchars($q['valid_until'])?></div><?php endif; ?></div>
         </div>
+        <?php if(!empty($q['intro_note'])): ?><div style="font-size:12.5px;color:#374151;line-height:1.5;margin-bottom:14px"><?=nl2br(htmlspecialchars($q['intro_note']))?></div><?php endif; ?>
         <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:14px">
           <tr style="background:#f1f3f5;color:#1f2937;text-align:left;border-bottom:2px solid <?=$col?>"><th style="padding:9px 7px">Kalem</th><th style="padding:9px 7px;text-align:right">Adet</th><th style="padding:9px 7px;text-align:right">Birim</th><th style="padding:9px 7px;text-align:right">Tutar</th></tr>
           <?php foreach($items as $i=>$it): ?>
@@ -158,6 +160,8 @@ if($new){
     <label>Müşteri</label>
     <select name="customer_id"><option value="">— Cari seç (veya alta yaz) —</option><?php foreach($cs as $c): ?><option value="<?=$c['id']?>"><?=htmlspecialchars($c['name'])?></option><?php endforeach; ?></select>
     <input name="customer_name" placeholder="veya müşteri adı yaz">
+    <label>Giriş Açıklaması (SAYIN altında görünür)</label>
+    <textarea name="intro_note" rows="3" placeholder="Örn: Firmamızdan talep etmiş olduğunuz ürün/hizmetler için hazırladığımız teklifimiz aşağıdaki gibidir."></textarea>
     <label>Geçerlilik Tarihi</label><input type="date" name="valid_until">
     <label>KDV %</label><input name="vat_rate" inputmode="decimal" value="20">
 
