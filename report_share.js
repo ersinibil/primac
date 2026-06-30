@@ -25,16 +25,32 @@
         var pw=210, ph=297;
         var ratio = pw / canvas.width;          // mm / px
         var pageHpx = Math.floor(ph / ratio);    // bir A4 sayfasına sığan px yüksekliği
+        var cctx = canvas.getContext('2d');
+        // Bir satır tamamen koyu arka plan mı (kartlar arası boşluk)? → güvenli kesim noktası
+        function rowIsBg(yy){
+          try{
+            var d = cctx.getImageData(0, yy, canvas.width, 1).data;
+            for(var i=0;i<d.length;i+=32){ if(!(d[i]<32 && d[i+1]<40 && d[i+2]<55)) return false; }
+            return true;
+          }catch(e){ return false; }
+        }
         var y=0, page=0;
         while(y < canvas.height){
-          var hpx = Math.min(pageHpx, canvas.height - y);
+          var target = Math.min(y + pageHpx, canvas.height);
+          var cut = target;
+          if(target < canvas.height){
+            // Hedefin biraz üstünde kartlar arası boşluk ara (kartı ortadan kesme)
+            var lim = Math.max(y + Math.floor(pageHpx*0.5), target - 280);
+            for(var s=target; s>lim; s--){ if(rowIsBg(s)){ cut=s; break; } }
+          }
+          var hpx = cut - y;
           var slice = document.createElement('canvas');
           slice.width = canvas.width; slice.height = hpx;
           slice.getContext('2d').drawImage(canvas, 0, y, canvas.width, hpx, 0, 0, canvas.width, hpx);
           var img = slice.toDataURL('image/jpeg', 0.92);
           if(page>0) pdf.addPage();
           pdf.addImage(img, 'JPEG', 0, 0, pw, hpx*ratio);
-          y += hpx; page++;
+          y = cut; page++;
         }
         var blob = pdf.output('blob');
         var fn = (window.ACANS_REPORT_NAME||'rapor') + '.pdf';
