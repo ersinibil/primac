@@ -33,6 +33,7 @@
   card('İş Takip','Açılan·tamamlanan·geciken','📋','report.php?modul=is','purple');
   card('Personel','Performans/KPI','👷','report.php?modul=personel','orange');
   card('Satış','Satış dökümü','🧾','report.php?modul=satis','yellow');
+  card('Teklif','Teklif dökümü','📄','report.php?modul=teklif','blue');
   card('Cari','Bakiye·hareket','👥','report.php?modul=cari','teal');
   card('Stok','Kritik·stok değeri','📦','report.php?modul=stok','red');
   ?>

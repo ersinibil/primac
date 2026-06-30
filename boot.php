@@ -170,4 +170,6 @@ function remember_check(){
 remember_check();
 // İşlem kaydı (kim ne yaptı) — web genelinde aktif olsun (mobilde common.php yüklüyor)
 if(is_file(__DIR__.'/activity_lib.php')) require_once __DIR__.'/activity_lib.php';
+// Geciken iş otomatik bildirimi (saatte bir, dosya kilidi ile) — giriş yapılmışsa
+if(!empty($_SESSION['user']) && is_file(__DIR__.'/job_overdue_lib.php')){ require_once __DIR__.'/job_overdue_lib.php'; try{ check_overdue_jobs(db()); }catch(Throwable $e){} }
 ?>

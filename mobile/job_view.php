@@ -111,6 +111,7 @@ try{
     $jobTxt="📋 İş: ".$j['title']."\nNo: ".($j['job_no']??'')."\nDurum: ".$j['status'].($j['customer']?"\nMüşteri: ".$j['customer']:'').($j['responsible']?"\nSorumlu: ".$j['responsible']:'').($j['due_date']?"\nTermin: ".$j['due_date']:'');
     echo '<div style="margin-top:6px;font-size:13px;opacity:.85">📤 İşi paylaş:</div>';
     echo share_buttons($jobTxt,$jobPhone,'İş: '.$j['title']);
+    if(!empty($j['due_date'])) echo '<a href="../ics.php?job='.$id.'" class="btn" style="display:block;text-align:center;margin-top:8px;background:#0ea5e9;color:#fff">📅 Takvime Ekle</a>';
   ?>
 </div>
 

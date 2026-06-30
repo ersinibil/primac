@@ -188,7 +188,9 @@ if(!$j){
 require_once __DIR__.'/share_lib.php';
 $jobPhone=preg_replace('/\D/','',($j['customer_id']?($pdo->query("SELECT phone FROM contacts WHERE id=".(int)$j['customer_id'])->fetch()['phone']??''):''));
 $jobTxt="📋 İş: ".$j['title']."\nNo: ".($j['job_no']??'')."\nDurum: ".$j['status'].($j['customer_name']?"\nMüşteri: ".$j['customer_name']:'').($j['responsible_name']?"\nSorumlu: ".$j['responsible_name']:'').($j['due_date']?"\nTermin: ".$j['due_date']:'');
-echo '<div style="max-width:520px">'.share_buttons($jobTxt,$jobPhone,'İş: '.$j['title']).'</div>';
+echo '<div style="max-width:520px">'.share_buttons($jobTxt,$jobPhone,'İş: '.$j['title']);
+if(!empty($j['due_date'])) echo '<a href="ics.php?job='.$id.'" class="btn" style="display:block;text-align:center;margin-top:8px;background:#0ea5e9;color:#fff;text-decoration:none">📅 Takvime Ekle</a>';
+echo '</div>';
 ?>
 
 <div class="cards">
