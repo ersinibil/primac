@@ -15,7 +15,8 @@
 <div class="grid">
   <?php card('Cariler','Müşteri/tedarikçi','👥','contacts.php','purple'); card('Yeni Cari','Cari ekle','➕','contact_new.php','blue');
   card('Satış','Satış yap','🧾','sales.php','orange'); card('Satın Alma','Alış + stok kartı','🛒','purchase.php','green');
-  card('Tahsilat','Tahsilat gir','💰','collection.php','yellow'); ?>
+  card('Tahsilat','Tahsilat gir','💰','collection.php','yellow');
+  card('Teklif','Teklif hazırla/gönder','📄','teklif.php','blue'); ?>
 </div>
 
 <div style="font-weight:900;margin:16px 4px 8px">💰 Finans</div>
@@ -53,6 +54,7 @@
   card('Satış','Satış yap','🧾','sales.php','orange');
   card('Tahsilat','Tahsilat gir','💰','collection.php','yellow');
   card('Cariler','Müşteri/tedarikçi','👥','contacts.php','purple');
+  card('Teklif','Teklif hazırla/gönder','📄','teklif.php','blue');
   card('Stok','Ürünleri gör','📦','stock.php','red');
   card('Mesajlar','İç yazışma','💬','messages.php','teal');
   card('Profil','Şifre & hesap','👤','profile.php','gray');
