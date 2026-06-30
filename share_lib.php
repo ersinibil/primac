@@ -10,6 +10,15 @@ function mail_link($subject,$body){
     return 'mailto:?subject='.rawurlencode($subject).'&body='.rawurlencode($body);
 }
 
+// Teklif firmaları — logo + web (logo dosyaları kök ve mobile/ içinde mevcut)
+function firm_list(){
+    return [
+        'ACANS'  => ['name'=>'ACANS Reklam','logo'=>'logo.png','web'=>'www.acansreklam.com'],
+        'PRIMAC' => ['name'=>'PRIMAC','logo'=>'logo_primac.png','web'=>'www.primac.com.tr'],
+    ];
+}
+function firm_info($k){ $l=firm_list(); return $l[$k] ?? null; }
+
 // Giriş bilgilerini WhatsApp ile gönder linki (şifre düz metin — sadece kurulum/sıfırlama anında).
 function cred_wa($phone,$username,$password){
     $url=function_exists('base_url')?base_url():'';

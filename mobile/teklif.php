@@ -32,9 +32,11 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['save_quote'])){
       $lt=$q*$pr; $sub+=$lt; $lines[]=[$nm,$q,$pr,$lt];
     }
     if(!$lines) throw new Exception('En az bir kalem girin.');
+    $firm=in_array($_POST['firm']??'',['ACANS','PRIMAC'],true)?$_POST['firm']:null;
     $vatAmt=$sub*$vat/100; $tot=$sub+$vatAmt; $no=next_quote_no();
-    $pdo->prepare("INSERT INTO quotes(quote_no,customer_id,customer_name,quote_date,valid_until,vat_rate,subtotal,vat_amount,total,notes,status,created_by,created_by_name) VALUES(?,?,?,?,?,?,?,?,?,?,'Taslak',?,?)")
-      ->execute([$no,$cid,$cname,date('Y-m-d'),($_POST['valid_until']??'')?:null,$vat,$sub,$vatAmt,$tot,trim($_POST['notes']??''),$me,$meName]);
+    try{ $pdo->exec("ALTER TABLE quotes ADD COLUMN firm VARCHAR(20) DEFAULT NULL"); }catch(Throwable $e){}
+    $pdo->prepare("INSERT INTO quotes(quote_no,firm,customer_id,customer_name,quote_date,valid_until,vat_rate,subtotal,vat_amount,total,notes,status,created_by,created_by_name) VALUES(?,?,?,?,?,?,?,?,?,?,?,'Taslak',?,?)")
+      ->execute([$no,$firm,$cid,$cname,date('Y-m-d'),($_POST['valid_until']??'')?:null,$vat,$sub,$vatAmt,$tot,trim($_POST['notes']??''),$me,$meName]);
     $qid=(int)$pdo->lastInsertId();
     $ins=$pdo->prepare("INSERT INTO quote_items(quote_id,name,qty,unit_price,line_total) VALUES(?,?,?,?,?)");
     foreach($lines as $l){ $ins->execute([$qid,$l[0],$l[1],$l[2],$l[3]]); }
@@ -58,44 +60,49 @@ if($id){
   if(!$q){ topx('Teklif'); echo '<div class="err">Teklif bulunamadı.</div>'; botx(); exit; }
   $items=[]; try{ $it=$pdo->prepare("SELECT * FROM quote_items WHERE quote_id=? ORDER BY id"); $it->execute([$id]); $items=$it->fetchAll(); }catch(Throwable $e){}
   $cphone=preg_replace('/\D/','',$q['customer_id']?($pdo->query("SELECT phone FROM contacts WHERE id=".(int)$q['customer_id'])->fetch()['phone']??''):'');
+  $fi=!empty($q['firm'])?firm_info($q['firm']):null;
   topx('Teklif '.$q['quote_no']);
   ?>
+  <style>@media print{ body *{visibility:hidden!important} #repArea,#repArea *{visibility:visible!important} #repArea{position:absolute;left:0;top:0;width:100%} .noprint{display:none!important} @page{size:A4;margin:10mm} }</style>
   <div id="repArea">
-    <div class="rep">
-      <div class="rep-hero" style="background:linear-gradient(135deg,#1d4ed8,#0ea5e9);border-radius:16px;padding:16px;color:#fff;margin-bottom:12px">
-        <div style="font-size:20px;font-weight:900">📄 TEKLİF</div>
-        <div style="opacity:.9;font-size:13px;margin-top:2px"><?=htmlspecialchars($q['quote_no'])?> · <?=htmlspecialchars($q['quote_date'])?><?=$q['valid_until']?' · Geçerlilik: '.htmlspecialchars($q['valid_until']):''?></div>
+    <div style="background:#fff;color:#111;padding:20px;font-family:Arial,Helvetica,sans-serif;border-radius:8px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #1d4ed8;padding-bottom:12px;margin-bottom:16px">
+        <div>
+          <?php if($fi): ?><img src="../<?=htmlspecialchars($fi['logo'])?>" alt="logo" style="height:46px;object-fit:contain"><div style="color:#555;font-size:11px;margin-top:4px;font-weight:700"><?=htmlspecialchars($fi['name'])?></div><?php else: ?><div style="font-size:20px;font-weight:900;color:#1d4ed8">TEKLİF</div><?php endif; ?>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:20px;font-weight:900">TEKLİF</div>
+          <div style="color:#555;font-size:12px"><?=htmlspecialchars($q['quote_no'])?></div>
+          <div style="color:#555;font-size:12px"><?=htmlspecialchars($q['quote_date'])?></div>
+          <?php if($q['valid_until']): ?><div style="color:#555;font-size:12px">Geç: <?=htmlspecialchars($q['valid_until'])?></div><?php endif; ?>
+        </div>
       </div>
-      <div class="panel" style="margin-bottom:10px">
-        <div><b>Müşteri:</b> <?=htmlspecialchars($q['customer_name']?:'—')?></div>
-        <div><b>Durum:</b> <?=htmlspecialchars($q['status'])?> · <b>Hazırlayan:</b> <?=htmlspecialchars($q['created_by_name']?:'—')?></div>
+      <div style="margin-bottom:14px"><span style="color:#888;font-size:11px">SAYIN</span><div style="font-size:16px;font-weight:700"><?=htmlspecialchars($q['customer_name']?:'—')?></div></div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:14px">
+        <tr style="background:#f3f4f6;text-align:left"><th style="padding:8px 6px">Kalem</th><th style="padding:8px 6px;text-align:right">Adet</th><th style="padding:8px 6px;text-align:right">Birim</th><th style="padding:8px 6px;text-align:right">Tutar</th></tr>
+        <?php foreach($items as $it): ?>
+        <tr style="border-bottom:1px solid #eee">
+          <td style="padding:8px 6px"><?=htmlspecialchars($it['name'])?></td>
+          <td style="padding:8px 6px;text-align:right"><?=rtrim(rtrim(number_format((float)$it['qty'],3,',','.'),'0'),',')?></td>
+          <td style="padding:8px 6px;text-align:right"><?=mm($it['unit_price'])?></td>
+          <td style="padding:8px 6px;text-align:right"><?=mm($it['line_total'])?></td>
+        </tr>
+        <?php endforeach; ?>
+      </table>
+      <div style="margin-left:auto;width:240px;font-size:14px">
+        <div style="display:flex;justify-content:space-between;padding:2px 0"><span style="color:#555">Ara Toplam</span><b><?=mm($q['subtotal'])?></b></div>
+        <div style="display:flex;justify-content:space-between;padding:2px 0"><span style="color:#555">KDV (%<?=rtrim(rtrim(number_format((float)$q['vat_rate'],2,',','.'),'0'),',')?>)</span><b><?=mm($q['vat_amount'])?></b></div>
+        <div style="display:flex;justify-content:space-between;font-size:17px;margin-top:5px;border-top:2px solid #1d4ed8;padding-top:6px"><b>TOPLAM</b><b style="color:#1d4ed8"><?=mm($q['total'])?></b></div>
       </div>
-      <div class="panel" style="overflow:auto;margin-bottom:10px">
-        <table style="width:100%;border-collapse:collapse;font-size:13px">
-          <tr style="text-align:left;opacity:.7"><th style="padding:6px 4px">Kalem</th><th style="padding:6px 4px;text-align:right">Adet</th><th style="padding:6px 4px;text-align:right">Birim</th><th style="padding:6px 4px;text-align:right">Tutar</th></tr>
-          <?php foreach($items as $it): ?>
-          <tr style="border-top:1px solid rgba(128,128,128,.2)">
-            <td style="padding:6px 4px"><?=htmlspecialchars($it['name'])?></td>
-            <td style="padding:6px 4px;text-align:right"><?=rtrim(rtrim(number_format((float)$it['qty'],3,',','.'),'0'),',')?></td>
-            <td style="padding:6px 4px;text-align:right"><?=mm($it['unit_price'])?></td>
-            <td style="padding:6px 4px;text-align:right"><?=mm($it['line_total'])?></td>
-          </tr>
-          <?php endforeach; ?>
-        </table>
-      </div>
-      <div class="panel" style="margin-bottom:10px">
-        <div style="display:flex;justify-content:space-between"><span>Ara Toplam</span><b><?=mm($q['subtotal'])?></b></div>
-        <div style="display:flex;justify-content:space-between"><span>KDV (%<?=rtrim(rtrim(number_format((float)$q['vat_rate'],2,',','.'),'0'),',')?>)</span><b><?=mm($q['vat_amount'])?></b></div>
-        <div style="display:flex;justify-content:space-between;font-size:17px;margin-top:6px;border-top:1px solid rgba(128,128,128,.25);padding-top:6px"><span><b>GENEL TOPLAM</b></span><b style="color:#22c55e"><?=mm($q['total'])?></b></div>
-      </div>
-      <?php if($q['notes']): ?><div class="panel" style="margin-bottom:10px"><b>Not:</b><br><?=nl2br(htmlspecialchars($q['notes']))?></div><?php endif; ?>
-      <div class="rep-foot" style="text-align:center;opacity:.6;font-size:12px;padding:8px">ACANS OTS — Online Takip Sistemi · Bu teklif otomatik üretilmiştir</div>
+      <?php if($q['notes']): ?><div style="margin-top:16px;font-size:13px;color:#333"><b>Not:</b><br><?=nl2br(htmlspecialchars($q['notes']))?></div><?php endif; ?>
+      <?php if($fi): ?><div style="margin-top:26px;border-top:1px solid #e5e7eb;padding-top:10px;text-align:center;color:#666;font-size:12px"><b style="color:#1d4ed8"><?=htmlspecialchars($fi['name'])?></b> · 🌐 <?=htmlspecialchars($fi['web'])?></div><?php endif; ?>
     </div>
   </div>
 
   <div class="panel noprint">
-    <b>📤 Teklifi gönder</b>
+    <b>📤 Teklifi gönder / yazdır</b>
     <button onclick="shareReportPDF(this)" class="btn" style="display:block;width:100%;background:#16a34a;color:#fff;padding:14px;margin-top:10px">📄 PDF Olarak Paylaş (WhatsApp/Mail)</button>
+    <button onclick="window.print()" class="btn" style="display:block;width:100%;background:#475569;color:#fff;padding:12px;margin-top:8px">🖨 Yazdır (A4)</button>
     <?php
       $txt="📄 Teklif ".$q['quote_no']."\nMüşteri: ".$q['customer_name']."\nTutar: ".mm($q['total']).($q['valid_until']?"\nGeçerlilik: ".$q['valid_until']:'');
       echo share_buttons($txt,$cphone,'Teklif '.$q['quote_no']);
@@ -112,7 +119,7 @@ if($id){
   </div>
   <a class="btn dark" href="teklif.php" style="display:block;text-align:center;margin-top:8px">← Teklif Listesi</a>
 
-  <script>window.ACANS_REPORT_NAME='teklif_<?=htmlspecialchars($q['quote_no'])?>';</script>
+  <script>window.ACANS_REPORT_NAME='teklif_<?=htmlspecialchars($q['quote_no'])?>';window.ACANS_PDF_BG='#ffffff';window.ACANS_PDF_FG='#111111';</script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="../report_share.js"></script>
@@ -127,6 +134,8 @@ if($new){
   ?>
   <div class="panel">
   <form method="post">
+    <label>Teklifi veren firma (opsiyonel)</label>
+    <select name="firm"><option value="">— Firma yok (sade) —</option><option value="ACANS">ACANS Reklam</option><option value="PRIMAC">PRIMAC</option></select>
     <label>Müşteri</label>
     <select name="customer_id"><option value="">— Cari seç (veya alta yaz) —</option><?php foreach($cs as $c): ?><option value="<?=$c['id']?>"><?=htmlspecialchars($c['name'])?></option><?php endforeach; ?></select>
     <input name="customer_name" placeholder="veya müşteri adı yaz">

@@ -12,14 +12,16 @@
     if(btn){ btn.textContent='⏳ PDF hazırlanıyor...'; btn.disabled=true; }
 
     // Telefon dar ekranını değil, sabit 800px okunur düzeni yakala
+    var bg = window.ACANS_PDF_BG || '#0b1220';
+    var fg = window.ACANS_PDF_FG || '#e5edf7';
     var holder = document.createElement('div');
-    holder.style.cssText = 'position:fixed;left:-10000px;top:0;width:800px;background:#0b1220;padding:16px;color:#e5edf7';
+    holder.style.cssText = 'position:fixed;left:-10000px;top:0;width:800px;background:'+bg+';padding:16px;color:'+fg;
     holder.appendChild(src.cloneNode(true));
     document.body.appendChild(holder);
 
     function done(){ if(btn){ btn.textContent=t; btn.disabled=false; } if(holder.parentNode) holder.parentNode.removeChild(holder); }
 
-    html2canvas(holder,{backgroundColor:'#0b1220',scale:2,useCORS:true}).then(function(canvas){
+    html2canvas(holder,{backgroundColor:bg,scale:2,useCORS:true}).then(function(canvas){
       try{
         var pdf = new JsPDF('p','mm','a4');
         var pw=210, ph=297;
