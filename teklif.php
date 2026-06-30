@@ -64,11 +64,11 @@ if($id){
   $fi=!empty($q['firm'])?firm_info($q['firm']):null;
   $col=$fi?$fi['c']:'#1d4ed8'; $col2=$fi?$fi['c2']:'#0b1f3a';
 ?>
-<style>@media print{ body *{visibility:hidden!important} #repArea,#repArea *{visibility:visible!important} #repArea{position:absolute;left:0;top:0;width:100%} .noprint{display:none!important} @page{size:A4;margin:12mm} }</style>
+<style>@media print{ body *{visibility:hidden!important} #repArea,#repArea *{visibility:visible!important} #repArea{position:absolute;left:0;top:0;width:100%} #repArea>div{min-height:auto!important;border:none!important;border-radius:0!important} .noprint{display:none!important} @page{size:A4;margin:12mm} }</style>
 <div class="panel-head"><h1>Teklif <?=h($q['quote_no'])?></h1><a class="btn secondary" href="teklif.php">Liste</a></div>
 
 <div id="repArea" style="max-width:780px;margin:0 auto">
-  <div style="background:#fff;color:#111;font-family:Arial,Helvetica,sans-serif;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden">
+  <div style="background:#fff;color:#111;font-family:Arial,Helvetica,sans-serif;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;display:flex;flex-direction:column;min-height:1131px">
     <div style="background:<?=$col?>;padding:18px 24px;display:flex;justify-content:space-between;align-items:center">
       <?php if($fi): ?><div style="background:#fff;border-radius:10px;padding:8px 14px;display:inline-block"><img src="<?=h($fi['logo'])?>" alt="logo" style="height:48px;object-fit:contain;display:block"></div><?php else: ?><div style="color:#fff;font-weight:700;font-size:15px">ACANS OTS</div><?php endif; ?>
       <div style="text-align:right;color:#fff">
@@ -78,7 +78,7 @@ if($id){
     </div>
     <div style="height:5px;background:<?=$col2?>"></div>
 
-    <div style="padding:24px">
+    <div style="padding:24px;flex:1">
       <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px">
         <div><div style="color:<?=$col?>;font-size:11px;letter-spacing:.06em;font-weight:800">SAYIN</div><div style="font-size:18px;font-weight:700"><?=h($q['customer_name']?:'—')?></div></div>
         <div style="text-align:right;color:#555;font-size:13px">
