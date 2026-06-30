@@ -64,9 +64,13 @@ if($id){
   $col=$fi?$fi['c']:'#1d4ed8'; $col2=$fi?$fi['c2']:'#0b1f3a';
   topx('Teklif '.$q['quote_no']);
   ?>
-  <style>@media print{ body *{visibility:hidden!important} #repArea,#repArea *{visibility:visible!important} #repArea{position:absolute;left:0;top:0;width:100%} #repArea>div{min-height:auto!important;border-radius:0!important} .noprint{display:none!important} @page{size:A4;margin:10mm} }</style>
+  <style>
+  @media print{ body *{visibility:hidden!important} #repArea,#repArea *{visibility:visible!important} #repArea{position:absolute;left:0;top:0;width:100%} #repArea>div{min-height:auto!important;border-radius:0!important} .noprint{display:none!important} @page{size:A4;margin:0} }
+  .pdfmode .paper{min-height:1131px!important;position:relative!important;border:none!important;border-radius:0!important}
+  .pdfmode .qfoot{position:absolute!important;left:0;right:0;bottom:0}
+  </style>
   <div id="repArea">
-    <div style="background:#fff;color:#1f2937;font-family:Arial,Helvetica,sans-serif;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden">
+    <div class="paper" style="background:#fff;color:#1f2937;font-family:Arial,Helvetica,sans-serif;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden">
       <div style="height:5px;background:<?=$col?>"></div>
       <div style="padding:16px 16px 12px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #eef0f2">
         <?php if($fi && !empty($fi['mark'])): ?><div style="display:flex;align-items:center;gap:9px"><span style="background:<?=$col?>;border-radius:7px;padding:5px"><img src="../<?=htmlspecialchars($fi['mark'])?>" alt="logo" style="height:36px;object-fit:contain;display:block"></span><div style="font-weight:800;font-size:14px;color:#1f2937"><?=htmlspecialchars($fi['name'])?></div></div><?php elseif($fi): ?><img src="../<?=htmlspecialchars($fi['logo'])?>" alt="logo" style="height:36px;object-fit:contain;display:block"><?php else: ?><div style="font-weight:800;color:#1f2937">ACANS OTS</div><?php endif; ?>
@@ -98,7 +102,7 @@ if($id){
         </div>
         <?php if($q['notes']): ?><div style="margin-top:16px;font-size:13px;color:#333;background:#f8f9fb;border-left:4px solid <?=$col?>;padding:9px 12px;border-radius:0 6px 6px 0"><b style="color:<?=$col?>">Not</b><br><?=nl2br(htmlspecialchars($q['notes']))?></div><?php endif; ?>
       </div>
-      <div style="border-top:2px solid <?=$col?>;background:#f8f9fa;color:#374151;padding:11px 16px;text-align:center;font-size:12px">
+      <div class="qfoot" style="border-top:2px solid <?=$col?>;background:#f8f9fa;color:#374151;padding:11px 16px;text-align:center;font-size:12px">
         <?php if($fi): ?><b style="color:#1f2937"><?=htmlspecialchars($fi['name'])?></b> · 🌐 <?=htmlspecialchars($fi['web'])?><?php else: ?>ACANS OTS — Online Takip Sistemi<?php endif; ?>
       </div>
     </div>

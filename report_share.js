@@ -20,7 +20,7 @@
     var holder = document.createElement('div');
     holder.style.cssText = 'position:fixed;left:-10000px;top:0;width:'+W+'px;background:'+bg+';padding:'+pad+'px;color:'+fg;
     var clone = src.cloneNode(true);
-    if(fit){ clone.style.maxWidth='none'; clone.style.width='100%'; clone.style.margin='0'; }
+    if(fit){ clone.style.maxWidth='none'; clone.style.width='100%'; clone.style.margin='0'; holder.classList.add('pdfmode'); }
     holder.appendChild(clone);
     document.body.appendChild(holder);
     function done(){ if(btn){ btn.textContent=t; btn.disabled=false; } if(holder.parentNode) holder.parentNode.removeChild(holder); }
@@ -29,11 +29,10 @@
       try{
         var pdf = new JsPDF('p','mm','a4');
         var pw=210, ph=297;
-        // TEK SAYFA modu: sayfayı İÇERİK BOYUTUNDA üret (boş alan/yarım sayfa imkânsız, tek sayfa)
+        // ANTETLİ KAĞIT modu: TAM A4 sayfa; belge .pdfmode ile A4 oranında (footer dibe sabit) yakalanır
         if(fit){
-          var wmm=210, hmm=wmm*canvas.height/canvas.width;
-          var pdfF=new JsPDF({orientation:'p',unit:'mm',format:[wmm,hmm]});
-          pdfF.addImage(canvas.toDataURL('image/jpeg',0.95),'JPEG',0,0,wmm,hmm);
+          var pdfF=new JsPDF('p','mm','a4');
+          pdfF.addImage(canvas.toDataURL('image/jpeg',0.95),'JPEG',0,0,210,297);
           var blobF=pdfF.output('blob'); var fnF=(window.ACANS_REPORT_NAME||'rapor')+'.pdf';
           var fileF=new File([blobF],fnF,{type:'application/pdf'});
           if(navigator.canShare && navigator.canShare({files:[fileF]})){ navigator.share({files:[fileF],title:fnF}).catch(function(){}).finally(done); }

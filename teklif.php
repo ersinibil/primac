@@ -64,11 +64,16 @@ if($id){
   $fi=!empty($q['firm'])?firm_info($q['firm']):null;
   $col=$fi?$fi['c']:'#1d4ed8'; $col2=$fi?$fi['c2']:'#0b1f3a';
 ?>
-<style>@media print{ body *{visibility:hidden!important} #repArea,#repArea *{visibility:visible!important} #repArea{position:absolute;left:0;top:0;width:100%} #repArea>div{min-height:auto!important;border:none!important;border-radius:0!important} .noprint{display:none!important} @page{size:A4;margin:12mm} }</style>
+<style>
+@media print{ body *{visibility:hidden!important} #repArea,#repArea *{visibility:visible!important} #repArea{position:absolute;left:0;top:0;width:100%} #repArea>div{min-height:auto!important;border:none!important;border-radius:0!important} .noprint{display:none!important} @page{size:A4;margin:0} }
+/* PDF üretimi: TAM A4 antetli kağıt — footer sayfa dibine sabit (W=800 → A4 yük. 1131px) */
+.pdfmode .paper{min-height:1131px!important;position:relative!important;border:none!important;border-radius:0!important}
+.pdfmode .qfoot{position:absolute!important;left:0;right:0;bottom:0}
+</style>
 <div class="panel-head"><h1>Teklif <?=h($q['quote_no'])?></h1><a class="btn secondary" href="teklif.php">Liste</a></div>
 
 <div id="repArea" style="max-width:780px;margin:0 auto">
-  <div style="background:#fff;color:#1f2937;font-family:Arial,Helvetica,sans-serif;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden">
+  <div class="paper" style="background:#fff;color:#1f2937;font-family:Arial,Helvetica,sans-serif;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden">
     <div style="height:6px;background:<?=$col?>"></div>
     <div style="padding:22px 24px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #eef0f2">
       <?php if($fi && !empty($fi['mark'])): ?><div style="display:flex;align-items:center;gap:12px"><span style="background:<?=$col?>;border-radius:8px;padding:6px"><img src="<?=h($fi['mark'])?>" alt="logo" style="height:44px;object-fit:contain;display:block"></span><div style="font-weight:800;font-size:17px;color:#1f2937"><?=h($fi['name'])?></div></div><?php elseif($fi): ?><img src="<?=h($fi['logo'])?>" alt="logo" style="height:46px;object-fit:contain;display:block"><?php else: ?><div style="font-weight:800;font-size:16px;color:#1f2937">ACANS OTS</div><?php endif; ?>
@@ -106,7 +111,7 @@ if($id){
       <?php if($q['notes']): ?><div style="margin-top:20px;font-size:13px;color:#333;background:#f8f9fb;border-left:4px solid <?=$col?>;padding:10px 14px;border-radius:0 6px 6px 0"><b style="color:<?=$col?>">Not</b><br><?=nl2br(h($q['notes']))?></div><?php endif; ?>
     </div>
 
-    <div style="border-top:2px solid <?=$col?>;background:#f8f9fa;color:#374151;padding:12px 24px;text-align:center;font-size:12px">
+    <div class="qfoot" style="border-top:2px solid <?=$col?>;background:#f8f9fa;color:#374151;padding:12px 24px;text-align:center;font-size:12px">
       <?php if($fi): ?><b style="color:#1f2937"><?=h($fi['name'])?></b> &nbsp;·&nbsp; 🌐 <?=h($fi['web'])?><?php else: ?>ACANS OTS — Online Takip Sistemi<?php endif; ?>
     </div>
   </div>
