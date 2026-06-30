@@ -14,10 +14,19 @@
     // Telefon dar ekranını değil, sabit 800px okunur düzeni yakala
     var bg = window.ACANS_PDF_BG || '#0b1220';
     var fg = window.ACANS_PDF_FG || '#e5edf7';
+    var pad = (typeof window.ACANS_PDF_PAD==='number') ? window.ACANS_PDF_PAD : 16;
+    var fit = !!window.ACANS_PDF_FIT;   // tek A4 sayfaya sığdır (teklif gibi belgeler)
+    var W = 800;
     var holder = document.createElement('div');
-    holder.style.cssText = 'position:fixed;left:-10000px;top:0;width:800px;background:'+bg+';padding:16px;color:'+fg;
-    holder.appendChild(src.cloneNode(true));
+    holder.style.cssText = 'position:fixed;left:-10000px;top:0;width:'+W+'px;background:'+bg+';padding:'+pad+'px;color:'+fg;
+    var clone = src.cloneNode(true);
+    holder.appendChild(clone);
     document.body.appendChild(holder);
+    if(fit){
+      // Belgeyi A4 oranında uzat (footer en altta dursun) — yalnız PDF için, ekranı etkilemez
+      var inner = (clone.children && clone.children.length===1) ? clone.children[0] : clone;
+      try{ inner.style.minHeight = Math.round((W-2*pad)*297/210)+'px'; }catch(e){}
+    }
 
     function done(){ if(btn){ btn.textContent=t; btn.disabled=false; } if(holder.parentNode) holder.parentNode.removeChild(holder); }
 
@@ -25,6 +34,17 @@
       try{
         var pdf = new JsPDF('p','mm','a4');
         var pw=210, ph=297;
+        // TEK SAYFA modu: tüm görseli bir A4'e sığdır (asla ikinci sayfa olmaz)
+        if(fit){
+          var iw=pw, ih=canvas.height*(pw/canvas.width);
+          if(ih>ph){ ih=ph; iw=canvas.width*(ph/canvas.height); }
+          pdf.addImage(canvas.toDataURL('image/jpeg',0.95),'JPEG',(pw-iw)/2,0,iw,ih);
+          var blobF=pdf.output('blob'); var fnF=(window.ACANS_REPORT_NAME||'rapor')+'.pdf';
+          var fileF=new File([blobF],fnF,{type:'application/pdf'});
+          if(navigator.canShare && navigator.canShare({files:[fileF]})){ navigator.share({files:[fileF],title:fnF}).catch(function(){}).finally(done); }
+          else { var aF=document.createElement('a'); aF.href=URL.createObjectURL(blobF); aF.download=fnF; document.body.appendChild(aF); aF.click(); aF.remove(); done(); }
+          return;
+        }
         var ratio = pw / canvas.width;          // mm / px
         var pageHpx = Math.floor(ph / ratio);    // bir A4 sayfasına sığan px yüksekliği
         var cctx = canvas.getContext('2d');

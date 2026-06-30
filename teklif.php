@@ -68,7 +68,7 @@ if($id){
 <div class="panel-head"><h1>Teklif <?=h($q['quote_no'])?></h1><a class="btn secondary" href="teklif.php">Liste</a></div>
 
 <div id="repArea" style="max-width:780px;margin:0 auto">
-  <div style="background:#fff;color:#111;font-family:Arial,Helvetica,sans-serif;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;display:flex;flex-direction:column;min-height:1131px">
+  <div style="background:#fff;color:#111;font-family:Arial,Helvetica,sans-serif;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;display:flex;flex-direction:column">
     <div style="background:<?=$col?>;padding:18px 24px;display:flex;justify-content:space-between;align-items:center">
       <?php if($fi): ?><div style="background:#fff;border-radius:10px;padding:8px 14px;display:inline-block"><img src="<?=h($fi['logo'])?>" alt="logo" style="height:48px;object-fit:contain;display:block"></div><?php else: ?><div style="color:#fff;font-weight:700;font-size:15px">ACANS OTS</div><?php endif; ?>
       <div style="text-align:right;color:#fff">
@@ -133,7 +133,7 @@ if($id){
   </div>
 </section>
 
-<script>window.ACANS_REPORT_NAME='teklif_<?=h($q['quote_no'])?>';window.ACANS_PDF_BG='#ffffff';window.ACANS_PDF_FG='#111111';</script>
+<script>window.ACANS_REPORT_NAME='teklif_<?=h($q['quote_no'])?>';window.ACANS_PDF_BG='#ffffff';window.ACANS_PDF_FG='#111111';window.ACANS_PDF_FIT=true;window.ACANS_PDF_PAD=0;</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="report_share.js"></script>

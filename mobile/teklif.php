@@ -66,7 +66,7 @@ if($id){
   ?>
   <style>@media print{ body *{visibility:hidden!important} #repArea,#repArea *{visibility:visible!important} #repArea{position:absolute;left:0;top:0;width:100%} #repArea>div{min-height:auto!important;border-radius:0!important} .noprint{display:none!important} @page{size:A4;margin:10mm} }</style>
   <div id="repArea">
-    <div style="background:#fff;color:#111;font-family:Arial,Helvetica,sans-serif;border-radius:10px;overflow:hidden;display:flex;flex-direction:column;min-height:1131px">
+    <div style="background:#fff;color:#111;font-family:Arial,Helvetica,sans-serif;border-radius:10px;overflow:hidden;display:flex;flex-direction:column">
       <div style="background:<?=$col?>;padding:14px 16px;display:flex;justify-content:space-between;align-items:center">
         <?php if($fi): ?><div style="background:#fff;border-radius:8px;padding:6px 10px;display:inline-block"><img src="../<?=htmlspecialchars($fi['logo'])?>" alt="logo" style="height:38px;object-fit:contain;display:block"></div><?php else: ?><div style="color:#fff;font-weight:700">ACANS OTS</div><?php endif; ?>
         <div style="text-align:right;color:#fff">
@@ -124,7 +124,7 @@ if($id){
   </div>
   <a class="btn dark" href="teklif.php" style="display:block;text-align:center;margin-top:8px">← Teklif Listesi</a>
 
-  <script>window.ACANS_REPORT_NAME='teklif_<?=htmlspecialchars($q['quote_no'])?>';window.ACANS_PDF_BG='#ffffff';window.ACANS_PDF_FG='#111111';</script>
+  <script>window.ACANS_REPORT_NAME='teklif_<?=htmlspecialchars($q['quote_no'])?>';window.ACANS_PDF_BG='#ffffff';window.ACANS_PDF_FG='#111111';window.ACANS_PDF_FIT=true;window.ACANS_PDF_PAD=0;</script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="../report_share.js"></script>
