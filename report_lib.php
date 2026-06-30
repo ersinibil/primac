@@ -1,8 +1,8 @@
 <?php
 // ACANS OS — Paylaşımlı Rapor Kütüphanesi (mobil + web ortak)
-function report_modules(){ return ['tumu'=>'🗂️ Tümü','genel'=>'📊 Yekün','tahsilat'=>'💰 Tahsilat/Finans','is'=>'📋 İş Takip','personel'=>'👷 Personel','satis'=>'🧾 Satış','cari'=>'👥 Cari','stok'=>'📦 Stok']; }
+function report_modules(){ return ['tumu'=>'🗂️ Tümü','genel'=>'📊 Yekün','tahsilat'=>'💰 Tahsilat/Finans','is'=>'📋 İş Takip','personel'=>'👷 Personel','satis'=>'🧾 Satış','teklif'=>'📄 Teklif','cari'=>'👥 Cari','stok'=>'📦 Stok']; }
 // "Tümü"de yer alacak modüller (özet hariç tek tek hepsi)
-function report_all_keys(){ return ['genel','tahsilat','is','personel','satis','cari','stok']; }
+function report_all_keys(){ return ['genel','tahsilat','is','personel','satis','teklif','cari','stok']; }
 // Tüm modülleri tek raporda alt alta render et
 function report_render_all($pdo,$appName,$from,$to,$detail=false){
   $out='';
@@ -94,6 +94,19 @@ function rpt($pdo,$modul,$from,$to,$ref=0,$detail=false){
     $m=$pdo->prepare("SELECT fm.movement_date,c.name cari,fm.amount,fm.description FROM finance_movements fm LEFT JOIN contacts c ON c.id=fm.contact_id WHERE fm.movement_type LIKE '%sale%' AND DATE(fm.movement_date) BETWEEN ? AND ? ORDER BY fm.id DESC");
     $m->execute([$from,$to]); $R['table']['head']=['Tarih','Cari','Tutar','Açıklama'];
     foreach($m->fetchAll() as $r)$R['table']['rows'][]=[$r['movement_date'],$r['cari'],tl($r['amount']),$r['description']];
+    break;
+
+  case 'teklif':
+    $R['title']='Teklif';
+    $s=$pdo->prepare("SELECT COUNT(*) n,COALESCE(SUM(total),0) tut,COALESCE(SUM(CASE WHEN status='Kabul' THEN total ELSE 0 END),0) kabul FROM quotes WHERE DATE(quote_date) BETWEEN ? AND ?");
+    $s->execute([$from,$to]); $sd=$s->fetch();
+    $R['cards']=[['📄','Teklif Sayısı',$sd['n'],'#3b82f6'],['💰','Toplam Tutar',tl($sd['tut']),'#6366f1'],['✅','Kabul Edilen',tl($sd['kabul']),'#22c55e']];
+    $cc=$pdo->prepare("SELECT status k,COUNT(*) s FROM quotes WHERE DATE(quote_date) BETWEEN ? AND ? GROUP BY status");
+    $cc->execute([$from,$to]); $cd=[]; foreach($cc->fetchAll() as $r)$cd[$r['k']?:'—']=(float)$r['s'];
+    $R['chart']=['Duruma göre teklif',$cd];
+    $m=$pdo->prepare("SELECT quote_date,quote_no,customer_name,total,status FROM quotes WHERE DATE(quote_date) BETWEEN ? AND ? ORDER BY id DESC");
+    $m->execute([$from,$to]); $R['table']['head']=['Tarih','No','Müşteri','Tutar','Durum'];
+    foreach($m->fetchAll() as $r)$R['table']['rows'][]=[$r['quote_date'],$r['quote_no'],$r['customer_name'],tl($r['total']),$r['status']];
     break;
 
   case 'cari':

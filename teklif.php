@@ -68,7 +68,7 @@ if($id){
 <div class="panel-head"><h1>Teklif <?=h($q['quote_no'])?></h1><a class="btn secondary" href="teklif.php">Liste</a></div>
 
 <div id="repArea" style="max-width:780px;margin:0 auto">
-  <div style="background:#fff;color:#111;font-family:Arial,Helvetica,sans-serif;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;display:flex;flex-direction:column">
+  <div style="background:#fff;color:#111;font-family:Arial,Helvetica,sans-serif;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;position:relative">
     <div style="background:<?=$col?>;padding:18px 24px;display:flex;justify-content:space-between;align-items:center">
       <?php if($fi && !empty($fi['mark'])): ?><div style="display:flex;align-items:center;gap:12px"><img src="<?=h($fi['mark'])?>" alt="logo" style="height:60px;object-fit:contain"><div style="color:#fff;font-weight:800;font-size:16px;letter-spacing:.5px"><?=h($fi['name'])?></div></div><?php elseif($fi): ?><div style="background:#fff;border-radius:10px;padding:8px 14px;display:inline-block"><img src="<?=h($fi['logo'])?>" alt="logo" style="height:48px;object-fit:contain;display:block"></div><?php else: ?><div style="color:#fff;font-weight:700;font-size:15px">ACANS OTS</div><?php endif; ?>
       <div style="text-align:right;color:#fff">
@@ -78,7 +78,7 @@ if($id){
     </div>
     <div style="height:5px;background:<?=$col2?>"></div>
 
-    <div style="padding:24px;flex:1">
+    <div style="padding:24px;padding-bottom:64px">
       <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px">
         <div><div style="color:<?=$col?>;font-size:11px;letter-spacing:.06em;font-weight:800">SAYIN</div><div style="font-size:18px;font-weight:700"><?=h($q['customer_name']?:'—')?></div></div>
         <div style="text-align:right;color:#555;font-size:13px">
@@ -106,7 +106,7 @@ if($id){
       <?php if($q['notes']): ?><div style="margin-top:20px;font-size:13px;color:#333;background:#f8f9fb;border-left:4px solid <?=$col?>;padding:10px 14px;border-radius:0 6px 6px 0"><b style="color:<?=$col?>">Not</b><br><?=nl2br(h($q['notes']))?></div><?php endif; ?>
     </div>
 
-    <div style="background:<?=$col2?>;color:#fff;padding:12px 24px;text-align:center;font-size:12px">
+    <div style="background:<?=$col2?>;color:#fff;padding:12px 24px;text-align:center;font-size:12px;position:absolute;left:0;right:0;bottom:0">
       <?php if($fi): ?><b><?=h($fi['name'])?></b> &nbsp;·&nbsp; 🌐 <?=h($fi['web'])?><?php else: ?>ACANS OTS — Online Takip Sistemi<?php endif; ?>
     </div>
   </div>

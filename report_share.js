@@ -23,9 +23,10 @@
     holder.appendChild(clone);
     document.body.appendChild(holder);
     if(fit){
-      // Belgeyi A4 oranında uzat (footer en altta dursun) — yalnız PDF için, ekranı etkilemez
+      // Belgeyi A4 boyuna sabitle (footer absolute-bottom ile alta otursun) — yalnız PDF için
       var inner = (clone.children && clone.children.length===1) ? clone.children[0] : clone;
-      try{ inner.style.minHeight = Math.round((W-2*pad)*297/210)+'px'; }catch(e){}
+      var ah = Math.round((W-2*pad)*297/210)+'px';
+      try{ inner.style.height=ah; inner.style.minHeight=ah; inner.style.position='relative'; }catch(e){}
     }
 
     function done(){ if(btn){ btn.textContent=t; btn.disabled=false; } if(holder.parentNode) holder.parentNode.removeChild(holder); }

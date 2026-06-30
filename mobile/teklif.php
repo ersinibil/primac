@@ -66,7 +66,7 @@ if($id){
   ?>
   <style>@media print{ body *{visibility:hidden!important} #repArea,#repArea *{visibility:visible!important} #repArea{position:absolute;left:0;top:0;width:100%} #repArea>div{min-height:auto!important;border-radius:0!important} .noprint{display:none!important} @page{size:A4;margin:10mm} }</style>
   <div id="repArea">
-    <div style="background:#fff;color:#111;font-family:Arial,Helvetica,sans-serif;border-radius:10px;overflow:hidden;display:flex;flex-direction:column">
+    <div style="background:#fff;color:#111;font-family:Arial,Helvetica,sans-serif;border-radius:10px;overflow:hidden;position:relative">
       <div style="background:<?=$col?>;padding:14px 16px;display:flex;justify-content:space-between;align-items:center">
         <?php if($fi && !empty($fi['mark'])): ?><div style="display:flex;align-items:center;gap:9px"><img src="../<?=htmlspecialchars($fi['mark'])?>" alt="logo" style="height:48px;object-fit:contain"><div style="color:#fff;font-weight:800;font-size:14px"><?=htmlspecialchars($fi['name'])?></div></div><?php elseif($fi): ?><div style="background:#fff;border-radius:8px;padding:6px 10px;display:inline-block"><img src="../<?=htmlspecialchars($fi['logo'])?>" alt="logo" style="height:38px;object-fit:contain;display:block"></div><?php else: ?><div style="color:#fff;font-weight:700">ACANS OTS</div><?php endif; ?>
         <div style="text-align:right;color:#fff">
@@ -75,7 +75,7 @@ if($id){
         </div>
       </div>
       <div style="height:4px;background:<?=$col2?>"></div>
-      <div style="padding:18px;flex:1">
+      <div style="padding:18px;padding-bottom:56px">
         <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px">
           <div><div style="color:<?=$col?>;font-size:11px;font-weight:800">SAYIN</div><div style="font-size:16px;font-weight:700"><?=htmlspecialchars($q['customer_name']?:'—')?></div></div>
           <div style="text-align:right;color:#555;font-size:12px"><div><?=htmlspecialchars($q['quote_date'])?></div><?php if($q['valid_until']): ?><div>Geç: <?=htmlspecialchars($q['valid_until'])?></div><?php endif; ?></div>
@@ -98,7 +98,7 @@ if($id){
         </div>
         <?php if($q['notes']): ?><div style="margin-top:16px;font-size:13px;color:#333;background:#f8f9fb;border-left:4px solid <?=$col?>;padding:9px 12px;border-radius:0 6px 6px 0"><b style="color:<?=$col?>">Not</b><br><?=nl2br(htmlspecialchars($q['notes']))?></div><?php endif; ?>
       </div>
-      <div style="background:<?=$col2?>;color:#fff;padding:11px 16px;text-align:center;font-size:12px">
+      <div style="background:<?=$col2?>;color:#fff;padding:11px 16px;text-align:center;font-size:12px;position:absolute;left:0;right:0;bottom:0">
         <?php if($fi): ?><b><?=htmlspecialchars($fi['name'])?></b> · 🌐 <?=htmlspecialchars($fi['web'])?><?php else: ?>ACANS OTS — Online Takip Sistemi<?php endif; ?>
       </div>
     </div>
