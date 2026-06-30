@@ -51,3 +51,9 @@ Türkçe.
 
 ## Detaylar
 Geliştirme geçmişi, backlog ve deploy notları → `memory/` klasörüne bakın.
+
+## Paylaşım + Teklif + Mesajlaşma Onarımı (2026-06-30) ✅
+- share_lib.php: WhatsApp+Mail ortak butonları (wa_link/mail_link/share_buttons/cred_wa). İş (mobil+web), görev (mytasks), personel şifre (WA) paylaşımı. Sadece METİN taşır; PDF gereken yerde rapor PDF paylaşımı.
+- Teklif modülü (mobil/teklif.php, 014_quotes.sql): dinamik kalemli form (canlı toplam+KDV), liste, rapor-stili görünüm, PDF/WhatsApp/Mail (report_share.js), durum (Taslak/Gönderildi/Kabul/Red). Admin+personel menüde. Tablo güvencesi var. WEB PARİTESİ HENÜZ YOK (yapılacak).
+- Mesajlaşma çoklu dosya "bağlantı hatası" onarımı: AJAX yanıtında temiz JSON (ob_start + ob_end_clean + display_errors off) — araya giren PHP uyarısı r.json()'u bozuyordu. İstemci artık gerçek hata sebebini gösterir.
+- Bu oturum git ile takipte (repo init edildi; config.php/vendor/uploads/*.zip .gitignore'da).

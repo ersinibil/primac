@@ -146,6 +146,15 @@ th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;p
             </div>
         </details>
 
+        <div class="nav-title">Teklif</div>
+        <details>
+            <summary>📄 Teklifler</summary>
+            <div class="sub">
+                <a href="teklif.php">Tüm Teklifler</a>
+                <a href="teklif.php?new=1">+ Yeni Teklif</a>
+            </div>
+        </details>
+
         <div class="nav-title">Banka / Kasa</div>
         <details>
             <summary>💰 Finans</summary>
