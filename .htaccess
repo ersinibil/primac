@@ -1,0 +1,4 @@
+# Hassas dosyaları web erişiminden gizle
+<FilesMatch "^(config\.php|config\.sample\.php|.*\.log|guncelleme\.zip|.*\.sql)$">
+  Require all denied
+</FilesMatch>

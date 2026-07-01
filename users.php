@@ -31,16 +31,19 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         if(isset($_POST['update_user'])){
             $uid=(int)$_POST['user_id'];
             $perms=$_POST['permissions'] ?? [];
+            $role=$_POST['role']; $active=isset($_POST['active'])?1:0;
+            // Ana yönetici (ilk kullanıcı, id=1) korunur: pasifleştirilemez, admin rolü düşürülemez.
+            if($uid===1){ $role='admin'; $active=1; }
             $pdo->prepare("UPDATE app_users SET username=?, full_name=?, phone=?, email=?, role=?, personnel_id=?, permissions=?, active=? WHERE id=?")
                 ->execute([
                     trim($_POST['username']),
                     trim($_POST['full_name']),
                     trim($_POST['phone']),
                     trim($_POST['email']),
-                    $_POST['role'],
+                    $role,
                     (int)$_POST['personnel_id'] ?: null,
                     json_encode($perms,JSON_UNESCAPED_UNICODE),
-                    isset($_POST['active'])?1:0,
+                    $active,
                     $uid
                 ]);
             if(!empty($_POST['password'])){

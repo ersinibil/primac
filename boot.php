@@ -1,14 +1,22 @@
 <?php
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
+// Güvenlik: hata mesajları ekrana BASILMAZ (DB şifresi/yol sızmasın), log'a yazılır.
+ini_set('display_errors', 0);
+ini_set('display_startup_errors', 0);
 error_reporting(E_ALL);
+ini_set('log_errors', 1);
 
 // Oturumu uzun ömürlü yap — telefonda/PWA'da kısa sürede atmasın (30 gün)
 $__life = 60*60*24*30;
 @ini_set('session.gc_maxlifetime', $__life);
 @ini_set('session.cookie_lifetime', $__life);
 if (session_status() === PHP_SESSION_NONE) {
-    @session_set_cookie_params($__life, '/');
+    @session_set_cookie_params([
+        'lifetime' => $__life,
+        'path'     => '/',
+        'secure'   => !empty($_SERVER['HTTPS']),
+        'httponly' => true,   // JS ile okunamaz (XSS'te oturum çalınmaz)
+        'samesite' => 'Lax',
+    ]);
     session_start();
 }
 
