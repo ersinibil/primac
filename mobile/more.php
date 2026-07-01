@@ -30,6 +30,7 @@
 <div style="font-weight:900;margin:16px 4px 8px">📊 Raporlar</div>
 <div class="grid">
   <?php
+  card('Günlük Rapor','Bugünkü iş özeti','📅','../gunluk_rapor.php?web=1','blue');
   card('Tümü (Yekün)','Hepsi tek sunum','🗂️','report.php?modul=tumu','blue');
   card('Finans/Tahsilat','Tahsilat·ödeme·net','💰','report.php?modul=tahsilat','green');
   card('İş Takip','Açılan·tamamlanan·geciken','📋','report.php?modul=is','purple');

@@ -226,6 +226,7 @@ th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;p
 
         <?php if(user_can('report')): ?>
         <a href="report.php" <?=($cur==='report.php'?'class="active"':'')?>><span>📊</span> Raporlar</a>
+        <a href="gunluk_rapor.php" <?=($cur==='gunluk_rapor.php'?'class="active"':'')?>><span>📅</span> Günlük İş Raporu</a>
         <?php endif; ?>
 
         <?php if(user_can('stock')): ?>

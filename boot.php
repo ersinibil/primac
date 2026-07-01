@@ -120,7 +120,7 @@ function page_module_map(){
         'stock.php'=>'stock','product_new.php'=>'stock','stock_movement_new.php'=>'stock',
         'product_categories.php'=>'stock','product_taxonomy.php'=>'stock','purchase.php'=>'stock',
         'sales.php'=>'stock','kpi.php'=>'personnel',
-        'report.php'=>'report',
+        'report.php'=>'report','gunluk_rapor.php'=>'report',
         'personnel.php'=>'personnel','personnel_new.php'=>'personnel','personnel_view.php'=>'personnel',
         'users.php'=>'users',
         'brand_settings.php'=>'users',

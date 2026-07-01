@@ -46,13 +46,17 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['save_request'])){
       ->execute([$reqNo,$myPid,$jobId,$category,$title,$desc,$priority,'Yeni',$ME?:null]);
     $rid=(int)$pdo->lastInsertId();
 
-    // Yöneticilere bildirim
+    // Yöneticilere bildirim + iç mesaj
     try{
       $admins=$pdo->query("SELECT id FROM app_users WHERE role='admin' AND active=1")->fetchAll(PDO::FETCH_COLUMN);
+      $notifMsg=$name.' · '.$category.' · '.$priority;
       foreach($admins as $aid){
-        if((int)$aid===$ME) continue;
+        $aid=(int)$aid;
+        if($aid===$ME) continue;
         if(function_exists('notify_user'))
-          notify_user((int)$aid,'📨 Yeni talep: '.$title,$name.' · '.$category.' · '.$priority,'requests.php');
+          notify_user($aid,'📨 Yeni talep: '.$title,$notifMsg,'requests.php');
+        // Mesajlar ekranında da görünsün
+        try{ $pdo->prepare("INSERT INTO internal_messages(sender_user_id,receiver_user_id,message,is_read) VALUES(?,?,?,0)")->execute([$ME?:null,$aid,'📨 Yeni talep: '.$title."\n".$notifMsg]); }catch(Throwable $e2){}
       }
     }catch(Throwable $e){}
 
@@ -67,7 +71,7 @@ $flash=$_SESSION['_flash']??''; unset($_SESSION['_flash']);
 $jobs=[];
 try{ $jobs=$pdo->query("SELECT id, job_no, title FROM jobs ORDER BY id DESC LIMIT 100")->fetchAll(); }catch(Throwable $e){}
 
-$cats=['Malzeme Talebi','Satın Alma Talebi','Avans Talebi','İzin Talebi','Mesai Talebi','Arıza / Teknik Sorun','Grafik Revize Talebi','Dış Atölye Talebi','Montaj Talebi','Muhasebe / Evrak Talebi','Genel'];
+$cats=['Malzeme Talebi','Satın Alma Talebi','Avans Talebi','İzin Talebi','Mesai Talebi','Arıza / Teknik Sorun','Grafik Revize Talebi','Dış Atölye Talebi','Montaj Talebi','Muhasebe / Evrak Talebi','Ödeme Talebi','Özel İzin/Talep','Genel'];
 $pris=['Normal','Acil','Çok Acil','Düşük'];
 
 topx('Yeni Talep');

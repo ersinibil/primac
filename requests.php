@@ -6,8 +6,29 @@ $pdo=db();
 
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['request_id'])){
     try{
+        $rid=(int)$_POST['request_id'];
+        $newStatus=$_POST['status'];
+        $note=trim($_POST['manager_note']);
         $stmt=$pdo->prepare("UPDATE management_requests SET status=?, manager_note=?, updated_at=NOW() WHERE id=?");
-        $stmt->execute([$_POST['status'], trim($_POST['manager_note']), (int)$_POST['request_id']]);
+        $stmt->execute([$newStatus, $note, $rid]);
+
+        // Talep sahibine bildirim + iç mesaj
+        try{
+            $rq=$pdo->prepare("SELECT title, created_by FROM management_requests WHERE id=?");
+            $rq->execute([$rid]); $row=$rq->fetch();
+            $owner=(int)($row['created_by']??0);
+            $notifTitle='📨 Talebiniz: '.$newStatus;
+            $notifMsg=($row['title']??'').($note?' · '.$note:'');
+            if($owner){
+                // Uygulama içi bildirim
+                try{ $pdo->prepare("INSERT INTO internal_notifications(title,message,target_user_id,is_read) VALUES(?,?,?,0)")->execute([$notifTitle,$notifMsg,$owner]); }catch(Throwable $e2){}
+                // Mesajlar ekranında görünsün
+                $senderId=$_SESSION['user']['id']??null;
+                try{ $pdo->prepare("INSERT INTO internal_messages(sender_user_id,receiver_user_id,message,is_read) VALUES(?,?,?,0)")->execute([$senderId,$owner,$notifMsg]); }catch(Throwable $e2){}
+                // Web Push (push_lib varsa)
+                if(file_exists(__DIR__.'/push_lib.php')){ require_once __DIR__.'/push_lib.php'; try{ push_to_user($owner,$notifTitle,$notifMsg,'requests.php'); }catch(Throwable $e2){} }
+            }
+        }catch(Throwable $e){}
     }catch(Throwable $e){
         $error=$e->getMessage();
     }

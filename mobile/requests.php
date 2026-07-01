@@ -35,13 +35,17 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['request_id'])){
     $pdo->prepare("UPDATE management_requests SET status=?, manager_note=?, updated_at=NOW() WHERE id=?")
       ->execute([$status,$note,$rid]);
 
-    // Talep sahibine bildirim
+    // Talep sahibine bildirim + iç mesaj
     try{
       $r=$pdo->prepare("SELECT title, created_by FROM management_requests WHERE id=?");
       $r->execute([$rid]); $row=$r->fetch();
       $owner=(int)($row['created_by']??0);
-      if($owner && $owner!==$ME && function_exists('notify_user')){
-        notify_user($owner,'📨 Talebiniz: '.$status,($row['title']??'').($note?' · '.$note:''),'requests.php');
+      $notifTitle='📨 Talebiniz: '.$status;
+      $notifMsg=($row['title']??'').($note?' · '.$note:'');
+      if($owner && $owner!==$ME){
+        if(function_exists('notify_user')) notify_user($owner,$notifTitle,$notifMsg,'requests.php');
+        // Mesajlar ekranında görünsün
+        try{ $pdo->prepare("INSERT INTO internal_messages(sender_user_id,receiver_user_id,message,is_read) VALUES(?,?,?,0)")->execute([$ME?:null,$owner,$notifTitle."\n".$notifMsg]); }catch(Throwable $e2){}
       }
     }catch(Throwable $e){}
 

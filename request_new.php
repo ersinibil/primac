@@ -92,6 +92,8 @@ $jobs=$pdo->query("SELECT id, job_no, title FROM jobs ORDER BY id DESC LIMIT 100
 <option>Dış Atölye Talebi</option>
 <option>Montaj Talebi</option>
 <option>Muhasebe / Evrak Talebi</option>
+<option>Ödeme Talebi</option>
+<option>Özel İzin/Talep</option>
 <option>Genel</option>
 </select>
 </label>

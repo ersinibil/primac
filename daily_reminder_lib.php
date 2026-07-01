@@ -61,11 +61,13 @@ function check_daily_reminders($pdo, $force=false){
             if($nj || $nt){ $rep[]='• '.$p['name'].': '.$nj.' iş · '.$nt.' görev'; $anyWork=true; }
         }
         if(!$anyWork) $rep[]='Bugün bekleyen iş/görev yok. 🎉';
+        $rep[]='';
+        $rep[]='📄 Detaylı rapor: gunluk_rapor.php';
         $rmsg=implode("\n",$rep);
         foreach($admins as $aid){ $aid=(int)$aid;
             try{ $insN->execute(['📊 Günlük iş raporu',$rmsg,$aid]); }catch(Throwable $e){}
             try{ $insM->execute([$aid,$rmsg]); }catch(Throwable $e){}
-            if($hasPush){ try{ push_to_user($aid,'📊 Günlük iş raporu','Tüm personelin bugünkü işleri','dashboard.php'); }catch(Throwable $e){} }
+            if($hasPush){ try{ push_to_user($aid,'📊 Günlük iş raporu','Tüm personelin bugünkü işleri','gunluk_rapor.php'); }catch(Throwable $e){} }
         }
         // Yönetici WhatsApp (app_user'ı personele bağlı ve telefonu olanlar)
         try{
