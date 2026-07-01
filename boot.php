@@ -174,24 +174,22 @@ function locked_link($label,$url,$permission){
 
 // Marka logo/ikon fonksiyonları — her yerde merkezi kaynak
 function brand_logo(){
-    // 1. Önce share_lib'deki get_setting'i yükle (yoksa skip)
+    // 1. config'de AÇIKÇA tanımlı logo EN ÖNCELİKLİ (her site kendi config'iyle kesinleşir)
+    try{
+        $cfg = app_config();
+        if(!empty($cfg['logo']) && is_file(__DIR__.'/'.$cfg['logo'])) return $cfg['logo'];
+    }catch(Throwable $e){}
+    // 2. config'de yoksa admin panelden yüklenen ayar (app_settings)
     if(!function_exists('get_setting') && is_file(__DIR__.'/share_lib.php')){
         require_once __DIR__.'/share_lib.php';
     }
-    // 2. Veritabanındaki ayar
     if(function_exists('get_setting')){
         try{
             $v = get_setting('brand_logo','');
             if($v && is_file(__DIR__.'/'.$v)) return $v;
         }catch(Throwable $e){}
     }
-    // 3. config'de AÇIKÇA tanımlı logo ('logo' => 'logo_primac.png' gibi)
-    try{
-        $cfg = app_config();
-        if(!empty($cfg['logo']) && is_file(__DIR__.'/'.$cfg['logo'])) return $cfg['logo'];
-    }catch(Throwable $e){}
-    // 4. Varsayılan (app_name tahmini YOK — kırılgandı). Firma logosunu admin panelden
-    //    (Logo/Marka) yükler ya da config.php'ye 'logo'=>'logo_primac.png' eklenir.
+    // 3. Varsayılan
     return 'logo.png';
 }
 function brand_icon(){
