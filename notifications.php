@@ -24,7 +24,7 @@ require_once __DIR__.'/layout_top.php';
 
 $rows=[];
 try{
-    $rows=$pdo->query("SELECT * FROM notifications ORDER BY is_read ASC, id DESC LIMIT 100")->fetchAll();
+    $rows=$pdo->query("SELECT * FROM internal_notifications ORDER BY is_read ASC, id DESC LIMIT 100")->fetchAll();
 }catch(Throwable $e){
     echo "<div class='alert'>".h($e->getMessage())."</div>";
 }

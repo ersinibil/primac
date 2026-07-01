@@ -128,7 +128,7 @@ try{
 </div>
 <?php
 try{
-$notifs=db()->query("SELECT * FROM notifications ORDER BY is_read ASC, id DESC LIMIT 6")->fetchAll();
+$notifs=db()->query("SELECT * FROM internal_notifications ORDER BY is_read ASC, id DESC LIMIT 6")->fetchAll();
 if($notifs):
 ?>
 <div class="notif-list">
