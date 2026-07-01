@@ -185,15 +185,13 @@ function brand_logo(){
             if($v && is_file(__DIR__.'/'.$v)) return $v;
         }catch(Throwable $e){}
     }
-    // 3. config'de tanımlı logo
+    // 3. config'de AÇIKÇA tanımlı logo ('logo' => 'logo_primac.png' gibi)
     try{
         $cfg = app_config();
         if(!empty($cfg['logo']) && is_file(__DIR__.'/'.$cfg['logo'])) return $cfg['logo'];
-        // 4. app_name'de PRIMAC geçiyorsa logo_primac.png
-        $an = $cfg['app_name'] ?? '';
-        if(stripos($an,'PRIMAC') !== false && is_file(__DIR__.'/logo_primac.png')) return 'logo_primac.png';
     }catch(Throwable $e){}
-    // 5. Varsayılan
+    // 4. Varsayılan (app_name tahmini YOK — kırılgandı). Firma logosunu admin panelden
+    //    (Logo/Marka) yükler ya da config.php'ye 'logo'=>'logo_primac.png' eklenir.
     return 'logo.png';
 }
 function brand_icon(){
