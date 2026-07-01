@@ -11,7 +11,7 @@ if($isAdmin){
 $myMsg=unread_msg(); $myNotif=unread_notif();
 ?>
 <?php if($isAdmin): ?>
-  <div class="panel"><b>Online Takip ve Yönetim Sistemi</b><p class="small">Yönetici paneli · Web ERP ayrı butondadır.</p>
+  <div class="panel"><b>Online Takip ve Yönetim Sistemi</b><p class="small">Yönetici paneli · Web sürümü ayrı butondadır.</p>
   <div class="grid">
     <?php card('Açık İş',$open.' adet','📋','jobs.php','blue');card('Cari',$contacts.' kayıt','👥','contacts.php','purple');card('Ürün',$stock.' stok','📦','stock.php','orange');card('Kritik',$crit.' ürün','⚠️','stock.php','red');?>
   </div></div>

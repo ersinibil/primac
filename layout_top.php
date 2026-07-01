@@ -136,8 +136,8 @@ th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;p
         <div class="brand-mark">A</div>
     <?php endif; ?>
     <div>
-        <div class="brand-title">ACANS ERP</div>
-        <div class="brand-subtitle">İşletim Sistemi</div>
+        <div class="brand-title"><?=h(app_config()['app_name'] ?? 'OTS')?></div>
+        <div class="brand-subtitle">Online Takip ve Yönetim Sistemi</div>
     </div>
 </a>
 
@@ -164,7 +164,7 @@ th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;p
         $finance_pages = ['finance.php','finance_accounts.php','finance_new.php','finance_transfer.php'];
         $stock_pages = ['stock.php','product_new.php','stock_movement_new.php','product_categories.php','product_taxonomy.php','purchase.php'];
         $izleme_pages = ['activity.php','notifications.php'];
-        $admin_pages = ['dashboard.php','requests.php','profile.php','users.php','temizle_veri.php','logout.php'];
+        $admin_pages = ['dashboard.php','requests.php','profile.php','users.php','temizle_veri.php','wa_settings.php','logout.php'];
         $hesabim_pages = ['profile.php','request_new.php','logout.php'];
         ?>
 
@@ -259,6 +259,7 @@ th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;p
                 <a href="requests.php" <?=($cur==='requests.php'?'class="active"':'')?>><span>📨</span> Onay Bekleyenler</a>
                 <a href="profile.php" <?=($cur==='profile.php'?'class="active"':'')?>><span>👤</span> Profilim / Şifre</a>
                 <a href="users.php" <?=($cur==='users.php'?'class="active"':'')?>><span>👥</span> Kullanıcılar & Yetkiler</a>
+                <a href="wa_settings.php" <?=($cur==='wa_settings.php'?'class="active"':'')?>><span>📱</span> WhatsApp Ayarları</a>
                 <a href="temizle_veri.php" <?=($cur==='temizle_veri.php'?'class="active"':'')?> style="color:#fca5a5"><span>🧹</span> Veri Temizleme (canlıya hazırlık)</a>
                 <a href="logout.php"><span>🚪</span> Çıkış</a>
             </div>

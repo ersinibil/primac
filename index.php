@@ -67,7 +67,7 @@ button{width:100%;border:0;border-radius:14px;background:#111827;color:white;pad
 <div class="login">
 <div class="logo" style="background:#fff;overflow:hidden;padding:6px"><img src="logo.png" alt="ACANS" style="width:100%;height:100%;object-fit:contain" onerror="this.parentNode.textContent='A'"></div>
 <h1>ACANS OTS</h1>
-<div class="muted">ERP yönetim ve personel giriş ekranı</div>
+<div class="muted">Online Takip ve Yönetim Sistemi</div>
 <?php if($error): ?><div class="alert"><?=h($error)?></div><?php endif; ?>
 <form method="post">
 <label>Kullanıcı Adı</label>

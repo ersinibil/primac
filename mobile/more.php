@@ -52,7 +52,7 @@
 
 <div style="font-weight:900;margin:16px 4px 8px">⚙ Sistem</div>
 <div class="grid">
-  <?php card('Son İşlemler','Aktivite akışı','🕘','activity.php','gray'); card('Web Sürümü','Masaüstü ERP','🖥','../dashboard.php?web=1','gray'); card('Profil','Şifre & hesap','👤','profile.php','blue'); ?>
+  <?php card('Son İşlemler','Aktivite akışı','🕘','activity.php','gray'); card('Web Sürümü','Masaüstü Sürüm','🖥','../dashboard.php?web=1','gray'); card('Profil','Şifre & hesap','👤','profile.php','blue'); ?>
 </div>
 <?php else: ?>
 <div class="grid">

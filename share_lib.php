@@ -2,26 +2,101 @@
 // ACANS OTS — Ortak paylaşım (WhatsApp + Mail) — mobil+web
 // wa.me sadece METİN taşır (PDF eki için rapor PDF paylaşımı kullanılır).
 
+// ---------------------------------------------------------------------------
+// Uygulama ayar deposu (app_settings tablosu)
+// ---------------------------------------------------------------------------
+function get_setting($key, $default=null){
+    if(!function_exists('db')) return $default;
+    try{
+        $st=db()->prepare("SELECT `value` FROM app_settings WHERE `key`=? LIMIT 1");
+        $st->execute([$key]);
+        $row=$st->fetch(PDO::FETCH_ASSOC);
+        return ($row!==false) ? $row['value'] : $default;
+    }catch(Throwable $e){ return $default; }
+}
+
+function set_setting($key, $val){
+    if(!function_exists('db')) return false;
+    $pdo=db();
+    try{
+        // Tablo yoksa oluştur
+        $pdo->exec("CREATE TABLE IF NOT EXISTS app_settings (
+            `key` VARCHAR(100) NOT NULL PRIMARY KEY,
+            `value` TEXT,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        $st=$pdo->prepare("INSERT INTO app_settings (`key`,`value`) VALUES(?,?) ON DUPLICATE KEY UPDATE `value`=VALUES(`value`), updated_at=NOW()");
+        return $st->execute([$key,$val]);
+    }catch(Throwable $e){ return false; }
+}
+
+// ---------------------------------------------------------------------------
+
 function wa_link($text,$phone=''){
     $p=preg_replace('/\D/','',(string)$phone);
     return 'https://wa.me/'.$p.'?text='.rawurlencode($text);
 }
 
-// Otomatik WhatsApp gönderimi. config.php'de WA_GATEWAY_URL tanımlıysa o servise POST atar
-// (ultramsg / callmebot / kendi gateway'in). Tanımsızsa sessizce false döner (sadece iç mesaj gider).
-// Beklenen POST alanları: to=<telefon>, body=<metin>, (varsa) token=<WA_GATEWAY_TOKEN>.
-function wa_send($phone,$text){
-    if(!defined('WA_GATEWAY_URL') || !WA_GATEWAY_URL || !function_exists('curl_init')) return false;
+// Telefon normalize: TR 0XXX→90XXX, 10 hane→90 ekle
+function _wa_normalize_phone($phone){
     $p=preg_replace('/\D/','',(string)$phone);
-    if(strlen($p)<10) return false;
+    if(strlen($p)<10) return '';
     if(substr($p,0,1)==='0') $p='90'.substr($p,1);
     elseif(strlen($p)===10) $p='90'.$p;
-    $payload=['to'=>$p,'body'=>$text];
-    if(defined('WA_GATEWAY_TOKEN') && WA_GATEWAY_TOKEN) $payload['token']=WA_GATEWAY_TOKEN;
+    return $p;
+}
+
+// Otomatik WhatsApp gönderimi.
+// Önce app_settings'ten (admin panelden) okur; yoksa eski WA_GATEWAY_URL sabitine düşer.
+// wa_enabled=0 ise hiç göndermez.
+function wa_send($phone,$text){
+    if(!function_exists('curl_init')) return false;
+
+    // --- app_settings'ten oku ---
+    $enabled  = get_setting('wa_enabled','0');
+    $provider = get_setting('wa_provider','');
+    $instance = get_setting('wa_instance','');
+    $token    = get_setting('wa_token','');
+    $wa_url   = get_setting('wa_url','');
+
+    // Hiç ayar girilmemişse eski config sabitine düş
+    $has_db_config = ($provider && ($instance || $wa_url));
+    if(!$has_db_config){
+        // Eski yol
+        if(!defined('WA_GATEWAY_URL') || !WA_GATEWAY_URL) return false;
+        $enabled='1'; $provider='custom'; $wa_url=WA_GATEWAY_URL;
+        if(defined('WA_GATEWAY_TOKEN') && WA_GATEWAY_TOKEN) $token=WA_GATEWAY_TOKEN;
+    }
+
+    if($enabled!=='1') return false;
+
+    $p=_wa_normalize_phone($phone);
+    if(!$p) return false;
+
     try{
-        $ch=curl_init(WA_GATEWAY_URL);
-        curl_setopt_array($ch,[CURLOPT_POST=>true,CURLOPT_POSTFIELDS=>http_build_query($payload),CURLOPT_RETURNTRANSFER=>true,CURLOPT_TIMEOUT=>8,CURLOPT_SSL_VERIFYPEER=>false]);
-        $r=curl_exec($ch); curl_close($ch);
+        if($provider==='ultramsg' && $instance){
+            // UltraMsg: POST https://api.ultramsg.com/{instance}/messages/chat
+            $url='https://api.ultramsg.com/'.rawurlencode($instance).'/messages/chat';
+            $payload='token='.urlencode($token).'&to='.urlencode($p).'&body='.urlencode($text);
+        } else {
+            // Genel/custom gateway
+            if(!$wa_url) return false;
+            $url=$wa_url;
+            $d=['to'=>$p,'body'=>$text];
+            if($token) $d['token']=$token;
+            $payload=http_build_query($d);
+        }
+        $ch=curl_init($url);
+        curl_setopt_array($ch,[
+            CURLOPT_POST=>true,
+            CURLOPT_POSTFIELDS=>$payload,
+            CURLOPT_RETURNTRANSFER=>true,
+            CURLOPT_TIMEOUT=>10,
+            CURLOPT_SSL_VERIFYPEER=>false,
+            CURLOPT_HTTPHEADER=>['Content-Type: application/x-www-form-urlencoded'],
+        ]);
+        $r=curl_exec($ch);
+        curl_close($ch);
         return $r!==false;
     }catch(Throwable $e){ return false; }
 }
