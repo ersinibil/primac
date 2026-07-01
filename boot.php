@@ -123,6 +123,7 @@ function page_module_map(){
         'report.php'=>'report',
         'personnel.php'=>'personnel','personnel_new.php'=>'personnel','personnel_view.php'=>'personnel',
         'users.php'=>'users',
+        'brand_settings.php'=>'users',
     ];
 }
 
@@ -169,6 +170,43 @@ function locked_link($label,$url,$permission){
         return '<a href="'.h($url).'">'.$label.'</a>';
     }
     return '<a href="#" title="Yetkiniz yok" style="opacity:.45;cursor:not-allowed">🔒 '.$label.'</a>';
+}
+
+// Marka logo/ikon fonksiyonları — her yerde merkezi kaynak
+function brand_logo(){
+    // 1. Önce share_lib'deki get_setting'i yükle (yoksa skip)
+    if(!function_exists('get_setting') && is_file(__DIR__.'/share_lib.php')){
+        require_once __DIR__.'/share_lib.php';
+    }
+    // 2. Veritabanındaki ayar
+    if(function_exists('get_setting')){
+        try{
+            $v = get_setting('brand_logo','');
+            if($v && is_file(__DIR__.'/'.$v)) return $v;
+        }catch(Throwable $e){}
+    }
+    // 3. config'de tanımlı logo
+    try{
+        $cfg = app_config();
+        if(!empty($cfg['logo']) && is_file(__DIR__.'/'.$cfg['logo'])) return $cfg['logo'];
+        // 4. app_name'de PRIMAC geçiyorsa logo_primac.png
+        $an = $cfg['app_name'] ?? '';
+        if(stripos($an,'PRIMAC') !== false && is_file(__DIR__.'/logo_primac.png')) return 'logo_primac.png';
+    }catch(Throwable $e){}
+    // 5. Varsayılan
+    return 'logo.png';
+}
+function brand_icon(){
+    if(!function_exists('get_setting') && is_file(__DIR__.'/share_lib.php')){
+        require_once __DIR__.'/share_lib.php';
+    }
+    if(function_exists('get_setting')){
+        try{
+            $v = get_setting('brand_icon','');
+            if($v && is_file(__DIR__.'/'.$v)) return $v;
+        }catch(Throwable $e){}
+    }
+    return brand_logo();
 }
 
 function money($v){ return number_format((float)$v, 2, ',', '.') . ' ₺'; }

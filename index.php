@@ -65,7 +65,7 @@ button{width:100%;border:0;border-radius:14px;background:#111827;color:white;pad
 </head>
 <body>
 <div class="login">
-<div class="logo" style="background:#fff;overflow:hidden;padding:6px"><img src="logo.png" alt="ACANS" style="width:100%;height:100%;object-fit:contain" onerror="this.parentNode.textContent='A'"></div>
+<div class="logo" style="background:#fff;overflow:hidden;padding:6px"><img src="<?=h(brand_logo())?>" alt="Logo" style="width:100%;height:100%;object-fit:contain" onerror="this.parentNode.textContent='A'"></div>
 <h1><?=h(app_config()['app_name'] ?? 'OTS')?></h1>
 <div class="muted">Online Takip ve Yönetim Sistemi</div>
 <?php if($error): ?><div class="alert"><?=h($error)?></div><?php endif; ?>

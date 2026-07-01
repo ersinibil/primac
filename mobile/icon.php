@@ -1,13 +1,44 @@
 <?php
-// PWA / uygulama ikonu — gerçek ACANS logosu (logo.png) yeniden boyutlanır.
+// PWA / uygulama ikonu — yönetimden yüklenen marka ikonu veya logo
 error_reporting(0); @ini_set('display_errors','0');
 while(function_exists('ob_get_level') && ob_get_level()>0) ob_end_clean();
 
 $size=(int)($_GET['size'] ?? 192);
 if($size<64) $size=64; if($size>1024) $size=1024;
 
-// İkon = sadece "A" amblemi (logo_a.png); yoksa tam logo
-$logo=is_file(__DIR__.'/logo_a.png')?__DIR__.'/logo_a.png':__DIR__.'/logo.png';
+// Marka ikonu: uploads/brand_icon.png → uploads/brand_logo.png → logo_a.png → logo.png
+$_root = dirname(__DIR__);
+$logo = '';
+// Önce share_lib ile ayarı oku (boot yüklenmeden güvenli)
+if(!function_exists('get_setting') && is_file($_root.'/share_lib.php')){
+    // Minimal db bağlantısı için config gerekli
+    if(!function_exists('db') && is_file($_root.'/boot.php')){
+        // Sadece ikonun kaynak tespiti için; sessiz yükle
+        @include_once $_root.'/boot.php';
+    } else {
+        @include_once $_root.'/share_lib.php';
+    }
+}
+if(function_exists('brand_icon')){
+    $__bi = brand_icon();
+    if($__bi && is_file($_root.'/'.$__bi)) $logo = $_root.'/'.$__bi;
+} else {
+    // get_setting doğrudan
+    if(function_exists('get_setting')){
+        $__bi = get_setting('brand_icon','');
+        if($__bi && is_file($_root.'/'.$__bi)) $logo = $_root.'/'.$__bi;
+        if(!$logo){ $__bl = get_setting('brand_logo',''); if($__bl && is_file($_root.'/'.$__bl)) $logo = $_root.'/'.$__bl; }
+    }
+    // uploads/brand_icon.png doğrudan kontrol
+    if(!$logo && is_file($_root.'/uploads/brand_icon.png')) $logo = $_root.'/uploads/brand_icon.png';
+    if(!$logo && is_file($_root.'/uploads/brand_logo.png')) $logo = $_root.'/uploads/brand_logo.png';
+}
+// Fallback: logo_a.png → logo.png
+if(!$logo) $logo = is_file(__DIR__.'/logo_a.png') ? __DIR__.'/logo_a.png' : __DIR__.'/logo.png';
+// Kök dizindeki logo_a / logo
+if(!is_file($logo)){
+    $logo = is_file($_root.'/logo_a.png') ? $_root.'/logo_a.png' : $_root.'/logo.png';
+}
 if(is_file($logo) && function_exists('imagecreatefrompng')){
     $src=@imagecreatefrompng($logo);
     if($src){

@@ -128,10 +128,8 @@ th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;p
 <div class="app-shell">
 <aside class="sidebar">
     <a class="brand brand-link" href="dashboard.php" title="Ana sayfa">
-    <?php if(file_exists(__DIR__.'/logo.png')): ?>
-        <img class="brand-logo" src="logo.png" alt="ACANS">
-    <?php elseif(file_exists(__DIR__.'/uploads/company_logo.png')): ?>
-        <img class="brand-logo" src="uploads/company_logo.png" alt="Logo">
+    <?php $__blogo=brand_logo(); if($__blogo && file_exists(__DIR__.'/'.$__blogo)): ?>
+        <img class="brand-logo" src="<?=h($__blogo)?>" alt="Logo">
     <?php else: ?>
         <div class="brand-mark">A</div>
     <?php endif; ?>
@@ -260,6 +258,7 @@ th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;p
                 <a href="profile.php" <?=($cur==='profile.php'?'class="active"':'')?>><span>👤</span> Profilim / Şifre</a>
                 <a href="users.php" <?=($cur==='users.php'?'class="active"':'')?>><span>👥</span> Kullanıcılar & Yetkiler</a>
                 <a href="wa_settings.php" <?=($cur==='wa_settings.php'?'class="active"':'')?>><span>📱</span> WhatsApp Ayarları</a>
+                <a href="brand_settings.php" <?=($cur==='brand_settings.php'?'class="active"':'')?>><span>🎨</span> Logo / Marka</a>
                 <a href="temizle_veri.php" <?=($cur==='temizle_veri.php'?'class="active"':'')?> style="color:#fca5a5"><span>🧹</span> Veri Temizleme (canlıya hazırlık)</a>
                 <a href="logout.php"><span>🚪</span> Çıkış</a>
             </div>
