@@ -52,12 +52,43 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['set_qstatus']) && (int)(
   header('Location: teklif.php?id='.(int)$_POST['qid']); exit;
 }
 
+// Teklif düzenle
+if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['edit_quote']) && is_admin()){
+  $eid=(int)($_POST['edit_id']??0);
+  if($eid){
+    try{
+      $cid=(int)($_POST['customer_id']??0)?:null;
+      $cname=trim($_POST['customer_name']??'');
+      if($cid && $cname===''){ $r=$pdo->prepare("SELECT name FROM contacts WHERE id=?"); $r->execute([$cid]); $cname=$r->fetch()['name']??''; }
+      $vat=(float)str_replace(',','.',$_POST['vat_rate']??'20');
+      $names=$_POST['item_name']??[]; $qtys=$_POST['item_qty']??[]; $prices=$_POST['item_price']??[];
+      $sub=0; $lines=[];
+      for($i=0;$i<count($names);$i++){
+        $nm=trim($names[$i]); if($nm==='') continue;
+        $q2=(float)str_replace(',','.',$qtys[$i]??'0'); $pr=(float)str_replace(',','.',$prices[$i]??'0');
+        $lt=$q2*$pr; $sub+=$lt; $lines[]=[$nm,$q2,$pr,$lt];
+      }
+      if(!$lines) throw new Exception('En az bir kalem girin.');
+      $firm=in_array($_POST['firm']??'',['ACANS','PRIMAC'],true)?$_POST['firm']:null;
+      $vatAmt=$sub*$vat/100; $tot=$sub+$vatAmt;
+      $pdo->prepare("UPDATE quotes SET firm=?,customer_id=?,customer_name=?,intro_note=?,valid_until=?,vat_rate=?,subtotal=?,vat_amount=?,total=?,notes=? WHERE id=?")
+        ->execute([$firm,$cid,$cname,trim($_POST['intro_note']??''),($_POST['valid_until']??'')?:null,$vat,$sub,$vatAmt,$tot,trim($_POST['notes']??''),$eid]);
+      $pdo->prepare("DELETE FROM quote_items WHERE quote_id=?")->execute([$eid]);
+      $ins=$pdo->prepare("INSERT INTO quote_items(quote_id,name,qty,unit_price,line_total) VALUES(?,?,?,?,?)");
+      foreach($lines as $l){ $ins->execute([$eid,$l[0],$l[1],$l[2],$l[3]]); }
+      if(function_exists('activity_log')) activity_log('Teklif','Düzenleme','ID:'.$eid,'','quote',$eid,'teklif.php?id='.$eid,'✏️');
+      header('Location: teklif.php?id='.$eid); exit;
+    }catch(Throwable $e){ $error=$e->getMessage(); }
+  }
+}
+
 $id=(int)($_GET['id']??0);
 $new=!empty($_GET['new']);
+$editMode=($id && !empty($_GET['edit']));
 require_once __DIR__.'/layout_top.php';
 
 /* ---------- GÖRÜNÜM ---------- */
-if($id){
+if($id && !$editMode){
   $q=null; try{ $s=$pdo->prepare("SELECT * FROM quotes WHERE id=?"); $s->execute([$id]); $q=$s->fetch(); }catch(Throwable $e){}
   if(!$q){ echo '<div class="alert">Teklif bulunamadı.</div>'; require __DIR__.'/layout_bottom.php'; exit; }
   $items=[]; try{ $it=$pdo->prepare("SELECT * FROM quote_items WHERE quote_id=? ORDER BY id"); $it->execute([$id]); $items=$it->fetchAll(); }catch(Throwable $e){}
@@ -76,7 +107,7 @@ if($id){
 .paper.lh>.lhbody{position:relative!important;z-index:1}
 .pdfmode .paper.lh{aspect-ratio:auto}
 </style>
-<div class="panel-head"><h1>Teklif <?=h($q['quote_no'])?></h1><div class="actions noprint"><a class="btn secondary" href="teklif.php">Liste</a><?=delete_button('quote',$id)?></div></div>
+<div class="panel-head"><h1>Teklif <?=h($q['quote_no'])?></h1><div class="actions noprint"><a class="btn secondary" href="teklif.php">Liste</a><?php if(is_admin()): ?><a class="btn" href="teklif.php?id=<?=$id?>&edit=1" style="background:#0369a1">✏️ Düzenle</a><?php endif; ?><?=delete_button('quote',$id)?></div></div>
 
 <?php $lh = ($fi && !empty($fi['letterhead']) && is_file(__DIR__.'/'.$fi['letterhead'])) ? $fi['letterhead'] : ''; ?>
 <div id="repArea" style="max-width:780px;margin:0 auto">
@@ -155,6 +186,68 @@ if($id){
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="report_share.js"></script>
+<?php require __DIR__.'/layout_bottom.php'; exit; }
+
+/* ---------- DÜZENLE ---------- */
+if($editMode && is_admin()){
+  $q=null; try{ $s=$pdo->prepare("SELECT * FROM quotes WHERE id=?"); $s->execute([$id]); $q=$s->fetch(); }catch(Throwable $e){}
+  if(!$q){ echo '<div class="alert">Teklif bulunamadı.</div>'; require __DIR__.'/layout_bottom.php'; exit; }
+  $items=[]; try{ $it=$pdo->prepare("SELECT * FROM quote_items WHERE quote_id=? ORDER BY id"); $it->execute([$id]); $items=$it->fetchAll(); }catch(Throwable $e){}
+  $cs=$pdo->query("SELECT id,name FROM contacts ORDER BY name")->fetchAll();
+?>
+<div class="panel-head"><h1>Teklif Düzenle: <?=h($q['quote_no'])?></h1><div class="actions"><a class="btn secondary" href="teklif.php?id=<?=$id?>">İptal</a></div></div>
+<?php if($error): ?><div class="alert"><?=h($error)?></div><?php endif; ?>
+<section class="panel" style="max-width:620px">
+<form method="post">
+  <input type="hidden" name="edit_id" value="<?=$id?>">
+  <label>Teklifi veren firma (opsiyonel — logo/iletişim ekler)</label>
+  <select name="firm" style="width:100%"><option value="">— Firma yok (sade) —</option><option value="ACANS"<?=$q['firm']==='ACANS'?' selected':''?>>ACANS Reklam</option><option value="PRIMAC"<?=$q['firm']==='PRIMAC'?' selected':''?>>PRIMAC</option></select>
+  <label style="margin-top:6px">Müşteri</label>
+  <select name="customer_id" style="width:100%"><option value="">— Cari seç (veya alta yaz) —</option><?php foreach($cs as $c): ?><option value="<?=$c['id']?>"<?=(int)$q['customer_id']===(int)$c['id']?' selected':''?>><?=h($c['name'])?></option><?php endforeach; ?></select>
+  <input name="customer_name" placeholder="veya müşteri adı yaz" style="width:100%;margin-top:6px" value="<?=h($q['customer_name'])?>">
+  <label style="margin-top:8px;display:block">Giriş Açıklaması (SAYIN altında görünür)</label>
+  <textarea name="intro_note" rows="3" style="width:100%"><?=h($q['intro_note']??'')?></textarea>
+  <div style="display:flex;gap:10px;margin-top:6px">
+    <div style="flex:1"><label>Geçerlilik</label><input type="date" name="valid_until" style="width:100%" value="<?=h($q['valid_until']??'')?>"></div>
+    <div style="flex:1"><label>KDV %</label><input name="vat_rate" value="<?=h(rtrim(rtrim(number_format((float)$q['vat_rate'],2,'.',''),'0'),'.'))?>" style="width:100%"></div>
+  </div>
+  <label style="margin-top:10px;display:block">Kalemler</label>
+  <div id="rows"></div>
+  <button type="button" class="btn secondary" onclick="addRow()" style="margin-top:6px">+ Kalem Ekle</button>
+  <div class="panel" style="margin-top:10px;background:rgba(34,197,94,.08)">
+    <div style="display:flex;justify-content:space-between"><span>Ara Toplam</span><b id="tSub">0,00 ₺</b></div>
+    <div style="display:flex;justify-content:space-between"><span>KDV</span><b id="tVat">0,00 ₺</b></div>
+    <div style="display:flex;justify-content:space-between;font-size:18px;margin-top:4px"><span><b>Toplam</b></span><b id="tTot" style="color:#22c55e">0,00 ₺</b></div>
+  </div>
+  <label style="margin-top:8px;display:block">Not</label><textarea name="notes" rows="2" style="width:100%"><?=h($q['notes']??'')?></textarea>
+  <button class="btn" name="edit_quote" value="1" style="margin-top:10px;background:#0369a1">💾 Değişiklikleri Kaydet</button>
+</form>
+</section>
+<script>
+var initItems=<?=json_encode(array_values(array_map(function($it){ return [$it['name'],(float)$it['qty'],(float)$it['unit_price']]; },$items)))?>;
+function fmt(n){ return n.toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2})+' ₺'; }
+function num(v){ return parseFloat(String(v||'').replace(/\./g,'').replace(',','.'))||0; }
+function addRow(nm,q,p){
+  var d=document.createElement('div'); d.style.cssText='display:flex;gap:6px;margin-bottom:6px';
+  d.innerHTML='<input name="item_name[]" placeholder="Ürün/hizmet" style="flex:2" value="'+(nm||'')+'">'+
+    '<input name="item_qty[]" placeholder="Adet" style="flex:1" value="'+(q!==undefined?q:'1')+'">'+
+    '<input name="item_price[]" placeholder="Birim ₺" style="flex:1" value="'+(p||'')+'">'+
+    '<button type="button" onclick="this.parentNode.remove();calc()" class="btn" style="background:#7f1d1d">×</button>';
+  document.getElementById('rows').appendChild(d); d.addEventListener('input',calc);
+}
+function calc(){
+  var qs=document.getElementsByName('item_qty[]'), ps=document.getElementsByName('item_price[]'), sub=0;
+  for(var i=0;i<qs.length;i++){ sub+=num(qs[i].value)*num(ps[i].value); }
+  var vr=num(document.getElementsByName('vat_rate')[0].value), vat=sub*vr/100;
+  document.getElementById('tSub').textContent=fmt(sub);
+  document.getElementById('tVat').textContent=fmt(vat);
+  document.getElementById('tTot').textContent=fmt(sub+vat);
+}
+document.getElementsByName('vat_rate')[0].addEventListener('input',calc);
+for(var i=0;i<initItems.length;i++){ addRow(initItems[i][0],initItems[i][1],initItems[i][2]); }
+if(!initItems.length) addRow();
+calc();
+</script>
 <?php require __DIR__.'/layout_bottom.php'; exit; }
 
 /* ---------- YENİ ---------- */

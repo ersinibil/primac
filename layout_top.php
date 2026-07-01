@@ -1,7 +1,8 @@
 <?php require_once __DIR__.'/boot.php'; require_login();
-if(file_exists(__DIR__.'/activity_lib.php')) require_once __DIR__.'/activity_lib.php'; 
+if(file_exists(__DIR__.'/activity_lib.php')) require_once __DIR__.'/activity_lib.php';
 $notifCount = 0;
 try { $notifCount = safe_count("SELECT COUNT(*) c FROM notifications WHERE is_read=0"); } catch(Throwable $e) {}
+$cur = basename($_SERVER['SCRIPT_NAME']);
 ?>
 <!doctype html>
 <html lang="tr">
@@ -14,22 +15,49 @@ try { $notifCount = safe_count("SELECT COUNT(*) c FROM notifications WHERE is_re
 html,body{max-width:100%;overflow-x:hidden}
 body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;background:#f5f7fb;color:#101828}
 .app-shell{display:flex;min-height:100vh}
-.sidebar{width:284px;background:#071326;color:#fff;position:fixed;top:0;bottom:0;left:0;overflow:auto;padding:18px 14px}
-.brand{display:flex;gap:12px;align-items:center;margin:4px 6px 18px}
-.brand-mark{width:44px;height:44px;border-radius:15px;background:#fff;color:#071326;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:20px}
-.brand-title{font-weight:900;font-size:18px;letter-spacing:.2px}
-.brand-subtitle{color:#9fb0c7;font-size:12px;margin-top:3px}
-.company-box{background:#0f2138;border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:12px;margin:0 4px 16px}
-.company-box small{display:block;color:#9fb0c7;font-size:11px;margin-bottom:4px}
-.company-select{width:100%;background:#071326;color:white;border:1px solid rgba(255,255,255,.15);border-radius:12px;padding:10px;font-weight:800}
-.nav-title{font-size:11px;color:#7f95b2;letter-spacing:.08em;font-weight:900;margin:18px 8px 8px;text-transform:uppercase}
-.nav a,.nav details summary{display:flex;align-items:center;gap:9px;color:#e7eefc;text-decoration:none;padding:10px 12px;border-radius:12px;margin:3px 0;font-weight:700;cursor:pointer;list-style:none}
+.sidebar{width:284px;background:#071326;color:#fff;position:fixed;top:0;bottom:0;left:0;overflow:auto;padding:0 0 18px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.12) transparent}
+.sidebar::-webkit-scrollbar{width:4px}.sidebar::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:4px}
+
+/* Marka alanı */
+.brand{display:flex;gap:12px;align-items:center;padding:20px 18px 16px;margin:0;position:relative;border-bottom:1px solid rgba(255,255,255,.07)}
+.brand::after{content:'';position:absolute;bottom:0;left:18px;right:18px;height:1px;background:linear-gradient(90deg,transparent,rgba(37,99,235,.6),transparent)}
+.brand-mark{width:44px;height:44px;border-radius:15px;background:linear-gradient(135deg,#fff 60%,#dbeafe);color:#071326;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:20px;box-shadow:0 4px 14px rgba(37,99,235,.35),0 0 0 2px rgba(255,255,255,.15)}
+.brand-title{font-weight:900;font-size:18px;letter-spacing:.2px;line-height:1.2}
+.brand-subtitle{color:#7fa8d0;font-size:11.5px;margin-top:3px;letter-spacing:.03em}
+
+/* Şirket seçici */
+.company-box{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);border-radius:14px;padding:11px 13px;margin:14px 12px 4px}
+.company-box small{display:block;color:#7fa8d0;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}
+.company-select{width:100%;background:rgba(255,255,255,.07);color:#e7eefc;border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:8px 10px;font-weight:800;font-size:14px;cursor:pointer;outline:none;transition:border-color .2s,background .2s}
+.company-select:hover,.company-select:focus{background:rgba(255,255,255,.11);border-color:rgba(37,99,235,.55)}
+
+/* Navigasyon başlıkları */
+.nav-title{font-size:10.5px;color:#4d6a8a;letter-spacing:.12em;font-weight:900;margin:16px 18px 6px;text-transform:uppercase}
+
+/* Nav linkleri ve summary'ler */
+.nav{padding:6px 10px}
+.nav a,.nav details summary{display:flex;align-items:center;gap:10px;color:#c8d8f0;text-decoration:none;padding:9px 12px;border-radius:10px;margin:2px 0;font-size:14px;font-weight:700;cursor:pointer;list-style:none;transition:background .18s ease,color .18s ease,padding-left .18s ease;position:relative}
 .nav details summary::-webkit-details-marker{display:none}
-.nav a:hover,.nav details summary:hover{background:#14243d}
-.nav details[open] summary{background:#12233a}
-.nav details .sub{margin:4px 0 8px 18px;border-left:1px solid rgba(255,255,255,.1);padding-left:8px}
-.nav details .sub a{font-size:14px;padding:8px 10px;color:#cbd8ea}
-.sidebar-footer{border-top:1px solid rgba(255,255,255,.08);margin:18px 4px 0;padding-top:14px}
+
+/* Hover */
+.nav a:hover,.nav details summary:hover{background:rgba(255,255,255,.07);color:#fff}
+
+/* Aktif sayfa vurgusu */
+.nav a.active{background:rgba(37,99,235,.22);color:#fff;font-weight:800}
+.nav a.active::before{content:'';position:absolute;left:0;top:20%;bottom:20%;width:3px;border-radius:0 3px 3px 0;background:#2563eb}
+
+/* Açık grup summary */
+.nav details[open]>summary{background:rgba(255,255,255,.06);color:#fff}
+
+/* Alt menü */
+.nav details .sub{margin:3px 0 6px 20px;border-left:2px solid rgba(255,255,255,.08);padding-left:6px}
+.nav details .sub a{font-size:13.5px;padding:7px 10px;color:#8bafd4;font-weight:600;border-radius:8px}
+.nav details .sub a:hover{background:rgba(255,255,255,.07);color:#fff}
+.nav details .sub a.active{background:rgba(37,99,235,.22);color:#93c5fd;font-weight:700}
+.nav details .sub a.active::before{content:'';position:absolute;left:0;top:20%;bottom:20%;width:3px;border-radius:0 3px 3px 0;background:#2563eb}
+
+/* Footer */
+.sidebar-footer{border-top:1px solid rgba(255,255,255,.07);margin:14px 10px 0;padding-top:10px}
 .main{margin-left:284px;flex:1;padding:24px}
 .topbar{height:44px;display:flex;justify-content:space-between;align-items:center;background:#fff;border-radius:18px;padding:0 16px;margin-bottom:18px;box-shadow:0 8px 28px rgba(16,24,40,.05)}
 .search{display:flex;align-items:center;gap:8px;color:#667085;background:#f7f9fc;border-radius:999px;padding:9px 14px;min-width:280px}
@@ -76,8 +104,8 @@ th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;p
 .app-shell.nav-open .nav-overlay{display:block}
 }
 
-.brand-link{text-decoration:none;color:#fff}
-.brand-logo{width:44px;height:44px;border-radius:15px;object-fit:contain;background:#fff;padding:4px}
+.brand-link{text-decoration:none;color:#fff;display:flex;align-items:center;gap:12px}
+.brand-logo{width:44px;height:44px;border-radius:15px;object-fit:contain;background:#fff;padding:4px;box-shadow:0 4px 14px rgba(37,99,235,.35),0 0 0 2px rgba(255,255,255,.15)}
 .activity-list{display:flex;flex-direction:column;gap:10px}
 .activity-item{display:flex;gap:12px;text-decoration:none;color:#101828;background:#f8fafc;border:1px solid #eef2f6;border-radius:16px;padding:12px}
 .activity-item:hover{background:#eef2f6}
@@ -101,7 +129,7 @@ th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;p
 <aside class="sidebar">
     <a class="brand brand-link" href="dashboard.php" title="Ana sayfa">
     <?php if(file_exists(__DIR__.'/logo.png')): ?>
-        <img class="brand-logo" src="logo.png" alt="ACANS" style="background:#fff;border-radius:10px;padding:3px">
+        <img class="brand-logo" src="logo.png" alt="ACANS">
     <?php elseif(file_exists(__DIR__.'/uploads/company_logo.png')): ?>
         <img class="brand-logo" src="uploads/company_logo.png" alt="Logo">
     <?php else: ?>
@@ -114,7 +142,7 @@ th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;p
 </a>
 
 <div class="company-box">
-        <small>Şirket</small>
+        <small>Aktif Şirket</small>
         <select class="company-select">
             <option>PRIMAC</option>
             <option>ACANS</option>
@@ -124,126 +152,130 @@ th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;p
     </div>
 
     <nav class="nav">
-        <a href="dashboard.php">🏛 Komuta Merkezi</a>
-        <a href="messages.php">💬 Mesajlar</a>
+        <a href="dashboard.php" <?=($cur==='dashboard.php'?'class="active"':'')?>><span>🏛</span> Komuta Merkezi</a>
+        <a href="messages.php" <?=($cur==='messages.php'?'class="active"':'')?>><span>💬</span> Mesajlar</a>
+
+        <?php
+        /* Aktif grup tespiti: bir grubun alt menüsündeki bir sayfa aktifse details[open] kalır */
+        $jobs_pages = ['jobs.php','job_new.php','takvim.php','tasks.php','approval_waiting.php','external.php','production.php','assembly.php'];
+        $personnel_pages = ['personnel.php','personnel_new.php','tasks.php','requests.php'];
+        $contacts_pages = ['contacts.php','contact_new.php','external.php'];
+        $teklif_pages = ['teklif.php'];
+        $finance_pages = ['finance.php','finance_accounts.php','finance_new.php','finance_transfer.php'];
+        $stock_pages = ['stock.php','product_new.php','stock_movement_new.php','product_categories.php','product_taxonomy.php','purchase.php'];
+        $izleme_pages = ['activity.php','notifications.php'];
+        $admin_pages = ['dashboard.php','requests.php','profile.php','users.php','temizle_veri.php','logout.php'];
+        $hesabim_pages = ['profile.php','request_new.php','logout.php'];
+        ?>
 
         <?php if(user_can('jobs')): ?>
-        <details open>
-            <summary>📋 İşler</summary>
+        <details <?=(in_array($cur,$jobs_pages)?'open':'')?>><summary><span>📋</span> İşler</summary>
             <div class="sub">
-                <a href="jobs.php">İş Merkezi</a>
-                <a href="job_new.php">+ Yeni İş</a>
-                <a href="takvim.php">📅 Takvim</a>
-                <a href="tasks.php">Görevler</a>
-                <a href="approval_waiting.php">Müşteri Onayları</a>
-                <a href="external.php">Dış Tedarik / Atölye</a>
-                <a href="production.php">Üretim</a>
-                <a href="assembly.php">Montaj</a>
+                <a href="jobs.php" <?=($cur==='jobs.php'?'class="active"':'')?>><span>📁</span> İş Merkezi</a>
+                <a href="job_new.php" <?=($cur==='job_new.php'?'class="active"':'')?>><span>➕</span> Yeni İş</a>
+                <a href="takvim.php" <?=($cur==='takvim.php'?'class="active"':'')?>><span>📅</span> Takvim</a>
+                <a href="tasks.php" <?=($cur==='tasks.php'?'class="active"':'')?>><span>✅</span> Görevler</a>
+                <a href="approval_waiting.php" <?=($cur==='approval_waiting.php'?'class="active"':'')?>><span>🔍</span> Müşteri Onayları</a>
+                <a href="external.php" <?=($cur==='external.php'?'class="active"':'')?>><span>🔧</span> Dış Tedarik / Atölye</a>
+                <a href="production.php" <?=($cur==='production.php'?'class="active"':'')?>><span>🏭</span> Üretim</a>
+                <a href="assembly.php" <?=($cur==='assembly.php'?'class="active"':'')?>><span>🔩</span> Montaj</a>
             </div>
         </details>
         <?php endif; ?>
 
         <?php if(user_can('personnel')): ?>
-        <details>
-            <summary>👥 Personel & Görevler</summary>
+        <details <?=(in_array($cur,$personnel_pages)?'open':'')?>><summary><span>👥</span> Personel & Görevler</summary>
             <div class="sub">
-                <a href="personnel.php">Personeller</a>
-                <a href="personnel_new.php">+ Yeni Personel</a>
-                <a href="tasks.php">Görevler</a>
-                <a href="requests.php">Personel Talepleri</a>
+                <a href="personnel.php" <?=($cur==='personnel.php'?'class="active"':'')?>><span>👤</span> Personeller</a>
+                <a href="personnel_new.php" <?=($cur==='personnel_new.php'?'class="active"':'')?>><span>➕</span> Yeni Personel</a>
+                <a href="tasks.php" <?=($cur==='tasks.php'?'class="active"':'')?>><span>✅</span> Görevler</a>
+                <a href="requests.php" <?=($cur==='requests.php'?'class="active"':'')?>><span>📨</span> Personel Talepleri</a>
             </div>
         </details>
         <?php endif; ?>
 
         <?php if(user_can('contacts')): ?>
-        <details>
-            <summary>👥 Cari Hesaplar</summary>
+        <details <?=(in_array($cur,$contacts_pages)?'open':'')?>><summary><span>👥</span> Cari Hesaplar</summary>
             <div class="sub">
-                <a href="contacts.php">Tüm Cariler</a>
-                <a href="contact_new.php?type=Müşteri">+ Müşteri</a>
-                <a href="contact_new.php?type=Tedarikçi">+ Tedarikçi</a>
-                <a href="external.php">Dış Atölyeler</a>
+                <a href="contacts.php" <?=($cur==='contacts.php'?'class="active"':'')?>><span>📋</span> Tüm Cariler</a>
+                <a href="contact_new.php?type=Müşteri" <?=($cur==='contact_new.php'?'class="active"':'')?>><span>➕</span> Müşteri</a>
+                <a href="contact_new.php?type=Tedarikçi"><span>➕</span> Tedarikçi</a>
+                <a href="external.php" <?=($cur==='external.php'?'class="active"':'')?>><span>🔧</span> Dış Atölyeler</a>
             </div>
         </details>
         <?php endif; ?>
 
         <?php if(user_can('teklif')): ?>
-        <details>
-            <summary>📄 Teklifler</summary>
+        <details <?=(in_array($cur,$teklif_pages)?'open':'')?>><summary><span>📄</span> Teklifler</summary>
             <div class="sub">
-                <a href="teklif.php">Tüm Teklifler</a>
-                <a href="teklif.php?new=1">+ Yeni Teklif</a>
+                <a href="teklif.php" <?=($cur==='teklif.php'?'class="active"':'')?>><span>📋</span> Tüm Teklifler</a>
+                <a href="teklif.php?new=1"><span>➕</span> Yeni Teklif</a>
             </div>
         </details>
         <?php endif; ?>
 
         <?php if(user_can('finance')): ?>
-        <details>
-            <summary>💰 Finans</summary>
+        <details <?=(in_array($cur,$finance_pages)?'open':'')?>><summary><span>💰</span> Finans</summary>
             <div class="sub">
-                <a href="finance.php">Finans Paneli</a>
-                <a href="finance_accounts.php">Banka / Kasa / Kart / POS</a>
-                <a href="finance_new.php?direction=in">+ Tahsilat</a>
-                <a href="finance_new.php?direction=out">+ Ödeme</a>
-                <a href="finance_transfer.php">Hesap Transferi</a>
+                <a href="finance.php" <?=($cur==='finance.php'?'class="active"':'')?>><span>📊</span> Finans Paneli</a>
+                <a href="finance_accounts.php" <?=($cur==='finance_accounts.php'?'class="active"':'')?>><span>🏦</span> Banka / Kasa / Kart / POS</a>
+                <a href="finance_new.php?direction=in" <?=($cur==='finance_new.php'?'class="active"':'')?>><span>➕</span> Tahsilat</a>
+                <a href="finance_new.php?direction=out"><span>➖</span> Ödeme</a>
+                <a href="finance_transfer.php" <?=($cur==='finance_transfer.php'?'class="active"':'')?>><span>↔</span> Hesap Transferi</a>
             </div>
         </details>
         <?php endif; ?>
 
         <?php if(user_can('report')): ?>
-        <a href="report.php">📊 Raporlar</a>
+        <a href="report.php" <?=($cur==='report.php'?'class="active"':'')?>><span>📊</span> Raporlar</a>
         <?php endif; ?>
 
         <?php if(user_can('stock')): ?>
-        <details>
-            <summary>📦 Ürün / Stok</summary>
+        <details <?=(in_array($cur,$stock_pages)?'open':'')?>><summary><span>📦</span> Ürün / Stok</summary>
             <div class="sub">
-                <a href="stock.php">Ürün / Stok Listesi</a>
-                <a href="product_new.php">+ Yeni Ürün</a>
-                <a href="stock_movement_new.php?type=in">+ Stok Giriş</a>
-                <a href="stock_movement_new.php?type=out">+ Stok Çıkış</a>
-                <a href="product_categories.php">Kategoriler</a>
-                <a href="product_taxonomy.php">Marka / Birim</a>
-                <a href="purchase.php">Satın Alma İşleri</a>
+                <a href="stock.php" <?=($cur==='stock.php'?'class="active"':'')?>><span>📦</span> Ürün / Stok Listesi</a>
+                <a href="product_new.php" <?=($cur==='product_new.php'?'class="active"':'')?>><span>➕</span> Yeni Ürün</a>
+                <a href="stock_movement_new.php?type=in" <?=($cur==='stock_movement_new.php'?'class="active"':'')?>><span>⬆</span> Stok Giriş</a>
+                <a href="stock_movement_new.php?type=out"><span>⬇</span> Stok Çıkış</a>
+                <a href="product_categories.php" <?=($cur==='product_categories.php'?'class="active"':'')?>><span>🏷</span> Kategoriler</a>
+                <a href="product_taxonomy.php" <?=($cur==='product_taxonomy.php'?'class="active"':'')?>><span>🔖</span> Marka / Birim</a>
+                <a href="purchase.php" <?=($cur==='purchase.php'?'class="active"':'')?>><span>🛒</span> Satın Alma İşleri</a>
             </div>
         </details>
         <?php endif; ?>
 
         <div class="nav-title">Sistem</div>
-        <details>
-            <summary>🕘 İzleme</summary>
+        <details <?=(in_array($cur,$izleme_pages)?'open':'')?>><summary><span>🕘</span> İzleme</summary>
             <div class="sub">
-                <a href="activity.php">Son İşlemler</a>
-                <a href="notifications.php">Bildirimler</a>
+                <a href="activity.php" <?=($cur==='activity.php'?'class="active"':'')?>><span>📜</span> Son İşlemler</a>
+                <a href="notifications.php" <?=($cur==='notifications.php'?'class="active"':'')?>><span>🔔</span> Bildirimler</a>
             </div>
         </details>
 
         <?php if(user_can('users')): ?>
-        <details>
-            <summary>⚙ Yönetim</summary>
+        <details <?=(in_array($cur,$admin_pages)&&$cur!=='dashboard.php'?'open':'')?>><summary><span>⚙</span> Yönetim</summary>
             <div class="sub">
-                <a href="dashboard.php">Komuta Merkezi</a>
-                <a href="requests.php">Onay Bekleyenler</a>
-                <a href="profile.php">Profilim / Şifre</a>
-                <a href="users.php">Kullanıcılar & Yetkiler</a>
-                <a href="temizle_veri.php" style="color:#fca5a5">🧹 Veri Temizleme (canlıya hazırlık)</a>
-                <a href="logout.php">Çıkış</a>
+                <a href="dashboard.php" <?=($cur==='dashboard.php'?'class="active"':'')?>><span>🏛</span> Komuta Merkezi</a>
+                <a href="requests.php" <?=($cur==='requests.php'?'class="active"':'')?>><span>📨</span> Onay Bekleyenler</a>
+                <a href="profile.php" <?=($cur==='profile.php'?'class="active"':'')?>><span>👤</span> Profilim / Şifre</a>
+                <a href="users.php" <?=($cur==='users.php'?'class="active"':'')?>><span>👥</span> Kullanıcılar & Yetkiler</a>
+                <a href="temizle_veri.php" <?=($cur==='temizle_veri.php'?'class="active"':'')?> style="color:#fca5a5"><span>🧹</span> Veri Temizleme (canlıya hazırlık)</a>
+                <a href="logout.php"><span>🚪</span> Çıkış</a>
             </div>
         </details>
         <?php endif; ?>
         <?php if(!user_can('users')): ?>
-        <details>
-            <summary>⚙ Hesabım</summary>
+        <details <?=(in_array($cur,$hesabim_pages)?'open':'')?>><summary><span>⚙</span> Hesabım</summary>
             <div class="sub">
-                <a href="profile.php">Profilim / Şifre</a>
-                <a href="request_new.php">Talep Oluştur</a>
-                <a href="logout.php">Çıkış</a>
+                <a href="profile.php" <?=($cur==='profile.php'?'class="active"':'')?>><span>👤</span> Profilim / Şifre</a>
+                <a href="request_new.php" <?=($cur==='request_new.php'?'class="active"':'')?>><span>📨</span> Talep Oluştur</a>
+                <a href="logout.php"><span>🚪</span> Çıkış</a>
             </div>
         </details>
         <?php endif; ?>
 
         <div class="sidebar-footer">
-            <a href="logout.php">🚪 Çıkış</a>
+            <a href="logout.php"><span>🚪</span> Çıkış</a>
         </div>
     </nav>
 </aside>
