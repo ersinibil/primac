@@ -51,7 +51,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ACANS OTS Giriş</title>
+<title><?=h(app_config()['app_name'] ?? 'OTS')?> — Giriş</title>
 <style>
 body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#071326,#10233f);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:#101828}
 .login{width:420px;max-width:92vw;background:white;border-radius:28px;padding:30px;box-shadow:0 30px 80px rgba(0,0,0,.25)}
@@ -66,7 +66,7 @@ button{width:100%;border:0;border-radius:14px;background:#111827;color:white;pad
 <body>
 <div class="login">
 <div class="logo" style="background:#fff;overflow:hidden;padding:6px"><img src="logo.png" alt="ACANS" style="width:100%;height:100%;object-fit:contain" onerror="this.parentNode.textContent='A'"></div>
-<h1>ACANS OTS</h1>
+<h1><?=h(app_config()['app_name'] ?? 'OTS')?></h1>
 <div class="muted">Online Takip ve Yönetim Sistemi</div>
 <?php if($error): ?><div class="alert"><?=h($error)?></div><?php endif; ?>
 <form method="post">
