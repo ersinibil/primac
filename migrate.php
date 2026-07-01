@@ -47,7 +47,15 @@ $pdo->exec("CREATE TABLE IF NOT EXISTS schema_migrations(
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
 $applied = [];
-foreach($pdo->query("SELECT filename FROM schema_migrations")->fetchAll(PDO::FETCH_COLUMN) as $f) $applied[$f]=1;
+try{
+  foreach($pdo->query("SELECT filename FROM schema_migrations")->fetchAll(PDO::FETCH_COLUMN) as $f) $applied[$f]=1;
+}catch(Throwable $e){
+  // Eski/uyumsuz takip tablosu (örn. kur.php 'name' kolonuyla kurmuş) → sıfırla.
+  // Migration'lar idempotent (IF NOT EXISTS) olduğu için yeniden çalışması veriyi bozmaz.
+  $pdo->exec("DROP TABLE IF EXISTS schema_migrations");
+  $pdo->exec("CREATE TABLE schema_migrations(filename VARCHAR(190) NOT NULL PRIMARY KEY, applied_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+  $applied=[];
+}
 
 $files = glob(__DIR__.'/database/migrations/*.sql');
 sort($files);

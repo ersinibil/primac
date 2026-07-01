@@ -16,6 +16,7 @@ if (session_status() === PHP_SESSION_NONE) {
 if (isset($_GET['web'])) $_SESSION['force_web'] = 1;
 $__mpub = ['public_file.php','cron.php','ics.php','icon.php','manifest.php','sw.php','kur.php','migrate.php'];
 if (empty($_SESSION['force_web'])
+    && !empty($_SESSION['user'])
     && strpos($_SERVER['SCRIPT_NAME'] ?? '', '/mobile/') === false
     && !in_array(basename($_SERVER['SCRIPT_NAME'] ?? ''), $__mpub, true)
     && !empty($_SERVER['HTTP_USER_AGENT'])
