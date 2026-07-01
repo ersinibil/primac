@@ -3,10 +3,12 @@ require_once 'common.php';
 $pdo=db();
 $id=(int)($_GET['id'] ?? 0);
 
-// active kolonu güvencesi
-try{
-    $pdo->exec("ALTER TABLE contacts ADD COLUMN active TINYINT(1) NOT NULL DEFAULT 1");
-}catch(Throwable $e){}
+// Kolon güvenceleri
+try{ $pdo->exec("ALTER TABLE contacts ADD COLUMN active TINYINT(1) NOT NULL DEFAULT 1"); }catch(Throwable $e){}
+try{ $pdo->exec("ALTER TABLE contacts ADD COLUMN phone2 varchar(60) DEFAULT NULL AFTER phone"); }catch(Throwable $e){}
+try{ $pdo->exec("ALTER TABLE contacts ADD COLUMN website varchar(255) DEFAULT NULL AFTER email"); }catch(Throwable $e){}
+try{ $pdo->exec("ALTER TABLE contacts ADD COLUMN postal_code varchar(20) DEFAULT NULL AFTER district"); }catch(Throwable $e){}
+try{ $pdo->exec("ALTER TABLE contacts ADD COLUMN iban varchar(60) DEFAULT NULL AFTER postal_code"); }catch(Throwable $e){}
 
 // Aktif/Pasif toggle (topx öncesi)
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['toggle_active'])){
@@ -32,8 +34,32 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['delete_contact'])){
 // Cari düzenle (çıktıdan önce)
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['save_contact'])){
     try{
-        $pdo->prepare("UPDATE contacts SET name=?,type=?,phone=?,email=?,authorized_person=?,tax_office=?,tax_number=?,city=?,district=?,address=?,opening_balance=?,notes=? WHERE id=?")
-            ->execute([trim($_POST['name']),trim($_POST['type']??''),trim($_POST['phone']??''),trim($_POST['email']??''),trim($_POST['authorized_person']??''),trim($_POST['tax_office']??''),trim($_POST['tax_number']??''),trim($_POST['city']??''),trim($_POST['district']??''),trim($_POST['address']??''),(float)str_replace(',','.',$_POST['opening_balance']??'0'),trim($_POST['notes']??''),$id]);
+        $pdo->prepare("UPDATE contacts SET
+            name=?,type=?,authorized_person=?,
+            phone=?,phone2=?,email=?,website=?,
+            tax_office=?,tax_number=?,
+            city=?,district=?,postal_code=?,address=?,
+            iban=?,opening_balance=?,notes=?
+            WHERE id=?")
+            ->execute([
+                trim($_POST['name']),
+                trim($_POST['type'] ?? ''),
+                trim($_POST['authorized_person'] ?? ''),
+                trim($_POST['phone'] ?? ''),
+                trim($_POST['phone2'] ?? ''),
+                trim($_POST['email'] ?? ''),
+                trim($_POST['website'] ?? ''),
+                trim($_POST['tax_office'] ?? ''),
+                trim($_POST['tax_number'] ?? ''),
+                trim($_POST['city'] ?? ''),
+                trim($_POST['district'] ?? ''),
+                trim($_POST['postal_code'] ?? ''),
+                trim($_POST['address'] ?? ''),
+                trim($_POST['iban'] ?? ''),
+                (float)str_replace(',','.',$_POST['opening_balance'] ?? '0'),
+                trim($_POST['notes'] ?? ''),
+                $id
+            ]);
         try{ if(function_exists('activity_log')) activity_log('Cari','Düzenleme',trim($_POST['name']),'','contact',$id,'contact_view.php?id='.$id,'✏️'); }catch(Throwable $e){}
     }catch(Throwable $e){}
     header('Location: contact_view.php?id='.$id.'&ok=1'); exit;
@@ -102,18 +128,22 @@ try{
   <summary style="font-weight:900;cursor:pointer">✏️ Cari Bilgilerini Düzenle</summary>
   <form method="post" style="margin-top:10px">
     <label>Cari Adı</label><input name="name" value="<?=htmlspecialchars($c['name'])?>" required>
-    <div style="display:flex;gap:10px"><div style="flex:1"><label>Tür</label>
-      <select name="type"><?php foreach(['Müşteri','Tedarikçi','Her İkisi','Personel','Diğer'] as $tp): ?><option <?=($c['type']??'')===$tp?'selected':''?>><?=$tp?></option><?php endforeach; ?></select></div>
-      <div style="flex:1"><label>Telefon</label><input name="phone" value="<?=htmlspecialchars($c['phone']??'')?>"></div></div>
-    <div style="display:flex;gap:10px"><div style="flex:1"><label>E-posta</label><input name="email" value="<?=htmlspecialchars($c['email']??'')?>"></div>
-      <div style="flex:1"><label>Yetkili</label><input name="authorized_person" value="<?=htmlspecialchars($c['authorized_person']??'')?>"></div></div>
-    <div style="display:flex;gap:10px"><div style="flex:1"><label>Vergi D.</label><input name="tax_office" value="<?=htmlspecialchars($c['tax_office']??'')?>"></div>
-      <div style="flex:1"><label>Vergi No</label><input name="tax_number" value="<?=htmlspecialchars($c['tax_number']??'')?>"></div></div>
-    <div style="display:flex;gap:10px"><div style="flex:1"><label>İl</label><input name="city" value="<?=htmlspecialchars($c['city']??'')?>"></div>
-      <div style="flex:1"><label>İlçe</label><input name="district" value="<?=htmlspecialchars($c['district']??'')?>"></div></div>
+    <label>Tür</label>
+    <select name="type"><?php foreach(['Müşteri','Tedarikçi','Her İkisi'] as $tp): ?><option <?=($c['type']??'')===$tp?'selected':''?>><?=$tp?></option><?php endforeach; ?></select>
+    <label>Yetkili Kişi</label><input name="authorized_person" value="<?=htmlspecialchars($c['authorized_person']??'')?>">
+    <label>Telefon</label><input name="phone" type="tel" value="<?=htmlspecialchars($c['phone']??'')?>">
+    <label>2. Telefon</label><input name="phone2" type="tel" value="<?=htmlspecialchars($c['phone2']??'')?>">
+    <label>E-posta</label><input name="email" type="email" value="<?=htmlspecialchars($c['email']??'')?>">
+    <label>Web Sitesi</label><input name="website" type="url" value="<?=htmlspecialchars($c['website']??'')?>" placeholder="https://">
+    <label>Vergi Dairesi</label><input name="tax_office" value="<?=htmlspecialchars($c['tax_office']??'')?>">
+    <label>Vergi / TC No</label><input name="tax_number" value="<?=htmlspecialchars($c['tax_number']??'')?>">
+    <label>İl</label><input name="city" value="<?=htmlspecialchars($c['city']??'')?>">
+    <label>İlçe</label><input name="district" value="<?=htmlspecialchars($c['district']??'')?>">
+    <label>Posta Kodu</label><input name="postal_code" maxlength="10" value="<?=htmlspecialchars($c['postal_code']??'')?>">
     <label>Adres</label><textarea name="address" rows="2"><?=htmlspecialchars($c['address']??'')?></textarea>
+    <label>IBAN</label><input name="iban" maxlength="32" value="<?=htmlspecialchars($c['iban']??'')?>" placeholder="TR00 0000 0000 0000 0000 0000 00">
     <label>Açılış Bakiyesi (₺)</label><input name="opening_balance" value="<?=htmlspecialchars($c['opening_balance']??'0')?>">
-    <label>Not</label><textarea name="notes" rows="2"><?=htmlspecialchars($c['notes']??'')?></textarea>
+    <label>Notlar</label><textarea name="notes" rows="2"><?=htmlspecialchars($c['notes']??'')?></textarea>
     <button class="btn dark" name="save_contact" value="1" style="width:100%;padding:13px;margin-top:8px">💾 Kaydet</button>
   </form>
 </details>

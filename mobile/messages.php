@@ -15,10 +15,36 @@ foreach (['receiver_user_id'=>'INT NULL','is_read'=>'TINYINT(1) DEFAULT 0','atta
 $with = (int)($_GET['with'] ?? 0);
 $thread = (int)($_GET['thread'] ?? 0);
 
+/* --- Mesaj düzenleme (sadece kendi metin mesajları) --- */
+if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['edit_msg'])) {
+    $eid=(int)$_POST['edit_msg'];
+    $newText=trim($_POST['edit_text']??'');
+    $resp=['ok'=>false,'error'=>''];
+    if($eid>0 && $newText!==''){
+        try{
+            $st=$pdo->prepare("UPDATE internal_messages SET message=? WHERE id=? AND sender_user_id=? AND (attachment IS NULL OR attachment='')");
+            $st->execute([$newText,$eid,$me]);
+            $resp['ok']=($st->rowCount()>0);
+            if(!$resp['ok']) $resp['error']='Düzenlenemedi (sahip değilsiniz ya da ekli mesaj).';
+        }catch(Throwable $e){ $resp['error']='Hata: '.$e->getMessage(); }
+    } else { $resp['error']='Geçersiz istek.'; }
+    if(!empty($_POST['ajax'])){ header('Content-Type: application/json'); echo json_encode($resp); exit; }
+    header('Location: messages.php?with='.(int)($_POST['with']??0).'&thread='.(int)($_POST['thread']??0)); exit;
+}
+
 /* --- Mesaj / sohbet silme --- */
 if ($_SERVER['REQUEST_METHOD']==='POST' && (isset($_POST['del_msg'])||isset($_POST['del_conv']))) {
     if(isset($_POST['del_msg'])){
-        try{ $pdo->prepare("DELETE FROM internal_messages WHERE id=? AND (sender_user_id=? OR receiver_user_id=?)")->execute([(int)$_POST['del_msg'],$me,$me]); }catch(Throwable $e){}
+        $dmid=(int)$_POST['del_msg'];
+        // Önce eki kontrol et (sadece kendi gönderdiği mesaj)
+        $attRow=null;
+        try{ $attRow=$pdo->prepare("SELECT attachment FROM internal_messages WHERE id=? AND sender_user_id=?")->execute([$dmid,$me]) ? null : null;
+             $st2=$pdo->prepare("SELECT attachment FROM internal_messages WHERE id=? AND sender_user_id=?"); $st2->execute([$dmid,$me]); $attRow=$st2->fetch(); }catch(Throwable $e){}
+        if($attRow && !empty($attRow['attachment'])){
+            $fpath=__DIR__.'/../'.$attRow['attachment'];
+            if(is_file($fpath)) @unlink($fpath);
+        }
+        try{ $pdo->prepare("DELETE FROM internal_messages WHERE id=? AND sender_user_id=?")->execute([$dmid,$me]); }catch(Throwable $e){}
         if(!empty($_POST['ajax'])){ header('Content-Type: application/json'); echo json_encode(['ok'=>true]); exit; }
         header('Location: messages.php?with='.(int)($_POST['with']??0)); exit;
     }
@@ -62,7 +88,10 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
                     if($saved){
                         @chmod($dest,0644);
                         $att='uploads/job_files/'.$stored;
-                        $attType=in_array($ext,['jpg','jpeg','png','gif','webp','heic'])?'image':'file';
+                        if(in_array($ext,['jpg','jpeg','png','gif','webp','heic'])) $attType='image';
+                        elseif(in_array($ext,['m4a','mp3','wav','ogg','oga','aac','webm','opus'])) $attType='audio';
+                        elseif(in_array($ext,['mp4','mov','m4v'])) $attType='video';
+                        else $attType='file';
                     } else { $resp['error']='Kaydedilemedi (move/copy/put). dir_yazılır='.(is_writable($dir)?'1':'0'); }
                 }
             }
@@ -160,18 +189,40 @@ if ($thread):
 <div class="thread" id="thread">
 <?php if(!$tmsgs): ?><div id="emptymsg" style="text-align:center;color:#94a3b8;padding:24px">Henüz mesaj yok. İlk mesajı sen yaz 👇</div><?php endif; ?>
 <?php foreach($tmsgs as $m): $mine=((int)$m['sender_user_id']===$me); $snm=$m['full_name']?:$m['username']?:'?'; ?>
-    <div class="bubble <?=$mine?'mine':'theirs'?>" ondblclick="delMsg(<?=$m['id']?>)">
+    <div class="bubble <?=$mine?'mine':'theirs'?>" id="msg<?=$m['id']?>" <?=$mine?'ondblclick="editMsgT('.$m['id'].')"':''?>>
         <?php if(!$mine): ?><small style="color:#60a5fa;font-weight:700;opacity:1;text-align:left;margin:0 0 2px"><?=htmlspecialchars($snm)?></small><?php endif; ?>
         <?php if(!empty($m['attachment'])):
-          $apath='../'.htmlspecialchars($m['attachment']); $aext=strtolower(pathinfo($m['attachment'],PATHINFO_EXTENSION)); $isVid=in_array($aext,['mp4','mov','webm','m4v']); $isAud=in_array($aext,['m4a','mp3','wav','ogg','oga','aac']);
+          $apath='../'.htmlspecialchars($m['attachment']);
+          $aext=strtolower(pathinfo($m['attachment'],PATHINFO_EXTENSION));
+          $attT=$m['attach_type']??'file';
+          $isVid=($attT==='video'||in_array($aext,['mp4','mov','m4v']));
+          $isAud=($attT==='audio'||in_array($aext,['m4a','mp3','wav','ogg','oga','aac','webm','opus']));
           if($m['attach_type']==='image'): ?><img src="<?=$apath?>" onclick="ACANS_VIEW('<?=$apath?>','image')" style="max-width:200px;width:100%;border-radius:12px;display:block;margin-bottom:4px;cursor:pointer">
-        <?php elseif($isAud): ?><audio controls preload="none" src="<?=$apath?>" style="max-width:230px;width:100%;height:40px;margin-bottom:4px"></audio>
-        <?php elseif($isVid): ?><div onclick="ACANS_VIEW('<?=$apath?>','video')" style="position:relative;max-width:200px;cursor:pointer;margin-bottom:4px"><video src="<?=$apath?>#t=0.1" style="max-width:200px;width:100%;border-radius:12px;display:block" muted playsinline></video><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:40px">▶️</div></div>
+        <?php elseif($isAud): ?><audio controls preload="none" src="<?=$apath?>" style="max-width:230px;width:100%;margin-bottom:4px"></audio>
+        <?php elseif($isVid): ?><video controls preload="none" src="<?=$apath?>" style="max-width:220px;width:100%;border-radius:12px;display:block;margin-bottom:4px" playsinline></video>
         <?php else: ?><a href="javascript:void(0)" onclick="ACANS_VIEW('<?=$apath?>','file')" style="color:#fff;text-decoration:underline">📎 Dosya</a><br><?php endif; endif; ?>
-        <?=nl2br(htmlspecialchars($m['message']))?>
-        <small><?=htmlspecialchars(date('d.m H:i',strtotime($m['created_at'])))?> <span onclick="event.stopPropagation();delMsg(<?=$m['id']?>)" style="cursor:pointer;opacity:.55;margin-left:4px">🗑</span></small>
+        <span id="msgtxt<?=$m['id']?>"><?=nl2br(htmlspecialchars($m['message']))?></span>
+        <small>
+          <?=htmlspecialchars(date('d.m H:i',strtotime($m['created_at'])))?>
+          <?php if($mine): ?>
+            <?php if(empty($m['attachment'])): ?><span onclick="event.stopPropagation();editMsgT(<?=$m['id']?>)" style="cursor:pointer;opacity:.55;margin-left:6px" title="Düzenle">✏️</span><?php endif; ?>
+            <span onclick="event.stopPropagation();delMsgT(<?=$m['id']?>)" style="cursor:pointer;opacity:.55;margin-left:4px" title="Sil">🗑</span>
+          <?php endif; ?>
+        </small>
     </div>
 <?php endforeach; ?>
+</div>
+
+<!-- Grup düzenleme modalı -->
+<div id="editModalT" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.55);align-items:center;justify-content:center">
+  <div style="background:#0f2035;border-radius:18px;padding:18px;width:90%;max-width:400px">
+    <div style="font-weight:700;margin-bottom:10px">Mesajı Düzenle</div>
+    <textarea id="editTextT" rows="4" style="width:100%;border-radius:10px;padding:9px;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2);resize:vertical;font-size:15px"></textarea>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button onclick="saveEditT()" class="btn dark" style="flex:1">Kaydet</button>
+      <button onclick="document.getElementById('editModalT').style.display='none'" style="flex:1;background:rgba(255,255,255,.1);color:#fff;border:0;border-radius:12px;padding:10px;font-size:14px">İptal</button>
+    </div>
+  </div>
 </div>
 
 <form method="post" class="composer" enctype="multipart/form-data" id="msgform">
@@ -229,8 +280,24 @@ function vrec(btn){
   }).catch(function(){ alert('Mikrofon izni gerekli'); });
 }
 if(!window.MediaRecorder||!navigator.mediaDevices){ var vb=document.querySelectorAll('.vbtn'); for(var i=0;i<vb.length;i++)vb[i].style.display='none'; }
-function delMsg(id){ if(!confirm('Bu mesaj silinsin mi?'))return; var fd=new FormData();fd.append('del_msg',id);fd.append('ajax','1');
-  fetch('messages.php?thread='+THREADID,{method:'POST',body:fd,credentials:'same-origin'}).then(function(){location.reload();}); }
+var _editIdT=0;
+function editMsgT(id){
+  var span=document.getElementById('msgtxt'+id); if(!span)return;
+  _editIdT=id; document.getElementById('editTextT').value=span.innerText||span.textContent;
+  document.getElementById('editModalT').style.display='flex';
+}
+function saveEditT(){
+  var txt=document.getElementById('editTextT').value.trim(); if(!txt)return;
+  var fd=new FormData(); fd.append('edit_msg',_editIdT); fd.append('edit_text',txt); fd.append('thread',THREADID); fd.append('ajax','1');
+  fetch('messages.php?thread='+THREADID,{method:'POST',body:fd,credentials:'same-origin'})
+    .then(function(r){return r.json();}).then(function(d){
+      if(d&&d.ok){ var sp=document.getElementById('msgtxt'+_editIdT); if(sp)sp.innerHTML=txt.replace(/\n/g,'<br>'); document.getElementById('editModalT').style.display='none'; }
+      else alert(d&&d.error?d.error:'Düzenlenemedi.');
+    }).catch(function(){ alert('Bağlantı hatası.'); });
+}
+function delMsgT(id){ if(!confirm('Bu mesaj silinsin mi?'))return; var fd=new FormData();fd.append('del_msg',id);fd.append('ajax','1');
+  fetch('messages.php?thread='+THREADID,{method:'POST',body:fd,credentials:'same-origin'})
+    .then(function(r){return r.json();}).then(function(d){ if(d&&d.ok){ var b=document.getElementById('msg'+id); if(b)b.remove(); } else alert(d&&d.error?d.error:'Silinemedi.'); }); }
 document.getElementById('msgform').addEventListener('submit',function(e){ e.preventDefault();
   var ta=document.querySelector('.composer textarea'); var msg=ta?ta.value.trim():''; if(!msg&&!pendItems.length)return;
   var b=document.getElementById('sendbtn'); b.disabled=true; b.textContent='…';
@@ -271,33 +338,71 @@ if ($with):
 <div class="thread" id="thread">
 <?php if(!$msgs): ?><div id="emptymsg" style="text-align:center;color:#94a3b8;padding:24px">Henüz mesaj yok. İlk mesajı sen yaz 👇</div><?php endif; ?>
 <?php $maxId=0; foreach($msgs as $m): $mine=((int)$m['sender_user_id']===$me); $maxId=max($maxId,(int)$m['id']); ?>
-    <div class="bubble <?=$mine?'mine':'theirs'?>" ondblclick="delMsg(<?=$m['id']?>)">
+    <div class="bubble <?=$mine?'mine':'theirs'?>" id="msg<?=$m['id']?>" <?=$mine?'ondblclick="editMsg('.$m['id'].')"':''?>>
         <?php if(!empty($m['attachment'])):
           $apath='../'.htmlspecialchars($m['attachment']);
           $aext=strtolower(pathinfo($m['attachment'],PATHINFO_EXTENSION));
-          $isVid=in_array($aext,['mp4','mov','webm','m4v']); $isAud=in_array($aext,['m4a','mp3','wav','ogg','oga','aac']);
+          $attT=$m['attach_type']??'file';
+          $isVid=($attT==='video'||in_array($aext,['mp4','mov','m4v']));
+          $isAud=($attT==='audio'||in_array($aext,['m4a','mp3','wav','ogg','oga','aac','webm','opus']));
           if($m['attach_type']==='image'): ?>
           <img src="<?=$apath?>" onclick="ACANS_VIEW('<?=$apath?>','image')" style="max-width:200px;width:100%;border-radius:12px;display:block;margin-bottom:4px;cursor:pointer">
         <?php elseif($isAud): ?>
-          <audio controls preload="none" src="<?=$apath?>" style="max-width:230px;width:100%;height:40px;margin-bottom:4px"></audio>
+          <audio controls preload="none" src="<?=$apath?>" style="max-width:230px;width:100%;margin-bottom:4px"></audio>
         <?php elseif($isVid): ?>
-          <div onclick="ACANS_VIEW('<?=$apath?>','video')" style="position:relative;max-width:200px;cursor:pointer;margin-bottom:4px"><video src="<?=$apath?>#t=0.1" style="max-width:200px;width:100%;border-radius:12px;display:block" muted playsinline></video><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:40px">▶️</div></div>
+          <video controls preload="none" src="<?=$apath?>" style="max-width:220px;width:100%;border-radius:12px;display:block;margin-bottom:4px" playsinline></video>
         <?php else: ?>
           <a href="javascript:void(0)" onclick="ACANS_VIEW('<?=$apath?>','file')" style="color:#fff;text-decoration:underline">📎 Dosya</a><br>
         <?php endif; endif; ?>
-        <?=nl2br(htmlspecialchars($m['message']))?>
-        <small><?=htmlspecialchars(date('d.m H:i',strtotime($m['created_at'])))?><?=$mine?($m['is_read']?' ✓✓':' ✓'):''?> <span onclick="event.stopPropagation();delMsg(<?=$m['id']?>)" style="cursor:pointer;opacity:.55;margin-left:4px">🗑</span></small>
+        <span id="msgtxt<?=$m['id']?>"><?=nl2br(htmlspecialchars($m['message']))?></span>
+        <small>
+          <?=htmlspecialchars(date('d.m H:i',strtotime($m['created_at'])))?><?=$mine?($m['is_read']?' ✓✓':' ✓'):''?>
+          <?php if($mine): ?>
+            <?php if(empty($m['attachment'])): ?><span onclick="event.stopPropagation();editMsg(<?=$m['id']?>)" style="cursor:pointer;opacity:.55;margin-left:6px" title="Düzenle">✏️</span><?php endif; ?>
+            <span onclick="event.stopPropagation();delMsg(<?=$m['id']?>)" style="cursor:pointer;opacity:.55;margin-left:4px" title="Sil">🗑</span>
+          <?php endif; ?>
+        </small>
     </div>
 <?php endforeach; ?>
 </div>
+
+<!-- Düzenleme modalı -->
+<div id="editModal" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.55);align-items:center;justify-content:center">
+  <div style="background:#0f2035;border-radius:18px;padding:18px;width:90%;max-width:400px">
+    <div style="font-weight:700;margin-bottom:10px">Mesajı Düzenle</div>
+    <textarea id="editText" rows="4" style="width:100%;border-radius:10px;padding:9px;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2);resize:vertical;font-size:15px"></textarea>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button onclick="saveEdit()" class="btn dark" style="flex:1">Kaydet</button>
+      <button onclick="document.getElementById('editModal').style.display='none'" style="flex:1;background:rgba(255,255,255,.1);color:#fff;border:0;border-radius:12px;padding:10px;font-size:14px">İptal</button>
+    </div>
+  </div>
+</div>
+
 <script>
 /* Mesaj / sohbet silme */
 var WITHID=<?=$with?>;
+var _editId=0;
+function editMsg(id){
+  var span=document.getElementById('msgtxt'+id); if(!span)return;
+  var txt=span.innerText||span.textContent;
+  _editId=id;
+  document.getElementById('editText').value=txt;
+  document.getElementById('editModal').style.display='flex';
+}
+function saveEdit(){
+  var txt=document.getElementById('editText').value.trim(); if(!txt)return;
+  var fd=new FormData(); fd.append('edit_msg',_editId); fd.append('edit_text',txt); fd.append('with',WITHID); fd.append('ajax','1');
+  fetch('messages.php?with='+WITHID,{method:'POST',body:fd,credentials:'same-origin'})
+    .then(function(r){return r.json();}).then(function(d){
+      if(d&&d.ok){ var sp=document.getElementById('msgtxt'+_editId); if(sp)sp.innerHTML=txt.replace(/\n/g,'<br>'); document.getElementById('editModal').style.display='none'; }
+      else alert(d&&d.error?d.error:'Düzenlenemedi.');
+    }).catch(function(){ alert('Bağlantı hatası.'); });
+}
 function delMsg(id){
   if(!confirm('Bu mesaj silinsin mi?')) return;
   var fd=new FormData(); fd.append('del_msg',id); fd.append('with',WITHID); fd.append('ajax','1');
   fetch('messages.php?with='+WITHID,{method:'POST',body:fd,credentials:'same-origin'})
-    .then(function(){ var b=document.querySelector('.bubble[ondblclick*="('+id+')"]'); location.reload(); });
+    .then(function(r){return r.json();}).then(function(d){ if(d&&d.ok){ var b=document.getElementById('msg'+id); if(b)b.remove(); } else alert(d&&d.error?d.error:'Silinemedi.'); });
 }
 function delConv(uid){
   if(!confirm('Bu kişiyle tüm sohbet silinsin mi? Geri alınamaz.')) return;

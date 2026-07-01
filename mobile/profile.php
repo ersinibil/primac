@@ -4,8 +4,16 @@ $pdo=db(); $me=(int)($_SESSION['user']['id'] ?? 0);
 $ok=''; $er='';
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['change_pass'])){
     try{
+        $cur=$_POST['cur_pass'] ?? '';
         $new=$_POST['new_pass'] ?? '';
-        if(strlen($new)<4) throw new Exception('Şifre en az 4 karakter olmalı.');
+        $new2=$_POST['new_pass2'] ?? '';
+        // Mevcut şifreyi doğrula
+        $row=$pdo->prepare("SELECT password_hash FROM app_users WHERE id=? LIMIT 1");
+        $row->execute([$me]);
+        $dbu=$row->fetch();
+        if(!$dbu || !password_verify($cur,$dbu['password_hash'])) throw new Exception('Mevcut şifre hatalı.');
+        if(strlen($new)<6) throw new Exception('Şifre en az 6 karakter olmalı.');
+        if($new!==$new2) throw new Exception('Şifreler uyuşmuyor.');
         $pdo->prepare("UPDATE app_users SET password_hash=? WHERE id=?")->execute([password_hash($new,PASSWORD_DEFAULT),$me]);
         $ok='Şifre güncellendi.';
     }catch(Throwable $e){ $er=$e->getMessage(); }
@@ -39,7 +47,9 @@ if($pid){
 <div class="panel">
   <b>🔑 Şifre Değiştir</b>
   <form method="post" style="margin-top:8px">
-    <input type="password" name="new_pass" placeholder="Yeni şifre" required>
+    <input type="password" name="cur_pass" placeholder="Mevcut şifre" required>
+    <input type="password" name="new_pass" placeholder="Yeni şifre (min 6 karakter)" minlength="6" required>
+    <input type="password" name="new_pass2" placeholder="Yeni şifre tekrar" minlength="6" required>
     <button class="btn dark" name="change_pass" value="1" style="width:100%;padding:13px">Güncelle</button>
   </form>
 </div>

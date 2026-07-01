@@ -76,6 +76,9 @@ button{width:100%;border:0;border-radius:14px;background:#111827;color:white;pad
 <input type="password" name="password" required placeholder="••••••">
 <button>Giriş Yap</button>
 </form>
+<div style="text-align:center;margin-top:16px">
+<a href="sifre_sifirla.php" style="color:#6b7280;font-size:13px;text-decoration:none">Şifremi Unuttum</a>
+</div>
 </div>
 </body>
 </html>

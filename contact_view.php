@@ -7,10 +7,12 @@ $id=(int)($_GET['id'] ?? 0);
 $error='';
 $ok='';
 
-// active kolonu güvencesi
-try{
-    $pdo->exec("ALTER TABLE contacts ADD COLUMN active TINYINT(1) NOT NULL DEFAULT 1");
-}catch(Throwable $e){}
+// Kolon güvenceleri
+try{ $pdo->exec("ALTER TABLE contacts ADD COLUMN active TINYINT(1) NOT NULL DEFAULT 1"); }catch(Throwable $e){}
+try{ $pdo->exec("ALTER TABLE contacts ADD COLUMN phone2 varchar(60) DEFAULT NULL AFTER phone"); }catch(Throwable $e){}
+try{ $pdo->exec("ALTER TABLE contacts ADD COLUMN website varchar(255) DEFAULT NULL AFTER email"); }catch(Throwable $e){}
+try{ $pdo->exec("ALTER TABLE contacts ADD COLUMN postal_code varchar(20) DEFAULT NULL AFTER district"); }catch(Throwable $e){}
+try{ $pdo->exec("ALTER TABLE contacts ADD COLUMN iban varchar(60) DEFAULT NULL AFTER postal_code"); }catch(Throwable $e){}
 
 // Aktif/Pasif toggle
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['toggle_active'])){
@@ -26,8 +28,11 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['toggle_active'])){
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['save_profile'])){
     try{
         $stmt=$pdo->prepare("UPDATE contacts SET
-            name=?, type=?, authorized_person=?, phone=?, email=?, tax_info=?, tax_office=?, tax_number=?,
-            city=?, district=?, address=?, opening_balance=?, notes=?, representative_mode=?
+            name=?, type=?, authorized_person=?,
+            phone=?, phone2=?, email=?, website=?,
+            tax_office=?, tax_number=?,
+            city=?, district=?, postal_code=?, address=?,
+            iban=?, opening_balance=?, notes=?, representative_mode=?
             WHERE id=?
         ");
         $stmt->execute([
@@ -35,13 +40,16 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['save_profile'])){
             $_POST['type'],
             trim($_POST['authorized_person']),
             trim($_POST['phone']),
+            trim($_POST['phone2']),
             trim($_POST['email']),
-            trim($_POST['tax_info']),
+            trim($_POST['website']),
             trim($_POST['tax_office']),
             trim($_POST['tax_number']),
             trim($_POST['city']),
             trim($_POST['district']),
+            trim($_POST['postal_code']),
             trim($_POST['address']),
+            trim($_POST['iban']),
             (float)$_POST['opening_balance'],
             trim($_POST['notes']),
             $_POST['representative_mode'],
@@ -179,22 +187,26 @@ $balance=(float)$c['opening_balance'] + $in - $out;
 </label>
 
 <label>Telefon
-<input name="phone" value="<?=h($c['phone'] ?? '')?>">
+<input name="phone" type="tel" value="<?=h($c['phone'] ?? '')?>">
+</label>
+
+<label>2. Telefon
+<input name="phone2" type="tel" value="<?=h($c['phone2'] ?? '')?>">
 </label>
 
 <label>E-posta
-<input name="email" value="<?=h($c['email'] ?? '')?>">
+<input name="email" type="email" value="<?=h($c['email'] ?? '')?>">
 </label>
 
-<label>Vergi Bilgisi
-<input name="tax_info" value="<?=h($c['tax_info'] ?? '')?>">
+<label>Web Sitesi
+<input name="website" type="url" value="<?=h($c['website'] ?? '')?>" placeholder="https://">
 </label>
 
 <label>Vergi Dairesi
 <input name="tax_office" value="<?=h($c['tax_office'] ?? '')?>">
 </label>
 
-<label>Vergi / TCKN No
+<label>Vergi / TC No
 <input name="tax_number" value="<?=h($c['tax_number'] ?? '')?>">
 </label>
 
@@ -204,6 +216,14 @@ $balance=(float)$c['opening_balance'] + $in - $out;
 
 <label>İlçe
 <input name="district" value="<?=h($c['district'] ?? '')?>">
+</label>
+
+<label>Posta Kodu
+<input name="postal_code" maxlength="10" value="<?=h($c['postal_code'] ?? '')?>">
+</label>
+
+<label>IBAN
+<input name="iban" maxlength="32" value="<?=h($c['iban'] ?? '')?>" placeholder="TR00 0000 0000 0000 0000 0000 00">
 </label>
 
 <label>Açılış Bakiyesi

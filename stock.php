@@ -2,9 +2,11 @@
 require_once __DIR__.'/layout_top.php';
 
 $categoryId=(int)($_GET['category_id'] ?? 0);
+$pasifDahil=isset($_GET['pasif_dahil']);
 $where=[];
 $params=[];
 if($categoryId){ $where[]='s.category_id=?'; $params[]=$categoryId; }
+if(!$pasifDahil){ $where[]='(s.active IS NULL OR s.active=1)'; }
 $sqlWhere=$where ? 'WHERE '.implode(' AND ',$where) : '';
 
 $categories=db()->query("SELECT * FROM product_categories WHERE active=1 ORDER BY name")->fetchAll();
@@ -37,6 +39,7 @@ $categories=db()->query("SELECT * FROM product_categories WHERE active=1 ORDER B
 <?php endforeach; ?>
 </select>
 </label>
+<label style="align-self:end"><input type="checkbox" name="pasif_dahil" value="1" <?=$pasifDahil?'checked':''?> style="width:auto"> Pasif Dahil</label>
 <div style="align-self:end"><button class="btn secondary">Filtrele</button></div>
 </form>
 </section>
@@ -68,9 +71,11 @@ try{
     $rows=$st->fetchAll();
     foreach($rows as $r){
         $profit=(float)($r['sale_price'] ?? 0)-(float)($r['avg_cost'] ?: ($r['purchase_price'] ?? 0));
-        echo "<tr>";
+        $isPasif=isset($r['active']) && !$r['active'];
+        $rowStyle=$isPasif?' style="opacity:.45"':'';
+        echo "<tr$rowStyle>";
         echo "<td><b>".h($r['product_code'] ?: '-')."</b></td>";
-        echo "<td><a href='product_view.php?id=".h($r['id'])."'><b>".h($r['name'])."</b></a><br><span class='muted'>".h($r['variant_name'] ?: $r['brand'])."</span></td>";
+        echo "<td><a href='product_view.php?id=".h($r['id'])."'><b>".h($r['name'])."</b></a>".($isPasif?" <span style='font-size:11px;background:#ef4444;color:#fff;border-radius:6px;padding:1px 6px'>Pasif</span>":'')."<br><span class='muted'>".h($r['variant_name'] ?: $r['brand'])."</span></td>";
         echo "<td>".h($r['category_name'] ?: '-')."</td>";
         echo "<td>".h($r['quantity'])." ".h($r['unit'])."</td>";
         echo "<td>".h($r['critical_level'])." ".h($r['unit'])."</td>";
