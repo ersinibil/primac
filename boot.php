@@ -12,6 +12,19 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// Mobil cihaz → otomatik mobil arayüz (/mobile). Masaüstü görünümü için bir kez ?web=1.
+if (isset($_GET['web'])) $_SESSION['force_web'] = 1;
+$__mpub = ['public_file.php','cron.php','ics.php','icon.php','manifest.php','sw.php','kur.php','migrate.php'];
+if (empty($_SESSION['force_web'])
+    && strpos($_SERVER['SCRIPT_NAME'] ?? '', '/mobile/') === false
+    && !in_array(basename($_SERVER['SCRIPT_NAME'] ?? ''), $__mpub, true)
+    && !empty($_SERVER['HTTP_USER_AGENT'])
+    && preg_match('/Mobile|Android|iPhone|iPod|BlackBerry|Windows Phone|webOS/i', $_SERVER['HTTP_USER_AGENT'])
+    && stripos($_SERVER['HTTP_USER_AGENT'], 'iPad') === false) {
+    header('Location: mobile/index.php');
+    exit;
+}
+
 function h($v){ return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
 
 function app_config(){
@@ -97,6 +110,7 @@ function page_module_map(){
         'finance.php'=>'finance','finance_new.php'=>'finance','finance_accounts.php'=>'finance','finance_transfer.php'=>'finance','finance_account_view.php'=>'finance',
         'stock.php'=>'stock','product_new.php'=>'stock','stock_movement_new.php'=>'stock',
         'product_categories.php'=>'stock','product_taxonomy.php'=>'stock','purchase.php'=>'stock',
+        'sales.php'=>'stock','kpi.php'=>'personnel',
         'report.php'=>'report',
         'personnel.php'=>'personnel','personnel_new.php'=>'personnel','personnel_view.php'=>'personnel',
         'users.php'=>'users',
