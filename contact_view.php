@@ -7,6 +7,22 @@ $id=(int)($_GET['id'] ?? 0);
 $error='';
 $ok='';
 
+// active kolonu güvencesi
+try{
+    $pdo->exec("ALTER TABLE contacts ADD COLUMN active TINYINT(1) NOT NULL DEFAULT 1");
+}catch(Throwable $e){}
+
+// Aktif/Pasif toggle
+if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['toggle_active'])){
+    if(is_admin() || user_can('contacts')){
+        try{
+            $newActive=(int)$_POST['toggle_active'];
+            $pdo->prepare("UPDATE contacts SET active=? WHERE id=?")->execute([$newActive,$id]);
+        }catch(Throwable $e){}
+    }
+    header('Location: contact_view.php?id='.$id); exit;
+}
+
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['save_profile'])){
     try{
         $stmt=$pdo->prepare("UPDATE contacts SET
@@ -117,6 +133,15 @@ $balance=(float)$c['opening_balance'] + $in - $out;
 <a class="btn secondary" href="finance_new.php?direction=out&contact_id=<?=$id?>">+ Ödeme</a>
 <a class="btn" href="report.php?modul=cari_detay&ref=<?=$id?>">📊 Cari Raporu</a>
 <a class="btn secondary" href="contacts.php">Cari Listesi</a>
+<?php if(is_admin() || user_can('contacts')): ?>
+<?php $isActive=(int)($c['active'] ?? 1); ?>
+<form method="post" style="display:inline">
+    <input type="hidden" name="toggle_active" value="<?=$isActive?0:1?>">
+    <button class="btn <?=$isActive?'secondary':'danger'?>" style="<?=$isActive?'':'background:#dc2626;color:#fff'?>" onclick="return confirm('<?=$isActive?'Bu cariyi pasif yapmak istediğinize emin misiniz?':'Bu cariyi aktif yapmak istediğinize emin misiniz?'?>')">
+        <?=$isActive?'⏸ Pasif Yap':'✅ Aktif Yap'?>
+    </button>
+</form>
+<?php endif; ?>
 <?=delete_button('contact',$id)?>
 </div>
 </div>

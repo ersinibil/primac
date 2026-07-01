@@ -2,6 +2,33 @@
 require_once 'common.php';
 $pdo=db();
 $id=(int)($_GET['id'] ?? 0);
+
+// active kolonu güvencesi
+try{
+    $pdo->exec("ALTER TABLE contacts ADD COLUMN active TINYINT(1) NOT NULL DEFAULT 1");
+}catch(Throwable $e){}
+
+// Aktif/Pasif toggle (topx öncesi)
+if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['toggle_active'])){
+    if(is_admin() || user_can('contacts')){
+        try{
+            $pdo->prepare("UPDATE contacts SET active=? WHERE id=?")->execute([(int)$_POST['toggle_active'],$id]);
+        }catch(Throwable $e){}
+    }
+    header('Location: contact_view.php?id='.$id); exit;
+}
+
+// Silme (topx öncesi) - sadece admin
+if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['delete_contact'])){
+    if(is_admin()){
+        try{
+            $pdo->prepare("DELETE FROM contact_representatives WHERE contact_id=?")->execute([$id]);
+            $pdo->prepare("DELETE FROM contacts WHERE id=?")->execute([$id]);
+        }catch(Throwable $e){}
+        header('Location: contacts.php'); exit;
+    }
+}
+
 // Cari düzenle (çıktıdan önce)
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['save_contact'])){
     try{
@@ -34,6 +61,28 @@ try{
     <div style="text-align:right"><div class="muted" style="font-size:12px">Tahsilat / Ödeme</div><div style="font-weight:800"><?=mm($ft['tin'])?> / <?=mm($ft['tout'])?></div></div>
   </div>
 </div>
+
+<?php if(is_admin() || user_can('contacts')): ?>
+<?php $isActive=(int)($c['active'] ?? 1); ?>
+<div style="display:flex;gap:10px;margin-bottom:4px">
+  <form method="post" style="flex:1">
+    <input type="hidden" name="toggle_active" value="<?=$isActive?0:1?>">
+    <button class="btn<?=$isActive?'':' dark'?>" style="width:100%;<?=$isActive?'background:#f1f5f9;color:#334155':'background:#22c55e;color:#fff'?>"
+      onclick="return confirm('<?=$isActive?'Pasif yapmak istediğinize emin misiniz?':'Aktif yapmak istediğinize emin misiniz?'?>')">
+      <?=$isActive?'⏸ Pasif Yap':'✅ Aktif Yap'?>
+    </button>
+  </form>
+  <?php if(is_admin()): ?>
+  <form method="post" style="flex:1">
+    <input type="hidden" name="delete_contact" value="1">
+    <button class="btn" style="width:100%;background:#dc2626;color:#fff"
+      onclick="return confirm('Bu cariyi silmek istediğinize emin misiniz? Bu işlem geri alınamaz.')">
+      🗑 Sil
+    </button>
+  </form>
+  <?php endif; ?>
+</div>
+<?php endif; ?>
 
 <div class="grid">
   <a class="card green" href="collection.php?contact_id=<?=$id?>"><span>💰</span><b>Tahsilat</b><small>Bu cariden tahsilat gir</small></a>

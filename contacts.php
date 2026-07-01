@@ -1,13 +1,19 @@
 <?php
 require_once __DIR__.'/layout_top.php';
 
+// active kolonu güvencesi
+try{
+    db()->exec("ALTER TABLE contacts ADD COLUMN active TINYINT(1) NOT NULL DEFAULT 1");
+}catch(Throwable $e){}
+
 $type=$_GET['type'] ?? '';
+$showPassive=!empty($_GET['show_passive']);
 $where='';
 $params=[];
-if($type){
-    $where="WHERE c.type=?";
-    $params[]=$type;
-}
+$conditions=[];
+if($type){ $conditions[]="c.type=?"; $params[]=$type; }
+if(!$showPassive){ $conditions[]="(c.active IS NULL OR c.active=1)"; }
+if($conditions) $where="WHERE ".implode(' AND ',$conditions);
 ?>
 
 <style>
@@ -21,6 +27,8 @@ if($type){
 .rep-pill{display:inline-flex;align-items:center;border-radius:999px;background:#eef2ff;color:#3730a3;padding:6px 10px;font-weight:800;font-size:12px}.rep-empty{background:#f2f4f7;color:#667085}
 .type-pill{display:inline-flex;border-radius:999px;padding:6px 10px;font-weight:900;font-size:12px}.type-customer{background:#dcfce7;color:#166534}.type-supplier{background:#fef3c7;color:#92400e}.type-both{background:#dbeafe;color:#1e40af}
 .money-pos{font-weight:900;color:#166534}.money-neg{font-weight:900;color:#991b1b}.money-zero{font-weight:900;color:#667085}
+.passive-row{opacity:.45}
+.badge-passive{display:inline-flex;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:900;background:#f1f5f9;color:#64748b;margin-left:6px}
 @media(max-width:960px){.crm-tabs{grid-template-columns:1fr}.crm-hero{align-items:flex-start;flex-direction:column}}
 </style>
 
@@ -75,6 +83,11 @@ $totalPayable=safe_sum("SELECT COALESCE(SUM(CASE WHEN balance<0 THEN -balance EL
         <a class="btn small secondary" href="contacts.php">Tümü</a>
         <a class="btn small secondary" href="contacts.php?type=Müşteri">Müşteri</a>
         <a class="btn small secondary" href="contacts.php?type=Tedarikçi">Tedarikçi</a>
+        <?php if($showPassive): ?>
+        <a class="btn small secondary" href="contacts.php<?=$type?'?type='.urlencode($type):''?>">Sadece Aktif</a>
+        <?php else: ?>
+        <a class="btn small secondary" href="contacts.php?show_passive=1<?=$type?'&type='.urlencode($type):''?>">Pasif Dahil</a>
+        <?php endif; ?>
         <a class="btn small secondary" href="contacts_report.php">Rapor</a>
     </div>
 </div>
@@ -120,8 +133,9 @@ try{
         $balance=(float)$r['opening_balance']+(float)$r['total_in']-(float)$r['total_out'];
         $balClass=$balance>0?'money-pos':($balance<0?'money-neg':'money-zero');
 
-        echo "<tr>";
-        echo "<td class='crm-name'><a href='contact_view.php?id=".h($r['id'])."'>".h($r['name'])."</a></td>";
+        $isPassive=isset($r['active']) && (int)$r['active']===0;
+        echo "<tr".($isPassive?" class='passive-row'":"").">";
+        echo "<td class='crm-name'><a href='contact_view.php?id=".h($r['id'])."'>".h($r['name'])."</a>".($isPassive?"<span class='badge-passive'>Pasif</span>":"")."</td>";
         echo "<td><span class='type-pill ".$typeClass."'>".h($r['type'])."</span></td>";
         echo "<td><span class='rep-pill ".($rep==='Atanmadı'?'rep-empty':'')."'>".h($rep)."</span></td>";
         echo "<td>".money($r['opening_balance'])."</td>";
