@@ -113,6 +113,16 @@ function firm_list(){
 }
 function firm_info($k){ $l=firm_list(); return $l[$k] ?? null; }
 
+// Rastgele güvenli şifre üret (8-12 karakter, uppercase+lowercase+digit+special)
+function generate_random_password($length=10){
+    $chars='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%';
+    $result='';
+    for($i=0;$i<$length;$i++){
+        $result.=$chars[random_int(0,strlen($chars)-1)];
+    }
+    return $result;
+}
+
 // Giriş bilgilerini WhatsApp ile gönder linki (şifre düz metin — sadece kurulum/sıfırlama anında).
 function cred_wa($phone,$username,$password){
     $url=function_exists('base_url')?base_url():'';

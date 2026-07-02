@@ -2,6 +2,73 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
+## Personele WhatsApp ile giriş bilgisi gönderimi — tekli & toplu (2026-07-03)
+- Kullanıcı isteği: "personellere WhatsApp'tan site giriş ekranı kullanıcı adları ve şifrelerini kendi telefonlarına gönderebileceğim bir yer olsun. toplu olarak ya da tek tek."
+- **share_lib.php** — `generate_random_password($length=10)` eklendi (büyük+küçük+rakam+özel karakter karması, güvenli rastgele üretim).
+- **Web (users.php)**: 
+  - Yeni section: "📲 Toplu WhatsApp Gönderimi" — radio (Tüm Aktif / Seçilenlere), checkbox listesi (aktif kullanıcılar, telefon yok olanlar ayrı gösterilir), "Yeni rastgele şifre üret" checkbox (default checked), Gönder butonu.
+  - Her mevcut kullanıcı satırında: `<details>` açılır form "📲 Şifre Sıfırla ve WhatsApp ile Gönder" — mini form, hidden input'lar ile gönderim yapılıyor.
+  - POST handler `send_bulk_wa`: seçilen her kullanıcı için rastgele şifre üret → `password_hash()` ile kaydet → `wa_send()` ile gönderi → sonuç array'de (başarılı/başarısız/telefon yok).
+  - Gönderim sonucu: başarılı/başarısız/telefon yok sayıları + detay tablo (her kişinin gönderim durumu).
+- **Mobil (mobile/users.php)**:
+  - Toplu form aynı — details açılır, radio + checkbox listesi + generate checkbox + Gönder.
+  - Her user'da "📲 WhatsApp ile Gönder" details formu (tekli gönderim).
+  - POST handler aynı, ama sonuç session'a kaydedilip redirect sonrası okunuyor (`$_SESSION['wa_results']`, load'da temizlenir — PRG deseni).
+  - Gönderim özeti: mobil card-style, grid layout (başarılı/başarısız/telefon yok), detay liste scroll-able.
+- **Önemli tasarım kararı:**
+  - Toplu gönderim DAIMA yeni rastgele şifre üretir (kullanıcı kabul etmişse). Bu, zaten kayıtlı bir kullanıcının şifresini bilmeyerek yeniden tahmin ettiremez, ancak admin'in kontrol altındadır (generate checkbox).
+  - Şifre sıfırlama ve WhatsApp gönderimi TEK İŞLEM — aynı POST'ta yapılır, başarısızlık durumunda DB update de yapılmayabilir (try/catch'te transaction yok, ama telefon numarası boşsa baştan fail).
+  - Telefon numarası zorunlu — boş olanlar listede ayrı gösterilir ("Telefon yok"), gönderim kapsam dışında.
+- **Yetki kontrolü**: Web'de `require_permission('users')`, mobilde `block_personel()` (yönetici only).
+- **SQL & PHP 7.2**: Tüm sorguların prepared statement'lar, PHP 7.2 uyumlu (str_contains/match/named args YASAK).
+- **Web+Mobil parite**: Aynı POST handler (`send_bulk_wa`), aynı mantık, UI platform-specific (web grid, mobil details + card özeti).
+- **Bilinen sınırlamalar**: 
+  - wa_send() fonksiyonu `app_settings` (admin panel) veya eski config sabitlerinden WA API ayarlarını okur — ayar yoksa false döner (mesaj gönderilmez).
+  - Bir başta "Başarısız" sonucu API hatası veya koşulsuz başarısızlık olabilir (hata mesajı detayda).
+
+
+
+## Mobil menü (mobile/more.php) yetki tabanlı render düzeltmesi (2026-07-03)
+- **Yapısal sorun**: Mobil menü TÜM bölümleri (Stok, Cari & Satış, Finans, Muhasebe, Personel & İş, Raporlar, Sistem) tek bir `if($isAdmin): ... else: ...` bloğuna bağlıydı. Admin olmayan ama belirli modül yetkileri (finance, stock, muhasebe vb.) verilen personel, menüde ilgili modüle giden LİNK görmüyordu — sadece URL'yi bilse boot.php'nin `require_permission()` vasıtasıyla sayfaya erişebiliyordu, menü kapalı kaldığı için bulmayı olanaksız.
+- **Çözüm**: Admin/personel ikili yapısı kaldırılıp, her bölüm/kart şimdi ilgili `user_can('modül')` kontrolünden geçiyor:
+  - **📦 Stok & Ürün**: `user_can('stock')`
+  - **👥 Cari & Satış**: Bölüm gösterilir eğer YARINDAN BİRİ: contacts, stock, teklif, finance → Kart bazında ayrı kontrol (Cariler=contacts, Satış=stock, Tahsilat=finance, Teklif=teklif)
+  - **💰 Finans**: `user_can('finance')`
+  - **📒 Muhasebe**: `user_can('muhasebe')`
+  - **👷 Personel & İş**: Her zaman gösterilir (İşlerim/Talep Aç kişisel kartlar herkese açık) → Modül kartları (Personel=personnel, Görev Ata=tasks, İşler/Üretim/Takvim=jobs)
+  - **📊 Raporlar**: `user_can('report')`
+  - **⚙ Sistem**: Her zaman gösterilir (Profil/Çıkış/Mesajlar herkese açık) → Kullanıcılar/Logo kartları `user_can('users')`
+- **Modül eşleştirmesi**:
+  - collection.php (tahsilat) → finance
+  - payment.php (ödeme) → finance
+  - uretim.php → jobs
+  - calendar.php (takvim) → jobs
+  - task_new.php → tasks
+  - requests.php → jobs
+  - activity.php, profile.php, mytasks.php, messages.php, request_new.php → her zaman (kişisel)
+- **Admin davranışı**: İçinde `user_can()` tüm modülleri true döndüğü için, admin menü tamamen aynen gösterilir — sadece personel için görunürlük artar.
+- **Sonuç**: Admin OLMAYAN ama belirli yetkileri olan personel artık kendi yetkili olduğu bölümleri mobil menüde görebiliyor, menü yapısı admin/personel ayrımı yerine yetki tabanlı.
+
+## Satın alma veri bütünlüğü düzeltmesi (2026-07-03)
+- **Bug**: Web tarafındaki `purchase.php` sadece jobs tablosunu listeliyor, stok güncellemiyor; mobil
+  `mobile/purchase.php` ise doğru çalışıyor (stock_items/stock_movements/finance_movements güncelliyor).
+  Web'de satın alma "işi" oluşturulsa da asıl stok artışı hiç yaşanmıyordu.
+- **Çözüm (Yaklaşım A seçildi):** Yeni `stock_lib.php` oluşturuldu — ortak stok işlemleri:
+  - `stock_add_purchase()`: stok kartı oluştur/güncelle + hareketi kaydet (averaj maliyet hesaplaması dahil)
+  - `stock_add_purchase_finance()`: ödeme metoduna göre finansal hareket + hesap bakiyesi
+  - Web ve mobil aynı fonksiyonları çağırıyor, kod tekrarı ortadan kaldırıldı.
+- `purchase.php` (web): mobil deseniyle "Hızlı Satın Alma" formu eklendi (ürün seç, miktar/fiyat gir,
+  kaydet → stok+hareketi güncelle). Var olan "Satın Alma İşleri" listesi korundu (iki bölüm).
+  POST işlem topx() ÖNCE yapılıyor (PRG deseni), başarıysa redirect, sonra form gösterilir.
+- `mobile/purchase.php`: inline stok mantığı kaldırılıp `stock_lib.php` fonksiyonlarını çağıracak şekilde
+  refactor edildi (kod tekrarı azaldı). PRG deseni (POST → redirect) korundu.
+- `stock_lib.php` hem web hem mobil tarafından require edilebilir şekilde kuruldu (../../stock_lib.php
+  mobilde). Tüm SQL prepared statement (7.2 uyumlu). PHP 7.2 uyumlu (str_contains, match, named args YASAK).
+- Ödeme metodlarına "Çek" ve "Senet" eklendi (mevcut "Veresiye/Peşin/Banka/Kredi Kartı/POS"'un yanına),
+  bunları account_type='Diğer' hesaplara eşleyen map fonksiyon stock_lib.php'de.
+- Boot.php `page_module_map()` kontrolü: `purchase.php` zaten 'stock' modülüne bağlı, dokunulmadı.
+- Mobil/web parite: ikisi de aynı stok/finansal güncellemeyi yapıyor, ikisinde de aynen çalışıyor.
+
 ## Arama güvenlik düzeltmesi + Çek/Senet foto/görev otomasyonu (2026-07-02, hızlı commit — kullanıcı limit uyarısı)
 - **KRİTİK güvenlik düzeltmesi**: `search_lib.php`'nin ilk hali (aynı gün eklendi) modül yetkisi
   kontrolü yapmıyordu — `finance`/`personnel`/`stock` vb. yetkisi olmayan bir personel arama kutusu

@@ -1,8 +1,9 @@
 <?php
 require_once 'common.php';
+require_once __DIR__.'/../share_lib.php';
 if(!$isAdmin){ header('Location: index.php'); exit; }
 $pdo=db();
-$ok=''; $er='';
+$ok=''; $er=''; $wa_results='';
 
 $permLabels=module_list();
 
@@ -49,11 +50,161 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['create_user'])){
     header('Location: users.php'); exit;
 }
 
+// Toplu WhatsApp gönder
+if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['send_bulk_wa'])){
+    $selected=$_POST['selected_users'] ?? [];
+    $mode=$_POST['wa_mode'] ?? 'all';
+    $genNewPw=isset($_POST['gen_new_password'])?1:0;
+
+    if($mode==='selected' && empty($selected)){
+        $er='Lütfen en az bir kullanıcı seçin.';
+    } else {
+        $users_to_send=[];
+        if($mode==='all'){
+            $users_to_send=$pdo->query("SELECT id,username,phone,full_name FROM app_users WHERE active=1 ORDER BY full_name")->fetchAll();
+        } else {
+            foreach($selected as $uid){
+                $uid=(int)$uid;
+                if($uid>0){
+                    $s=$pdo->prepare("SELECT id,username,phone,full_name FROM app_users WHERE id=? AND active=1");
+                    $s->execute([$uid]);
+                    $r=$s->fetch();
+                    if($r) $users_to_send[]=$r;
+                }
+            }
+        }
+
+        $results=['success'=>0,'no_phone'=>0,'failed'=>0,'details'=>[]];
+
+        foreach($users_to_send as $u){
+            $uid=$u['id'];
+            $username=$u['username'];
+            $phone=$u['phone'] ?? '';
+            $full_name=$u['full_name'];
+
+            if(!$phone){
+                $results['no_phone']++;
+                $results['details'][]=['name'=>$full_name,'status'=>'Telefon numarası yok','ok'=>false];
+                continue;
+            }
+
+            try{
+                $password=$_POST['password_'.$uid] ?? '';
+
+                if($genNewPw){
+                    $password=generate_random_password(10);
+                    $pdo->prepare("UPDATE app_users SET password_hash=? WHERE id=?")->execute([password_hash($password,PASSWORD_DEFAULT),$uid]);
+                }
+
+                if(!$password){
+                    $results['failed']++;
+                    $results['details'][]=['name'=>$full_name,'status'=>'Şifre bulunamadı','ok'=>false];
+                    continue;
+                }
+
+                $appName=(app_config()['app_name'] ?? 'OTS');
+                $txt="🔐 ".$appName." giriş bilgileriniz\nKullanıcı: ".$username."\nŞifre: ".$password;
+                $sent=wa_send($phone,$txt);
+
+                if($sent){
+                    $results['success']++;
+                    $results['details'][]=['name'=>$full_name,'status'=>'Gönderildi','ok'=>true];
+                } else {
+                    $results['failed']++;
+                    $results['details'][]=['name'=>$full_name,'status'=>'API hatası','ok'=>false];
+                }
+            }catch(Throwable $e){
+                $results['failed']++;
+                $results['details'][]=['name'=>$full_name,'status'=>'Hata: '.$e->getMessage(),'ok'=>false];
+            }
+        }
+
+        $_SESSION['wa_results']=$results;
+    }
+    header('Location: users.php'); exit;
+}
+
 $users=$pdo->query("SELECT u.*,p.name pname FROM app_users u LEFT JOIN personnel p ON p.id=u.personnel_id ORDER BY u.role,u.full_name")->fetchAll();
+
+// Session'dan wa_results oku ve temizle
+if(!empty($_SESSION['wa_results'])){
+    $wa_results=$_SESSION['wa_results'];
+    unset($_SESSION['wa_results']);
+}
+
 topx('Kullanıcılar & Yetkiler');
 ?>
 <?php if($ok): ?><div class="notice"><?=htmlspecialchars($ok)?></div><?php endif; ?>
 <?php if($er): ?><div class="err"><?=htmlspecialchars($er)?></div><?php endif; ?>
+
+<?php if($wa_results && is_array($wa_results)):
+    $res=$wa_results;
+?>
+<div class="panel">
+<h3 style="margin-top:0">WhatsApp Gönderim Özeti</h3>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
+    <div style="background:rgba(22,163,74,.2);border-radius:12px;padding:10px;text-align:center;border:1px solid rgba(22,163,74,.4)">
+        <div style="font-size:24px;color:#86efac;font-weight:bold"><?=$res['success']?></div>
+        <div style="font-size:11px;color:#86efac">Başarılı</div>
+    </div>
+    <div style="background:rgba(239,68,68,.2);border-radius:12px;padding:10px;text-align:center;border:1px solid rgba(239,68,68,.4)">
+        <div style="font-size:24px;color:#fca5a5;font-weight:bold"><?=$res['failed']?></div>
+        <div style="font-size:11px;color:#fca5a5">Başarısız</div>
+    </div>
+    <div style="background:rgba(107,114,128,.2);border-radius:12px;padding:10px;text-align:center;border:1px solid rgba(107,114,128,.4)">
+        <div style="font-size:24px;color:#d1d5db;font-weight:bold"><?=$res['no_phone']?></div>
+        <div style="font-size:11px;color:#d1d5db">Telefon Yok</div>
+    </div>
+</div>
+<?php if(!empty($res['details'])): ?>
+<div style="font-size:12px;max-height:200px;overflow-y:auto">
+<?php foreach($res['details'] as $d): ?>
+<div style="display:flex;justify-content:space-between;align-items:center;padding:8px;border-bottom:1px solid rgba(255,255,255,.1)">
+    <div><?=htmlspecialchars($d['name'])?></div>
+    <div style="background:<?=$d['ok']?'rgba(22,163,74,.3)':'rgba(239,68,68,.3)'?>;color:<?=$d['ok']?'#86efac':'#fca5a5'?>;border-radius:6px;padding:3px 8px;font-size:11px">
+    <?=$d['ok']?'✓':'✗'?> <?=htmlspecialchars($d['status'])?>
+    </div>
+</div>
+<?php endforeach; ?>
+</div>
+<?php endif; ?>
+</div>
+<?php endif; ?>
+
+<details class="panel">
+  <summary style="font-weight:900;cursor:pointer">📲 Toplu WhatsApp Gönderimi</summary>
+  <form method="post" style="margin-top:10px">
+    <input type="hidden" name="send_bulk_wa" value="1">
+
+    <div style="margin:0 0 10px">
+    <label style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <input type="radio" name="wa_mode" value="all" checked style="width:auto">
+      <span>Tüm Aktif Kullanıcılara</span>
+    </label>
+    <label style="display:flex;align-items:center;gap:8px">
+      <input type="radio" name="wa_mode" value="selected" style="width:auto">
+      <span>Seçilenlere</span>
+    </label>
+    </div>
+
+    <div style="max-height:180px;overflow-y:auto;border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:8px;margin-bottom:10px">
+    <?php foreach($users as $u): if(!($u['active'] ?? true)) continue; ?>
+    <label style="display:flex;align-items:center;gap:8px;padding:8px;margin:4px 0;background:rgba(255,255,255,.05);border-radius:10px;font-size:12px">
+      <input type="checkbox" name="selected_users[]" value="<?=$u['id']?>" style="width:auto">
+      <span><?=htmlspecialchars($u['full_name'] ?: $u['username'])?></span>
+      <?php if(!($u['phone'] ?? '')): ?><span style="color:#ef4444;font-size:10px;margin-left:auto">Telefon yok</span><?php endif; ?>
+    </label>
+    <?php endforeach; ?>
+    </div>
+
+    <label style="display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:13px">
+      <input type="checkbox" name="gen_new_password" value="1" checked style="width:auto">
+      <span>Yeni rastgele şifre üret</span>
+    </label>
+
+    <button class="btn dark" style="width:100%;padding:12px;background:#16a34a;color:#fff">📲 WhatsApp ile Gönder</button>
+  </form>
+</details>
 
 <details class="panel">
   <summary style="font-weight:900;cursor:pointer">➕ Yeni Kullanıcı</summary>
@@ -129,6 +280,19 @@ topx('Kullanıcılar & Yetkiler');
       <button class="btn dark" name="reset_pass" value="1" style="padding:10px 14px;margin:0">Sıfırla</button>
     </form>
   </details>
+
+  <?php if(($u['phone'] ?? '') && ($u['active'] ?? true)): ?>
+  <details style="margin-top:6px">
+    <summary style="font-size:13px;color:#60a5fa;cursor:pointer">📲 WhatsApp ile Gönder</summary>
+    <form method="post" style="margin-top:8px">
+      <input type="hidden" name="send_bulk_wa" value="1">
+      <input type="hidden" name="wa_mode" value="selected">
+      <input type="hidden" name="selected_users[]" value="<?=(int)$u['id']?>">
+      <input type="hidden" name="gen_new_password" value="1">
+      <button class="btn dark" style="width:100%;padding:11px;background:#16a34a;color:#fff;margin-top:8px">📲 Şifre Sıfırla ve Gönder</button>
+    </form>
+  </details>
+  <?php endif; ?>
 </div>
 <?php endforeach; ?>
 
