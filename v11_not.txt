@@ -1,1 +1,0 @@
-v11: product_categories.php tam kategori/alt kategori düzenleme; product_taxonomy.php marka/birim yönetimi; product_new.php dropdown kullanır.

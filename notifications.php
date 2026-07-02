@@ -6,16 +6,18 @@ $pdo=db();
 
 if(isset($_GET['read'])){
     $id=(int)$_GET['read'];
-    $stmt=$pdo->prepare("UPDATE notifications SET is_read=1 WHERE id=?");
+    $stmt=$pdo->prepare("UPDATE internal_notifications SET is_read=1 WHERE id=?");
     $stmt->execute([$id]);
     if(!empty($_GET['go'])){
-        header("Location: ".$_GET['go']);
+        $go=$_GET['go'];
+        if(preg_match('#^(https?:)?//#i',$go)) $go='dashboard.php'; // open redirect koruması: sadece site-içi göreli path
+        header("Location: ".$go);
         exit;
     }
 }
 
 if(isset($_GET['all_read'])){
-    $pdo->exec("UPDATE notifications SET is_read=1 WHERE is_read=0");
+    $pdo->exec("UPDATE internal_notifications SET is_read=1 WHERE is_read=0");
     header("Location: notifications.php");
     exit;
 }

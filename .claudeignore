@@ -5,3 +5,8 @@ build
 *.log
 *.jpg
 *.png
+vendor
+uploads
+*.zip
+install_*.php
+guncelleme.zip

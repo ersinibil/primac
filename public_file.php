@@ -15,8 +15,8 @@ if($file && $_SERVER['REQUEST_METHOD']==='POST'){
     if(in_array($decision,['Onaylandı','Reddedildi'])){
         $pdo->prepare("UPDATE job_files SET approval_status=?, customer_note=? WHERE id=?")
             ->execute([$decision,trim($_POST['note'] ?? ''),$file['id']]);
-        try{ $pdo->prepare("INSERT INTO internal_notifications(title,message,is_read) VALUES(?,?,0)")
-            ->execute(['🖼 Müşteri '.$decision.': '.$file['original_name'],($file['customer']?:'').' · '.($file['job_no']?:'')]); }catch(Throwable $e){}
+        try{ $pdo->prepare("INSERT INTO internal_notifications(title,message,action_url,is_read) VALUES(?,?,?,0)")
+            ->execute(['🖼 Müşteri '.$decision.': '.$file['original_name'],($file['customer']?:'').' · '.($file['job_no']?:''),!empty($file['job_id'])?('job_view.php?id='.$file['job_id']):null]); }catch(Throwable $e){}
         try{ if(function_exists('activity_log')) activity_log('Onay','Müşteri',$decision.' · '.$file['original_name'],'','job_file',(int)$file['id'],'',$decision==='Onaylandı'?'✅':'❌'); }catch(Throwable $e){}
         $ok='Yanıtınız kaydedildi. Teşekkürler.';
         $file['approval_status']=$decision;

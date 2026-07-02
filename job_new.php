@@ -100,7 +100,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                     $msgText="🆕 Yeni iş atandı: ".$jobNo." — ".trim($_POST['title'])
                         .($_POST['due_date']?"\n📅 Termin: ".$_POST['due_date']:'')
                         .($customerName!=='-'?"\n👤 Müşteri: ".$customerName:'');
-                    try{ $pdo->prepare("INSERT INTO internal_notifications(title,message,target_user_id,is_read) VALUES(?,?,?,0)")->execute(['Yeni İş Atandı',$msgText,$ruid]); }catch(Throwable $e){}
+                    try{ $pdo->prepare("INSERT INTO internal_notifications(title,message,target_user_id,action_url,is_read) VALUES(?,?,?,?,0)")->execute(['Yeni İş Atandı',$msgText,$ruid,'job_view.php?id='.$jobId]); }catch(Throwable $e){}
                     try{ $pdo->prepare("INSERT INTO internal_messages(sender_user_id,receiver_user_id,message,is_read) VALUES(?,?,?,0)")->execute([$senderId,$ruid,$msgText]); }catch(Throwable $e){}
                     if(function_exists('push_to_user')){ try{ push_to_user($ruid,'Yeni İş Atandı',$jobNo.' — '.trim($_POST['title']),'job_view.php?id='.$jobId); }catch(Throwable $e){} }
                 }

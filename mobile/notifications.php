@@ -19,11 +19,15 @@ try{
   $st=$pdo->prepare("SELECT * FROM internal_notifications WHERE (target_user_id IS NULL OR target_user_id=?) ORDER BY id DESC LIMIT 80"); $st->execute([$ME]); $rows=$st->fetchAll();
   if(!$rows){ echo '<div class="panel muted" style="text-align:center">Bildirim yok 🔕</div>'; }
   foreach($rows as $n){
+    $go=!empty($n['action_url']) ? $n['action_url'] : 'index.php';
     echo '<div class="item" style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">';
     echo '<div style="flex:1;min-width:0"><b>'.htmlspecialchars($n['title']).'</b>';
-    if(!empty($n['message'])) echo '<br><span class="muted">'.htmlspecialchars($n['message']).'</span>';
+    if(!empty($n['message'])) echo '<br><span class="muted">'.nl2br(htmlspecialchars($n['message'])).'</span>';
     echo '<br><small class="muted">'.htmlspecialchars($n['created_at']??'').'</small></div>';
-    echo '<a href="notifications.php?del='.(int)$n['id'].'" style="flex:0 0 auto;color:#f87171;font-size:20px;text-decoration:none">🗑️</a>';
+    echo '<div style="flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:8px">';
+    echo '<a href="'.htmlspecialchars($go).'" class="btn" style="padding:6px 12px;font-size:13px">Aç</a>';
+    echo '<a href="notifications.php?del='.(int)$n['id'].'" style="color:#f87171;font-size:20px;text-decoration:none">🗑️</a>';
+    echo '</div>';
     echo '</div>';
   }
 }catch(Throwable $e){ echo '<div class="err">'.htmlspecialchars($e->getMessage()).'</div>'; }

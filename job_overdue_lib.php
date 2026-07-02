@@ -17,18 +17,19 @@ function check_overdue_jobs($pdo){
     if(!$rows) return;
     $admins=[]; try{ $admins=$pdo->query("SELECT id FROM app_users WHERE role='admin' AND active=1")->fetchAll(PDO::FETCH_COLUMN); }catch(Throwable $e){}
     $hasPush=file_exists(__DIR__.'/push_lib.php'); if($hasPush) require_once __DIR__.'/push_lib.php';
-    $ins=$pdo->prepare("INSERT INTO internal_notifications(title,message,target_user_id,is_read) VALUES(?,?,?,0)");
+    $ins=$pdo->prepare("INSERT INTO internal_notifications(title,message,target_user_id,action_url,is_read) VALUES(?,?,?,?,0)");
     $resStmt=$pdo->prepare("SELECT id FROM app_users WHERE personnel_id=? AND active=1 LIMIT 1");
     $upd=$pdo->prepare("UPDATE jobs SET overdue_notified_at=? WHERE id=?");
     foreach($rows as $j){
         $title='⚠️ Geciken İş';
         $msg=$j['title'].($j['job_no']?' ('.$j['job_no'].')':'').' — termin '.$j['due_date'].' geçti';
+        $jobUrl='job_view.php?id='.$j['id'];
         $targets=[];
         if($j['responsible_personnel_id']){ try{ $resStmt->execute([$j['responsible_personnel_id']]); $r=$resStmt->fetch(); if($r) $targets[(int)$r['id']]=(int)$r['id']; }catch(Throwable $e){} }
         foreach($admins as $a){ $a=(int)$a; if($a) $targets[$a]=$a; }
         foreach($targets as $tu){
-            try{ $ins->execute([$title,$msg,$tu]); }catch(Throwable $e){}
-            if($hasPush){ try{ push_to_user($tu,$title,$msg,'job_view.php?id='.$j['id']); }catch(Throwable $e){} }
+            try{ $ins->execute([$title,$msg,$tu,$jobUrl]); }catch(Throwable $e){}
+            if($hasPush){ try{ push_to_user($tu,$title,$msg,$jobUrl); }catch(Throwable $e){} }
         }
         try{ $upd->execute([$today,$j['id']]); }catch(Throwable $e){}
     }

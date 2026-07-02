@@ -16,7 +16,7 @@ echo '<meta charset=utf-8><body style="font-family:-apple-system,sans-serif;max-
 // Silinecek bilinen çöpler
 $targets=[];
 foreach(glob($d.'/install_*.php') as $f) $targets[]=$f;          // tüm install dosyaları
-$single=['push_test.php','mobile/push_enable.php','kontrol.php','iz.php','bak.php','kaynak.php',
+$single=['push_test.php','kontrol.php','iz.php','bak.php','kaynak.php',
  'fix_login.php','ac_extract.php','dev_check.php','ac.php','guncelleme.zip','assets','migrate.php',
  'layout_top_patch_note.txt','v9_not.txt','v11_not.txt','v16_not.txt','v19_not.txt','RAPOR.md'];
 foreach($single as $s){ if(file_exists($d.'/'.$s)) $targets[]=$d.'/'.$s; }

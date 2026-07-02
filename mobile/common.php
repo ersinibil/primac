@@ -10,9 +10,14 @@ if(empty($_SESSION['_mig_notif'])){
     try{ if(!db()->query("SHOW COLUMNS FROM internal_notifications LIKE 'target_user_id'")->fetch()) db()->exec("ALTER TABLE internal_notifications ADD COLUMN target_user_id INT NULL"); }catch(Throwable $e){}
     $_SESSION['_mig_notif']=1;
 }
+// Bildirim tıklanınca doğru sayfaya gitsin: action_url kolonu (oturum başına bir kez migrate)
+if(empty($_SESSION['_mig_notif_url'])){
+    try{ if(!db()->query("SHOW COLUMNS FROM internal_notifications LIKE 'action_url'")->fetch()) db()->exec("ALTER TABLE internal_notifications ADD COLUMN action_url VARCHAR(255) DEFAULT NULL"); }catch(Throwable $e){}
+    $_SESSION['_mig_notif_url']=1;
+}
 // Bir kullanıcıya bildirim (uygulama içi + Web Push). $uid null ise genel.
 function notify_user($uid,$title,$msg='',$url='index.php'){
-    try{ db()->prepare("INSERT INTO internal_notifications(title,message,target_user_id,is_read) VALUES(?,?,?,0)")->execute([$title,$msg,$uid?:null]); }catch(Throwable $e){}
+    try{ db()->prepare("INSERT INTO internal_notifications(title,message,target_user_id,action_url,is_read) VALUES(?,?,?,?,0)")->execute([$title,$msg,$uid?:null,$url]); }catch(Throwable $e){}
     if($uid && file_exists(__DIR__.'/../push_lib.php')){ require_once __DIR__.'/../push_lib.php'; try{ push_to_user((int)$uid,$title,$msg,$url); }catch(Throwable $e){} }
 }
 function unread_msg(){ static $v=null; global $ME; if($v===null) $v=mc("SELECT COUNT(*) c FROM internal_messages WHERE receiver_user_id=$ME AND is_read=0"); return $v; }

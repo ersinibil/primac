@@ -25,8 +25,7 @@ function check_daily_reminders($pdo, $force=false){
     $taskStmt=$pdo->prepare("SELECT title,due_date FROM tasks
         WHERE personnel_id=? AND status NOT IN ('Tamamlandı','İptal')
         ORDER BY (due_date IS NULL), due_date LIMIT 25");
-    $insN=$pdo->prepare("INSERT INTO internal_notifications(title,message,target_user_id,is_read) VALUES(?,?,?,0)");
-    $insM=$pdo->prepare("INSERT INTO internal_messages(sender_user_id,receiver_user_id,message,is_read) VALUES(NULL,?,?,0)");
+    $insN=$pdo->prepare("INSERT INTO internal_notifications(title,message,target_user_id,action_url,is_read) VALUES(?,?,?,?,0)");
 
     foreach($users as $u){
         $pid=(int)$u['personnel_id'];
@@ -40,8 +39,7 @@ function check_daily_reminders($pdo, $force=false){
         $msg=implode("\n",$lines);
         $uid=(int)$u['id'];
 
-        try{ $insN->execute(['🌅 Bugün bekleyen işlerin',$msg,$uid]); }catch(Throwable $e){}
-        try{ $insM->execute([$uid,$msg]); }catch(Throwable $e){}
+        try{ $insN->execute(['🌅 Bugün bekleyen işlerin',$msg,$uid,'mytasks.php']); }catch(Throwable $e){}
         if($hasPush){ try{ push_to_user($uid,'🌅 Bugün bekleyen işlerin',count($jobs).' iş · '.count($tasks).' görev','mytasks.php'); }catch(Throwable $e){} }
         if(!empty($u['phone']) && function_exists('wa_send')){ try{ wa_send($u['phone'],$msg); }catch(Throwable $e){} }
     }
@@ -76,8 +74,7 @@ function check_daily_reminders($pdo, $force=false){
 
         $adminIds=array_column($admins,'id');
         foreach($adminIds as $aid){ $aid=(int)$aid;
-            try{ $insN->execute(['📊 Günlük iş raporu',$rmsg,$aid]); }catch(Throwable $e){}
-            try{ $insM->execute([$aid,$rmsg]); }catch(Throwable $e){}
+            try{ $insN->execute(['📊 Günlük iş raporu',$rmsg,$aid,'gunluk_rapor.php']); }catch(Throwable $e){}
             if($hasPush){ try{ push_to_user($aid,'📊 Günlük iş raporu','Tüm personelin bugünkü işleri','gunluk_rapor.php'); }catch(Throwable $e){} }
         }
 

@@ -21,7 +21,7 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['request_id'])){
             $notifMsg=($row['title']??'').($note?' · '.$note:'');
             if($owner){
                 // Uygulama içi bildirim
-                try{ $pdo->prepare("INSERT INTO internal_notifications(title,message,target_user_id,is_read) VALUES(?,?,?,0)")->execute([$notifTitle,$notifMsg,$owner]); }catch(Throwable $e2){}
+                try{ $pdo->prepare("INSERT INTO internal_notifications(title,message,target_user_id,action_url,is_read) VALUES(?,?,?,?,0)")->execute([$notifTitle,$notifMsg,$owner,'requests.php']); }catch(Throwable $e2){}
                 // Mesajlar ekranında görünsün
                 $senderId=$_SESSION['user']['id']??null;
                 try{ $pdo->prepare("INSERT INTO internal_messages(sender_user_id,receiver_user_id,message,is_read) VALUES(?,?,?,0)")->execute([$senderId,$owner,$notifMsg]); }catch(Throwable $e2){}
