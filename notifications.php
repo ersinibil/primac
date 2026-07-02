@@ -11,6 +11,15 @@ if(isset($_GET['read'])){
     if(!empty($_GET['go'])){
         $go=$_GET['go'];
         if(preg_match('#^(https?:)?//#i',$go)) $go='dashboard.php'; // open redirect koruması: sadece site-içi göreli path
+        // Bazı bildirimler (örn. mobile/task_new.php) mobil-sadece bir sayfaya (mytasks.php gibi)
+        // link veriyor — web kökünde böyle bir dosya yoksa 404 veriyordu. Bu, TEK giriş noktası
+        // (herkes buradan geçiyor: dashboard.php'nin "Detay" butonu dahil) olduğu için düzeltme
+        // burada merkezi olarak yapılıyor (2026-07-03: dashboard.php'nin kendi kopyası bu kontrolü
+        // hiç yapmıyordu, aynı 404 orada da tekrarlanıyordu).
+        $goFile=explode('?',$go,2)[0];
+        if($goFile!=='' && strpos($go,'mobile/')!==0 && !file_exists(__DIR__.'/'.$goFile) && file_exists(__DIR__.'/mobile/'.$goFile)){
+            $go='mobile/'.$go;
+        }
         header("Location: ".$go);
         exit;
     }
