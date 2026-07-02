@@ -94,13 +94,22 @@ if (!function_exists('search_run')) {
             $out['movements'] = $s->fetchAll();
         } catch (Throwable $e) {} }
 
-        // Çek / Senet — Finans modülünün bir parçası
+        // Çek / Senet — Finans modülünün bir parçası. "Çek"/"Senet" TÜR adının kendisi yazılırsa
+        // (numara/banka/cari alanında geçmese bile) o türdeki tüm kayıtlar listelensin — 2026-07-02
+        // kullanıcı bildirimi: "aramada çek'i göremedim" (sadece alan içeriği aranıyordu, tür adı değil).
+        $qNorm = mb_strtolower($q, 'UTF-8');
+        $typeMatch = null;
+        if (in_array($qNorm, ['çek','cek'], true)) $typeMatch = 'cek';
+        elseif (in_array($qNorm, ['senet','senedi','senetler'], true)) $typeMatch = 'senet';
         if (function_exists('user_can') && user_can('finance')) { try {
-            $s = $pdo->prepare("SELECT k.id,k.type,k.number,k.amount,k.due_date,k.status,k.bank_name,c.name contact_name
+            $sql = "SELECT k.id,k.type,k.number,k.amount,k.due_date,k.status,k.bank_name,c.name contact_name
                 FROM checks_notes k LEFT JOIN contacts c ON c.id=k.contact_id
-                WHERE k.number LIKE ? OR k.bank_name LIKE ? OR c.name LIKE ?
-                ORDER BY k.id DESC LIMIT 20");
-            $s->execute([$like,$like,$like]);
+                WHERE k.number LIKE ? OR k.bank_name LIKE ? OR c.name LIKE ?".($typeMatch ? " OR k.type=?" : "")."
+                ORDER BY k.id DESC LIMIT 20";
+            $s = $pdo->prepare($sql);
+            $params = [$like,$like,$like];
+            if ($typeMatch) $params[] = $typeMatch;
+            $s->execute($params);
             $out['checks'] = $s->fetchAll();
         } catch (Throwable $e) {} }
 
