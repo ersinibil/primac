@@ -40,6 +40,13 @@ try{
 <section class="panel">
 <?php foreach($rows as $n): 
 $go=$n['action_url'] ?: 'dashboard.php';
+// Bazı bildirimler (örn. mobile/task_new.php) mobil-sadece bir sayfaya (mytasks.php gibi) link veriyor —
+// web kökünde böyle bir dosya yoksa 404 veriyordu (2026-07-03 kullanıcı bildirimi). Hedef dosya web
+// kökünde yoksa ama mobile/ altında varsa oraya yönlendir.
+$goFile=explode('?',$go,2)[0];
+if($goFile!=='' && strpos($go,'mobile/')!==0 && !file_exists(__DIR__.'/'.$goFile) && file_exists(__DIR__.'/mobile/'.$goFile)){
+    $go='mobile/'.$go;
+}
 $readUrl='notifications.php?read='.$n['id'].'&go='.urlencode($go);
 ?>
 <div class="notice-card <?=$n['is_read']?'':'unread'?>">
