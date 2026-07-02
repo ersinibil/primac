@@ -27,7 +27,7 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['action']) && $_POST['act
 $test_result='';
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['action']) && $_POST['action']==='test'){
     $t_phone = trim($_POST['test_phone'] ?? '');
-    $t_text  = trim($_POST['test_text']  ?? 'ACANS OTS — WhatsApp test mesajı.');
+    $t_text  = trim($_POST['test_text']  ?? ((app_config()['app_name'] ?? 'OTS').' — WhatsApp test mesajı.'));
     if($t_phone){
         $ok = wa_send($t_phone, $t_text);
         $test_result = $ok ? 'ok:Mesaj gönderildi (API yanıtı alındı).' : 'err:Gönderilemedi — ayarları ve telefon numarasını kontrol edin.';
@@ -111,7 +111,7 @@ require_once __DIR__.'/layout_top.php';
                 <input type="text" name="test_phone" placeholder="05321234567 veya +905321234567" value="<?=h($_POST['test_phone']??'')?>">
             </label>
             <label>Mesaj
-                <input type="text" name="test_text" value="<?=h($_POST['test_text']??'ACANS OTS — WhatsApp test mesajı.')?>" placeholder="Test mesajı">
+                <input type="text" name="test_text" value="<?=h($_POST['test_text']??((app_config()['app_name']??'OTS').' — WhatsApp test mesajı.'))?>" placeholder="Test mesajı">
             </label>
         </div>
         <div style="margin-top:14px">

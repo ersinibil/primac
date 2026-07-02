@@ -1,4 +1,4 @@
-<?php require_once 'common.php'; topx('ACANS OTS');
+<?php require_once 'common.php'; topx(app_config()['app_name'] ?? 'OTS');
 $open=mc("SELECT COUNT(*) c FROM jobs WHERE status NOT IN ('Tamamlandı','İptal','Teslim Edildi')");
 if($isAdmin){
   $contacts=mc("SELECT COUNT(*) c FROM contacts");

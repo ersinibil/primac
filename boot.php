@@ -134,10 +134,28 @@ function user_can($permission){
     if(!$u) return false;
     if(is_admin()) return true;
 
-    $perms=$u['permissions'] ?? [];
-    if(is_string($perms)){
-        $decoded=json_decode($perms,true);
-        $perms=is_array($decoded)?$decoded:[];
+    // Yönetici bir yetkiyi yeni verdiyse oturum açık kullanıcıda hemen etkili olsun diye
+    // permissions HER ÇAĞRIDA DB'den taze okunur (session'daki eski kopyaya güvenilmez).
+    $perms=null;
+    if(!empty($u['id'])){
+        try{
+            $row=db()->prepare("SELECT permissions FROM app_users WHERE id=?");
+            $row->execute([$u['id']]);
+            $r=$row->fetch();
+            if($r!==false){
+                $decoded=json_decode($r['permissions'] ?? '[]',true);
+                $perms=is_array($decoded)?$decoded:[];
+                $_SESSION['user']['permissions']=$perms; // session'ı da güncel tut
+            }
+        }catch(Throwable $e){ $perms=null; }
+    }
+    if($perms===null){
+        // DB'ye erişilemediyse session'daki son bilinen kopyaya düş (tamamen erişimsiz kalmasın)
+        $perms=$u['permissions'] ?? [];
+        if(is_string($perms)){
+            $decoded=json_decode($perms,true);
+            $perms=is_array($decoded)?$decoded:[];
+        }
     }
     return in_array($permission,$perms,true);
 }

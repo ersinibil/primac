@@ -59,7 +59,7 @@
 
 <div style="font-weight:900;margin:16px 4px 8px">⚙ Sistem</div>
 <div class="grid">
-  <?php card('Son İşlemler','Aktivite akışı','🕘','activity.php','gray'); card('Web Sürümü','Masaüstü Sürüm','🖥','../dashboard.php?web=1','gray'); card('Profil','Şifre & hesap','👤','profile.php','blue'); card('Kullanıcılar','Yetki yönetimi','👥','users.php','purple'); ?>
+  <?php card('Son İşlemler','Aktivite akışı','🕘','activity.php','gray'); card('Web Sürümü','Masaüstü Sürüm','🖥','../dashboard.php?web=1','gray'); card('Profil','Şifre & hesap','👤','profile.php','blue'); card('Kullanıcılar','Yetki yönetimi','👥','users.php','purple'); card('Logo / Marka','Marka ayarları','🎨','../brand_settings.php','gray'); card('Çıkış Yap','Oturumu kapat','🚪','../logout.php','red'); ?>
 </div>
 <?php else: ?>
 <div class="grid">
@@ -73,6 +73,7 @@
   card('Talep Aç','Yönetime talep gönder','📨','request_new.php','orange');
   card('Mesajlar','İç yazışma','💬','messages.php','teal');
   card('Profil','Şifre & hesap','👤','profile.php','gray');
+  card('Çıkış Yap','Oturumu kapat','🚪','../logout.php','red');
   ?>
 </div>
 <?php endif; ?>

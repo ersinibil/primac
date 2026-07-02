@@ -133,7 +133,7 @@ if($id && !$editMode){
       <?php if(!$lh): ?>
       <div style="height:5px;background:<?=$col?>"></div>
       <div style="padding:16px 16px 12px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #eef0f2">
-        <?php if($fi && !empty($fi['mark'])): ?><div style="display:flex;align-items:center;gap:9px"><span style="background:<?=$col?>;border-radius:7px;padding:5px"><img src="../<?=htmlspecialchars($fi['mark'])?>" alt="logo" style="height:36px;object-fit:contain;display:block"></span><div style="font-weight:800;font-size:14px;color:#1f2937"><?=htmlspecialchars($fi['name'])?></div></div><?php elseif($fi): ?><img src="../<?=htmlspecialchars($fi['logo'])?>" alt="logo" style="height:36px;object-fit:contain;display:block"><?php else: ?><div style="font-weight:800;color:#1f2937">ACANS OTS</div><?php endif; ?>
+        <?php if($fi && !empty($fi['mark'])): ?><div style="display:flex;align-items:center;gap:9px"><span style="background:<?=$col?>;border-radius:7px;padding:5px"><img src="../<?=htmlspecialchars($fi['mark'])?>" alt="logo" style="height:36px;object-fit:contain;display:block"></span><div style="font-weight:800;font-size:14px;color:#1f2937"><?=htmlspecialchars($fi['name'])?></div></div><?php elseif($fi): ?><img src="../<?=htmlspecialchars($fi['logo'])?>" alt="logo" style="height:36px;object-fit:contain;display:block"><?php else: ?><div style="font-weight:800;color:#1f2937"><?=htmlspecialchars(app_config()['app_name'] ?? 'OTS')?></div><?php endif; ?>
         <div style="text-align:right">
           <div style="font-size:23px;font-weight:900;letter-spacing:1px;color:#1f2937">TEKLİF</div>
           <div style="font-size:11px;color:<?=$col?>;font-weight:700"><?=htmlspecialchars($q['quote_no'])?></div>
@@ -167,7 +167,7 @@ if($id && !$editMode){
       </div>
       <?php if(!$lh): ?>
       <div class="qfoot" style="border-top:2px solid <?=$col?>;background:#f8f9fa;color:#374151;padding:11px 16px;text-align:center;font-size:12px">
-        <?php if($fi): ?><b style="color:#1f2937"><?=htmlspecialchars($fi['name'])?></b> · 🌐 <?=htmlspecialchars($fi['web'])?><?php else: ?>ACANS OTS — Online Takip Sistemi<?php endif; ?>
+        <?php if($fi): ?><b style="color:#1f2937"><?=htmlspecialchars($fi['name'])?></b> · 🌐 <?=htmlspecialchars($fi['web'])?><?php else: ?><?=htmlspecialchars(app_config()['app_name'] ?? 'OTS')?> — Online Takip Sistemi<?php endif; ?>
       </div>
       <?php endif; ?>
     </div>

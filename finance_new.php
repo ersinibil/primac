@@ -2,6 +2,7 @@
 require_once __DIR__.'/boot.php';
 require_login();
 require_once __DIR__.'/activity_lib.php';
+require_once __DIR__.'/accounting_lib.php';
 
 $pdo=db();
 $error='';
@@ -14,14 +15,16 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         $direction=$_POST['direction'];
         $amount=(float)$_POST['amount'];
         $accountId=(int)$_POST['account_id'];
+        $catId=(int)($_POST['category_id']??0) ?: null;
         if($amount<=0) throw new Exception('Tutar sıfırdan büyük olmalı.');
         if(!$accountId) throw new Exception('Hesap seçilmelidir.');
 
-        $stmt=$pdo->prepare("INSERT INTO finance_movements(contact_id,job_id,direction,amount,payment_channel,account_id,status,movement_date,description,movement_type,reference_no)
-            VALUES(?,NULL,?,?,?,?,?,?,?,'normal',?)");
+        $stmt=$pdo->prepare("INSERT INTO finance_movements(contact_id,category_id,job_id,direction,amount,payment_channel,account_id,status,movement_date,description,movement_type,reference_no)
+            VALUES(?,?,NULL,?,?,?,?,?,?,?,'normal',?)");
         $status=$direction==='in'?'Tahsil Edildi':'Ödendi';
         $stmt->execute([
             (int)$_POST['contact_id'] ?: null,
+            $catId,
             $direction,
             $amount,
             $_POST['payment_channel'],
@@ -64,6 +67,8 @@ require_once __DIR__.'/layout_top.php';
 
 $contacts=$pdo->query("SELECT id,name,type FROM contacts ORDER BY name")->fetchAll();
 $accounts=$pdo->query("SELECT * FROM finance_accounts WHERE active=1 ORDER BY account_type,name")->fetchAll();
+$giderCats=acc_categories($pdo,'gider');
+$gelirCats=acc_categories($pdo,'gelir');
 ?>
 
 <div class="panel-head">
@@ -80,17 +85,29 @@ $accounts=$pdo->query("SELECT * FROM finance_accounts WHERE active=1 ORDER BY ac
 <form method="post" class="form-grid">
 
 <label>İşlem Tipi
-<select name="direction">
+<select name="direction" id="fnDirection" onchange="fnFilterCats()">
 <option value="in" <?=$direction==='in'?'selected':''?>>Tahsilat</option>
 <option value="out" <?=$direction==='out'?'selected':''?>>Ödeme</option>
 </select>
 </label>
 
-<label>Cari
+<label>Cari <small style="font-weight:400;color:#667085">(opsiyonel)</small>
 <select name="contact_id">
 <option value="">Cari seçilmedi</option>
 <?php foreach($contacts as $c): ?>
 <option value="<?=$c['id']?>" <?=$contactId===$c['id']?'selected':''?>><?=h($c['name'].' / '.$c['type'])?></option>
+<?php endforeach; ?>
+</select>
+</label>
+
+<label>Kategori <small style="font-weight:400;color:#667085">(cari yerine/yanında — personel yol gideri, yakıt, vergi, telefon vb.)</small>
+<select name="category_id" id="fnCatSel">
+<option value="">— Seç —</option>
+<?php foreach($giderCats as $c): ?>
+<option value="<?=(int)$c['id']?>" data-type="out" style="<?=$direction==='out'?'':'display:none'?>">[<?=h($c['group_name'])?>] <?=h($c['name'])?></option>
+<?php endforeach; ?>
+<?php foreach($gelirCats as $c): ?>
+<option value="<?=(int)$c['id']?>" data-type="in" style="<?=$direction==='in'?'':'display:none'?>">[<?=h($c['group_name'])?>] <?=h($c['name'])?></option>
 <?php endforeach; ?>
 </select>
 </label>
@@ -134,5 +151,17 @@ $accounts=$pdo->query("SELECT * FROM finance_accounts WHERE active=1 ORDER BY ac
 <button class="btn">Kaydet</button>
 </form>
 </section>
+<script>
+function fnFilterCats(){
+  var t=document.getElementById('fnDirection').value;
+  var opts=document.getElementById('fnCatSel').options;
+  for(var i=0;i<opts.length;i++){
+    var o=opts[i];
+    if(!o.dataset.type){o.style.display='';continue;}
+    o.style.display=(o.dataset.type===t)?'':'none';
+    if(o.dataset.type!==t&&o.selected) o.selected=false;
+  }
+}
+</script>
 
 <?php require_once __DIR__.'/layout_bottom.php'; ?>

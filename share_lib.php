@@ -116,12 +116,14 @@ function firm_info($k){ $l=firm_list(); return $l[$k] ?? null; }
 // Giriş bilgilerini WhatsApp ile gönder linki (şifre düz metin — sadece kurulum/sıfırlama anında).
 function cred_wa($phone,$username,$password){
     $url=function_exists('base_url')?base_url():'';
-    $txt="🔐 ACANS OTS giriş bilgileriniz\nKullanıcı: ".$username."\nŞifre: ".$password.($url?"\nAdres: ".$url:'');
+    $appName=function_exists('app_config')?(app_config()['app_name']??'OTS'):'OTS';
+    $txt="🔐 ".$appName." giriş bilgileriniz\nKullanıcı: ".$username."\nŞifre: ".$password.($url?"\nAdres: ".$url:'');
     return wa_link($txt,$phone);
 }
 
 // WhatsApp + Mail buton çifti. $phone boşsa WhatsApp kişi seçtirir.
-function share_buttons($text,$phone='',$subject='ACANS OTS'){
+function share_buttons($text,$phone='',$subject=null){
+    if($subject===null) $subject=function_exists('app_config')?(app_config()['app_name']??'OTS'):'OTS';
     $wa=wa_link($text,$phone); $ml=mail_link($subject,$text);
     return '<div style="display:flex;gap:8px;margin-top:8px">'
         .'<a href="'.htmlspecialchars($wa).'" target="_blank" rel="noopener" class="btn" style="flex:1;text-align:center;background:#16a34a;color:#fff;padding:10px;text-decoration:none">📲 WhatsApp</a>'

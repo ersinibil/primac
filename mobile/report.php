@@ -3,7 +3,7 @@ require_once 'common.php';
 require_once __DIR__.'/../report_lib.php'; // paylaşımlı rapor mantığı (mobil+web)
 block_personel(); // yönetici raporu
 $pdo=db(); $me=(int)($_SESSION['user']['id']??0);
-$appName = 'ACANS OTS';
+$appName = app_config()['app_name'] ?? 'OTS';
 
 $from = preg_match('/^\d{4}-\d{2}-\d{2}$/',$_GET['from']??'')?$_GET['from']:date('Y-m-01');
 $to   = preg_match('/^\d{4}-\d{2}-\d{2}$/',$_GET['to']??'')?$_GET['to']:date('Y-m-t');

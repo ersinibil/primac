@@ -60,6 +60,7 @@ $pos=safe_sum("SELECT COALESCE(SUM(current_balance),0) s FROM finance_accounts W
 <th>Tarih</th>
 <th>Tip</th>
 <th>Cari</th>
+<th>Kategori</th>
 <th>Hesap</th>
 <th>Yöntem</th>
 <th>Tutar</th>
@@ -70,9 +71,10 @@ $pos=safe_sum("SELECT COALESCE(SUM(current_balance),0) s FROM finance_accounts W
 <tbody>
 <?php
 try{
-    $st=db()->prepare("SELECT f.*, c.name contact_name, a.name account_name, a.account_type, ta.name target_account_name
+    $st=db()->prepare("SELECT f.*, c.name contact_name, ac.name cat_name, a.name account_name, a.account_type, ta.name target_account_name
         FROM finance_movements f
         LEFT JOIN contacts c ON c.id=f.contact_id
+        LEFT JOIN accounting_categories ac ON ac.id=f.category_id
         LEFT JOIN finance_accounts a ON a.id=f.account_id
         LEFT JOIN finance_accounts ta ON ta.id=f.target_account_id
         $sqlWhere
@@ -84,6 +86,7 @@ try{
         echo "<td>".h($r['movement_date'])."</td>";
         echo "<td>".h($r['movement_type']==='transfer'?'Transfer':($r['direction']=='in'?'Tahsilat':'Ödeme'))."</td>";
         echo "<td>".h($r['contact_name'] ?: '-')."</td>";
+        echo "<td>".h($r['cat_name'] ?: '-')."</td>";
         $account=$r['account_name'] ?: $r['payment_channel'];
         if($r['movement_type']==='transfer' && $r['target_account_name']) $account.=' → '.$r['target_account_name'];
         echo "<td>".h($account)."</td>";
@@ -93,9 +96,9 @@ try{
         echo "<td>".h($r['description'])."</td>";
         echo "</tr>";
     }
-    if(!$rows) echo "<tr><td colspan='8' class='muted'>Henüz finans hareketi yok.</td></tr>";
+    if(!$rows) echo "<tr><td colspan='9' class='muted'>Henüz finans hareketi yok.</td></tr>";
 }catch(Throwable $e){
-    echo "<tr><td colspan='8'><div class='alert'>".h($e->getMessage())."</div></td></tr>";
+    echo "<tr><td colspan='9'><div class='alert'>".h($e->getMessage())."</div></td></tr>";
 }
 ?>
 </tbody>

@@ -1,10 +1,12 @@
 <?php
+require_once __DIR__.'/../boot.php';
+$appName = app_config()['app_name'] ?? 'OTS';
 header('Content-Type: application/manifest+json; charset=utf-8');
 echo json_encode([
-  'id'=>'acans-os-mobile',
-  'name'=>'ACANS OTS — İşletim Paneli',
-  'short_name'=>'ACANS OTS',
-  'description'=>'ACANS mobil işletim paneli: iş, cari, stok, tahsilat ve mesajlaşma.',
+  'id'=>'ots-mobile',
+  'name'=>$appName.' — İşletim Paneli',
+  'short_name'=>$appName,
+  'description'=>$appName.' mobil işletim paneli: iş, cari, stok, tahsilat ve mesajlaşma.',
   'start_url'=>'./index.php',
   'scope'=>'./',
   'display'=>'standalone',

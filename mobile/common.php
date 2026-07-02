@@ -126,8 +126,8 @@ document.getElementById('lb-save').addEventListener('click',function(){
     try{ if(!ac){ac=new (window.AudioContext||window.webkitAudioContext)();} if(ac.state==='suspended')ac.resume(); }catch(e){}
     var msg='Ses + banner çalışıyor.';
     if('Notification'in window){
-      if(Notification.permission==='default'){ try{ Notification.requestPermission().then(function(p){ if(p==='granted'){ nativeNotify('🔔 ACANS OTS','Bildirim açıldı','#'); if('serviceWorker'in navigator)navigator.serviceWorker.ready.then(function(r){setupPush(r);}); } }); }catch(e){} }
-      else if(Notification.permission==='granted'){ nativeNotify('🔔 ACANS OTS','Test bildirimi','#'); if('serviceWorker'in navigator)navigator.serviceWorker.ready.then(function(r){setupPush(r);}); }
+      if(Notification.permission==='default'){ try{ Notification.requestPermission().then(function(p){ if(p==='granted'){ nativeNotify('🔔 <?=htmlspecialchars(app_config()['app_name'] ?? 'OTS')?>','Bildirim açıldı','#'); if('serviceWorker'in navigator)navigator.serviceWorker.ready.then(function(r){setupPush(r);}); } }); }catch(e){} }
+      else if(Notification.permission==='granted'){ nativeNotify('🔔 <?=htmlspecialchars(app_config()['app_name'] ?? 'OTS')?>','Test bildirimi','#'); if('serviceWorker'in navigator)navigator.serviceWorker.ready.then(function(r){setupPush(r);}); }
       else { msg='Bildirim izni REDDEDİLMİŞ — telefon ayarlarından izin ver.'; }
     }
     beep();

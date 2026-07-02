@@ -1,5 +1,6 @@
 <?php
 require_once 'common.php';
+require_once __DIR__.'/../accounting_lib.php';
 block_personel();
 $pdo=db();
 $cid=(int)($_GET['contact_id'] ?? 0);
@@ -16,6 +17,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     $err='';
     try{
         $contact=(int)($_POST['contact_id']??0); // opsiyonel
+        $catId=(int)($_POST['category_id']??0) ?: null; // opsiyonel — cari yerine/yanında
         $amount=(float)str_replace(',','.',$_POST['amount']??'0');
         $pm=$_POST['payment_channel'] ?? 'Nakit';
         if($amount<=0) throw new Exception('Tutar geçersiz.');
@@ -24,9 +26,9 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         $accId=(int)($_POST['account_id']??0);
         if(!$accId) $accId=pay_acc_for_pm($pdo,$pm);
 
-        $pdo->prepare("INSERT INTO finance_movements(contact_id,direction,amount,payment_channel,account_id,status,movement_date,description,movement_type)
-            VALUES(?,?,?,?,?,?,?,?,'mobile')")
-            ->execute([$contact?:null,'out',$amount,$pm,$accId,'Ödendi',date('Y-m-d'),trim($_POST['description'] ?? '')]);
+        $pdo->prepare("INSERT INTO finance_movements(contact_id,category_id,direction,amount,payment_channel,account_id,status,movement_date,description,movement_type)
+            VALUES(?,?,?,?,?,?,?,?,?,'mobile')")
+            ->execute([$contact?:null,$catId,'out',$amount,$pm,$accId,'Ödendi',date('Y-m-d'),trim($_POST['description'] ?? '')]);
 
         if($accId){ try{ $pdo->prepare("UPDATE finance_accounts SET current_balance=current_balance-? WHERE id=?")->execute([$amount,$accId]); }catch(Throwable $e){} }
 
@@ -42,9 +44,10 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 topx('Ödeme / Gider');
 if(!empty($_SESSION['payment_err'])){ echo '<div class="err">'.htmlspecialchars($_SESSION['payment_err']).'</div>'; unset($_SESSION['payment_err']); }
 
-$cs=[]; $accounts=[];
+$cs=[]; $accounts=[]; $gcats=[];
 try{ $cs=$pdo->query("SELECT id,name FROM contacts ORDER BY name")->fetchAll(); }catch(Throwable $e){}
 try{ $accounts=$pdo->query("SELECT * FROM finance_accounts WHERE COALESCE(active,1)=1 ORDER BY account_type,name")->fetchAll(); }catch(Throwable $e){}
+$gcats=acc_categories($pdo,'gider');
 ?>
 <div class="panel" style="display:flex;gap:8px"><a class="btn dark" href="kasa.php" style="flex:1;text-align:center">🏦 Kasa Durumu</a></div>
 <div class="panel">
@@ -52,6 +55,10 @@ try{ $accounts=$pdo->query("SELECT * FROM finance_accounts WHERE COALESCE(active
   <label>Cari <small class="muted">(opsiyonel)</small></label>
   <select name="contact_id"><option value="">— Cari seçilmedi —</option>
   <?php foreach($cs as $c): ?><option value="<?=$c['id']?>" <?=$cid===(int)$c['id']?'selected':''?>><?=htmlspecialchars($c['name'])?></option><?php endforeach; ?></select>
+
+  <label>Kategori <small class="muted">(opsiyonel — cari yerine/yanında: personel yol gideri, yakıt, vergi, telefon vb.)</small></label>
+  <select name="category_id"><option value="">— Kategori seçilmedi —</option>
+  <?php foreach($gcats as $c): ?><option value="<?=(int)$c['id']?>">[<?=htmlspecialchars($c['group_name'])?>] <?=htmlspecialchars($c['name'])?></option><?php endforeach; ?></select>
 
   <label>Hesap / Kasa / Kart</label>
   <select name="account_id"><option value="">Yönteme göre otomatik</option>

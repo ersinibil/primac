@@ -24,7 +24,7 @@ if($file && $_SERVER['REQUEST_METHOD']==='POST'){
 }
 ?><!doctype html><html lang="tr"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Onay · ACANS OTS</title>
+<title>Onay · <?=htmlspecialchars(app_config()["app_name"] ?? "OTS")?></title>
 <style>
 body{margin:0;background:#0f172a;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;min-height:100vh}
 .wrap{max-width:560px;margin:auto;padding:18px}
@@ -67,5 +67,5 @@ textarea{width:100%;border:0;border-radius:12px;padding:12px;margin:8px 0;font-s
     <?php else: ?><p class="muted">Bu dosyayı onayladınız. Teşekkürler.</p><?php endif; ?>
   </div>
 <?php endif; ?>
-<p class="muted" style="text-align:center">ACANS OTS · Online Takip Sistemi</p>
+<p class="muted" style="text-align:center"><?=htmlspecialchars(app_config()["app_name"] ?? "OTS")?> · Online Takip Sistemi</p>
 </div></body></html>

@@ -1,8 +1,8 @@
 <?php
 // ACANS OS — Paylaşımlı Rapor Kütüphanesi (mobil + web ortak)
-function report_modules(){ return ['tumu'=>'🗂️ Tümü','genel'=>'📊 Yekün','tahsilat'=>'💰 Tahsilat/Finans','is'=>'📋 İş Takip','personel'=>'👷 Personel','satis'=>'🧾 Satış','teklif'=>'📄 Teklif','cari'=>'👥 Cari','stok'=>'📦 Stok']; }
+function report_modules(){ return ['tumu'=>'🗂️ Tümü','genel'=>'📊 Yekün','tahsilat'=>'💰 Tahsilat/Finans','muhasebe'=>'📒 Muhasebe','is'=>'📋 İş Takip','personel'=>'👷 Personel','satis'=>'🧾 Satış','teklif'=>'📄 Teklif','cari'=>'👥 Cari','stok'=>'📦 Stok']; }
 // "Tümü"de yer alacak modüller (özet hariç tek tek hepsi)
-function report_all_keys(){ return ['genel','tahsilat','is','personel','satis','teklif','cari','stok']; }
+function report_all_keys(){ return ['genel','tahsilat','muhasebe','is','personel','satis','teklif','cari','stok']; }
 // Tüm modülleri tek raporda alt alta render et
 function report_render_all($pdo,$appName,$from,$to,$detail=false){
   $out='';
@@ -36,9 +36,28 @@ function rpt($pdo,$modul,$from,$to,$ref=0,$detail=false){
     $ch=$pdo->prepare("SELECT COALESCE(NULLIF(payment_channel,''),'Diğer') k, SUM(amount) s FROM finance_movements WHERE direction='in' AND DATE(movement_date) BETWEEN ? AND ? GROUP BY k ORDER BY s DESC");
     $ch->execute([$from,$to]); $cd=[]; foreach($ch->fetchAll() as $r)$cd[$r['k']]=(float)$r['s'];
     $R['chart']=['Tahsilat — kanal',$cd];
-    $m=$pdo->prepare("SELECT fm.movement_date,fm.direction,c.name cari,fm.amount,fm.description FROM finance_movements fm LEFT JOIN contacts c ON c.id=fm.contact_id WHERE DATE(fm.movement_date) BETWEEN ? AND ? ORDER BY fm.movement_date,fm.id");
-    $m->execute([$from,$to]); $R['table']['head']=['Tarih','Tür','Cari','Tutar','Açıklama'];
-    foreach($m->fetchAll() as $r)$R['table']['rows'][]=[$r['movement_date'],$r['direction']==='in'?'Tahsilat':'Ödeme',$r['cari'],tl($r['amount']),$r['description']];
+    $ch2=$pdo->prepare("SELECT COALESCE(ac.name,'Kategorisiz') k, SUM(fm.amount) s FROM finance_movements fm LEFT JOIN accounting_categories ac ON ac.id=fm.category_id WHERE fm.direction='out' AND DATE(fm.movement_date) BETWEEN ? AND ? GROUP BY k ORDER BY s DESC LIMIT 12");
+    $ch2->execute([$from,$to]); $cd2=[]; foreach($ch2->fetchAll() as $r)$cd2[$r['k']]=(float)$r['s'];
+    $R['chart2']=['Ödeme / Gider — kategoriye göre',$cd2];
+    $m=$pdo->prepare("SELECT fm.movement_date,fm.direction,c.name cari,COALESCE(ac.name,'') kat,fm.amount,fm.description FROM finance_movements fm LEFT JOIN contacts c ON c.id=fm.contact_id LEFT JOIN accounting_categories ac ON ac.id=fm.category_id WHERE DATE(fm.movement_date) BETWEEN ? AND ? ORDER BY fm.movement_date,fm.id");
+    $m->execute([$from,$to]); $R['table']['head']=['Tarih','Tür','Cari','Kategori','Tutar','Açıklama'];
+    foreach($m->fetchAll() as $r)$R['table']['rows'][]=[$r['movement_date'],$r['direction']==='in'?'Tahsilat':'Ödeme',$r['cari'],$r['kat'],tl($r['amount']),$r['description']];
+    break;
+
+  case 'muhasebe':
+    $R['title']='Muhasebe (Kategori Gider/Gelir)';
+    $s=$pdo->prepare("SELECT COALESCE(SUM(CASE WHEN type='gelir' THEN amount END),0) gelir, COALESCE(SUM(CASE WHEN type='gider' THEN amount END),0) gider, COUNT(*) n FROM accounting_entries WHERE entry_date BETWEEN ? AND ?");
+    $s->execute([$from,$to]); $t=$s->fetch();
+    $R['cards']=[['📈','Gelir',tl($t['gelir']),'#22c55e'],['📉','Gider',tl($t['gider']),'#f87171'],['📊','Net',tl($t['gelir']-$t['gider']),'#3b82f6'],['🔢','Kayıt',$t['n'],'#a78bfa']];
+    $cc=$pdo->prepare("SELECT COALESCE(ac.name,'Kategorisiz') k, SUM(ae.amount) s FROM accounting_entries ae LEFT JOIN accounting_categories ac ON ac.id=ae.category_id WHERE ae.type='gider' AND ae.entry_date BETWEEN ? AND ? GROUP BY k ORDER BY s DESC LIMIT 12");
+    $cc->execute([$from,$to]); $cd=[]; foreach($cc->fetchAll() as $r)$cd[$r['k']]=(float)$r['s'];
+    $R['chart']=['Gider — kategoriye göre',$cd];
+    $cc2=$pdo->prepare("SELECT COALESCE(ac.name,'Kategorisiz') k, SUM(ae.amount) s FROM accounting_entries ae LEFT JOIN accounting_categories ac ON ac.id=ae.category_id WHERE ae.type='gelir' AND ae.entry_date BETWEEN ? AND ? GROUP BY k ORDER BY s DESC LIMIT 12");
+    $cc2->execute([$from,$to]); $cd2=[]; foreach($cc2->fetchAll() as $r)$cd2[$r['k']]=(float)$r['s'];
+    $R['chart2']=['Gelir — kategoriye göre',$cd2];
+    $m=$pdo->prepare("SELECT ae.entry_date,ae.type,COALESCE(ac.name,'Kategorisiz') kat,ae.amount,ae.description FROM accounting_entries ae LEFT JOIN accounting_categories ac ON ac.id=ae.category_id WHERE ae.entry_date BETWEEN ? AND ? ORDER BY ae.entry_date DESC,ae.id DESC");
+    $m->execute([$from,$to]); $R['table']['head']=['Tarih','Tür','Kategori','Tutar','Açıklama'];
+    foreach($m->fetchAll() as $r)$R['table']['rows'][]=[$r['entry_date'],$r['type']==='gelir'?'Gelir':'Gider',$r['kat'],($r['type']==='gider'?'-':'').tl($r['amount']),$r['description']];
     break;
 
   case 'is':
@@ -221,7 +240,7 @@ table.rep-tbl tr:nth-child(even) td{background:rgba(255,255,255,.025)}
 <?php } ?>
 <div class="rep">
   <div class="rep-hero">
-    <div class="lg"><img src="logo.png" alt="ACANS" style="width:100%;height:100%;object-fit:contain;border-radius:inherit" onerror="this.parentNode.textContent='<?=$ic?>'"></div>
+    <div class="lg"><img src="<?=htmlspecialchars(base_url().(function_exists('brand_logo')?brand_logo():'logo.png'))?>" alt="<?=$ic?>" style="width:100%;height:100%;object-fit:contain;border-radius:inherit" onerror="this.parentNode.textContent='<?=$ic?>'"></div>
     <div style="flex:1"><h2><?=htmlspecialchars($appName)?> · <?=htmlspecialchars($R['title'])?> Raporu</h2>
       <div class="dt">📅 <?=htmlspecialchars($from)?> — <?=htmlspecialchars($to)?> · Oluşturma: <?=date('d.m.Y H:i')?></div></div>
   </div>
@@ -234,12 +253,22 @@ table.rep-tbl tr:nth-child(even) td{background:rgba(255,255,255,.025)}
     <?php endforeach; ?>
   </div>
 
-  <?php if($R['chart'] && !empty($R['chart'][1])): $mx=max(array_map('floatval',$R['chart'][1]))?:1; $i=0;
-    $cols=['#22c55e,#a3e635','#3b82f6,#22d3ee','#f97316,#fbbf24','#a855f7,#ec4899','#ef4444,#f97316','#14b8a6,#22d3ee']; ?>
+  <?php $cols=['#22c55e,#a3e635','#3b82f6,#22d3ee','#f97316,#fbbf24','#a855f7,#ec4899','#ef4444,#f97316','#14b8a6,#22d3ee']; ?>
+  <?php if($R['chart'] && !empty($R['chart'][1])): $mx=max(array_map('floatval',$R['chart'][1]))?:1; $i=0; ?>
   <div class="rep-card"><div class="ttl">📊 <?=htmlspecialchars($R['chart'][0])?></div>
     <?php foreach($R['chart'][1] as $lbl=>$val): $g=$cols[$i++%count($cols)]; ?>
       <div class="rep-bar"><div class="l"><?=htmlspecialchars($lbl)?></div>
         <div class="t"><div class="f" style="width:<?=max(3,round($val/$mx*100))?>%;background:linear-gradient(90deg,<?=$g?>)"></div></div>
+        <div class="v"><?=($val>=1000)?number_format($val,0,',','.'):$val?></div></div>
+    <?php endforeach; ?>
+  </div>
+  <?php endif; ?>
+
+  <?php if(!empty($R['chart2']) && !empty($R['chart2'][1])): $mx2=max(array_map('floatval',$R['chart2'][1]))?:1; $i2=0; ?>
+  <div class="rep-card"><div class="ttl">📊 <?=htmlspecialchars($R['chart2'][0])?></div>
+    <?php foreach($R['chart2'][1] as $lbl=>$val): $g=$cols[$i2++%count($cols)]; ?>
+      <div class="rep-bar"><div class="l"><?=htmlspecialchars($lbl)?></div>
+        <div class="t"><div class="f" style="width:<?=max(3,round($val/$mx2*100))?>%;background:linear-gradient(90deg,<?=$g?>)"></div></div>
         <div class="v"><?=($val>=1000)?number_format($val,0,',','.'):$val?></div></div>
     <?php endforeach; ?>
   </div>

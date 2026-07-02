@@ -116,7 +116,7 @@ if($id && !$editMode){
     <?php if(!$lh): ?>
     <div style="height:6px;background:<?=$col?>"></div>
     <div style="padding:22px 24px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #eef0f2">
-      <?php if($fi && !empty($fi['mark'])): ?><div style="display:flex;align-items:center;gap:12px"><span style="background:<?=$col?>;border-radius:8px;padding:6px"><img src="<?=h($fi['mark'])?>" alt="logo" style="height:44px;object-fit:contain;display:block"></span><div style="font-weight:800;font-size:17px;color:#1f2937"><?=h($fi['name'])?></div></div><?php elseif($fi): ?><img src="<?=h($fi['logo'])?>" alt="logo" style="height:46px;object-fit:contain;display:block"><?php else: ?><div style="font-weight:800;font-size:16px;color:#1f2937">ACANS OTS</div><?php endif; ?>
+      <?php if($fi && !empty($fi['mark'])): ?><div style="display:flex;align-items:center;gap:12px"><span style="background:<?=$col?>;border-radius:8px;padding:6px"><img src="<?=h($fi['mark'])?>" alt="logo" style="height:44px;object-fit:contain;display:block"></span><div style="font-weight:800;font-size:17px;color:#1f2937"><?=h($fi['name'])?></div></div><?php elseif($fi): ?><img src="<?=h($fi['logo'])?>" alt="logo" style="height:46px;object-fit:contain;display:block"><?php else: ?><div style="font-weight:800;font-size:16px;color:#1f2937"><?=htmlspecialchars(app_config()['app_name'] ?? 'OTS')?></div><?php endif; ?>
       <div style="text-align:right">
         <div style="font-size:28px;font-weight:900;letter-spacing:2px;color:#1f2937">TEKLİF</div>
         <div style="font-size:12px;color:<?=$col?>;font-weight:700;margin-top:2px"><?=h($q['quote_no'])?></div>
@@ -156,7 +156,7 @@ if($id && !$editMode){
 
     <?php if(!$lh): ?>
     <div class="qfoot" style="border-top:2px solid <?=$col?>;background:#f8f9fa;color:#374151;padding:12px 24px;text-align:center;font-size:12px">
-      <?php if($fi): ?><b style="color:#1f2937"><?=h($fi['name'])?></b> &nbsp;·&nbsp; 🌐 <?=h($fi['web'])?><?php else: ?>ACANS OTS — Online Takip Sistemi<?php endif; ?>
+      <?php if($fi): ?><b style="color:#1f2937"><?=h($fi['name'])?></b> &nbsp;·&nbsp; 🌐 <?=h($fi['web'])?><?php else: ?><?=htmlspecialchars(app_config()['app_name'] ?? 'OTS')?> — Online Takip Sistemi<?php endif; ?>
     </div>
     <?php endif; ?>
   </div>

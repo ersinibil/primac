@@ -65,10 +65,11 @@ try{
 <div class="panel"><b>Son Hareketler</b>
 <?php
 try{
-  $rows=$pdo->query("SELECT f.*, c.name cari FROM finance_movements f LEFT JOIN contacts c ON c.id=f.contact_id ORDER BY f.id DESC LIMIT 30")->fetchAll();
+  $rows=$pdo->query("SELECT f.*, c.name cari, ac.name kat FROM finance_movements f LEFT JOIN contacts c ON c.id=f.contact_id LEFT JOIN accounting_categories ac ON ac.id=f.category_id ORDER BY f.id DESC LIMIT 30")->fetchAll();
   if(!$rows) echo '<p class="muted" style="margin:10px 0 0">Hareket yok.</p>';
   foreach($rows as $m){ $in=$m['direction']==='in';
-    echo '<div class="item"><b style="color:'.($in?'#4ade80':'#f87171').'">'.($in?'Tahsilat':'Ödeme').': '.mm($m['amount']).'</b><br><small>'.htmlspecialchars(($m['cari']?:'-').' · '.($m['payment_channel']?:'').' · '.($m['movement_date']??'')).'</small></div>';
+    $tag=$m['cari'] ?: ($m['kat'] ?: '-');
+    echo '<div class="item"><b style="color:'.($in?'#4ade80':'#f87171').'">'.($in?'Tahsilat':'Ödeme').': '.mm($m['amount']).'</b><br><small>'.htmlspecialchars($tag.' · '.($m['payment_channel']?:'').' · '.($m['movement_date']??'')).'</small></div>';
   }
 }catch(Throwable $e){ echo '<div class="err">'.htmlspecialchars($e->getMessage()).'</div>'; }
 ?>
