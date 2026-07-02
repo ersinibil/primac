@@ -9,11 +9,15 @@ $editError='';
 $editOk='';
 
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['edit_account'])){
-    try{
-        finance_account_update($pdo, $id, $_POST);
-        $editOk='Hesap güncellendi.';
-    }catch(Throwable $e){
-        $editError=$e->getMessage();
+    if(!can_edit_delete()){
+        $editError='Bu işlem için yetkiniz yok.';
+    }else{
+        try{
+            finance_account_update($pdo, $id, $_POST);
+            $editOk='Hesap güncellendi.';
+        }catch(Throwable $e){
+            $editError=$e->getMessage();
+        }
     }
 }
 
@@ -43,7 +47,12 @@ $isCard = ($a['account_type']==='Kredi Kartı');
     <?php if($isCard): ?><a class="btn" href="finance_transfer.php?to=<?=$id?>">💳 Karta Ödeme</a><?php endif; ?>
     <a class="btn" href="finance_new.php?direction=in&account_id=<?=$id?>">+ Giriş</a>
     <a class="btn secondary" href="finance_new.php?direction=out&account_id=<?=$id?>">+ Çıkış</a>
-    <?=delete_button('account',$id)?>
+    <?php if(can_edit_delete()): ?>
+    <form method="post" action="sil.php" style="display:inline-block;margin:0" onsubmit="return confirm('Bu hesabı silmek istediğinize emin misiniz? Hareketi olan hesaplar kalıcı silinmez, pasife alınır.')">
+      <input type="hidden" name="t" value="account"><input type="hidden" name="id" value="<?=$id?>">
+      <button class="btn danger" type="submit">🗑 Sil</button>
+    </form>
+    <?php endif; ?>
   </div>
 </div>
 
@@ -57,6 +66,7 @@ $isCard = ($a['account_type']==='Kredi Kartı');
   <div class="card"><small>Hareket Sayısı</small><strong><?=count($rows)?></strong></div>
 </div>
 
+<?php if(can_edit_delete()): ?>
 <section class="panel">
 <details><summary style="font-weight:900;cursor:pointer;font-size:18px">✏️ Hesabı Düzenle</summary>
 <form method="post" class="form-grid" style="margin-top:10px">
@@ -80,6 +90,7 @@ $isCard = ($a['account_type']==='Kredi Kartı');
 </form>
 </details>
 </section>
+<?php endif; ?>
 
 <?php if($isCard): ?>
 <div class="ok" style="background:#eff6ff;color:#1e40af">💳 Bu bir kredi kartı hesabıdır. Karta yapılan ödemeler (kasa/bankadan) <b>Karta Ödeme</b> ile işlenir; harcamalar <b>+ Çıkış</b> olarak girilir.</div>

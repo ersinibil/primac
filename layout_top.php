@@ -159,7 +159,7 @@ th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;p
         $personnel_pages = ['personnel.php','personnel_new.php','tasks.php','requests.php'];
         $contacts_pages = ['contacts.php','contact_new.php','external.php'];
         $teklif_pages = ['teklif.php'];
-        $finance_pages = ['finance.php','finance_accounts.php','finance_new.php','finance_transfer.php'];
+        $finance_pages = ['finance.php','finance_accounts.php','finance_new.php','finance_transfer.php','checks_notes.php','check_note_view.php'];
         $stock_pages = ['stock.php','product_new.php','stock_movement_new.php','product_categories.php','product_taxonomy.php','purchase.php'];
         $report_pages = ['report.php','gunluk_rapor.php'];
         $izleme_pages = ['activity.php','notifications.php'];
@@ -221,6 +221,7 @@ th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;p
                 <a href="finance_new.php?direction=in" <?=($cur==='finance_new.php'?'class="active"':'')?>><span>➕</span> Tahsilat</a>
                 <a href="finance_new.php?direction=out"><span>➖</span> Ödeme</a>
                 <a href="finance_transfer.php" <?=($cur==='finance_transfer.php'?'class="active"':'')?>><span>↔</span> Hesap Transferi</a>
+                <a href="checks_notes.php" <?=($cur==='checks_notes.php'||$cur==='check_note_view.php'?'class="active"':'')?>><span>🧾</span> Çek / Senet</a>
             </div>
         </details>
         <?php endif; ?>

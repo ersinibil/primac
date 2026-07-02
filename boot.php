@@ -102,9 +102,18 @@ function module_list(){
         'contacts'=>'Cari Hesaplar','teklif'=>'Teklifler','finance'=>'Finans',
         'stock'=>'Stok / Ürün / Satın Alma','report'=>'Raporlar','personnel'=>'Personel',
         'muhasebe'=>'Muhasebe (Gider/Gelir/Personel Ödemeleri)','users'=>'Kullanıcı / Yetki',
+        'edit_delete'=>'Var Olan Kaydı Düzenleme / Silme Yetkisi',
     ];
 }
 function module_label($key){ $m=module_list(); return $m[$key] ?? $key; }
+
+// Bir personelin (admin hariç) var olan kayıtları düzenleme/silme hakkı var mı? Modül yetkisi
+// (örn. 'finance') sadece görüntüleme/yeni kayıt eklemeyi kapsar — var olan bir kaydı değiştirmek/silmek
+// için ayrıca bu genel yetki de gerekir. Admin her zaman true. Kademeli olarak modül modül uygulanıyor
+// (bkz. memory/features.md) — henüz bu kontrolü kullanmayan eski ekranlar olabilir.
+function can_edit_delete(){
+    return is_admin() || user_can('edit_delete');
+}
 
 // Web sayfası → gerekli modül yetkisi. boot.php sonunda otomatik uygulanır (tek merkezden koruma).
 function page_module_map(){
@@ -119,6 +128,7 @@ function page_module_map(){
         'teklif.php'=>'teklif',
         'finance.php'=>'finance','finance_new.php'=>'finance','finance_accounts.php'=>'finance','finance_transfer.php'=>'finance','finance_account_view.php'=>'finance',
         'kasa.php'=>'finance','transfer.php'=>'finance','account_view.php'=>'finance','movement_view.php'=>'finance',
+        'checks_notes.php'=>'finance','check_note_view.php'=>'finance',
         'stock.php'=>'stock','product_new.php'=>'stock','stock_movement_new.php'=>'stock',
         'product_categories.php'=>'stock','product_taxonomy.php'=>'stock','purchase.php'=>'stock',
         'sales.php'=>'stock','kpi.php'=>'personnel',

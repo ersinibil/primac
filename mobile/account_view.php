@@ -5,6 +5,10 @@ $pdo=db(); $id=(int)($_GET['id']??0);
 
 /* Hesap bilgisi düzenle — topx'tan ÖNCE (PRG) */
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['edit_account'])){
+    if(!can_edit_delete()){
+        $_SESSION['acc_err']='Bu işlem için yetkiniz yok.';
+        header('Location: account_view.php?id='.$id); exit;
+    }
     try{
         finance_account_update($pdo,$id,$_POST);
         header('Location: account_view.php?id='.$id.'&ok=1'); exit;
@@ -13,9 +17,9 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['edit_account'])){
         header('Location: account_view.php?id='.$id); exit;
     }
 }
-/* Hesap sil — sadece yönetici, hareketi olan hesaplar pasife alınır (soft-delete) */
+/* Hesap sil — admin veya 'edit_delete' yetkili personel, hareketi olan hesaplar pasife alınır (soft-delete) */
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['delete_account'])){
-    if($isAdmin){
+    if(can_edit_delete()){
         try{
             $res=finance_account_delete($pdo,$id);
             if($res['ok'] && !$res['soft']){ header('Location: kasa.php?deleted=1'); exit; }
@@ -50,7 +54,7 @@ try{
     <small style="color:#4ade80">↓ Giriş: <?=mm($t['tin'])?></small>
     <small style="color:#f87171">↑ Çıkış: <?=mm($t['tout'])?></small>
   </div>
-  <?php if($isAdmin): ?>
+  <?php if(can_edit_delete()): ?>
   <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
     <form method="post" style="margin:0" onsubmit="return confirm('Bu hesabı silmek istediğinize emin misiniz? Hareketi olan hesaplar kalıcı silinmez, pasife alınır.')">
       <input type="hidden" name="delete_account" value="1">
@@ -60,6 +64,7 @@ try{
   <?php endif; ?>
 </div>
 
+<?php if(can_edit_delete()): ?>
 <details class="panel">
   <summary style="font-weight:900;cursor:pointer">✏️ Hesap Bilgilerini Düzenle</summary>
   <form method="post" style="margin-top:10px">
@@ -80,6 +85,7 @@ try{
     <button class="btn dark" name="edit_account" value="1" style="width:100%;padding:13px;margin-top:8px">💾 Kaydet</button>
   </form>
 </details>
+<?php endif; ?>
 
 <div class="panel"><b>📜 Hesap Hareketleri</b>
 <?php

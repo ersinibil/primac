@@ -16,7 +16,7 @@ Saf PHP ERP. Web masaüstü paneli + mobil PWA (mobile/).
 | Ortam | URL | DB |
 |---|---|---|
 | ACANS prod | acanstr.com/ots/ | u7883898_primacos |
-| PRIMAC prod | primac.tr | aynı DB (marka: firm_list/brand_settings.php) |
+| PRIMAC prod | primac.tr | u7883898_primactr — AYRI DB (2026-07-02 teyit edildi, marka: firm_list/brand_settings.php) |
 | Lokal | localhost:8080 | lokal config.php |
 
 `acanstr.com/erp/` kaldırıldı — ACANS artık acanstr.com/ots/ üzerinden yürütülüyor.
@@ -46,12 +46,18 @@ ots/
 7. Yeni özellik hem web hem mobilde olmalı.
 
 ## Kalıcı Proje Ajanları (.claude/agents/)
-Bu projeye özel 5 ajan tanımlı, ikisi sürekli güvenlikten sorumlu:
-- `ots-feature-dev` — yeni özellik/bugfix (web+mobil parite).
-- `ots-db-migration-dev` — migration yazımı/incelemesi.
-- `ots-code-reviewer` — bu dosyadaki kurallara uyum incelemesi.
-- `ots-security-auditor` — uygulama içi güvenlik (SQLi/XSS/auth) — GÜVENLİK.
-- `ots-deploy-security-guard` — sunucu/deploy hijyeni (tanı dosyaları, .htaccess, temizle.php) — GÜVENLİK.
+Bu projeye özel 7 ajan tanımlı, ikisi sürekli güvenlikten sorumlu. Kolay anılsın diye her birine bir
+Türkçe takma isim verildi (teknik `name:` alanı kebab-case olarak kalıyor, çağırırken hep o kullanılır
+— takma isim sadece sohbette referans içindir):
+- `ots-feature-dev` (**Kerem**) — yeni özellik/bugfix (web+mobil parite).
+- `ots-db-migration-dev` (**Burak**) — migration yazımı/incelemesi.
+- `ots-code-reviewer` (**Ece**) — bu dosyadaki kurallara uyum incelemesi.
+- `ots-security-auditor` (**Selin**) — uygulama içi güvenlik (SQLi/XSS/auth) — GÜVENLİK.
+- `ots-deploy-security-guard` (**Can**) — sunucu/deploy hijyeni (tanı dosyaları, .htaccess, temizle.php) — GÜVENLİK.
+- `ots-parity-auditor` (**Elif**, yeni 2026-07-02) — web+mobil parite ve yetki-tutarlılığı denetimi
+  (block_personel()/page_module_map() çakışması, mobil-otomatik-yönlendirme tuzağı).
+- `ots-schema-drift-guard` (**Deniz**, yeni 2026-07-02) — kodun varsaydığı tablo/kolonlarla migration'ların
+  gerçekten oluşturduğu şema arasında sapma denetimi (ACANS/PRIMAC ayrı DB olduğu için önemli).
 
 ## Dil Tercihi
 Türkçe.

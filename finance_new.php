@@ -3,12 +3,24 @@ require_once __DIR__.'/boot.php';
 require_login();
 require_once __DIR__.'/activity_lib.php';
 require_once __DIR__.'/accounting_lib.php';
+require_once __DIR__.'/finance_lib.php';
 
 $pdo=db();
 $error='';
-$direction=$_GET['direction'] ?? 'in';
+$editId=(int)($_GET['id'] ?? $_POST['id'] ?? 0);
+$editRow=null;
+if($editId){
+    $editRow=finance_movement_get($pdo,$editId);
+    if(!$editRow){ header('Location: finance.php'); exit; }
+    if(!in_array($editRow['movement_type'],finance_movement_editable_types(),true) || !can_edit_delete()){
+        header('Location: finance.php'); exit;
+    }
+}
+
+$direction=$_GET['direction'] ?? ($editRow['direction'] ?? 'in');
 if(!in_array($direction,['in','out'])) $direction='in';
-$contactId=(int)($_GET['contact_id'] ?? 0);
+if($editRow) $direction=$editRow['direction'];
+$contactId=(int)($_GET['contact_id'] ?? ($editRow['contact_id'] ?? 0));
 
 if($_SERVER['REQUEST_METHOD']==='POST'){
     try{
@@ -18,6 +30,26 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         $catId=(int)($_POST['category_id']??0) ?: null;
         if($amount<=0) throw new Exception('Tutar sıfırdan büyük olmalı.');
         if(!$accountId) throw new Exception('Hesap seçilmelidir.');
+
+        if($editId){
+            finance_movement_update($pdo,$editId,$_POST);
+
+            $contactName='Cari seçilmedi';
+            if((int)$_POST['contact_id']){
+                $cs=$pdo->prepare("SELECT name FROM contacts WHERE id=?");
+                $cs->execute([(int)$_POST['contact_id']]);
+                $contactName=$cs->fetch()['name'] ?? $contactName;
+            }
+            $as=$pdo->prepare("SELECT name FROM finance_accounts WHERE id=?");
+            $as->execute([$accountId]);
+            $accountName=$as->fetch()['name'] ?? $_POST['payment_channel'];
+            $title = ($direction==='in'?'Tahsilat güncellendi':'Ödeme güncellendi');
+            $desc = $contactName.' · '.number_format($amount,2,',','.').' ₺ · '.$accountName;
+            activity_log('Finans',$direction==='in'?'Tahsilat':'Ödeme',$title,$desc,'finance',$editId,'finance.php','✏️');
+
+            header("Location: finance.php");
+            exit;
+        }
 
         $stmt=$pdo->prepare("INSERT INTO finance_movements(contact_id,category_id,job_id,direction,amount,payment_channel,account_id,status,movement_date,description,movement_type,reference_no)
             VALUES(?,?,NULL,?,?,?,?,?,?,?,'normal',?)");
@@ -72,7 +104,7 @@ $gelirCats=acc_categories($pdo,'gelir');
 ?>
 
 <div class="panel-head">
-<h1><?=$direction==='in'?'Tahsilat':'Ödeme'?> Kaydı</h1>
+<h1><?=$editId?'Hareketi Düzenle':(($direction==='in'?'Tahsilat':'Ödeme').' Kaydı')?></h1>
 <div class="actions">
 <a class="btn secondary" href="finance.php">Finans</a>
 <a class="btn secondary" href="finance_accounts.php">Hesaplar</a>
@@ -81,8 +113,19 @@ $gelirCats=acc_categories($pdo,'gelir');
 
 <?php if($error): ?><div class="alert"><?=h($error)?></div><?php endif; ?>
 
+<?php
+$fCatId=(int)($editRow['category_id'] ?? 0);
+$fAccId=(int)($editRow['account_id'] ?? ($_GET['account_id'] ?? 0));
+$fChannel=$editRow['payment_channel'] ?? '';
+$fAmount=$editRow['amount'] ?? '';
+$fDate=$editRow['movement_date'] ?? date('Y-m-d');
+$fRef=$editRow['reference_no'] ?? '';
+$fDesc=$editRow['description'] ?? '';
+$channelOpts=['Nakit','Banka / EFT','Kredi Kartı','POS','Çek','Senet','Diğer'];
+?>
 <section class="panel">
 <form method="post" class="form-grid">
+<?php if($editId): ?><input type="hidden" name="id" value="<?=$editId?>"><?php endif; ?>
 
 <label>İşlem Tipi
 <select name="direction" id="fnDirection" onchange="fnFilterCats()">
@@ -104,10 +147,10 @@ $gelirCats=acc_categories($pdo,'gelir');
 <select name="category_id" id="fnCatSel">
 <option value="">— Seç —</option>
 <?php foreach($giderCats as $c): ?>
-<option value="<?=(int)$c['id']?>" data-type="out" style="<?=$direction==='out'?'':'display:none'?>">[<?=h($c['group_name'])?>] <?=h($c['name'])?></option>
+<option value="<?=(int)$c['id']?>" data-type="out" style="<?=$direction==='out'?'':'display:none'?>" <?=$fCatId===(int)$c['id']?'selected':''?>>[<?=h($c['group_name'])?>] <?=h($c['name'])?></option>
 <?php endforeach; ?>
 <?php foreach($gelirCats as $c): ?>
-<option value="<?=(int)$c['id']?>" data-type="in" style="<?=$direction==='in'?'':'display:none'?>">[<?=h($c['group_name'])?>] <?=h($c['name'])?></option>
+<option value="<?=(int)$c['id']?>" data-type="in" style="<?=$direction==='in'?'':'display:none'?>" <?=$fCatId===(int)$c['id']?'selected':''?>>[<?=h($c['group_name'])?>] <?=h($c['name'])?></option>
 <?php endforeach; ?>
 </select>
 </label>
@@ -116,39 +159,36 @@ $gelirCats=acc_categories($pdo,'gelir');
 <select name="account_id" required>
 <option value="">Seçiniz</option>
 <?php foreach($accounts as $a): ?>
-<option value="<?=$a['id']?>" <?=(int)($_GET['account_id']??0)===(int)$a['id']?'selected':''?>><?=h($a['account_type'].' - '.$a['name'].' / '.money($a['current_balance']))?></option>
+<option value="<?=$a['id']?>" <?=$fAccId===(int)$a['id']?'selected':''?>><?=h($a['account_type'].' - '.$a['name'].' / '.money($a['current_balance']))?></option>
 <?php endforeach; ?>
 </select>
 </label>
 
 <label>Yöntem
 <select name="payment_channel">
-<option>Nakit</option>
-<option>Banka / EFT</option>
-<option>Kredi Kartı</option>
-<option>POS</option>
-<option>Çek</option>
-<option>Diğer</option>
+<?php foreach($channelOpts as $co): ?>
+<option <?=$fChannel===$co?'selected':''?>><?=h($co)?></option>
+<?php endforeach; ?>
 </select>
 </label>
 
 <label>Tutar
-<input type="number" step="0.01" name="amount" required>
+<input type="number" step="0.01" name="amount" value="<?=h($fAmount)?>" required>
 </label>
 
 <label>Tarih
-<input type="date" name="movement_date" value="<?=date('Y-m-d')?>">
+<input type="date" name="movement_date" value="<?=h($fDate)?>">
 </label>
 
 <label>Referans No
-<input name="reference_no" placeholder="Dekont, fiş, işlem no">
+<input name="reference_no" placeholder="Dekont, fiş, işlem no" value="<?=h($fRef)?>">
 </label>
 
 <label class="full">Açıklama
-<textarea name="description" rows="3"></textarea>
+<textarea name="description" rows="3"><?=h($fDesc)?></textarea>
 </label>
 
-<button class="btn">Kaydet</button>
+<button class="btn"><?=$editId?'💾 Güncelle':'Kaydet'?></button>
 </form>
 </section>
 <script>

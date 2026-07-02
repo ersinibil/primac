@@ -28,11 +28,15 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             ]);
             $ok='Hesap eklendi.';
         }elseif(isset($_POST['edit_account'])){
-            finance_account_update($pdo, (int)$_POST['id'], $_POST);
-            $ok='Hesap güncellendi.';
+            if(!can_edit_delete()){
+                $error='Bu işlem için yetkiniz yok.';
+            }else{
+                finance_account_update($pdo, (int)$_POST['id'], $_POST);
+                $ok='Hesap güncellendi.';
+            }
         }elseif(isset($_POST['delete_account'])){
-            if(!is_admin()){
-                $error='Hesap silme yalnızca yönetici/admin yetkisiyle yapılabilir.';
+            if(!can_edit_delete()){
+                $error='Hesap silme için yetkiniz yok.';
             }else{
                 $res=finance_account_delete($pdo, (int)$_POST['id']);
                 if($res['ok']) $ok=$res['msg']; else $error=$res['msg'];
@@ -163,9 +167,9 @@ foreach($rows as $a){
     echo "<td>".money($a['current_balance'])."</td>";
     echo "<td>".($a['active']?badge('Aktif','green'):badge('Pasif','gray'))."</td>";
     echo "<td>"
-        ."<a class='btn small secondary' href='finance_account_view.php?id=".$aid."'>📄 Ekstre</a> "
-        ."<button type='button' class='btn small secondary' onclick=\"document.getElementById('edit-acc-".$aid."').style.display=(document.getElementById('edit-acc-".$aid."').style.display==='none'?'table-row':'none')\">✏️ Düzenle</button> ";
-    if(is_admin()){
+        ."<a class='btn small secondary' href='finance_account_view.php?id=".$aid."'>📄 Ekstre</a> ";
+    if(can_edit_delete()){
+        echo "<button type='button' class='btn small secondary' onclick=\"document.getElementById('edit-acc-".$aid."').style.display=(document.getElementById('edit-acc-".$aid."').style.display==='none'?'table-row':'none')\">✏️ Düzenle</button> ";
         echo "<form method='post' style='display:inline' onsubmit=\"return confirm('Bu hesabı silmek istediğinize emin misiniz? Hareketleri olan hesaplar kalıcı silinmez, pasife alınır.')\">"
             ."<input type='hidden' name='id' value='".$aid."'>"
             ."<button class='btn small danger' name='delete_account' value='1'>🗑 Sil</button>"
@@ -173,6 +177,7 @@ foreach($rows as $a){
     }
     echo "</td>";
     echo "</tr>";
+    if(can_edit_delete()){
     echo "<tr id='edit-acc-".$aid."' style='display:none;background:#f9fafb'><td colspan='7'>";
     echo "<form method='post' class='form-grid' style='margin:10px 0'>";
     echo "<input type='hidden' name='id' value='".$aid."'>";
@@ -191,6 +196,7 @@ foreach($rows as $a){
     echo "<button class='btn' name='edit_account' value='1'>💾 Kaydet</button>";
     echo "</form>";
     echo "</td></tr>";
+    }
 }
 if(!$rows) echo "<tr><td colspan='7' class='muted'>Hesap yok.</td></tr>";
 }catch(Throwable $e){

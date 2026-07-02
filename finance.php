@@ -38,6 +38,8 @@ $pos=safe_sum("SELECT COALESCE(SUM(current_balance),0) s FROM finance_accounts W
 </div>
 </div>
 
+<?php if(isset($_GET['deleted'])): ?><div class="ok">Finans hareketi silindi, hesap bakiyesi güncellendi.</div><?php endif; ?>
+
 <section class="finance-grid">
 <a class="finance-tile ft-bank" href="finance_accounts.php?type=Banka"><small>🏦 Bankalar</small><strong><?=money($bank)?></strong><span>Banka hesapları</span></a>
 <a class="finance-tile ft-cash" href="finance_accounts.php?type=Kasa"><small>💵 Kasalar</small><strong><?=money($cash)?></strong><span>Nakit kasa hesapları</span></a>
@@ -66,10 +68,13 @@ $pos=safe_sum("SELECT COALESCE(SUM(current_balance),0) s FROM finance_accounts W
 <th>Tutar</th>
 <th>Durum</th>
 <th>Açıklama</th>
+<th>İşlem</th>
 </tr>
 </thead>
 <tbody>
 <?php
+require_once __DIR__.'/finance_lib.php';
+$editableTypes=finance_movement_editable_types();
 try{
     $st=db()->prepare("SELECT f.*, c.name contact_name, ac.name cat_name, a.name account_name, a.account_type, ta.name target_account_name
         FROM finance_movements f
@@ -82,6 +87,8 @@ try{
     $st->execute($params);
     $rows=$st->fetchAll();
     foreach($rows as $r){
+        $rid=(int)$r['id'];
+        $canEdit=in_array($r['movement_type'],$editableTypes,true) && can_edit_delete();
         echo "<tr>";
         echo "<td>".h($r['movement_date'])."</td>";
         echo "<td>".h($r['movement_type']==='transfer'?'Transfer':($r['direction']=='in'?'Tahsilat':'Ödeme'))."</td>";
@@ -94,11 +101,23 @@ try{
         echo "<td>".money($r['amount'])."</td>";
         echo "<td>".badge($r['status'],status_tone($r['status']))."</td>";
         echo "<td>".h($r['description'])."</td>";
+        echo "<td>";
+        if($canEdit){
+            echo "<a class='btn small secondary' href='finance_new.php?id=".$rid."'>✏️ Düzenle</a> ";
+            echo "<form method='post' action='sil.php' style='display:inline' onsubmit=\"return confirm('Bu finans hareketi KALICI olarak silinecek ve ilgili hesap bakiyesi geri alınacak. Emin misiniz?')\">"
+                ."<input type='hidden' name='t' value='finance'>"
+                ."<input type='hidden' name='id' value='".$rid."'>"
+                ."<button class='btn small danger' type='submit'>🗑 Sil</button>"
+                ."</form>";
+        }elseif(!in_array($r['movement_type'],$editableTypes,true)){
+            echo "<span class='muted' title='Satış/belge/transfer işleminden otomatik oluştu'>Otomatik</span>";
+        }
+        echo "</td>";
         echo "</tr>";
     }
-    if(!$rows) echo "<tr><td colspan='9' class='muted'>Henüz finans hareketi yok.</td></tr>";
+    if(!$rows) echo "<tr><td colspan='10' class='muted'>Henüz finans hareketi yok.</td></tr>";
 }catch(Throwable $e){
-    echo "<tr><td colspan='9'><div class='alert'>".h($e->getMessage())."</div></td></tr>";
+    echo "<tr><td colspan='10'><div class='alert'>".h($e->getMessage())."</div></td></tr>";
 }
 ?>
 </tbody>

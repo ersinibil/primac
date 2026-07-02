@@ -24,7 +24,8 @@
   <?php card('Kasa Durumu','Banka/kasa/kart','🏦','kasa.php','teal');
   card('Tahsilat','Tahsilat gir','💰','collection.php','yellow');
   card('Ödeme / Gider','Gider/ödeme gir','💸','payment.php','red');
-  card('Transfer','Hesaplar arası / karta ödeme','↔️','transfer.php','blue'); ?>
+  card('Transfer','Hesaplar arası / karta ödeme','↔️','transfer.php','blue');
+  card('Çek / Senet','Vade takibi','🧾','checks_notes.php','purple'); ?>
 </div>
 
 <div style="font-weight:900;margin:16px 4px 8px">📒 Muhasebe</div>

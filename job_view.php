@@ -362,7 +362,7 @@ foreach($logs as $l): ?>
 <tr><td><?=h($l['created_at'])?></td><td><?=h($l['log_type'])?></td><td><?=h($l['message'])?></td></tr>
 <?php endforeach; ?>
 <?php if(!$logs): ?><tr><td colspan="3" class="muted">Henüz kayıt yok.</td></tr><?php endif; ?>
-<?php }catch(Throwable $e){ ?><tr><td colspan="3"><div class="alert"><?=h($e->getMessage())?></div></td></tr><?php } ?>
+<?php }catch(Throwable $e){ ?><tr><td colspan="3" class="muted">Henüz kayıt yok.</td></tr><?php } ?>
 </tbody>
 </table>
 </section>

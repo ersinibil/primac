@@ -2,6 +2,90 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
+## "Düzenleme/Silme Yetkisi" — kademeli ayrı izin (2026-07-02)
+- Kullanıcı isteği: "yapılan işlemi düzenleme ve silme yetkisi herkese verilmemeli, personel yetki
+  ekranında buna bir buton verilebilir, ver-verme gibi." Yani modül yetkisi (örn. 'finance') artık
+  SADECE görüntüleme/yeni kayıt eklemeyi kapsıyor; VAR OLAN bir kaydı düzenlemek/silmek için ayrıca
+  yeni bir genel yetki gerekiyor.
+- `boot.php`: `module_list()`'e `'edit_delete'=>'Var Olan Kaydı Düzenleme / Silme Yetkisi'` eklendi —
+  `users.php`/`mobile/users.php` zaten `module_list()`'i dinamik checkbox listesi olarak render ettiği
+  için ekstra bir UI değişikliği gerekmedi, yeni checkbox otomatik çıktı. `can_edit_delete()` yardımcı
+  fonksiyonu: `is_admin() || user_can('edit_delete')`.
+- `sil.php`: eskiden TÜM silme türleri (`t=`) blanket `is_admin()` şartına bağlıydı. Şimdi
+  `$editDeleteTypes=['account','finance']` listesindeki türler `can_edit_delete()` ile de geçebiliyor,
+  listede olmayanlar (cari/iş/teklif/ürün/personel — henüz bu yeni yetkiye taşınmadı) hâlâ admin-only.
+  **Kademeli genişletme**: kalan modüller (satış/görevler/muhasebe/ürün kategorisi) için düzenle-sil
+  eklenirken bunlar da `$editDeleteTypes`'a ve ilgili sayfalardaki kontrole eklenecek.
+- Şu an bu yetkiyle korunan ekranlar: `finance_accounts.php`/`finance_account_view.php`/
+  `mobile/account_view.php` (hesap düzenle/sil), `finance.php`/`finance_new.php`/`mobile/movement_view.php`
+  (hareket düzenle/sil), `checks_notes.php`/`mobile/check_note_view.php` (çek/senet düzenle/sil).
+  Her birinde hem POST handler (sunucu tarafı asıl garanti) hem buton/form görünürlüğü (`can_edit_delete()`)
+  güncellendi — sadece UI gizleme değil, gerçek sunucu tarafı kontrol.
+- Yeni kayıt OLUŞTURMA bu yetkiye bağlı DEĞİL — sadece ilgili modül yetkisi (örn. 'finance') yeterli,
+  tutarlı bir şekilde her yerde aynı ayrım korundu.
+
+## Çek / Senet takip modülü (2026-07-02)
+- Kullanıcı isteği: "muhasebe sistemine ödeme metodu olarak çek ve senet eklenmeli ve onlara da kayıt
+  kart açılabilmeli, bunda da değişiklik ekle sil vs alanları olmalı."
+- Migration `024_checks_notes.sql`: yeni `checks_notes` tablosu (tür, numara, tutar, vade tarihi,
+  opsiyonel cari, banka adı, durum: portföyde/tahsil edildi/ciro edildi/karşılıksız/iptal, not).
+- `checks_notes_lib.php` (yeni, web+mobil ortak): CRUD fonksiyonları.
+- Web `checks_notes.php` + mobil `mobile/checks_notes.php` (liste+yeni kayıt, vadesi geçen/yaklaşan
+  satırlar renkli vurgulu) ve `mobile/check_note_view.php` (detay+düzenle+sil, `account_view.php` ile
+  aynı desen). `boot.php` `page_module_map()`'e `'finance'` yetkisine bağlı eklendi.
+- Web sidebar (Finans grubu) ve mobil menü (💰 Finans bölümü, "Çek / Senet" kartı) linklendi.
+- Ödeme yöntemi olarak "Çek" ve "Senet" ayrıca `finance_movements.payment_channel` seçeneklerine
+  (web `finance_new.php`, mobil `mobile/movement_view.php`/`payment.php`/`collection.php`) eklendi —
+  bu, ayrı takip kartı zorunlu olmadan normal bir tahsilat/ödeme kaydında da "Çek"/"Senet" seçilebilmesi
+  içindir (`mobile/payment.php`+`mobile/collection.php`'deki hesap-tipi eşleme fonksiyonlarında
+  Çek/Senet → 'Diğer' hesap tipine düşüyor, `pay_acc_for_pm`/`acc_for_pm`).
+- Düzenle/sil `can_edit_delete()` yetkisine bağlı (bkz. yukarıdaki "Düzenleme/Silme Yetkisi" maddesi).
+- NOT: Bu özelliği uygulayan ajanın bağlantısı yanıt sırasında koptu (menü linkleri ve "Senet" seçeneği
+  bazı dosyalarda eksik kalmıştı) — kalan parçalar elle tamamlandı, dosyalar (migration, lib, web+mobil
+  sayfalar) tek tek okunup bütünlük doğrulandı.
+
+## Finans hareketleri (tahsilat/ödeme) düzenle/sil (2026-07-02)
+- `finance_movements` (tahsilat/ödeme kayıtları) için düzenleme hiç yoktu, silme hiçbir ekrandan
+  çağrılamıyordu (`sil.php`'de `t=finance` case'i tanımlıydı ama ölü koddu — hiçbir UI onu POST
+  etmiyordu). Bu turda entegre edildi.
+- `finance_lib.php`'ye (paralel bir ajanın aynı anda eklediği Finans HESAPLARI fonksiyonlarının
+  yanına) yeni bölüm eklendi: `finance_movement_editable_types()`, `finance_movement_get()`,
+  `finance_movement_reverse_balance()`, `finance_movement_apply_balance()`,
+  `finance_movement_update()`, `finance_movement_delete()`.
+- **Kapsam kısıtı (kritik):** `finance_movements` sadece elle giriş (web `finance_new.php`,
+  mobil Ödeme/Tahsilat → `movement_type='normal'|'mobile'`) değil, başka modüllerden de otomatik
+  satır alıyor: satış (`sale`/`mobile_sale`), alış/satış belgesi ödemesi (`document`, `document_id`
+  ile bağlı), hesaplar arası transfer (`transfer`, `target_account_id` ile). Bu otomatik satırlar
+  başka tabloların (stock_movements, trade_documents.paid_amount, karşı hesap bakiyesi) kaynağı
+  olduğu için düzenleme/silme SADECE `normal`/`mobile` tipli hareketlerde izinli — diğerleri
+  `finance_movement_update/delete` içinde Exception/`ok=false` ile reddediliyor, UI'da "Otomatik"
+  etiketiyle gösteriliyor (buton yok).
+- Bakiye tutarlılığı: silme/düzenlemede önce eski hareketin hesap bakiyesine etkisi geri alınıyor
+  (`finance_movement_reverse_balance` — transfer ise HER İKİ hesap, normal ise tek hesap), sonra
+  (düzenlemede) yeni değerin etkisi tekrar uygulanıyor. `accounting_entries` (Muhasebe modülü)
+  ile `finance_movements` arasında DB ilişkisi YOK (bağımsız tablolar) — kontrol edilip doğrulandı.
+- `finance.php` (web liste): "İşlem" kolonu — düzenilebilir satırlarda ✏️ Düzenle (`finance_new.php?id=`)
+  + admin'e özel 🗑 Sil (`sil.php`, `t=finance`); otomatik satırlarda "Otomatik" etiketi.
+- `finance_new.php`: `?id=` ile düzenleme moduna giriyor (aynı form, mevcut kayıt önden dolduruluyor,
+  kaydet `finance_movement_update()` çağırıyor); yeni kayıt akışı değişmedi.
+- `sil.php`: `t=finance` artık genel DELETE akışının dışına alınıp `finance_movement_delete()`'e
+  yönlendiriliyor (t=account'un yanına, aynı desende) — bakiye geri alma + tip kısıtı garanti.
+- Mobil: yeni `mobile/movement_view.php` (hesap dengi `account_view.php`'nin deseni) — hareket
+  detayı + `<details>` içinde düzenleme formu (düzenilebilir tiplerde) + admin-only silme butonu.
+  `mobile/kasa.php`'nin "Son Hareketler" listesi artık her satırdan `movement_view.php?id=`'e
+  linkleniyor. `mobile/payment.php` ve `mobile/collection.php`'ye de kendi son 10 kaydını gösteren
+  ve movement_view.php'ye linkleyen mini liste eklendi (önceden bu ekranlarda hiç liste yoktu).
+  `boot.php` `page_module_map()`'e `movement_view.php=>finance` eklendi.
+- ~~Silme yetkisi admin-only~~ GÜNCELLEME: aynı gün sonra "Düzenleme/Silme Yetkisi" maddesiyle
+  `can_edit_delete()`'e taşındı (admin VEYA ayrı verilen `edit_delete` izni) — yukarıdaki ilgili maddeye bak.
+- Yeni migration gerekmedi — `finance_movements.category_id`/`reference_no`/`target_account_id`
+  zaten önceki migrationlarda vardı.
+- Not: Aynı anda paralel çalışan bir ajan `finance_accounts.php`/`mobile/account_view.php`/
+  `finance_lib.php`/`sil.php`'yi Finans HESAPLARI (Kasa/Banka/Kart) düzenle/sil için değiştiriyordu.
+  `finance_lib.php`'ye sadece yeni fonksiyonlar eklendi (var olanlara dokunulmadı), `sil.php`'ye
+  `t=account`'ın hemen altına yeni bir `t=finance` bloğu eklendi — çakışma yaşanmadı, iki özellik
+  birbirinden bağımsız çalışıyor.
+
 ## Finans hesapları düzenle/sil (2026-07-02)
 - `finance_accounts` (Kasa/Banka/Kredi Kartı/POS) için düzenleme hiç yoktu, silme sadece
   `finance_account_view.php`'de vardı (liste sayfasında yoktu), mobilde ikisi de yoktu.
@@ -20,9 +104,8 @@
 - `mobile/account_view.php`: düzenleme formu (herkes, finance yetkisiyle) + silme butonu (sadece
   yönetici/admin, `$isAdmin`, `confirm()` ile) eklendi. POST işlemleri PRG deseniyle `topx()`'ten
   ÖNCE işlenip redirect ediliyor.
-- Silme yetkisi admin-only tutuldu (mevcut `delete_button()`/`sil.php` deseniyle tutarlı — proje
-  genelinde kalıcı silme her yerde admin'e özel), düzenleme ise sadece `finance` modül yetkisiyle
-  (page_module_map üzerinden otomatik) açık — ekstra kısıtlama eklenmedi.
+- ~~Silme yetkisi admin-only tutuldu~~ GÜNCELLEME: aynı gün sonra "Düzenleme/Silme Yetkisi" maddesiyle
+  `can_edit_delete()`'e taşındı (admin VEYA ayrı verilen `edit_delete` izni) — yukarıdaki ilgili maddeye bak.
 - Yeni migration gerekmedi — `finance_accounts.active` kolonu zaten 005_finance.sql'de vardı.
 - İnceleme sonrası düzeltmeler: (1) `finance_account_has_movements()` sadece `finance_movements`e bakıyordu,
   `accounting_entries.account_id` referansını görmüyordu — sadece muhasebe modülünde kullanılmış bir hesap

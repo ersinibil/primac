@@ -7,7 +7,7 @@ $cid=(int)($_GET['contact_id'] ?? 0);
 
 // payment_channel → account_type eşlemesi (collection.php ile aynı mantık)
 function pay_acc_for_pm($pdo,$pm){
-    $map=['Nakit'=>'Kasa','Banka'=>'Banka','Kredi Kartı'=>'Kredi Kartı','POS'=>'POS'];
+    $map=['Nakit'=>'Kasa','Banka'=>'Banka','Kredi Kartı'=>'Kredi Kartı','POS'=>'POS','Çek'=>'Diğer','Senet'=>'Diğer'];
     $type=$map[$pm] ?? 'Kasa';
     try{ $s=$pdo->prepare("SELECT id FROM finance_accounts WHERE account_type=? AND COALESCE(active,1)=1 ORDER BY id LIMIT 1"); $s->execute([$type]); $r=$s->fetch(); return $r?(int)$r['id']:null; }catch(Throwable $e){ return null; }
 }
@@ -66,9 +66,23 @@ $gcats=acc_categories($pdo,'gider');
 
   <label>Tutar</label><input type="number" step="0.01" name="amount" required>
   <label>Ödeme Yöntemi</label>
-  <select name="payment_channel"><option>Nakit</option><option>Banka</option><option>Kredi Kartı</option><option>POS</option></select>
+  <select name="payment_channel"><option>Nakit</option><option>Banka</option><option>Kredi Kartı</option><option>POS</option><option>Çek</option><option>Senet</option></select>
   <label>Açıklama</label><textarea name="description" rows="2" placeholder="Gider / ödeme açıklaması"></textarea>
   <button class="btn dark" style="width:100%;padding:14px;margin-top:8px">💸 Ödemeyi Kaydet</button>
 </form>
+</div>
+<div class="panel"><b>Son Ödemeler</b>
+<?php
+try{
+  $recent=$pdo->prepare("SELECT f.*, c.name cari, ac.name kat FROM finance_movements f LEFT JOIN contacts c ON c.id=f.contact_id LEFT JOIN accounting_categories ac ON ac.id=f.category_id WHERE f.direction='out' AND f.movement_type IN ('normal','mobile') ORDER BY f.id DESC LIMIT 10");
+  $recent->execute();
+  $rrows=$recent->fetchAll();
+  if(!$rrows) echo '<p class="muted" style="margin:10px 0 0">Henüz ödeme yok.</p>';
+  foreach($rrows as $m){
+    $tag=$m['cari'] ?: ($m['kat'] ?: '-');
+    echo '<a class="item" href="movement_view.php?id='.(int)$m['id'].'" style="display:block"><b style="color:#f87171">'.mm($m['amount']).'</b><br><small>'.htmlspecialchars($tag.' · '.($m['payment_channel']?:'').' · '.($m['movement_date']??'')).'</small></a>';
+  }
+}catch(Throwable $e){ echo '<div class="err">'.htmlspecialchars($e->getMessage()).'</div>'; }
+?>
 </div>
 <?php botx(); ?>
