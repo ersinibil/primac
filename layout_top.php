@@ -9,7 +9,7 @@ $cur = basename($_SERVER['SCRIPT_NAME']);
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ACANS OTS — Özel Proje</title>
+<title><?=htmlspecialchars(app_config()['app_name'] ?? 'OTS')?> — Online Takip Sistemi</title>
 <style>
 *{box-sizing:border-box}
 html,body{max-width:100%;overflow-x:hidden}
@@ -220,6 +220,18 @@ th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;p
                 <a href="finance_new.php?direction=in" <?=($cur==='finance_new.php'?'class="active"':'')?>><span>➕</span> Tahsilat</a>
                 <a href="finance_new.php?direction=out"><span>➖</span> Ödeme</a>
                 <a href="finance_transfer.php" <?=($cur==='finance_transfer.php'?'class="active"':'')?>><span>↔</span> Hesap Transferi</a>
+            </div>
+        </details>
+        <?php endif; ?>
+
+        <?php if(user_can('muhasebe')): ?>
+        <details <?=(in_array($cur,['accounting.php','accounting_categories.php'])?'open':'')?>><summary><span>📒</span> Muhasebe</summary>
+            <div class="sub">
+                <a href="accounting.php" <?=($cur==='accounting.php'?'class="active"':'')?>><span>📋</span> Kayıtlar</a>
+                <a href="accounting.php?tab=yeni"><span>➕</span> Yeni Kayıt</a>
+                <a href="accounting.php?tab=personel"><span>👷</span> Personel Ödemeleri</a>
+                <a href="accounting.php?tab=ozet"><span>📊</span> Özet</a>
+                <?php if(is_admin()): ?><a href="accounting_categories.php" <?=($cur==='accounting_categories.php'?'class="active"':'')?>><span>⚙</span> Kategoriler</a><?php endif; ?>
             </div>
         </details>
         <?php endif; ?>

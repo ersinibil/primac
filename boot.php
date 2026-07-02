@@ -100,7 +100,8 @@ function module_list(){
     return [
         'dashboard'=>'Komuta Merkezi','jobs'=>'İşler (üretim/montaj/dış tedarik/takvim)','tasks'=>'Görevler',
         'contacts'=>'Cari Hesaplar','teklif'=>'Teklifler','finance'=>'Finans',
-        'stock'=>'Stok / Ürün / Satın Alma','report'=>'Raporlar','personnel'=>'Personel','users'=>'Kullanıcı / Yetki',
+        'stock'=>'Stok / Ürün / Satın Alma','report'=>'Raporlar','personnel'=>'Personel',
+        'muhasebe'=>'Muhasebe (Gider/Gelir/Personel Ödemeleri)','users'=>'Kullanıcı / Yetki',
     ];
 }
 function module_label($key){ $m=module_list(); return $m[$key] ?? $key; }
@@ -121,6 +122,7 @@ function page_module_map(){
         'product_categories.php'=>'stock','product_taxonomy.php'=>'stock','purchase.php'=>'stock',
         'sales.php'=>'stock','kpi.php'=>'personnel',
         'report.php'=>'report','gunluk_rapor.php'=>'report',
+        'accounting.php'=>'muhasebe','accounting_categories.php'=>'muhasebe',
         'personnel.php'=>'personnel','personnel_new.php'=>'personnel','personnel_view.php'=>'personnel',
         'users.php'=>'users',
         'brand_settings.php'=>'users',

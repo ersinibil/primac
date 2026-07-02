@@ -2,12 +2,21 @@
 require_once 'common.php';
 $pdo=db(); $me=(int)($_SESSION['user']['id'] ?? 0);
 $ok=''; $er='';
+if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['save_profile'])){
+    try{
+        $fn=trim($_POST['full_name'] ?? '');
+        $ph=trim($_POST['phone'] ?? '');
+        $em=trim($_POST['email'] ?? '');
+        $pdo->prepare("UPDATE app_users SET full_name=?,phone=?,email=? WHERE id=?")->execute([$fn,$ph,$em,$me]);
+        if($fn) $_SESSION['user']['name']=$fn;
+        $ok='Profil güncellendi.';
+    }catch(Throwable $e){ $er=$e->getMessage(); }
+}
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['change_pass'])){
     try{
         $cur=$_POST['cur_pass'] ?? '';
         $new=$_POST['new_pass'] ?? '';
         $new2=$_POST['new_pass2'] ?? '';
-        // Mevcut şifreyi doğrula
         $row=$pdo->prepare("SELECT password_hash FROM app_users WHERE id=? LIMIT 1");
         $row->execute([$me]);
         $dbu=$row->fetch();
@@ -43,6 +52,19 @@ if($pid){
   <div class="card teal"><span>✅</span><b><?=$st['gorev']?></b><small>Açık görev</small></div>
 </div>
 <?php endif; ?>
+
+<div class="panel">
+  <b>👤 Profil Bilgileri</b>
+  <form method="post" style="margin-top:8px">
+    <label style="color:#94a3b8;font-size:12px">Ad Soyad</label>
+    <input name="full_name" value="<?=htmlspecialchars($user['full_name'] ?? '')?>" placeholder="Ad Soyad">
+    <label style="color:#94a3b8;font-size:12px">Telefon</label>
+    <input name="phone" type="tel" value="<?=htmlspecialchars($user['phone'] ?? '')?>" placeholder="Telefon">
+    <label style="color:#94a3b8;font-size:12px">E-posta</label>
+    <input name="email" type="email" value="<?=htmlspecialchars($user['email'] ?? '')?>" placeholder="E-posta">
+    <button class="btn dark" name="save_profile" value="1" style="width:100%;padding:13px">💾 Kaydet</button>
+  </form>
+</div>
 
 <div class="panel">
   <b>🔑 Şifre Değiştir</b>

@@ -27,6 +27,12 @@
   card('Transfer','Hesaplar arası / karta ödeme','↔️','transfer.php','blue'); ?>
 </div>
 
+<div style="font-weight:900;margin:16px 4px 8px">📒 Muhasebe</div>
+<div class="grid">
+  <?php card('Muhasebe','Gider · Gelir · Personel','📒','accounting.php','purple');
+  card('Yeni Kayıt','Hızlı gider/gelir gir','➕','accounting.php#yeni','orange'); ?>
+</div>
+
 <div style="font-weight:900;margin:16px 4px 8px">📊 Raporlar</div>
 <div class="grid">
   <?php
@@ -53,7 +59,7 @@
 
 <div style="font-weight:900;margin:16px 4px 8px">⚙ Sistem</div>
 <div class="grid">
-  <?php card('Son İşlemler','Aktivite akışı','🕘','activity.php','gray'); card('Web Sürümü','Masaüstü Sürüm','🖥','../dashboard.php?web=1','gray'); card('Profil','Şifre & hesap','👤','profile.php','blue'); ?>
+  <?php card('Son İşlemler','Aktivite akışı','🕘','activity.php','gray'); card('Web Sürümü','Masaüstü Sürüm','🖥','../dashboard.php?web=1','gray'); card('Profil','Şifre & hesap','👤','profile.php','blue'); card('Kullanıcılar','Yetki yönetimi','👥','users.php','purple'); ?>
 </div>
 <?php else: ?>
 <div class="grid">

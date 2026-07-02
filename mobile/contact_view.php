@@ -117,10 +117,18 @@ try{
   <a class="card blue" href="report.php?modul=cari_detay&ref=<?=$id?>"><span>📊</span><b>Cari Raporu</b><small>Ekstre · hareketler · işler (PDF/paylaş)</small></a>
 </div>
 
-<?php if(!empty($c['phone'])): ?>
+<?php if(!empty($c['phone']) || !empty($c['email']) || !empty($c['website'])): ?>
 <div class="grid">
+<?php if(!empty($c['phone'])): ?>
   <a class="card blue" href="tel:<?=htmlspecialchars(preg_replace('/\s+/','',$c['phone']))?>"><span>📞</span><b>Ara</b><small><?=htmlspecialchars($c['phone'])?></small></a>
   <a class="card teal" href="https://wa.me/<?=htmlspecialchars(preg_replace('/\D/','',$c['phone']))?>"><span>💬</span><b>WhatsApp</b><small>Mesaj gönder</small></a>
+<?php endif; ?>
+<?php if(!empty($c['email'])): ?>
+  <a class="card yellow" href="mailto:<?=htmlspecialchars($c['email'])?>"><span>✉️</span><b>E-posta</b><small><?=htmlspecialchars($c['email'])?></small></a>
+<?php endif; ?>
+<?php if(!empty($c['website'])): ?>
+  <a class="card purple" href="<?=htmlspecialchars($c['website'])?>" target="_blank" rel="noopener"><span>🌐</span><b>Web Sitesi</b><small><?=htmlspecialchars(parse_url($c['website'],PHP_URL_HOST) ?: $c['website'])?></small></a>
+<?php endif; ?>
 </div>
 <?php endif; ?>
 

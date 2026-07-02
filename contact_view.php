@@ -164,6 +164,21 @@ $balance=(float)$c['opening_balance'] + $in - $out;
 <div class="card"><small>Bakiye</small><strong><?=money($balance)?></strong></div>
 </div>
 
+<?php if(!empty($c['phone']) || !empty($c['email']) || !empty($c['website'])): ?>
+<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">
+<?php if(!empty($c['phone'])): ?>
+<a href="tel:<?=h(preg_replace('/\s+/','',$c['phone']))?>" class="btn secondary" style="font-size:13px">📞 <?=h($c['phone'])?></a>
+<a href="https://wa.me/<?=h(preg_replace('/\D/','',$c['phone']))?>" class="btn" style="background:#16a34a;color:#fff;font-size:13px">💬 WhatsApp</a>
+<?php endif; ?>
+<?php if(!empty($c['email'])): ?>
+<a href="mailto:<?=h($c['email'])?>" class="btn secondary" style="font-size:13px">✉️ <?=h($c['email'])?></a>
+<?php endif; ?>
+<?php if(!empty($c['website'])): ?>
+<a href="<?=h($c['website'])?>" target="_blank" rel="noopener" class="btn secondary" style="font-size:13px">🌐 Web Sitesi</a>
+<?php endif; ?>
+</div>
+<?php endif; ?>
+
 <section class="panel">
 <h2>Cari Profil</h2>
 <form method="post" class="form-grid">
