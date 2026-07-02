@@ -10,6 +10,12 @@ $wa_results='';
 
 $permLabels=module_list();
 
+// personnel_edit.php'den "giriş hesabı yok" linkiyle gelindiyse Yeni Kullanıcı formunu doldur
+// (2026-07-03: kullanıcı şikayeti — "düzenle dediğimiz personele ait bilgi direk gelsin").
+$prefillPersonnelId = (int)($_GET['personnel_id'] ?? 0);
+$prefillFullName = trim($_GET['full_name'] ?? '');
+$prefillPhone = trim($_GET['phone'] ?? '');
+
 if($_SERVER['REQUEST_METHOD']==='POST'){
     try{
         if(isset($_POST['create_user'])){
@@ -193,7 +199,7 @@ $users=$pdo->query("SELECT u.*, p.name personnel_name FROM app_users u LEFT JOIN
 <input type="hidden" name="create_user" value="1">
 
 <label>Ad Soyad
-<input name="full_name" required>
+<input name="full_name" required value="<?=h($prefillFullName)?>">
 </label>
 
 <label>Kullanıcı Adı
@@ -201,7 +207,7 @@ $users=$pdo->query("SELECT u.*, p.name personnel_name FROM app_users u LEFT JOIN
 </label>
 
 <label>Telefon
-<input name="phone">
+<input name="phone" value="<?=h($prefillPhone)?>">
 </label>
 
 <label>E-posta
@@ -224,7 +230,7 @@ $users=$pdo->query("SELECT u.*, p.name personnel_name FROM app_users u LEFT JOIN
 <select name="personnel_id">
 <option value="">Bağlama</option>
 <?php foreach($personnel as $p): ?>
-<option value="<?=$p['id']?>"><?=h($p['name'].' / '.($p['role'] ?: '-'))?></option>
+<option value="<?=$p['id']?>" <?=$prefillPersonnelId===(int)$p['id']?'selected':''?>><?=h($p['name'].' / '.($p['role'] ?: '-'))?></option>
 <?php endforeach; ?>
 </select>
 </label>

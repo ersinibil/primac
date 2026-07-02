@@ -205,7 +205,7 @@ try{ $uu=$pdo->prepare("SELECT id,permissions,role FROM app_users WHERE personne
   <button class="btn" style="margin-top:12px">🔐 Yetkileri Kaydet</button>
   </form>
 <?php else: ?>
-  <p class="muted" style="margin:0">Bu personelin giriş hesabı yok. Yetki vermek için önce <a href="users.php">Kullanıcı &amp; Yetki</a> ekranından hesap oluşturup bu personele bağlayın.</p>
+  <p class="muted" style="margin:0">Bu personelin giriş hesabı yok. Yetki vermek için önce <a href="users.php?personnel_id=<?=$id?>&full_name=<?=urlencode($p['name'])?>&phone=<?=urlencode($p['phone']??'')?>">Kullanıcı &amp; Yetki</a> ekranından hesap oluşturup bu personele bağlayın (ad/telefon otomatik dolacak).</p>
 <?php endif; ?>
 </section>
 <?php endif; ?>

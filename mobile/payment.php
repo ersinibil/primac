@@ -1,7 +1,6 @@
 <?php
 require_once 'common.php';
 require_once __DIR__.'/../accounting_lib.php';
-block_personel();
 $pdo=db();
 $cid=(int)($_GET['contact_id'] ?? 0);
 

@@ -2,6 +2,58 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
+## Mobil menü/yetki tutarsızlığı düzeltmesi + kritik açık kapatma (2026-07-03)
+- Bugünkü mobil menü (isAdmin→user_can()) refactor'ü sonrası güvenlik denetiminde bulundu: bazı
+  kartlar `user_can()` ile açılıyordu ama hedef sayfa hâlâ `block_personel()` (admin-only) kilitliydi
+  — "kart görünüyor, tıklayınca anasayfaya atılıyor" hatası. Daha kötüsü: `mobile/collection.php`
+  (tahsilat girişi) hiçbir yetki kontrolüne sahip değildi — `page_module_map()`'te de yoktu,
+  `block_personel()` de yoktu — oturum açmış HERHANGİ bir kullanıcı tahsilat kaydı girebiliyordu.
+  (`mobile/transfer.php` için ayrı bir güvenlik bulgusu da geldi ama YANLIŞ ÇIKTI — o sayfa zaten
+  `page_module_map()`'te `'finance'`e bağlıydı, ajan sadece dosya içine bakıp merkezi korumayı
+  gözden kaçırmış.)
+- Düzeltme: `boot.php` `page_module_map()`'e `'collection.php'=>'finance'` ve `'payment.php'=>'finance'`
+  eklendi. `mobile/payment.php` ve `mobile/purchase.php`'deki `block_personel()` kaldırıldı (web
+  tarafları zaten sadece modül yetkisi istiyordu, mobil admin-only kalmıştı — parite sağlandı).
+- Ama `personnel.php`/`kpi.php`/`task_new.php`/`requests.php`/`report.php`/`activity.php` hâlâ
+  `block_personel()` kilitli bırakıldı (bunları modül-yetkisine açmak için bugün açık bir kullanıcı
+  onayı yoktu, özellikle personnel.php maaş/IBAN içeriyor — önceki oturumda kasıtlı admin-only
+  bırakılmıştı). Bunun yerine `mobile/more.php`'deki bu sayfalara giden kartlar `$isAdmin`'e geri
+  alındı — menü artık gerçek erişimle eşleşiyor, kimseye yanlış söz vermiyor.
+- **Ders (ileride tekrarlanmasın)**: bir sayfanın erişim modelini (block_personel↔modül yetkisi)
+  değiştirmeden önce, o sayfaya giden TÜM giriş noktalarını (menü kartları + varsa doğrudan linkler)
+  kontrol et — tek dosyayı değiştirip diğerlerini menüyle senkronsuz bırakmak "görünür ama erişilemez"
+  ya da (daha kötü) "hiç korunmayan" sayfa yaratabilir.
+
+## Kullanıcı & Yetki ekranı: personelden gelince otomatik doldur (2026-07-03)
+- Kullanıcı şikayeti: "personeli web de yetki ve kullanıcı adı tanımla ekranına geldiğinde boş geliyor.
+  düzenle dediğimiz personele ait bilgi direk gelsin." Kök neden: `personnel_edit.php`'deki "bu
+  personelin giriş hesabı yok, users.php'den oluşturun" linki hiçbir parametre taşımıyordu, `users.php`
+  "Yeni Kullanıcı" formu her zaman bomboş açılıyordu.
+- `personnel_edit.php`: link artık `users.php?personnel_id=X&full_name=...&phone=...` şeklinde.
+  `users.php`: bu GET parametreleri "Yeni Kullanıcı" formunun Ad Soyad/Telefon alanlarını ve Personel
+  Bağlantısı seçimini otomatik dolduruyor — admin sadece kullanıcı adı/şifre/yetki işaretleyip kaydediyor.
+
+## Satın alma stok senkronu — kod incelemesi düzeltmeleri (2026-07-03)
+- Web `purchase.php`'nin ilk hali `layout_top.php`'yi (HTML çıktısı) POST işlemeden ÖNCE çağırıyordu —
+  bu yüzden `header('Location:...')` "headers already sent" nedeniyle fiilen çalışmıyordu, PRG deseni
+  kırıktı. `require_once boot.php + require_login()` en başa alındı, `layout_top.php` POST bloğunun
+  SONRASINA taşındı (`product_new.php`'deki doğru desenle aynı hizaya getirildi).
+- Mobil ödeme yöntemi listesine web ile parite için "Çek"/"Senet" eklendi (web'de zaten vardı, mobilde
+  eksikti).
+
+## WhatsApp ile giriş bilgisi gönderimi — tekli & toplu (2026-07-03)
+- Kullanıcı isteği: "personellere whatsaptan site giriş ekranı kullanıcı adları ve şifrelerini kendi
+  telefonlarına gönderebileceğim bir yer olsun. toplu olarak ya da tek tek."
+- `users.php` (web) + `mobile/users.php`'ye toplu ("Tüm Aktif"/"Seçilenler") ve tekli WhatsApp gönderim
+  eklendi. Şifreler hash'li saklandığı için (var olanı geri okunamaz), gönderim öncesi YENİ rastgele
+  şifre üretilip kaydediliyor, düz metin şifre sadece gönderim anında kullanılıyor.
+- `share_lib.php`'ye `generate_random_password()` eklendi. Gerçek gönderim `wa_send()` (UltraMsg API,
+  `wa_settings.php`'den yapılandırılır) üzerinden — kullanıcıya `~/Desktop/WHATSAPP-API-KURULUM.txt`
+  adım adım kurulum kılavuzu bırakıldı.
+- NOT: bu özelliği yazan ajan görevi bitirince KENDİ BAŞINA commit attı (`4de5f1f`) — beklenen akış
+  (feature-dev → security/code review → ben commit) atlanmış oldu. Sonraki agent dispatch'lerde
+  "commit atma, working tree'de bırak" talimatını açıkça eklemek gerekiyor.
+
 ## Personele WhatsApp ile giriş bilgisi gönderimi — tekli & toplu (2026-07-03)
 - Kullanıcı isteği: "personellere WhatsApp'tan site giriş ekranı kullanıcı adları ve şifrelerini kendi telefonlarına gönderebileceğim bir yer olsun. toplu olarak ya da tek tek."
 - **share_lib.php** — `generate_random_password($length=10)` eklendi (büyük+küçük+rakam+özel karakter karması, güvenli rastgele üretim).
