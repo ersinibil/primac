@@ -52,6 +52,21 @@ $ps=$pdo->query("SELECT name FROM stock_items WHERE COALESCE(active,1)=1 ORDER B
 <?php if($ok): ?><div class="notice"><?=htmlspecialchars($ok)?></div><?php endif; ?>
 <?php if($er): ?><div class="err"><?=htmlspecialchars($er)?></div><?php endif; ?>
 <div class="panel">
+<details open><summary>Hızlı Tedarikçi Ekle</summary>
+<div style="padding:10px;border-top:1px solid #e5e7eb;margin-top:10px">
+  <input type="text" id="qcName" placeholder="Tedarikçi adı" style="width:100%;border:1px solid #d0d5dd;border-radius:8px;padding:9px;margin-bottom:8px">
+  <button type="button" class="btn dark" style="width:100%" onclick="quickContactMob(document.getElementById('qcName').value, 'Tedarikçi')">✓ Ekle</button>
+</div>
+</details>
+
+<details open><summary>Hızlı Ürün Ekle</summary>
+<div style="padding:10px;border-top:1px solid #e5e7eb;margin-top:10px">
+  <input type="text" id="qpName" placeholder="Ürün adı" style="width:100%;border:1px solid #d0d5dd;border-radius:8px;padding:9px;margin-bottom:8px">
+  <input type="text" id="qpUnit" placeholder="adet" value="adet" style="width:100%;border:1px solid #d0d5dd;border-radius:8px;padding:9px;margin-bottom:8px">
+  <button type="button" class="btn dark" style="width:100%" onclick="quickProductMob(document.getElementById('qpName').value, document.getElementById('qpUnit').value)">✓ Ekle</button>
+</div>
+</details>
+
 <form method="post">
   <label>Tedarikçi</label>
   <select name="contact_id" required><option value="">— Seç —</option><?php foreach($cs as $c): ?><option value="<?=$c['id']?>"><?=htmlspecialchars($c['name'])?></option><?php endforeach; ?></select>
@@ -69,5 +84,50 @@ $ps=$pdo->query("SELECT name FROM stock_items WHERE COALESCE(active,1)=1 ORDER B
   <button class="btn dark" style="width:100%;padding:14px">🛒 Alışı Kaydet</button>
 </form>
 </div>
-<script>function c(){var q=parseFloat(document.getElementById('q').value)||0,p=parseFloat(document.getElementById('p').value)||0;document.getElementById('t').textContent=(q*p).toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2})+' ₺';}c();</script>
+<script>
+function c(){var q=parseFloat(document.getElementById('q').value)||0,p=parseFloat(document.getElementById('p').value)||0;document.getElementById('t').textContent=(q*p).toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2})+' ₺';}
+c();
+
+// Hızlı cari/ürün ekleme
+function quickContactMob(name, type) {
+    if (!name) { alert('Ad girin'); return; }
+    const fd = new FormData();
+    fd.append('t', 'contact');
+    fd.append('name', name);
+    fd.append('contact_type', type || 'Tedarikçi');
+    fetch('../ajax_quick_add.php', {method: 'POST', body: fd})
+        .then(r => r.json())
+        .then(data => {
+            if (data.ok) {
+                const sel = document.querySelector('select[name="contact_id"]');
+                const opt = document.createElement('option');
+                opt.value = data.id;
+                opt.textContent = data.name;
+                opt.selected = true;
+                sel.appendChild(opt);
+                document.getElementById('qcName').value = '';
+                document.querySelector('details[open] summary').click();
+                alert('Cari eklendi');
+            } else alert('Hata: ' + data.message);
+        })
+        .catch(e => alert('Hata: ' + e));
+}
+function quickProductMob(name, unit) {
+    if (!name) { alert('Ad girin'); return; }
+    const fd = new FormData();
+    fd.append('t', 'product');
+    fd.append('name', name);
+    fd.append('unit', unit || 'adet');
+    fetch('../ajax_quick_add.php', {method: 'POST', body: fd})
+        .then(r => r.json())
+        .then(data => {
+            if (data.ok) {
+                document.querySelector('input[name="product_name"]').value = data.name;
+                document.getElementById('qpName').value = '';
+                alert('Ürün eklendi');
+            } else alert('Hata: ' + data.message);
+        })
+        .catch(e => alert('Hata: ' + e));
+}
+</script>
 <?php botx(); ?>

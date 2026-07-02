@@ -1,13 +1,66 @@
-// ACANS OS mobil SW — ağ öncelikli + Web Push (uygulama kapalıyken bildirim)
-const CACHE='acans-os-v25';
-self.addEventListener('install',e=>{ self.skipWaiting(); });
+// ACANS OTS mobil SW — Offline çalışma + Web Push (uygulama kapalıyken bildirim)
+const CACHE='acans-os-v27';
+const STATIC_ASSETS=[
+  './',
+  './index.php',
+  './manifest.php',
+  './icon.php?size=192',
+  './icon.php?size=180',
+  './icon.php?size=96'
+];
+
+self.addEventListener('install',e=>{
+  e.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(STATIC_ASSETS)).catch(()=>{}));
+  self.skipWaiting();
+});
+
 self.addEventListener('activate',e=>{
-  e.waitUntil(caches.keys().then(ks=>Promise.all(ks.map(k=>caches.delete(k)))));
+  e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))));
   self.clients.claim();
 });
+
 self.addEventListener('fetch',e=>{
   if(e.request.method!=='GET') return;
-  e.respondWith(fetch(e.request).catch(()=>caches.match(e.request)));
+
+  var url=new URL(e.request.url);
+  // Gerçekten statik (nadiren değişen) varlıklar: js/css/görsel + icon.php/manifest.php.
+  // Bunlar cache-first olabilir. DİĞER TÜM .php sayfaları (kasa.php, notifications.php,
+  // index.php gibi bildirim/sayı/bakiye içeren dinamik içerik) network-first OLMALI —
+  // 2026-07-03 denetiminde bulundu: hepsi cache-first yapılmıştı, kullanıcı sinyali olsa
+  // bile bir kez açılan sayfa hep ESKİ veriyi (eski mesaj sayısı, eski bakiye) gösteriyordu.
+  var isTrulyStatic = url.pathname.match(/\.(js|css|png|jpg|jpeg|webp|svg|gif)$/)
+    || url.pathname.endsWith('icon.php') || url.pathname.endsWith('manifest.php');
+
+  if(isTrulyStatic){
+    e.respondWith(
+      caches.match(e.request).then(function(cached){
+        if(cached) return cached;
+        return fetch(e.request).then(function(response){
+          if(response && response.status===200 && response.type!=='error'){
+            var clone=response.clone();
+            caches.open(CACHE).then(cache=>cache.put(e.request,clone)).catch(()=>{});
+          }
+          return response;
+        });
+      })
+    );
+    return;
+  }
+
+  // Dinamik .php sayfaları: ÖNCE network dene, sadece network gerçekten başarısızsa
+  // (offline/sinyal yok) cache'deki son bilinen hale düş — "uygulamanın kabuğu offline'da
+  // açılabilsin" ihtiyacı bununla karşılanıyor, veri tazeliğinden ödün verilmiyor.
+  e.respondWith(
+    fetch(e.request).then(function(response){
+      if(response && response.status===200 && response.type!=='error' && url.pathname.endsWith('.php')){
+        var clone=response.clone();
+        caches.open(CACHE).then(cache=>cache.put(e.request,clone)).catch(()=>{});
+      }
+      return response;
+    }).catch(function(){
+      return caches.match(e.request).then(cached=>cached || new Response('Offline - İçerik yok',{status:503}));
+    })
+  );
 });
 
 // Gelen push → bildirim göster (uygulama kapalı/arka planda olsa da)

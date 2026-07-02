@@ -1,5 +1,6 @@
 <?php
 require_once 'common.php';
+require_once __DIR__.'/../stock_lib.php';
 $pdo=db();
 $cid=(int)($_GET['contact_id'] ?? 0);
 $ok=''; $er='';
@@ -19,46 +20,73 @@ function acc_for_method($pdo,$method){
 
 if($_SERVER['REQUEST_METHOD']==='POST'){
     try{
-        $contact=(int)$_POST['contact_id'];
-        $product=(int)$_POST['stock_item_id'];
-        $qty=(float)$_POST['quantity'];
-        $price=(float)$_POST['unit_price'];
-        $method=$_POST['payment_method'] ?? 'Peşin';
-        if(!$contact) throw new Exception('Cari seçin.');
-        if(!$product) throw new Exception('Ürün seçin.');
-        if($qty<=0) throw new Exception('Miktar geçersiz.');
-        if($price<0) throw new Exception('Fiyat geçersiz.');
+        if(isset($_POST['delete_sale'])){
+            // Satış silme (PRG: POST → işlem → redirect)
+            if(!can_edit_delete()) throw new Exception('Silme için yetkiniz yok.');
+            $saleId=(int)$_POST['id'];
+            $res=stock_reverse_sale($pdo,$saleId);
+            if($res['ok']){
+                $_SESSION['sales_ok']=$res['message'];
+            }else{
+                $_SESSION['sales_er']=$res['message'];
+            }
+            redirect('sales.php');
+        }else{
+            // Yeni satış kaydı
+            $contact=(int)$_POST['contact_id'];
+            $product=(int)$_POST['stock_item_id'];
+            $qty=(float)$_POST['quantity'];
+            $price=(float)$_POST['unit_price'];
+            $method=$_POST['payment_method'] ?? 'Peşin';
+            if(!$contact) throw new Exception('Cari seçin.');
+            if(!$product) throw new Exception('Ürün seçin.');
+            if($qty<=0) throw new Exception('Miktar geçersiz.');
+            if($price<0) throw new Exception('Fiyat geçersiz.');
 
-        $p=$pdo->prepare("SELECT * FROM stock_items WHERE id=?"); $p->execute([$product]); $item=$p->fetch();
-        if(!$item) throw new Exception('Ürün bulunamadı.');
+            $p=$pdo->prepare("SELECT * FROM stock_items WHERE id=?"); $p->execute([$product]); $item=$p->fetch();
+            if(!$item) throw new Exception('Ürün bulunamadı.');
 
-        $total=$qty*$price;
+            $total=$qty*$price;
 
-        // 1) Stok düş
-        $pdo->prepare("UPDATE stock_items SET quantity=quantity-? WHERE id=?")->execute([$qty,$product]);
-        // 2) Stok hareketi (şema farklı olabilir → try/catch)
-        try{ $pdo->prepare("INSERT INTO stock_movements(stock_item_id,direction,quantity,reason,note,created_at) VALUES(?,?,?,?,?,NOW())")
-            ->execute([$product,'out',$qty,'Satış','Mobil satış ('.$method.')']); }catch(Throwable $e){}
+            // 1) Stok düş
+            $pdo->prepare("UPDATE stock_items SET quantity=quantity-? WHERE id=?")->execute([$qty,$product]);
 
-        // 3) Kasa kaydı (finans hareketi)
-        $accId=acc_for_method($pdo,$method);
-        $pdo->prepare("INSERT INTO finance_movements(contact_id,direction,amount,payment_channel,account_id,status,movement_date,description,movement_type)
-            VALUES(?,?,?,?,?,?,?,?,'mobile_sale')")
-            ->execute([$contact,'in',$total,$method,$accId,'Tahsil Edildi',date('Y-m-d'),$item['name'].' x'.qty_fmt($qty).' satış']);
-        // 4) Kasa bakiyesi güncelle
-        if($accId){ try{ $pdo->prepare("UPDATE finance_accounts SET current_balance=current_balance+? WHERE id=?")->execute([$total,$accId]); }catch(Throwable $e){} }
+            // 2) Kasa kaydı (finans hareketi) ÖNCE oluşturulur — id'si stok hareketine kesin
+            // referans olarak yazılacak (bkz. sales.php web tarafındaki aynı düzeltme notu).
+            $accId=acc_for_method($pdo,$method);
+            $pdo->prepare("INSERT INTO finance_movements(contact_id,direction,amount,payment_channel,account_id,status,movement_date,description,movement_type)
+                VALUES(?,?,?,?,?,?,?,?,'mobile_sale')")
+                ->execute([$contact,'in',$total,$method,$accId,'Tahsil Edildi',date('Y-m-d'),$item['name'].' x'.qty_fmt($qty).' satış']);
+            $financeMovementId=(int)$pdo->lastInsertId();
 
-        // 5) Kâr/zarar hesabı (satış - maliyet)
-        $cost=(float)($item['avg_cost'] ?: $item['purchase_price'] ?: 0);
-        $profit=($price-$cost)*$qty;
+            // 3) Stok hareketi (şema farklı olabilir → try/catch) — finance_movement_id ile kesin referanslı
+            try{ $pdo->prepare("INSERT INTO stock_movements(stock_item_id,finance_movement_id,direction,quantity,reason,note,created_at) VALUES(?,?,?,?,?,?,NOW())")
+                ->execute([$product,$financeMovementId,'out',$qty,'Satış','Mobil satış ('.$method.')']); }catch(Throwable $e){}
+            // 4) Kasa bakiyesi güncelle
+            if($accId){ try{ $pdo->prepare("UPDATE finance_accounts SET current_balance=current_balance+? WHERE id=?")->execute([$total,$accId]); }catch(Throwable $e){} }
 
-        // 6) Log
-        try{ if(function_exists('activity_log')) activity_log('Satış','Mobil',$item['name'].' '.mm($total).' (kâr '.mm($profit).')',$method,'sale',$product,'mobile/sales.php','🧾'); }catch(Throwable $e){}
+            // 5) Kâr/zarar hesabı (satış - maliyet)
+            $cost=(float)($item['avg_cost'] ?: $item['purchase_price'] ?: 0);
+            $profit=($price-$cost)*$qty;
 
-        $kz = $profit>=0 ? ('Kâr: '.mm($profit)) : ('Zarar: '.mm(-$profit));
-        $ok=$item['name'].' satıldı: '.mm($total).' ('.$method.') · '.$kz;
-        $cid=$contact;
+            // 6) Log
+            try{ if(function_exists('activity_log')) activity_log('Satış','Mobil',$item['name'].' '.mm($total).' (kâr '.mm($profit).')',$method,'sale',$product,'mobile/sales.php','🧾'); }catch(Throwable $e){}
+
+            $kz = $profit>=0 ? ('Kâr: '.mm($profit)) : ('Zarar: '.mm(-$profit));
+            $ok=$item['name'].' satıldı: '.mm($total).' ('.$method.') · '.$kz;
+            $cid=$contact;
+        }
     }catch(Throwable $e){ $er=$e->getMessage(); }
+}
+
+// Session'dan mesajları oku (PRG dari silme sonrası)
+if(!empty($_SESSION['sales_ok'])){
+    $ok=$_SESSION['sales_ok'];
+    unset($_SESSION['sales_ok']);
+}
+if(!empty($_SESSION['sales_er'])){
+    $er=$_SESSION['sales_er'];
+    unset($_SESSION['sales_er']);
 }
 
 topx('Satış Yap');
@@ -70,6 +98,22 @@ topx('Satış Yap');
 $cs=$pdo->query("SELECT id,name FROM contacts ORDER BY name")->fetchAll();
 $ps=$pdo->query("SELECT id,name,quantity,unit,sale_price FROM stock_items WHERE COALESCE(active,1)=1 ORDER BY name")->fetchAll();
 ?>
+
+<details open style="margin-bottom:14px"><summary>Hızlı Cari Ekle</summary>
+<div style="padding:10px;border-top:1px solid #e5e7eb;margin-top:10px">
+  <input type="text" id="qsContactName" placeholder="Müşteri adı" style="width:100%;border:1px solid #d0d5dd;border-radius:8px;padding:9px;margin-bottom:8px">
+  <button type="button" class="btn dark" style="width:100%" onclick="quickContactSales(document.getElementById('qsContactName').value, 'Müşteri')">✓ Ekle</button>
+</div>
+</details>
+
+<details open style="margin-bottom:14px"><summary>Hızlı Ürün Ekle</summary>
+<div style="padding:10px;border-top:1px solid #e5e7eb;margin-top:10px">
+  <input type="text" id="qsProductName" placeholder="Ürün adı" style="width:100%;border:1px solid #d0d5dd;border-radius:8px;padding:9px;margin-bottom:8px">
+  <input type="text" id="qsProductUnit" placeholder="adet" value="adet" style="width:100%;border:1px solid #d0d5dd;border-radius:8px;padding:9px;margin-bottom:8px">
+  <button type="button" class="btn dark" style="width:100%" onclick="quickProductSales(document.getElementById('qsProductName').value, document.getElementById('qsProductUnit').value)">✓ Ekle</button>
+</div>
+</details>
+
 <div class="panel">
 <form method="post">
   <label>Cari (Müşteri)</label>
@@ -108,6 +152,54 @@ $ps=$pdo->query("SELECT id,name,quantity,unit,sale_price FROM stock_items WHERE 
 function setPrice(){var o=document.getElementById('prod').selectedOptions[0];if(o&&o.dataset.price){document.getElementById('price').value=o.dataset.price;}calc();}
 function calc(){var q=parseFloat(document.getElementById('qty').value)||0;var p=parseFloat(document.getElementById('price').value)||0;var t=q*p;document.getElementById('tot').textContent=t.toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2})+' ₺';}
 calc();
+
+// Hızlı cari/ürün ekleme
+function quickContactSales(name, type) {
+    if (!name) { alert('Ad girin'); return; }
+    const fd = new FormData();
+    fd.append('t', 'contact');
+    fd.append('name', name);
+    fd.append('contact_type', type || 'Müşteri');
+    fetch('../ajax_quick_add.php', {method: 'POST', body: fd})
+        .then(r => r.json())
+        .then(data => {
+            if (data.ok) {
+                const sel = document.querySelector('select[name="contact_id"]');
+                const opt = document.createElement('option');
+                opt.value = data.id;
+                opt.textContent = data.name;
+                opt.selected = true;
+                sel.appendChild(opt);
+                document.getElementById('qsContactName').value = '';
+                alert('Cari eklendi');
+            } else alert('Hata: ' + data.message);
+        })
+        .catch(e => alert('Hata: ' + e));
+}
+function quickProductSales(name, unit) {
+    if (!name) { alert('Ad girin'); return; }
+    const fd = new FormData();
+    fd.append('t', 'product');
+    fd.append('name', name);
+    fd.append('unit', unit || 'adet');
+    fetch('../ajax_quick_add.php', {method: 'POST', body: fd})
+        .then(r => r.json())
+        .then(data => {
+            if (data.ok) {
+                const sel = document.getElementById('prod');
+                const opt = document.createElement('option');
+                opt.value = data.id;
+                opt.dataset.price = 0;
+                opt.textContent = data.name + ' (Stok: 0 ' + (unit || 'adet') + ')';
+                opt.selected = true;
+                sel.appendChild(opt);
+                setPrice();
+                document.getElementById('qsProductName').value = '';
+                alert('Ürün eklendi');
+            } else alert('Hata: ' + data.message);
+        })
+        .catch(e => alert('Hata: ' + e));
+}
 </script>
 
 <?php botx(); ?>

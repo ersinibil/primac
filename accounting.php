@@ -8,10 +8,22 @@ $year=(int)($_GET['y'] ?? date('Y'));
 $tab=$_GET['tab'] ?? 'kayitlar';
 $msg=''; $err='';
 
+// Kayıt düzenleme
+if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['edit_entry'])){
+    try{
+        if(!can_edit_delete()) throw new Exception('Bu işlem için yetkiniz yok.');
+        accounting_entry_update($pdo, (int)$_POST['id'], $_POST);
+        $msg='Kayıt güncellendi.';
+    }catch(Throwable $e){ $err=$e->getMessage(); }
+}
+
 // Kayıt sil
-if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['del_entry']) && is_admin()){
-    try{ $pdo->prepare("DELETE FROM accounting_entries WHERE id=?")->execute([(int)$_POST['del_entry']]); $msg='Kayıt silindi.'; }
-    catch(Throwable $e){ $err=$e->getMessage(); }
+if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['del_entry'])){
+    try{
+        if(!can_edit_delete()) throw new Exception('Bu işlem için yetkiniz yok.');
+        $res=accounting_entry_delete($pdo, (int)$_POST['del_entry']);
+        if($res['ok']) $msg=$res['msg']; else $err=$res['msg'];
+    }catch(Throwable $e){ $err=$e->getMessage(); }
 }
 
 // Yeni kayıt
@@ -194,6 +206,16 @@ function filterCats(){
     if(o.dataset.type!==t&&o.selected) o.selected=false;
   }
 }
+function filterCatsEdit(id){
+  var t=document.getElementById('editType'+id).value;
+  var opts=document.getElementById('editCatSel'+id).options;
+  for(var i=0;i<opts.length;i++){
+    var o=opts[i];
+    if(!o.dataset.type){o.style.display='';continue;}
+    o.style.display=(o.dataset.type===t)?'':'none';
+    if(o.dataset.type!==t&&o.selected) o.selected=false;
+  }
+}
 </script>
 
 <?php elseif($tab==='personel'): ?>
@@ -266,13 +288,84 @@ foreach($entries as $e):
   </div>
   <div style="text-align:right;flex:0 0 auto;margin-left:10px">
     <div style="font-weight:900;color:<?=$tColor?>;font-size:15px"><?=$isGider?'-':'+' ?><?=money($e['amount'])?></div>
-    <?php if(is_admin()): ?>
-    <form method="post" style="margin:4px 0 0">
-      <button name="del_entry" value="<?=(int)$e['id']?>" class="btn danger" style="padding:3px 8px;font-size:11px" onclick="return confirm('Silinsin mi?')">Sil</button>
-    </form>
+    <?php if(can_edit_delete()): ?>
+    <div style="display:flex;gap:4px;margin:4px 0 0">
+      <button class="btn secondary" style="padding:3px 8px;font-size:11px" type="button" onclick="document.getElementById('edit-acc-<?=(int)$e['id']?>').style.display=(document.getElementById('edit-acc-<?=(int)$e['id']?>').style.display==='none'?'block':'none')">✏️ Düzenle</button>
+      <form method="post" style="display:inline" onsubmit="return confirm('Bu kaydı silmek istediğinize emin misiniz?')">
+        <button name="del_entry" value="<?=(int)$e['id']?>" class="btn danger" style="padding:3px 8px;font-size:11px">🗑 Sil</button>
+      </form>
+    </div>
     <?php endif; ?>
   </div>
 </div>
+<?php if(can_edit_delete()): ?>
+<div id="edit-acc-<?=(int)$e['id']?>" style="display:none;background:#f9fafb;padding:16px;border-radius:10px;margin:10px 0;border:1px solid #e5e7eb">
+  <h3 style="margin:0 0 14px;font-size:15px">Kaydı Düzenle</h3>
+  <form method="post" class="form-grid">
+    <input type="hidden" name="id" value="<?=(int)$e['id']?>">
+    <label>Tür
+      <select name="type" id="editType<?=(int)$e['id']?>" onchange="filterCatsEdit(<?=(int)$e['id']?>)">
+        <option value="gider" <?=$e['type']==='gider'?'selected':''?>>Gider</option>
+        <option value="gelir" <?=$e['type']==='gelir'?'selected':''?>>Gelir</option>
+      </select>
+    </label>
+    <label>Tarih
+      <input type="date" name="entry_date" value="<?=h($e['entry_date'])?>">
+    </label>
+    <label>Kategori
+      <select name="category_id" id="editCatSel<?=(int)$e['id']?>">
+        <option value="">— Seç —</option>
+        <?php foreach($giderCats as $c): ?>
+        <option value="<?=(int)$c['id']?>" data-type="gider" <?=$e['category_id']==$c['id']?'selected':''?>>[<?=h($c['group_name'])?>] <?=h($c['name'])?></option>
+        <?php endforeach; ?>
+        <?php foreach($gelirCats as $c): ?>
+        <option value="<?=(int)$c['id']?>" data-type="gelir" <?=$e['category_id']==$c['id']?'selected':''?> style="display:<?=$e['type']==='gelir'?'':' none'?>;">[<?=h($c['group_name'])?>] <?=h($c['name'])?></option>
+        <?php endforeach; ?>
+      </select>
+    </label>
+    <label>Tutar (₺)
+      <input type="number" step="0.01" min="0.01" name="amount" required value="<?=h(str_replace('.',',',$e['amount']))?>">
+    </label>
+    <label class="full">Açıklama
+      <input name="description" value="<?=h($e['description'] ?? '')?>">
+    </label>
+    <label class="full">Belge / Ref No
+      <input name="reference_no" value="<?=h($e['reference_no'] ?? '')?>">
+    </label>
+    <label>Hesap (Kasa/Banka)
+      <select name="account_id">
+        <option value="">— Seçme —</option>
+        <?php foreach($accounts as $a): ?>
+        <option value="<?=(int)$a['id']?>" <?=$e['account_id']==$a['id']?'selected':''?>><?=h($a['name'])?> (<?=h($a['account_type'])?>)</option>
+        <?php endforeach; ?>
+      </select>
+    </label>
+    <label>Personel (Ödeme ise)
+      <select name="personnel_id">
+        <option value="">— Yok —</option>
+        <?php foreach($personnel as $p): ?>
+        <option value="<?=(int)$p['id']?>" <?=$e['personnel_id']==$p['id']?'selected':''?>><?=h($p['name'])?></option>
+        <?php endforeach; ?>
+      </select>
+    </label>
+    <label>Ödeme Türü (Personel ise)
+      <select name="payment_type">
+        <option value="" <?=!$e['payment_type']?'selected':''?>>—</option>
+        <option value="maas" <?=$e['payment_type']==='maas'?'selected':''?>>Maaş</option>
+        <option value="avans" <?=$e['payment_type']==='avans'?'selected':''?>>Avans</option>
+        <option value="prim" <?=$e['payment_type']==='prim'?'selected':''?>>Prim / İkramiye</option>
+        <option value="sgk" <?=$e['payment_type']==='sgk'?'selected':''?>>SGK Primi</option>
+        <option value="vergi" <?=$e['payment_type']==='vergi'?'selected':''?>>Vergi</option>
+        <option value="diger" <?=$e['payment_type']==='diger'?'selected':''?>>Diğer</option>
+      </select>
+    </label>
+    <div style="display:flex;gap:8px">
+      <button class="btn" type="submit" name="edit_entry" value="1">💾 Kaydet</button>
+      <button class="btn secondary" type="button" onclick="document.getElementById('edit-acc-<?=(int)$e['id']?>').style.display='none'">✕ Kapat</button>
+    </div>
+  </form>
+</div>
+<?php endif; ?>
 <?php endforeach; ?>
 </section>
 <?php endif; ?>

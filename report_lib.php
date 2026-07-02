@@ -1,8 +1,8 @@
 <?php
 // ACANS OS — Paylaşımlı Rapor Kütüphanesi (mobil + web ortak)
-function report_modules(){ return ['tumu'=>'🗂️ Tümü','genel'=>'📊 Yekün','tahsilat'=>'💰 Tahsilat/Finans','muhasebe'=>'📒 Muhasebe','is'=>'📋 İş Takip','personel'=>'👷 Personel','satis'=>'🧾 Satış','teklif'=>'📄 Teklif','cari'=>'👥 Cari','stok'=>'📦 Stok']; }
+function report_modules(){ return ['tumu'=>'🗂️ Tümü','genel'=>'📊 Yekün','tahsilat'=>'💰 Tahsilat/Finans','muhasebe'=>'📒 Muhasebe','is'=>'📋 İş Takip','gorevler'=>'✓ Görevler','personel'=>'👷 Personel','satis'=>'🧾 Satış','satinalma'=>'📥 Satın Alma','teklif'=>'📄 Teklif','cari'=>'👥 Cari','stok'=>'📦 Stok']; }
 // "Tümü"de yer alacak modüller (özet hariç tek tek hepsi)
-function report_all_keys(){ return ['genel','tahsilat','muhasebe','is','personel','satis','teklif','cari','stok']; }
+function report_all_keys(){ return ['genel','tahsilat','muhasebe','is','gorevler','personel','satis','satinalma','teklif','cari','stok']; }
 // Tüm modülleri tek raporda alt alta render et
 function report_render_all($pdo,$appName,$from,$to,$detail=false){
   $out='';
@@ -73,6 +73,19 @@ function rpt($pdo,$modul,$from,$to,$ref=0,$detail=false){
     foreach($j->fetchAll() as $r)$R['table']['rows'][]=[$r['job_no'],$r['title'],$r['status'],$r['due_date'],$r['name']];
     break;
 
+  case 'gorevler':
+    $R['title']='Görevler';
+    $a=$pdo->prepare("SELECT COUNT(*) n FROM tasks WHERE DATE(created_at) BETWEEN ? AND ?"); $a->execute([$from,$to]); $acilan=(int)$a->fetch()['n'];
+    $st=$pdo->prepare("SELECT status,COUNT(*) c FROM tasks WHERE DATE(created_at) BETWEEN ? AND ? GROUP BY status"); $st->execute([$from,$to]);
+    $cd=[]; $tamam=0; foreach($st->fetchAll() as $r){ $cd[$r['status']]=(int)$r['c']; if($r['status']==='Tamamlandı')$tamam+=(int)$r['c']; }
+    $g=$pdo->prepare("SELECT COUNT(*) n FROM tasks WHERE status NOT IN ('Tamamlandı','İptal') AND due_date IS NOT NULL AND due_date<CURDATE()"); $g->execute(); $geciken=(int)$g->fetch()['n'];
+    $R['cards']=[['📋','Oluşturulan',$acilan,'#3b82f6'],['✓','Tamamlanan',$tamam,'#22c55e'],['▶','Açık',$acilan-$tamam,'#eab308'],['⏰','Geciken',$geciken,'#f87171']];
+    $R['chart']=['Duruma göre görev',$cd];
+    $pp=$pdo->prepare("SELECT COALESCE(p.name,'Atanmamış') pn, COUNT(*) c, SUM(CASE WHEN t.status='Tamamlandı' THEN 1 ELSE 0 END) tm FROM tasks t LEFT JOIN personnel p ON p.id=t.personnel_id WHERE DATE(t.created_at) BETWEEN ? AND ? GROUP BY t.personnel_id ORDER BY c DESC");
+    $pp->execute([$from,$to]); $R['table']['head']=['Personel','Toplam','Tamamlanan'];
+    foreach($pp->fetchAll() as $r)$R['table']['rows'][]=[$r['pn'],$r['c'],$r['tm']];
+    break;
+
   case 'personel':
     $R['title']='Personel Performans';
     $ps=$pdo->query("SELECT p.id,p.name,
@@ -113,6 +126,24 @@ function rpt($pdo,$modul,$from,$to,$ref=0,$detail=false){
     $m=$pdo->prepare("SELECT fm.movement_date,c.name cari,fm.amount,fm.description FROM finance_movements fm LEFT JOIN contacts c ON c.id=fm.contact_id WHERE fm.movement_type LIKE '%sale%' AND DATE(fm.movement_date) BETWEEN ? AND ? ORDER BY fm.id DESC");
     $m->execute([$from,$to]); $R['table']['head']=['Tarih','Cari','Tutar','Açıklama'];
     foreach($m->fetchAll() as $r)$R['table']['rows'][]=[$r['movement_date'],$r['cari'],tl($r['amount']),$r['description']];
+    break;
+
+  case 'satinalma':
+    $R['title']='Satın Alma';
+    $s=$pdo->prepare("SELECT COALESCE(SUM(fm.amount),0) tut,COUNT(*) n FROM finance_movements fm WHERE fm.movement_type='purchase' AND DATE(fm.movement_date) BETWEEN ? AND ?");
+    $s->execute([$from,$to]); $sd=$s->fetch();
+    $R['cards']=[['📥','Toplam Satın Alma',tl($sd['tut']),'#3b82f6'],['🔢','İşlem',$sd['n'],'#a78bfa'],['📊','Ortalama',tl($sd['n']>0?$sd['tut']/$sd['n']:0),'#22c55e']];
+    // Tedarikçi bazlı kırılım
+    $cc=$pdo->prepare("SELECT c.name k,SUM(fm.amount) s FROM finance_movements fm LEFT JOIN contacts c ON c.id=fm.contact_id WHERE fm.movement_type='purchase' AND DATE(fm.movement_date) BETWEEN ? AND ? GROUP BY fm.contact_id ORDER BY s DESC LIMIT 8");
+    $cc->execute([$from,$to]); $cd=[]; foreach($cc->fetchAll() as $r)$cd[$r['k']?:'—']=(float)$r['s'];
+    $R['chart']=['Tedarikçiye göre satın alma',$cd];
+    // Ödeme yöntemi dağılımı
+    $pm=$pdo->prepare("SELECT COALESCE(fm.payment_channel,'Veresiye') k,SUM(fm.amount) s FROM finance_movements fm WHERE fm.movement_type='purchase' AND DATE(fm.movement_date) BETWEEN ? AND ? GROUP BY fm.payment_channel ORDER BY s DESC");
+    $pm->execute([$from,$to]); $cd2=[]; foreach($pm->fetchAll() as $r)$cd2[$r['k']]=(float)$r['s'];
+    $R['chart2']=['Ödeme yöntemine göre',$cd2];
+    $m=$pdo->prepare("SELECT fm.movement_date,c.name cari,fm.payment_channel,fm.amount,fm.description FROM finance_movements fm LEFT JOIN contacts c ON c.id=fm.contact_id WHERE fm.movement_type='purchase' AND DATE(fm.movement_date) BETWEEN ? AND ? ORDER BY fm.movement_date DESC");
+    $m->execute([$from,$to]); $R['table']['head']=['Tarih','Tedarikçi','Ödeme Yöntemi','Tutar','Açıklama'];
+    foreach($m->fetchAll() as $r)$R['table']['rows'][]=[$r['movement_date'],$r['cari'],$r['payment_channel']??'—',tl($r['amount']),$r['description']];
     break;
 
   case 'teklif':

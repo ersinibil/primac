@@ -86,12 +86,15 @@ $soon=date('Y-m-d', strtotime('+7 days'));
 </label>
 
 <label>Cari <small style="font-weight:400;color:#667085">(opsiyonel — kimden alındı/kime verildi)</small>
-<select name="contact_id">
-<option value="">Cari seçilmedi</option>
-<?php foreach($contacts as $c): ?>
-<option value="<?=$c['id']?>"><?=h($c['name'].' / '.$c['type'])?></option>
-<?php endforeach; ?>
-</select>
+<div style="display:flex;gap:8px">
+  <select name="contact_id" style="flex:1">
+  <option value="">Cari seçilmedi</option>
+  <?php foreach($contacts as $c): ?>
+  <option value="<?=$c['id']?>"><?=h($c['name'].' / '.$c['type'])?></option>
+  <?php endforeach; ?>
+  </select>
+  <button type="button" class="btn secondary small" onclick="document.getElementById('dlgContactCheck').showModal()" title="Hızlı cari ekle">+</button>
+</div>
 </label>
 
 <label>Banka Adı <small style="font-weight:400;color:#667085">(çek ise)</small>
@@ -195,5 +198,55 @@ if(!$rows) echo "<tr><td colspan='9' class='muted'>Kayıt yok.</td></tr>";
 </tbody>
 </table>
 </section>
+
+<script>
+// Hızlı cari ekleme
+function quickAddContactCheck(name, type) {
+    if (!name) return;
+    const fd = new FormData();
+    fd.append('t', 'contact');
+    fd.append('name', name);
+    fd.append('contact_type', type || 'Müşteri');
+
+    fetch('ajax_quick_add.php', {method: 'POST', body: fd})
+        .then(r => r.json())
+        .then(data => {
+            if (data.ok) {
+                const sel = document.querySelector('select[name="contact_id"]');
+                const opt = document.createElement('option');
+                opt.value = data.id;
+                opt.textContent = data.name;
+                opt.selected = true;
+                sel.appendChild(opt);
+                document.getElementById('dlgContactCheck').close();
+                document.getElementById('contactNameCheck').value = '';
+            } else {
+                alert('Hata: ' + data.message);
+            }
+        })
+        .catch(e => alert('Bağlantı hatası: ' + e));
+}
+</script>
+
+<!-- Dialog: Hızlı cari ekleme (Çek/Senet) -->
+<dialog id="dlgContactCheck" style="border:none;border-radius:12px;box-shadow:0 8px 28px rgba(16,24,40,.15);max-width:420px;padding:24px">
+  <h3 style="margin-top:0">Hızlı Cari Ekle</h3>
+  <div style="margin-bottom:16px">
+    <label style="display:block;font-weight:800;color:#344054;margin-bottom:6px">Ad / Ünvan</label>
+    <input type="text" id="contactNameCheck" placeholder="Müşteri adı" style="width:100%;border:1px solid #d0d5dd;border-radius:12px;padding:11px">
+  </div>
+  <div style="margin-bottom:16px">
+    <label style="display:block;font-weight:800;color:#344054;margin-bottom:6px">Türü</label>
+    <select id="contactTypeCheck" style="width:100%;border:1px solid #d0d5dd;border-radius:12px;padding:11px">
+      <option>Müşteri</option>
+      <option>Tedarikçi</option>
+      <option>Diğer</option>
+    </select>
+  </div>
+  <div style="display:flex;gap:8px;justify-content:flex-end">
+    <button onclick="document.getElementById('dlgContactCheck').close()" class="btn secondary">İptal</button>
+    <button onclick="quickAddContactCheck(document.getElementById('contactNameCheck').value, document.getElementById('contactTypeCheck').value)" class="btn">Ekle</button>
+  </div>
+</dialog>
 
 <?php require_once __DIR__.'/layout_bottom.php'; ?>

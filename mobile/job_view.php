@@ -9,6 +9,29 @@ $msg='';
 
 stage_ajax_respond($pdo,$id); // aşama butonları AJAX (tüm sayfa yenilenmesin → donma yok)
 
+// İşi sil (admin-only, topx'tan ÖNCE)
+if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['delete_job'])){
+    if(!is_admin()){
+        $_SESSION['job_err']='Bu işlem için yetkiniz yok.';
+        header('Location: job_view.php?id='.$id); exit;
+    }
+    try{
+        try{ $pdo->exec("SET FOREIGN_KEY_CHECKS=0"); }catch(Throwable $e){}
+        // Alt kayıtları sil
+        foreach(['job_stages'=>'job_id','job_files'=>'job_id','job_notes'=>'job_id','tasks'=>'job_id'] as $ct=>$cf){
+            try{ $pdo->prepare("DELETE FROM `$ct` WHERE `$cf`=?")->execute([$id]); }catch(Throwable $e){}
+        }
+        // İşi sil
+        $pdo->prepare("DELETE FROM jobs WHERE id=?")->execute([$id]);
+        try{ $pdo->exec("SET FOREIGN_KEY_CHECKS=1"); }catch(Throwable $e){}
+        try{ if(function_exists('activity_log')) activity_log('Silme','İş silindi','jobs #'.$id,'','admin',null,'jobs.php','🗑'); }catch(Throwable $e){}
+        header('Location: jobs.php?deleted=1'); exit;
+    }catch(Throwable $e){
+        $_SESSION['job_err']='Silinemedi: '.$e->getMessage();
+        header('Location: job_view.php?id='.$id); exit;
+    }
+}
+
 // Sorumlu atama / durum güncelleme (çıktıdan önce)
 if($_SERVER['REQUEST_METHOD']==='POST'){
     try{
@@ -129,6 +152,14 @@ try{
     <button class="btn dark" name="save_job" value="1" style="width:100%;padding:13px;margin-top:8px">💾 Kaydet</button>
   </form>
 </details>
+
+<?php if($isAdmin): ?>
+<div class="panel">
+  <form method="post" onsubmit="return confirm('Bu işi ve bağlı tüm verileri KALICI olarak silmek istediğinize emin misiniz?')" style="margin:0">
+    <button class="btn" name="delete_job" value="1" style="width:100%;background:#dc2626;color:#fff;padding:12px;border-radius:14px">🗑 İşi Sil</button>
+  </form>
+</div>
+<?php endif; ?>
 
 <div class="panel">
   <b>🏭 Üretim Aşamaları</b>

@@ -34,10 +34,13 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['save_quote'])){
     if(!$lines) throw new Exception('En az bir kalem girin.');
     $firm=in_array($_POST['firm']??'',['ACANS','PRIMAC'],true)?$_POST['firm']:null;
     $vatAmt=$sub*$vat/100; $tot=$sub+$vatAmt; $no=next_quote_no();
+    $token=bin2hex(random_bytes(24));
     try{ $pdo->exec("ALTER TABLE quotes ADD COLUMN firm VARCHAR(20) DEFAULT NULL"); }catch(Throwable $e){}
     try{ $pdo->exec("ALTER TABLE quotes ADD COLUMN intro_note TEXT NULL"); }catch(Throwable $e){}
-    $pdo->prepare("INSERT INTO quotes(quote_no,firm,customer_id,customer_name,intro_note,quote_date,valid_until,vat_rate,subtotal,vat_amount,total,notes,status,created_by,created_by_name) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,'Taslak',?,?)")
-      ->execute([$no,$firm,$cid,$cname,trim($_POST['intro_note']??''),date('Y-m-d'),($_POST['valid_until']??'')?:null,$vat,$sub,$vatAmt,$tot,trim($_POST['notes']??''),$me,$meName]);
+    try{ $pdo->exec("ALTER TABLE quotes ADD COLUMN approval_token VARCHAR(64) NULL"); }catch(Throwable $e){}
+    try{ $pdo->exec("ALTER TABLE quotes ADD COLUMN approval_decision_at TIMESTAMP NULL"); }catch(Throwable $e){}
+    $pdo->prepare("INSERT INTO quotes(quote_no,firm,customer_id,customer_name,intro_note,quote_date,valid_until,vat_rate,subtotal,vat_amount,total,notes,status,approval_token,created_by,created_by_name) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,'Taslak',?,?,?)")
+      ->execute([$no,$firm,$cid,$cname,trim($_POST['intro_note']??''),date('Y-m-d'),($_POST['valid_until']??'')?:null,$vat,$sub,$vatAmt,$tot,trim($_POST['notes']??''),$token,$me,$meName]);
     $qid=(int)$pdo->lastInsertId();
     $ins=$pdo->prepare("INSERT INTO quote_items(quote_id,name,qty,unit_price,line_total) VALUES(?,?,?,?,?)");
     foreach($lines as $l){ $ins->execute([$qid,$l[0],$l[1],$l[2],$l[3]]); }
@@ -177,7 +180,8 @@ if($id && !$editMode){
     <b>📤 Teklifi gönder / yazdır</b>
     <button onclick="shareReportPDF(this)" class="btn" style="display:block;width:100%;background:#16a34a;color:#fff;padding:14px;margin-top:10px">📄 PDF İndir / Paylaş (WhatsApp/Mail)</button>
     <?php
-      $txt="📄 Teklif ".$q['quote_no']."\nMüşteri: ".$q['customer_name']."\nTutar: ".mm($q['total']).($q['valid_until']?"\nGeçerlilik: ".$q['valid_until']:'');
+      $approvalUrl=base_url().'quote_approve.php?token='.$q['approval_token'];
+      $txt="📄 Teklif ".$q['quote_no']."\nMüşteri: ".$q['customer_name']."\nTutar: ".mm($q['total']).($q['valid_until']?"\nGeçerlilik: ".$q['valid_until']:'')."\n\n✅ Onaylamak için: ".$approvalUrl;
       echo share_buttons($txt,$cphone,'Teklif '.$q['quote_no']);
     ?>
   </div>

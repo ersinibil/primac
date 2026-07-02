@@ -76,9 +76,9 @@ $cats=$pdo->query("SELECT c.*, p.name parent_name FROM product_categories c LEFT
 <section class="panel">
 <h2>Kategori Ağacı</h2>
 <table>
-<thead><tr><th>Kategori</th><th>Üst Kategori</th><th>Ürün</th><th>Durum</th><th>Düzenle</th></tr></thead>
+<thead><tr><th>Kategori</th><th>Üst Kategori</th><th>Ürün</th><th>Durum</th><th>Düzenle</th><th>Sil</th></tr></thead>
 <tbody>
-<?php foreach($cats as $c): ?>
+<?php foreach($cats as $c): $productCount=safe_count("SELECT COUNT(*) c FROM stock_items WHERE category_id=".(int)$c['id']); ?>
 <tr>
 <form method="post">
 <input type="hidden" name="id" value="<?=$c['id']?>">
@@ -91,16 +91,25 @@ $cats=$pdo->query("SELECT c.*, p.name parent_name FROM product_categories c LEFT
 <?php endforeach; ?>
 </select>
 </td>
-<td><?=safe_count("SELECT COUNT(*) c FROM stock_items WHERE category_id=".(int)$c['id'])?></td>
+<td><?=$productCount?></td>
 <td><label><input type="checkbox" name="active" <?=$c['active']?'checked':''?> style="width:auto"> Aktif</label></td>
 <td>
 <input type="number" name="sort_order" value="<?=h($c['sort_order'] ?? 0)?>" style="width:80px">
 <button class="btn small secondary" name="update" value="1">Kaydet</button>
 </td>
+<td>
+<?php if(can_edit_delete()): ?>
+<form method="post" action="sil.php" style="display:inline" onsubmit="return confirm('Kategori<?=$productCount>0?' '.$productCount.' ürün ile bağlı — ':' '?>silinemez mi?<?=$productCount>0?' (pasife alınacak)':' Emin misiniz?'?>')">
+<input type="hidden" name="t" value="product_category">
+<input type="hidden" name="id" value="<?=$c['id']?>">
+<button class="btn small danger" type="submit">🗑 Sil</button>
+</form>
+<?php endif; ?>
+</td>
 </form>
 </tr>
 <?php endforeach; ?>
-<?php if(!$cats): ?><tr><td colspan="5" class="muted">Kategori yok.</td></tr><?php endif; ?>
+<?php if(!$cats): ?><tr><td colspan="6" class="muted">Kategori yok.</td></tr><?php endif; ?>
 </tbody>
 </table>
 </section>

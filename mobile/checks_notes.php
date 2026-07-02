@@ -46,6 +46,13 @@ foreach($rows as $r){ if($r['status']==='portfoyde') $countPortfoyde++; }
   <label>Cari <small class="muted">(opsiyonel)</small></label>
   <select name="contact_id"><option value="">— Cari seçilmedi —</option>
   <?php foreach($contacts as $c): ?><option value="<?=$c['id']?>"><?=htmlspecialchars($c['name'])?></option><?php endforeach; ?></select>
+
+  <details style="margin-top:10px"><summary style="font-weight:700;cursor:pointer;color:#2563eb">+ Hızlı Cari Ekle</summary>
+  <div style="padding:8px;margin-top:8px;border-top:1px solid #e5e7eb">
+    <input type="text" id="qnContactName" placeholder="Müşteri adı" style="width:100%;border:1px solid #d0d5dd;border-radius:8px;padding:9px;margin-bottom:8px">
+    <button type="button" class="btn dark" style="width:100%" onclick="quickContactCheckMob(document.getElementById('qnContactName').value)">✓ Ekle</button>
+  </div>
+  </details>
   <label>Banka Adı <small class="muted">(çek ise)</small></label>
   <input name="bank_name">
   <label>Durum</label>
@@ -81,4 +88,30 @@ foreach($rows as $r){
 }
 ?>
 </div>
+
+<script>
+function quickContactCheckMob(name) {
+    if (!name) { alert('Ad girin'); return; }
+    const fd = new FormData();
+    fd.append('t', 'contact');
+    fd.append('name', name);
+    fd.append('contact_type', 'Müşteri');
+    fetch('../ajax_quick_add.php', {method: 'POST', body: fd})
+        .then(r => r.json())
+        .then(data => {
+            if (data.ok) {
+                const sel = document.querySelector('select[name="contact_id"]');
+                const opt = document.createElement('option');
+                opt.value = data.id;
+                opt.textContent = data.name;
+                opt.selected = true;
+                sel.appendChild(opt);
+                document.getElementById('qnContactName').value = '';
+                alert('Cari eklendi');
+            } else alert('Hata: ' + data.message);
+        })
+        .catch(e => alert('Hata: ' + e));
+}
+</script>
+
 <?php botx(); ?>

@@ -113,4 +113,57 @@ function stock_add_purchase_finance($pdo, $supplier, $total, $paymentMethod='Ver
         return ['ok'=>false, 'message'=>'Finansal kayıt başarısız: '.$e->getMessage()];
     }
 }
+
+/**
+ * Satış silme: stoku geri koy, stok hareketi sil, finans hareketi sil/geri al
+ * @param PDO $pdo
+ * @param int $saleId finance_movements kaydının ID'si (movement_type='sale' veya 'mobile_sale')
+ * @return array ['ok'=>bool, 'message'=>string]
+ */
+function stock_reverse_sale($pdo, $saleId){
+    require_once __DIR__.'/finance_lib.php';
+
+    try{
+        $saleId = (int)$saleId;
+        if($saleId < 1) return ['ok'=>false, 'message'=>'Geçersiz satış kaydı.'];
+
+        // Satış kaydını bul
+        $s = $pdo->prepare("SELECT * FROM finance_movements WHERE id=? AND (movement_type='sale' OR movement_type='mobile_sale')");
+        $s->execute([$saleId]);
+        $sale = $s->fetch();
+        if(!$sale) return ['ok'=>false, 'message'=>'Satış kaydı bulunamadı.'];
+
+        // İlişkili stok hareketini KESİN referansla (finance_movement_id) bul — 2026-07-03 denetiminde
+        // eski "aynı gün + en son eklenen" tahmini kaldırıldı, aynı gün birden fazla satışta yanlış
+        // kaydı buluyordu (migration 030: stock_movements.finance_movement_id).
+        $stk = $pdo->prepare("SELECT * FROM stock_movements WHERE finance_movement_id=? LIMIT 1");
+        $stk->execute([$saleId]);
+        $movement = $stk->fetch();
+
+        if($movement){
+            $itemId = $movement['stock_item_id'];
+            $qty = $movement['quantity'];
+
+            // Stoku geri koy
+            try{
+                $pdo->prepare("UPDATE stock_items SET quantity=quantity+? WHERE id=?")->execute([$qty, $itemId]);
+            }catch(Throwable $e){}
+
+            // Stok hareketini sil
+            try{
+                $pdo->prepare("DELETE FROM stock_movements WHERE id=?")->execute([$movement['id']]);
+            }catch(Throwable $e){}
+        }
+
+        // Finans hareketini geri al — finance_movement_delete() 'sale'/'mobile_sale' tipini kasıtlı
+        // olarak reddediyor (normal finans düzenleme ekranından dokunulmasın diye), bu yüzden burada
+        // bakiye geri alma + silme DOĞRUDAN yapılıyor (finance_movement_reverse_balance() ortak fonksiyonu).
+        finance_movement_reverse_balance($pdo, $sale);
+        $pdo->prepare("DELETE FROM finance_movements WHERE id=?")->execute([$saleId]);
+
+        return ['ok'=>true, 'message'=>'Satış silindi, stok ve bakiyeler geri alındı.'];
+    }catch(Throwable $e){
+        return ['ok'=>false, 'message'=>'Satış silme hatası: '.$e->getMessage()];
+    }
+}
 ?>

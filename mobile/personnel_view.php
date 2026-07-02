@@ -4,6 +4,31 @@ require_once __DIR__.'/../share_lib.php';
 block_personel();
 $pdo=db(); $id=(int)($_GET['id']??0); $ok=''; $er=''; $waCred='';
 
+/* Personeli sil (admin-only, topx'tan ÖNCE) */
+if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['delete_personnel'])){
+    if(!$isAdmin){
+        $_SESSION['pers_err']='Bu işlem için yetkiniz yok.';
+        header('Location: personnel_view.php?id='.$id); exit;
+    }
+    try{
+        // GÜVENLİK (2026-07-03 denetiminde bulundu): personel silinirken bağlı app_users hesabı
+        // pasife alınmıyordu — silinen personelin kullanıcı adı/şifresi (veya "beni hatırla" çerezi)
+        // hâlâ geçerli kalıp giriş yapabiliyordu. Personel silinmeden ÖNCE bağlı hesabı pasifleştir.
+        try{ $pdo->prepare("UPDATE app_users SET active=0 WHERE personnel_id=?")->execute([$id]); }catch(Throwable $e){}
+        try{ $pdo->exec("SET FOREIGN_KEY_CHECKS=0"); }catch(Throwable $e){}
+        // Alt kayıtları sil
+        $pdo->prepare("DELETE FROM personnel_devices WHERE personnel_id=?")->execute([$id]);
+        // Personeli sil
+        $pdo->prepare("DELETE FROM personnel WHERE id=?")->execute([$id]);
+        try{ $pdo->exec("SET FOREIGN_KEY_CHECKS=1"); }catch(Throwable $e){}
+        try{ if(function_exists('activity_log')) activity_log('Silme','Personel silindi','personnel #'.$id,'','admin',null,'personnel.php','🗑'); }catch(Throwable $e){}
+        header('Location: ../personnel.php?deleted=1'); exit;
+    }catch(Throwable $e){
+        $_SESSION['pers_err']='Silinemedi: '.$e->getMessage();
+        header('Location: personnel_view.php?id='.$id); exit;
+    }
+}
+
 if($_SERVER['REQUEST_METHOD']==='POST'){
     try{
         if(isset($_POST['save'])){
@@ -34,6 +59,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 }
 
 topx('Personel');
+if(!empty($_SESSION['pers_ok'])){ $ok=$_SESSION['pers_ok']; unset($_SESSION['pers_ok']); }
+if(!empty($_SESSION['pers_err'])){ $er=$_SESSION['pers_err']; unset($_SESSION['pers_err']); }
 try{
     $s=$pdo->prepare("SELECT * FROM personnel WHERE id=?"); $s->execute([$id]); $p=$s->fetch();
     if(!$p) throw new Exception('Personel bulunamadı.');
@@ -71,6 +98,14 @@ try{
   <button class="btn dark" name="save" value="1" style="width:100%;padding:13px;margin-top:8px">💾 Kaydet</button>
 </form>
 </div>
+
+<?php if($isAdmin): ?>
+<div class="panel">
+  <form method="post" onsubmit="return confirm('Bu personeli ve bağlı tüm verileri KALICI olarak silmek istediğinize emin misiniz?')" style="margin:0">
+    <button class="btn" name="delete_personnel" value="1" style="width:100%;background:#dc2626;color:#fff;padding:12px;border-radius:14px">🗑 Personeli Sil</button>
+  </form>
+</div>
+<?php endif; ?>
 
 <div class="panel"><b>🔑 Giriş Hesabı</b>
 <?php if($usr): ?>

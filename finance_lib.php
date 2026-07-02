@@ -2,6 +2,8 @@
 /* OTS Finans Hesapları (Kasa/Banka/Kredi Kartı/POS) — paylaşılan fonksiyonlar (web + mobil).
  * finance_accounts.php / finance_account_view.php / mobile/kasa.php / mobile/account_view.php ortak kullanır. */
 
+if(file_exists(__DIR__.'/audit_lib.php')) require_once __DIR__.'/audit_lib.php';
+
 function finance_account_types(){
     return ['Banka','Kasa','Kredi Kartı','POS','Diğer'];
 }
@@ -25,10 +27,20 @@ function finance_account_has_movements($pdo, $id){
 
 // Hesap bilgilerini günceller (ad/tür/banka/IBAN/kart/para birimi/not/aktif). Bakiye alanlarına dokunmaz.
 function finance_account_update($pdo, $id, array $data){
+    $id = (int)$id;
     $name = trim($data['name'] ?? '');
     if($name==='') throw new Exception('Hesap adı zorunlu.');
     $type = $data['account_type'] ?? 'Kasa';
     if(!in_array($type, finance_account_types(), true)) $type='Diğer';
+
+    // Audit log: eski değeri güncelleme öncesi oku
+    $oldRow = null;
+    try{
+        $s = $pdo->prepare("SELECT id,name,account_type,bank_name,iban,card_last4,currency,notes,active FROM finance_accounts WHERE id=?");
+        $s->execute([$id]);
+        $oldRow = $s->fetch();
+    }catch(Throwable $e){}
+
     $pdo->prepare("UPDATE finance_accounts SET name=?,account_type=?,bank_name=?,iban=?,card_last4=?,currency=?,notes=?,active=? WHERE id=?")
         ->execute([
             $name,
@@ -39,8 +51,25 @@ function finance_account_update($pdo, $id, array $data){
             trim($data['currency'] ?? '') ?: 'TRY',
             trim($data['notes'] ?? ''),
             !empty($data['active']) ? 1 : 0,
-            (int)$id
+            $id
         ]);
+
+    // Audit log: güncelleme işlemi başarılı, kaydı yap
+    $userId = current_user()['id'] ?? null;
+    if(function_exists('audit_log') && $oldRow){
+        audit_log($userId, 'update', 'finance_accounts', $id, $oldRow, [
+            'id'=>$oldRow['id'],
+            'name'=>$name,
+            'account_type'=>$type,
+            'bank_name'=>trim($data['bank_name'] ?? ''),
+            'iban'=>trim($data['iban'] ?? ''),
+            'card_last4'=>trim($data['card_last4'] ?? ''),
+            'currency'=>trim($data['currency'] ?? '') ?: 'TRY',
+            'notes'=>trim($data['notes'] ?? ''),
+            'active'=>!empty($data['active']) ? 1 : 0
+        ]);
+    }
+
     return true;
 }
 
@@ -50,11 +79,30 @@ function finance_account_update($pdo, $id, array $data){
 function finance_account_delete($pdo, $id){
     $id=(int)$id;
     if($id<1) return ['ok'=>false,'soft'=>false,'msg'=>'Geçersiz hesap.'];
+
+    // Audit log: silinecek hesabın eski halini oku
+    $oldRow = null;
+    try{
+        $s = $pdo->prepare("SELECT * FROM finance_accounts WHERE id=?");
+        $s->execute([$id]);
+        $oldRow = $s->fetch();
+    }catch(Throwable $e){}
+
+    $userId = current_user()['id'] ?? null;
+
     if(finance_account_has_movements($pdo,$id)){
         $pdo->prepare("UPDATE finance_accounts SET active=0 WHERE id=?")->execute([$id]);
+        // Audit log: soft-delete (pasife alma) kaydı
+        if(function_exists('audit_log') && $oldRow){
+            audit_log($userId, 'update', 'finance_accounts', $id, $oldRow, array_merge($oldRow, ['active'=>0]));
+        }
         return ['ok'=>true,'soft'=>true,'msg'=>'Bu hesapta finans hareketleri kayıtlı olduğu için kalıcı silinemedi, pasife alındı.'];
     }
     $pdo->prepare("DELETE FROM finance_accounts WHERE id=?")->execute([$id]);
+    // Audit log: kalıcı silme kaydı
+    if(function_exists('audit_log') && $oldRow){
+        audit_log($userId, 'delete', 'finance_accounts', $id, $oldRow, null);
+    }
     return ['ok'=>true,'soft'=>false,'msg'=>'Hesap silindi.'];
 }
 
@@ -121,6 +169,9 @@ function finance_movement_update($pdo, $id, array $data){
         throw new Exception('Bu hareket başka bir işlemden (satış/belge/transfer) otomatik oluşturulduğu için burada düzenlenemez.');
     }
 
+    // Audit log: eski değer (şimdiki row)
+    $oldRow = $row;
+
     $direction = ($data['direction'] ?? $row['direction'])==='in' ? 'in' : 'out';
     $amount = (float)str_replace(',', '.', (string)($data['amount'] ?? 0));
     if($amount<=0) throw new Exception('Tutar sıfırdan büyük olmalı.');
@@ -140,6 +191,25 @@ function finance_movement_update($pdo, $id, array $data){
         ->execute([$contactId,$catId,$direction,$amount,$channel,$accountId,$status,$date,$desc,$ref,$id]);
 
     finance_movement_apply_balance($pdo,$direction,$accountId,$amount);
+
+    // Audit log: yeni değer
+    $userId = current_user()['id'] ?? null;
+    if(function_exists('audit_log')){
+        audit_log($userId, 'update', 'finance_movements', $id, $oldRow, [
+            'id'=>$id,
+            'contact_id'=>$contactId,
+            'category_id'=>$catId,
+            'direction'=>$direction,
+            'amount'=>$amount,
+            'payment_channel'=>$channel,
+            'account_id'=>$accountId,
+            'status'=>$status,
+            'movement_date'=>$date,
+            'description'=>$desc,
+            'reference_no'=>$ref
+        ]);
+    }
+
     return true;
 }
 
@@ -154,5 +224,12 @@ function finance_movement_delete($pdo, $id){
     }
     finance_movement_reverse_balance($pdo,$row);
     $pdo->prepare("DELETE FROM finance_movements WHERE id=?")->execute([$id]);
+
+    // Audit log: silme kaydı
+    $userId = current_user()['id'] ?? null;
+    if(function_exists('audit_log')){
+        audit_log($userId, 'delete', 'finance_movements', $id, $row, null);
+    }
+
     return ['ok'=>true,'msg'=>'Hareket silindi, hesap bakiyesi güncellendi.'];
 }

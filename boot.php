@@ -22,7 +22,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 // Mobil cihaz → otomatik mobil arayüz (/mobile). Masaüstü görünümü için bir kez ?web=1.
 if (isset($_GET['web'])) $_SESSION['force_web'] = 1;
-$__mpub = ['public_file.php','cron.php','ics.php','icon.php','manifest.php','sw.php','kur.php','migrate.php','logout.php'];
+$__mpub = ['public_file.php','quote_approve.php','cron.php','ics.php','icon.php','manifest.php','sw.php','kur.php','migrate.php','logout.php'];
 if (empty($_SESSION['force_web'])
     && !empty($_SESSION['user'])
     && strpos($_SERVER['SCRIPT_NAME'] ?? '', '/mobile/') === false
@@ -72,6 +72,33 @@ function base_url(){
 }
 
 function require_login(){
+    // Idle timeout kontrolü — 2 saatlik inaktivite sonrası otomatik çıkış
+    $__idle_timeout = 60*60*2;  // 2 saat (saniye cinsinden)
+    if(!empty($_SESSION['user']) && !empty($_SESSION['last_activity'])){
+        if(time() - $_SESSION['last_activity'] > $__idle_timeout){
+            // Timeout geçmiş — oturumu kapat. session_destroy() tek başına $_SESSION array'ini
+            // TEMİZLEMEZ (PHP'nin bilinen davranışı) — elle boşaltmazsak bu istekte hâlâ dolu
+            // görünüp aşağıdaki remember_check()/require_login() kontrollerini yanıltır.
+            $_SESSION = [];
+            session_destroy();
+            // Remember-me çerezi varsa, otomatik giriş dene
+            if(!empty($_COOKIE['acans_remember'])){
+                remember_check();
+            }
+            // Hala oturum açılmamışsa login'e yönlendir
+            if(empty($_SESSION['user'])){
+                $ret = $_SERVER['REQUEST_URI'] ?? '';
+                if ($ret && $ret[0] === '/' && substr($ret,0,2) !== '//') {
+                    $_SESSION['return_to'] = $ret;
+                }
+                $dir = rtrim(str_replace('\\','/', dirname($_SERVER['SCRIPT_NAME'] ?? '/')), '/');
+                if (substr($dir, -7) === '/mobile') $dir = substr($dir, 0, -7);
+                redirect(($dir === '' ? '' : $dir) . '/index.php');
+            }
+            return;
+        }
+    }
+
     if(empty($_SESSION['user'])){
         // Girişten sonra geri dönmek için, gitmek istenen adresi sakla (sadece yerel yol)
         $ret = $_SERVER['REQUEST_URI'] ?? '';
@@ -84,6 +111,10 @@ function require_login(){
         if (substr($dir, -7) === '/mobile') $dir = substr($dir, 0, -7);
         redirect(($dir === '' ? '' : $dir) . '/index.php');
     }
+
+    // Oturum geçerli (timeout'tan geçti / yeni giriş) — son aktivite zamanını burada güncelle,
+    // yukarıdaki timeout kontrolünden SONRA olduğu için artık gerçek bir "fark" ölçülebiliyor.
+    $_SESSION['last_activity'] = time();
 }
 
 function current_user(){
@@ -302,6 +333,13 @@ function remember_check(){
     }catch(Throwable $e){}
 }
 remember_check();
+
+// Idle timeout: oturum açıksa, son aktivite zamanını güncelle. Bu SADECE require_login()'in
+// timeout kontrolünden SONRA, sayfa erişiminin GEÇERLİ olduğu onaylandıktan sonra çalışmalı —
+// burada koşulsuz çalıştırılırsa require_login() içindeki "time()-last_activity" farkı her
+// istekte ~0 olur ve idle-timeout hiçbir zaman tetiklenmez (2026-07-03 denetiminde bulundu).
+// require_login() zaten kendi içinde başarılı dönüşte last_activity'yi güncelliyor (aşağıya bak).
+
 // İşlem kaydı (kim ne yaptı) — web genelinde aktif olsun (mobilde common.php yüklüyor)
 if(is_file(__DIR__.'/activity_lib.php')) require_once __DIR__.'/activity_lib.php';
 // Geciken iş otomatik bildirimi (saatte bir, dosya kilidi ile) — giriş yapılmışsa

@@ -41,3 +41,63 @@ function acc_group_summary($pdo, $month, $year){
         $s->execute([$year,$month]); return $s->fetchAll();
     }catch(Throwable $e){ return []; }
 }
+
+// Muhasebe kaydını düzenler. Hesap bakiyesi: eski etkiyi geri al, yeni etkiyi uygula.
+function accounting_entry_update($pdo, $id, array $data){
+    $id=(int)$id;
+    // Eski kaydı al
+    $s=$pdo->prepare("SELECT * FROM accounting_entries WHERE id=?");
+    $s->execute([$id]);
+    $old=$s->fetch();
+    if(!$old) throw new Exception('Kayıt bulunamadı.');
+
+    $type=$data['type'] ?? $old['type'];
+    $amount=(float)str_replace(',','.',$data['amount'] ?? $old['amount']);
+    $date=$data['entry_date'] ?? $old['entry_date'];
+    $catId=(int)($data['category_id']??$old['category_id']) ?: null;
+    $desc=trim($data['description'] ?? $old['description'] ?? '');
+    $refNo=trim($data['reference_no'] ?? $old['reference_no'] ?? '');
+    $accId=(int)($data['account_id']??$old['account_id']) ?: null;
+    $pid=(int)($data['personnel_id']??$old['personnel_id']) ?: null;
+    $pt=trim($data['payment_type'] ?? $old['payment_type'] ?? '');
+
+    if($amount<=0) throw new Exception('Tutar sıfırdan büyük olmalı.');
+
+    // Eski hesap bakiyesini geri al — YÖN TERS ÇEVRİLİR (gelir eklemişti → şimdi çıkar, gider çıkarmıştı → şimdi ekle)
+    if($old['account_id']){
+        $dir=$old['type']==='gelir'?'-':'+';
+        try{ $pdo->prepare("UPDATE finance_accounts SET current_balance=current_balance{$dir}? WHERE id=?")->execute([$old['amount'],$old['account_id']]); }catch(Throwable $e){}
+    }
+
+    // Kaydı güncelle
+    $pdo->prepare("UPDATE accounting_entries SET entry_date=?,type=?,category_id=?,amount=?,description=?,reference_no=?,account_id=?,personnel_id=?,payment_type=? WHERE id=?")
+        ->execute([$date,$type,$catId,$amount,$desc,$refNo,$accId,$pid,$pt,$id]);
+
+    // Yeni hesap bakiyesini uygula
+    if($accId){
+        $dir=$type==='gelir'?'+':'-';
+        try{ $pdo->prepare("UPDATE finance_accounts SET current_balance=current_balance{$dir}? WHERE id=?")->execute([$amount,$accId]); }catch(Throwable $e){}
+    }
+
+    return true;
+}
+
+// Muhasebe kaydını siler, hesap bakiyesini geri alır.
+function accounting_entry_delete($pdo, $id){
+    $id=(int)$id;
+    if($id<1) return ['ok'=>false,'msg'=>'Geçersiz kayıt.'];
+
+    $s=$pdo->prepare("SELECT * FROM accounting_entries WHERE id=?");
+    $s->execute([$id]);
+    $row=$s->fetch();
+    if(!$row) return ['ok'=>false,'msg'=>'Kayıt bulunamadı.'];
+
+    // Hesap bakiyesini geri al — YÖN TERS ÇEVRİLİR (gelir eklemişti → şimdi çıkar, gider çıkarmıştı → şimdi ekle)
+    if($row['account_id']){
+        $dir=$row['type']==='gelir'?'-':'+';
+        try{ $pdo->prepare("UPDATE finance_accounts SET current_balance=current_balance{$dir}? WHERE id=?")->execute([$row['amount'],$row['account_id']]); }catch(Throwable $e){}
+    }
+
+    $pdo->prepare("DELETE FROM accounting_entries WHERE id=?")->execute([$id]);
+    return ['ok'=>true,'msg'=>'Kayıt silindi, hesap bakiyesi güncellendi.'];
+}

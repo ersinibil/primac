@@ -45,7 +45,8 @@ try{
     if($t['due_date']) echo ' · 📅 '.htmlspecialchars($t['due_date']).($geç?' <span style="color:#f87171;font-weight:900">GECİKMİŞ</span>':'');
     echo '</small>';
     echo '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">';
-    if($t['job_real']) echo '<a class="btn" href="job_view.php?id='.(int)$t['job_real'].'" style="background:#334155;color:#fff;flex:1;text-align:center">İş Detayı</a>';
+    echo '<a class="btn" href="task_view.php?id='.(int)$t['id'].'" style="background:#667085;color:#fff;flex:1;text-align:center">📝 Detay</a>';
+    if($t['job_real']) echo '<a class="btn" href="job_view.php?id='.(int)$t['job_real'].'" style="background:#334155;color:#fff;flex:1;text-align:center">📋 İş Detayı</a>';
     $tTxt="📝 Görev: ".$t['title'].($t['job_no']?"\nİş: ".$t['job_no']:'')."\nDurum: ".$t['status'].($t['due_date']?"\nTermin: ".$t['due_date']:'').($t['description']?"\n".$t['description']:'');
     echo '<a class="btn" href="'.htmlspecialchars(wa_link($tTxt,$t['pphone']??'')).'" target="_blank" rel="noopener" style="background:#16a34a;color:#fff;flex:1;text-align:center">📲 Gönder</a>';
     if($f!=='done'){

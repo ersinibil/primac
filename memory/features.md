@@ -2,6 +2,147 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
+## Büyük dalga sonrası kritik düzeltmeler (2026-07-03)
+Bu oturumda paralel çalışan çok sayıda ajanın ürettiği özellikler (Görevler, Satın alma raporu,
+Satış+hızlı ekleme, İş/Personel mobil silme, Muhasebe+kasa gizleme, Audit log+oturum, Mobil
+offline+barkod, WhatsApp teklif onayı, Dashboard trend) güvenlik+kod incelemesinden geçirildi.
+Bulunan KRİTİK sorunlar (hepsi bu commit'te düzeltildi):
+- **`boot.php` oturum zaman aşımı hiç çalışmıyordu** (dead code) — last_activity her istekte
+  koşulsuz yenileniyordu, timeout kontrolü hep ~0 fark görüyordu. Yenileme artık SADECE
+  `require_login()`'in timeout kontrolünden SONRA yapılıyor.
+- **`boot.php` `session_destroy()` sonrası `$_SESSION` temizlenmiyordu** — aynı istekte "çıkış"
+  fiilen etkisizdi (PHP'nin session_destroy() davranışı, array'i elle boşaltmak gerekiyor). `$_SESSION=[]` eklendi.
+- **`mobile/personnel_view.php` + `sil.php`: silinen personelin `app_users` hesabı aktif kalıyordu**
+  — kişi sistemden silinse bile kullanıcı adı/şifresiyle (veya "beni hatırla" çereziyle) giriş
+  yapmaya devam edebiliyordu. Personel silinmeden önce bağlı hesap artık `active=0` yapılıyor.
+- **`accounting_lib.php` bakiye geri-alma işaret hatası** — muhasebe kaydı düzenlenirken/silinirken
+  eski etki geri alınacağına AYNI YÖNDE tekrar uygulanıyordu (gelir sildikçe bakiye artıyordu).
+  Yön düzeltildi (`finance_lib.php`'deki doğru referans desenle uyumlu hale getirildi).
+- **`mobile/stock.php` geçersiz PHP sözdizimi** (`'BarcodeDetector' in window` JS operatörü PHP'ye
+  sızmış) — TÜM stock.php sayfasını tüm kullanıcılar için kırıyordu (Fatal parse error). Düzeltildi,
+  buton her zaman basılıp görünürlüğü JS'e bırakıldı.
+- **`task_new.php` geçersiz PHP sözdizimi** (`??')===` — tırnak/parantez kayması) — tüm sayfayı
+  kırıyordu. Düzeltildi.
+- **`mobile/sw.js` cache-first stratejisi TÜM `.php` sayfalarını (bildirim/mesaj sayısı, bakiye
+  içeren dinamik içerik dahil) önbellekten dönüyordu** — kullanıcı sinyali olsa bile hep ESKİ veri
+  görüyordu. Sadece gerçek statik varlıklar (js/css/görsel/icon.php/manifest.php) cache-first kaldı,
+  dinamik `.php` sayfaları network-first'e çevrildi (cache sadece offline fallback). Versiyon v27.
+- **`stock_lib.php` `stock_reverse_sale()` satış silmede YANLIŞ stok hareketini buluyordu**
+  ("aynı gün + en son eklenen" tahmini — aynı gün birden fazla satışta yanlış ürünün stoku
+  bozulabiliyordu) VE finans kaydı asla silinemiyordu (`finance_movement_delete()` 'sale'/
+  'mobile_sale' tipini kasıtlı reddediyor). Migration 030: `stock_movements.finance_movement_id`
+  kesin referans kolonu eklendi, `sales.php`/`mobile/sales.php` artık önce finans kaydını oluşturup
+  id'sini stok hareketine yazıyor; `stock_reverse_sale()` artık bu kesin referansla eşleşiyor ve
+  finans bakiyesini/kaydını `finance_movement_reverse_balance()` ile doğrudan (whitelist'i atlayarak,
+  bu özel akış için) geri alıyor. `sil.php`'nin `$map`'inde `'sale'` anahtarı hiç yoktu (t=sale
+  bloğu dead code'du) — eklendi.
+- **`mobile/sales.php` satış silme butonu `block_personel(true,'edit_delete')` gibi var olmayan bir
+  imzayla çağrılıyordu** — `block_personel()` parametre almıyor, `!null` her zaman true olduğu için
+  admin dahil HERKES "yetkiniz yok" hatası alıyordu. `can_edit_delete()` ile değiştirildi.
+- **`quote_approve.php` (girişsiz teklif onay sayfası) durum değişikliğini sunucu tarafında
+  kilitlemiyordu** — token'ı bilen biri Kabul/Red kararını sınırsız tekrar değiştirebiliyordu
+  (replay). `UPDATE ... WHERE status NOT IN('Kabul','Red')` + `rowCount()` kontrolü eklendi.
+- Düşük öncelikli, bu oturumla ilgisiz (dokunulmadı, sadece not): `report_lib.php`'nin `tahsilat`/
+  `muhasebe` case'leri `'report'` yetkisiyle açılıyor, `finance`/`muhasebe` yetkisinden bağımsız —
+  bu yüzden hem `report` hem `muhasebe` (ama `finance` değil) yetkisi olan biri finans hareket
+  detaylarını görebilir (current_balance değil, ama tutar/kategori kırılımı). İleride ele alınmalı.
+
+## Dashboard Trend & Karşılaştırma Grafikleri (2026-07-03)
+- **Web Dashboard (dashboard.php)**:
+  - "Bu Ay vs Geçen Ay Karşılaştırması" paneli: Tahsilat, Ödeme/Gider, Yeni Açılan İş, Tamamlanan İş metriklerinin bu ay vs geçen ay karşılaştırması.
+  - Her metriğin yanında yüzde değişim göstergesi (▲ yeşil artan, ▼ kırmızı azalan, → griyle sabit).
+  - "Son 6 Ay Trend" grafiği: Tahsilat ve Ödeme/Gider için aylık toplamlarını gösteren bar chart (native CSS, report_lib.php'deki deseniyle tutarlı).
+  - "Dikkat - Geciken İşler & Kritik Stok" uyarı panosu: Gecikmiş iş sayısı + en kritik 5 işin listesi (iş numarası, başlık, kaç gün gecikmiş — job_view.php'ye link).
+  
+- **Mobil Dashboard (mobile/index.php)**:
+  - "Bu Ay vs Geçen Ay" kartı: Tahsilat ve Ödeme tutarlarının bu ay/geçen ay gösterimi (basitleştirilmiş, mobil ekrana sığacak şekilde).
+  - "Dikkat" uyarı kartı: Gecikme sayısı ve kritik stok sayısı grid'de, "Geciken İşleri Gör" butonu.
+
+## Teklif onayı WhatsApp üzerinden (2026-07-03)
+- **Müşteri tarafından giriş yapmadan onay/red**: `quotes` tablosuna `approval_token (VARCHAR(64))` ve `approval_decision_at (TIMESTAMP NULL)` kolonları eklendi (migration 029).
+- **Yeni `quote_approve.php` (girişsiz)**: `public_file.php` ile aynı desen — token ile teklifi bulup salt-okunur gösterir. Müşteri "✅ Kabul Ediyorum" / "❌ Reddetme" tıklayıp karar verir. Hemen `quotes.status` güncellenir (Kabul/Red).
+- **Teklif oluşturunda token üret**: `teklif.php` (web) + `mobile/teklif.php`, yeni teklif INSERT'inde `approval_token=bin2hex(random_bytes(24))` oluşturuluyor (48 karakter hex, tahmin edilemez).
+- **WhatsApp paylaşım linki genişletme**: `share_buttons()` çağrısından önceki metin (`$txt`) artık onay linkini içeriyor: `✅ Onaylamak için: [quote_approve.php?token=...]` satırı eklendi (web+mobil parite).
+- **Müşteri kararına bildirim**: Onay/red sonrasında teklifi oluşturan personele `internal_notifications`'a otomatik bildirim yazılıyor (title: "✅ Teklif Kabul" vb., action_url: teklif detay sayfası). `activity_log` da kaydediliyor (✅/❌ ikonu ile).
+- **Güvenlik**: token tahmin edilemez uzunluğu, SQL prepared statement, XSS'e karşı `htmlspecialchars`, `public_file.php` deseniyle tutarlı.
+- **boot.php güncelleme**: `quote_approve.php` → `$__mpub` listesine eklendi (mobil yönlendirme tuzağından kurtarıldı).
+
+## Mobil PWA — Offline çalışma + Barkod/QR okutma (2026-07-03)
+- **Gerçek offline çalışma (Service Worker cache)**:
+  - `mobile/sw.js`: CACHE versiyonu `v26`'ya güncellendi. `install` event'inde statik kaynaklar (manifest.php, icon.php, .js, .css, resimler) önbelleğe alınıyor. `fetch` event: GET istekleri önce cache'e bak, yoksa network'e git, başarılıysa cache güncelle (stale-while-revalidate + network fallback). POST istekleri hiçbir zaman cache'lenmiyor.
+  - `mobile/common.php`: Offline banner HTML + CSS eklendi (kırmızı uyarı, "📴 Offline — Sinyal bulunamadı"). JS: `navigator.onLine` ile durum izleniyor, online/offline event'lerine tepki veriyor.
+  - Aktivasyon: eski cache versiyonları (v25 vb.) otomatik silinip yeni cache doldurulur — kullanıcıya manuel cache temizleme gerek yok.
+
+- **Barkod/QR okutma (stok işlemleri)**:
+  - `mobile/stock.php`: Tarayıcı BarcodeDetector API'sini destekliyorsa (Chrome/Android) "📷 Barkod Okut" butonu gösterilir (feature-detection: `if('BarcodeDetector' in window)`). iOS Safari kısmi/desteklenmiyor → buton gizli kalır (uygulama bozulmuyor).
+  - Modal + video stream: getUserMedia ile arka kameryi başlat → BarcodeDetector ile EAN-13/QR/Code-128 vb. formatları oku. Oktu sonra ürün listesini fetch → taranan kod ile product_code/barcode alanında eşleş → bulunursa product_view.php?id=X'e otomatik yönlendir.
+  - Fallback: BarcodeDetector desteklenmediğinde buton gösterilmiyor (graceful degradation). Kamera izni reddedilirse alert + modal kapat.
+  - Web tarafına eklenmedi (mobil PWA'ya özgü özellik, desktop kullanıcısı için gerekli değil).
+
+- **Teknik detaylar**: PDO prepared statement (yok, cache/offline işlemi). PHP 7.2 uyumlu. PRG deseni (yok, form POST değil). Mobil-Web parite (gerekli değil, native mobil cihaz özelliği).
+
+## Satış modülü: düzenle/sil + sidebar linki + hızlı cari/ürün ekleme (2026-07-03)
+- **Satış düzenle/sil**: Web `sales.php` ve mobil `mobile/sales.php`'de silme butonu eklendi. Satış
+  silişi `stock_lib.php`'deki yeni `stock_reverse_sale()` fonksiyonu üzerinden — stok geri koyuluyor
+  (stok_items.quantity+=), stok hareketi silinip, finans hareketi `finance_movement_delete()` (finance_lib.php)
+  üzerinden geri alınıyor (bakiye sıfırlanıyor). Silme yetkisi `can_edit_delete()` ile korumalı (admin VEYA
+  ayrı verilen 'edit_delete' izni), `sil.php` üzerinden (`t=sale`). `$editDeleteTypes`'a `'sale'` eklendi.
+- **Web sidebar**: "Satış" linki `layout_top.php`'de Ürün/Stok grubuna eklendi.
+- **Hızlı cari/ürün ekleme**: Yeni `ajax_quick_add.php` endpoint'i — `t=contact|product` ile minimal ad
+  kaydı oluşturup JSON id döner. Web'de HTML5 `<dialog>` (sales/purchase/checks_notes.php), mobilde
+  `<details>` inline form (mobile/sales/purchase/checks_notes.php). Aynı endpoint, no code duplication.
+  Yetkilendirme: `user_can('contacts')` / `user_can('stock')`.
+- PHP 7.2 uyumlu, tüm SQL prepared statement, web+mobil parite.
+
+## Muhasebe kaydı düzenleme + ürün kategorisi silme + güvenlik kontrolü (2026-07-03)
+- **Muhasebe kaydı düzenleme**: `accounting_lib.php`'ye `accounting_entry_update()` ve `accounting_entry_delete()` fonksiyonları eklendi — hesap bakiyesini "eski etkiyi geri al, yeni etkiyi uygula" desenine göre yönetiyor (finance_lib.php ile tutarlı). Web `accounting.php` ve mobil `mobile/accounting.php`'ye her kaydın yanında ✏️ Düzenle butonu + inline/details açılır düzenleme formu eklendi. Silme yetkisi `is_admin()`'den `can_edit_delete()`'e taşındı (tutarlılık).
+- **Ürün kategorisi silme**: `product_categories.php`'ye 🗑 Sil butonu eklendi. Kategori kullanımdaysa `active=0` soft-delete, kullanılmıyorsa kalıcı silinir (finance_accounts.php deseni). `sil.php`'ye `'product_category'` case'i eklendi.
+- **Muhasebe personeli hesap bakiyesi güvenlik**: Kontrol sonucu sızıntı YOK. Muhasebe personeli sadece `'muhasebe'` yetkisine sahip, `'finance'`/`'report'` erişemez. `accounting.php`'deki hesap dropdown'unda bakiye gösterilmez. Boot.php'deki otomatik koruma garantiliyor.
+- `sil.php`: `$editDeleteTypes` listesine `'accounting'`, `'product_category'` eklendi.
+
+## İki güvenlik iyileştirmesi: Değişmez denetim günlüğü + oturum zaman aşımı (2026-07-03)
+### 1) Denetim Günlüğü (Audit Log)
+- **Migration 028_audit_log.sql**: Yeni `audit_log` tablosu — `id, user_id, action (create/update/delete), table_name, record_id, old_value LONGTEXT, new_value LONGTEXT, ip_address, created_at` ile değişmez denetim kaydı.
+- **audit_lib.php** (yeni, web+mobil ortak): `audit_log($userId, $action, $table, $recordId, $oldValue, $newValue)` fonksiyonu. Eski/yeni değerler JSON'a dönüştürülür. try/catch sarılı — audit yazımı ana işlemi asla bozmasın.
+- **finance_lib.php** entegrasyonu: 4 kritik finansal fonksiyonda audit_log çağrısı:
+  - `finance_account_update()`: hesap düzenleme (ad/tür/banka/IBAN/not/aktif)
+  - `finance_account_delete()`: hesap silme (soft-delete kaydı)
+  - `finance_movement_update()`: hareket düzenleme (tahsilat/ödeme)
+  - `finance_movement_delete()`: hareket silme
+  Her işlemde eski satır UPDATE/DELETE ÖNCESINDE okunup, işlem başarılı olduktan sonra audit kaydı yapılıyor.
+- **Web görüntüleme**: Yeni `audit_log.php` (admin/users yetkisi zorunlu), tarih/kullanıcı/tablo filtreli liste (LIMIT 300, en yeni en üstte). JSON old/new değerler `<details>` açılır detay olarak gösterilir.
+- **Sidebar linki**: `layout_top.php` "İzleme" bölümüne "🔍 Denetim Günlüğü" kartı eklendi (admin/users yetkisiyle).
+
+### 2) Oturum Zaman Aşımı (Idle Timeout)
+- **boot.php güncelleme**: `require_login()` içine idle timeout (2 saat inaktivite) kontrol eklendi. Session kapalı ise, remember-me çerezi varsa otomatik giriş, yoksa login sayfasına yönlendir.
+- **Her istekte aktivite güncellemesi**: `$_SESSION['last_activity'] = time()` (boot.php'de remember_check sonrası).
+- **Remember-me uyumluluğu**: Timeout nedeniyle session kapalı olsa bile, remember-me çerezi geçerliyse otomatik giriş (kullanıcı deneyimi bozulmaz). Manual logout remember_clear() çağırıyor.
+
+## Görevler (tasks) modülü düzenle/sil + Personel görünümü + Satın alma raporu (2026-07-03)
+- **Görevler modülü (web + mobil parite)**:
+  - `tasks.php` (web): görev başlığı/açıklaması/termin/öncelik/atanan personel artık düzenlenebiliyor (inline form, `<details>` açılır). Silme işlemi `can_edit_delete()` ile kontrol ediliyor.
+  - `task_new.php` (web, yeni): görev oluşturma sayfası — personel seçimi, bildirim + iç mesaj otomasyonu.
+  - `mobile/task_view.php` (mobil, yeni): görev detayı + düzenle + sil — durum değiştirme, personel atama, silme işlemleri.
+  - `mobile/mytasks.php`: "📝 Detay" linki eklendi (task_view.php'ye).
+  - `sil.php`: `$editDeleteTypes` listesine `'task'` eklendi.
+  - **Personel bazlı filtreleme/görünüm**: `tasks.php` dropdown filtreleme (açık işlerde personel seçilecek), sıralama personel+termin tarihine göre (geciken işler ilk).
+  - **Geciken görev göstergesi**: tarih geçmiş görevler kırmızı ve `⏰` ikon ile vurgulnıyor.
+
+- **Görevler rapor modülü** (`report_lib.php`):
+  - `rpt('gorevler', ...)` case: Oluşturulan/Tamamlanan/Açık/Geciken metrikleri, duruma göre grafik, personel bazlı tablo.
+
+- **Satın alma raporu** (`report_lib.php`):
+  - `rpt('satinalma', ...)` case: Toplam tutarı, tedarikçi bazlı dağılım, ödeme yöntemi dağılımı, detay tablosu.
+  - `stock_lib.php` ile entegrasyon: `movement_type='purchase'` ile satın alma hareketleri işaretleniyor.
+
+- **Teknik**: PHP 7.2 uyumlu, prepared statements, PRG deseni, `can_edit_delete()` tutarlılığı.
+
+## Mobil İş/Personel silme (2026-07-03)
+- **mobile/job_view.php**: İş silme butonu eklendi (admin-only). Silme anında job_stages, job_files, job_notes, tasks alt kayıtları da temizleniyor (web'deki sil.php mantığıyla tutarlı).
+- **mobile/personnel_view.php**: Personel silme butonu eklendi (admin-only). Silme anında personnel_devices alt kayıtları temizleniyor. app_users.personnel_id referansı yetim kalıyor (mevcut sil.php'deki tutarsızlık korunmuş — ileride FK kaskad DELETE veya app_users.personnel_id SET NULL yapılabilir, ama bugünkü oturumda tutarlılık sağlamak için sil.php davranışı kopyalandı).
+- Her iki silme işlemi de PRG deseni kullanıyor (POST → redirect).
+- Silme formu JS `confirm()` ile onay istiyoruz.
+
 ## Mobil menü/yetki tutarsızlığı düzeltmesi + kritik açık kapatma (2026-07-03)
 - Bugünkü mobil menü (isAdmin→user_can()) refactor'ü sonrası güvenlik denetiminde bulundu: bazı
   kartlar `user_can()` ile açılıyordu ama hedef sayfa hâlâ `block_personel()` (admin-only) kilitliydi
