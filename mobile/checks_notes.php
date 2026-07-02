@@ -34,7 +34,7 @@ foreach($rows as $r){ if($r['status']==='portfoyde') $countPortfoyde++; }
 </div>
 
 <details class="panel"><summary style="font-weight:900;cursor:pointer">➕ Yeni Çek / Senet Kaydı</summary>
-<form method="post" style="margin-top:10px">
+<form method="post" style="margin-top:10px" enctype="multipart/form-data">
   <label>Tür</label>
   <select name="type"><?php foreach($typeOpts as $tk=>$tl): ?><option value="<?=$tk?>"><?=htmlspecialchars($tl)?></option><?php endforeach; ?></select>
   <label>Numara</label>
@@ -52,6 +52,8 @@ foreach($rows as $r){ if($r['status']==='portfoyde') $countPortfoyde++; }
   <select name="status"><?php foreach($statusOpts as $sk=>$sl): ?><option value="<?=$sk?>" <?=$sk==='portfoyde'?'selected':''?>><?=htmlspecialchars($sl)?></option><?php endforeach; ?></select>
   <label>Not</label>
   <textarea name="notes" rows="2"></textarea>
+  <label>Fotoğraf / Dosya <small class="muted">(opsiyonel, jpg/png/webp/gif/pdf, en fazla 15 MB)</small></label>
+  <input type="file" name="attachment" accept=".jpg,.jpeg,.png,.webp,.gif,.pdf">
   <button class="btn dark" name="add_cn" value="1" style="width:100%;padding:13px;margin-top:8px">💾 Kaydet</button>
 </form>
 </details>
@@ -71,8 +73,9 @@ foreach($rows as $r){
     $upcoming = $r['status']==='portfoyde' && $r['due_date'] && $r['due_date']>=$today && $r['due_date']<=$soon;
     $color = $overdue ? '#f87171' : ($upcoming ? '#f59e0b' : '#4ade80');
     $ic = $r['type']==='senet' ? '📝' : '🧾';
+    $att = !empty($r['attachment']) ? ' 📎' : '';
     echo '<a class="item" href="check_note_view.php?id='.(int)$r['id'].'" style="display:flex;justify-content:space-between;align-items:center">'
-       .'<span>'.$ic.' <b>'.htmlspecialchars($typeOpts[$r['type']]??$r['type']).' '.htmlspecialchars($r['number']?:'').'</b><br>'
+       .'<span>'.$ic.' <b>'.htmlspecialchars($typeOpts[$r['type']]??$r['type']).' '.htmlspecialchars($r['number']?:'').$att.'</b><br>'
        .'<small class="muted">'.htmlspecialchars(($r['contact_name']?:'-').' · '.($r['due_date']?:'Vadesiz').($overdue?' ⚠️':($upcoming?' ⏳':''))).'</small></span>'
        .'<b style="color:'.$color.'">'.mm($r['amount']).'</b></a>';
 }

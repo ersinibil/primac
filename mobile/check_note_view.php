@@ -52,6 +52,7 @@ try{
     <small class="muted">Durum: <?=htmlspecialchars($statusOpts[$r['status']]??$r['status'])?></small>
   </div>
   <?php if($r['notes']): ?><div style="margin-top:8px"><?=nl2br(htmlspecialchars($r['notes']))?></div><?php endif; ?>
+  <?php if(!empty($r['attachment'])): ?><div style="margin-top:8px"><a href="<?=htmlspecialchars(base_url().$r['attachment'])?>" target="_blank">📎 Dosyayı Gör</a></div><?php endif; ?>
   <?php if(can_edit_delete()): ?>
   <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
     <form method="post" style="margin:0" onsubmit="return confirm('Bu kaydı silmek istediğinize emin misiniz?')">
@@ -65,7 +66,7 @@ try{
 <?php if(can_edit_delete()): ?>
 <details class="panel">
   <summary style="font-weight:900;cursor:pointer">✏️ Kaydı Düzenle</summary>
-  <form method="post" style="margin-top:10px">
+  <form method="post" style="margin-top:10px" enctype="multipart/form-data">
     <label>Tür</label>
     <select name="type"><?php foreach($typeOpts as $tk=>$tl): ?><option value="<?=$tk?>" <?=$r['type']===$tk?'selected':''?>><?=htmlspecialchars($tl)?></option><?php endforeach; ?></select>
     <label>Numara</label>
@@ -83,6 +84,8 @@ try{
     <select name="status"><?php foreach($statusOpts as $sk=>$sl): ?><option value="<?=$sk?>" <?=$r['status']===$sk?'selected':''?>><?=htmlspecialchars($sl)?></option><?php endforeach; ?></select>
     <label>Not</label>
     <textarea name="notes" rows="2"><?=htmlspecialchars($r['notes']??'')?></textarea>
+    <label>Fotoğraf / Dosya <small class="muted">(yeni seçilirse eskisinin yerine geçer, boş bırakılırsa korunur)</small></label>
+    <input type="file" name="attachment" accept=".jpg,.jpeg,.png,.webp,.gif,.pdf">
     <button class="btn dark" name="edit_cn" value="1" style="width:100%;padding:13px;margin-top:8px">💾 Kaydet</button>
   </form>
 </details>

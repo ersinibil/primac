@@ -63,7 +63,7 @@ $soon=date('Y-m-d', strtotime('+7 days'));
 
 <section class="panel">
 <h2>Yeni Çek / Senet Kaydı</h2>
-<form method="post" class="form-grid">
+<form method="post" class="form-grid" enctype="multipart/form-data">
 
 <label>Tür
 <select name="type">
@@ -110,6 +110,10 @@ $soon=date('Y-m-d', strtotime('+7 days'));
 <textarea name="notes" rows="2"></textarea>
 </label>
 
+<label class="full">Fotoğraf / Dosya <small style="font-weight:400;color:#667085">(çekin/senedin fotoğrafı, opsiyonel — jpg/png/webp/gif/pdf, en fazla 15 MB)</small>
+<input type="file" name="attachment" accept=".jpg,.jpeg,.png,.webp,.gif,.pdf">
+</label>
+
 <button class="btn" name="save_cn" value="1">Kaydet</button>
 </form>
 </section>
@@ -129,7 +133,7 @@ $soon=date('Y-m-d', strtotime('+7 days'));
 </div>
 
 <table>
-<thead><tr><th>Tür</th><th>No</th><th>Tutar</th><th>Vade</th><th>Cari</th><th>Banka</th><th>Durum</th><th>İşlem</th></tr></thead>
+<thead><tr><th>Tür</th><th>No</th><th>Tutar</th><th>Vade</th><th>Cari</th><th>Banka</th><th>Durum</th><th>Dosya</th><th>İşlem</th></tr></thead>
 <tbody>
 <?php
 foreach($rows as $r){
@@ -147,6 +151,9 @@ foreach($rows as $r){
     echo "<td>".h($r['bank_name'] ?: '-')."</td>";
     echo "<td>".badge($statusOpts[$r['status']] ?? $r['status'], $statusTone)."</td>";
     echo "<td>";
+    if(!empty($r['attachment'])) echo "<a href='".h(base_url().$r['attachment'])."' target='_blank'>📎 Dosyayı Gör</a>"; else echo "<span class='muted'>-</span>";
+    echo "</td>";
+    echo "<td>";
     if(can_edit_delete()){
         echo "<button type='button' class='btn small secondary' onclick=\"document.getElementById('edit-cn-".$rid."').style.display=(document.getElementById('edit-cn-".$rid."').style.display==='none'?'table-row':'none')\">✏️ Düzenle</button> ";
         echo "<form method='post' style='display:inline' onsubmit=\"return confirm('Bu kaydı silmek istediğinize emin misiniz?')\">"
@@ -158,8 +165,8 @@ foreach($rows as $r){
     echo "</tr>";
 
     if(can_edit_delete()){
-    echo "<tr id='edit-cn-".$rid."' style='display:none;background:#f9fafb'><td colspan='8'>";
-    echo "<form method='post' class='form-grid' style='margin:10px 0'>";
+    echo "<tr id='edit-cn-".$rid."' style='display:none;background:#f9fafb'><td colspan='9'>";
+    echo "<form method='post' class='form-grid' style='margin:10px 0' enctype='multipart/form-data'>";
     echo "<input type='hidden' name='id' value='".$rid."'>";
     echo "<label>Tür<select name='type'>";
     foreach($typeOpts as $tk=>$tl){ echo "<option value='".h($tk)."' ".($r['type']===$tk?'selected':'').">".h($tl)."</option>"; }
@@ -175,12 +182,15 @@ foreach($rows as $r){
     foreach($statusOpts as $sk=>$sl){ echo "<option value='".h($sk)."' ".($r['status']===$sk?'selected':'').">".h($sl)."</option>"; }
     echo "</select></label>";
     echo "<label class='full'>Not<textarea name='notes' rows='2'>".h($r['notes'])."</textarea></label>";
+    echo "<label class='full'>Fotoğraf / Dosya <small style='font-weight:400;color:#667085'>(yeni dosya seçilirse eskisinin yerine geçer, boş bırakılırsa mevcut korunur)</small>";
+    if(!empty($r['attachment'])) echo " — <a href='".h(base_url().$r['attachment'])."' target='_blank'>📎 Mevcut dosyayı gör</a>";
+    echo "<input type='file' name='attachment' accept='.jpg,.jpeg,.png,.webp,.gif,.pdf'></label>";
     echo "<button class='btn' name='edit_cn' value='1'>💾 Kaydet</button>";
     echo "</form>";
     echo "</td></tr>";
     }
 }
-if(!$rows) echo "<tr><td colspan='8' class='muted'>Kayıt yok.</td></tr>";
+if(!$rows) echo "<tr><td colspan='9' class='muted'>Kayıt yok.</td></tr>";
 ?>
 </tbody>
 </table>

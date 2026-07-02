@@ -2,6 +2,12 @@
 
 <!-- Açık geliştirme görevleri. Kapanan madde buradan silinip memory/features.md'ye taşınır. -->
 
+## Ölü link — kpi.php web'de var olmayan personnel_view.php'ye linkliyor
+- `kpi.php` (web) satır ~96: `<a href="personnel_view.php?id=...">` — bu dosya web'de hiç yok (sadece
+  mobilde var, `mobile/personnel_view.php`). `search.php`'nin 2026-07-02 düzeltmesinde aynı bug bulunup
+  arama sonuçlarında `personnel_edit.php?id=`'e çevrildi; `kpi.php`'deki link bu turda kapsam dışı
+  bırakıldı, aynı düzeltme (personnel_edit.php?id=) oraya da uygulanmalı.
+
 ## Menü eksikleri (kod var, giriş noktası yok)
 - **work_center.php** ("İş Motoru") sol menüde hiç link yok. `layout_top_patch_note.txt`'den taşındı
   (2026-06-27 tarihli not, hâlâ yapılmamış). boot.php nav eşlemesinde de yok.

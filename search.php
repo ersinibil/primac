@@ -1,19 +1,13 @@
 <?php
 require_once __DIR__.'/layout_top.php';
+require_once __DIR__.'/search_lib.php';
 $q = trim($_GET['q'] ?? '');
 $pdo = db();
-
-function hl($text, $q) {
-    if ($q === '') return htmlspecialchars($text);
-    return preg_replace('/('.preg_quote(htmlspecialchars($q),'/').')/iu',
-        '<mark style="background:#fef08a;border-radius:3px;padding:0 2px">$1</mark>',
-        htmlspecialchars($text));
-}
 ?>
 <h1>🔍 Arama</h1>
 
 <form method="get" style="display:flex;gap:10px;margin-bottom:24px">
-    <input name="q" value="<?=htmlspecialchars($q)?>" placeholder="İş, müşteri, stok, personel ara…"
+    <input name="q" value="<?=htmlspecialchars($q)?>" placeholder="İş, cari, banka/kart, işlem, çek/senet, teklif, stok veya personel ara…"
         style="flex:1;border:1.5px solid #e5e7eb;border-radius:12px;padding:11px 14px;font-size:15px;outline:none"
         autofocus autocomplete="off">
     <button type="submit" style="background:#2563eb;color:#fff;border:0;border-radius:12px;padding:11px 20px;font-weight:800;cursor:pointer">Ara</button>
@@ -22,50 +16,13 @@ function hl($text, $q) {
 <?php if ($q === ''): ?>
 <div style="text-align:center;color:#667085;padding:40px 0">
     <div style="font-size:48px;margin-bottom:12px">🔍</div>
-    <p>İş no, müşteri adı, ürün veya personel ismi girin.</p>
+    <p>İş no, müşteri adı, banka/kart, işlem, çek/senet, teklif, ürün veya personel ismi girin.</p>
 </div>
 <?php else:
-    $like = '%'.$q.'%';
-    $found = 0;
-
-    // İşler
-    try {
-        $s = $pdo->prepare("SELECT j.id, j.job_no, j.title, j.status, c.name customer
-            FROM jobs j LEFT JOIN contacts c ON c.id=j.customer_id
-            WHERE j.title LIKE ? OR j.job_no LIKE ? OR j.description LIKE ? OR c.name LIKE ?
-            ORDER BY j.id DESC LIMIT 30");
-        $s->execute([$like,$like,$like,$like]);
-        $jobs = $s->fetchAll();
-    } catch(Throwable $e) { $jobs = []; }
-
-    // Cari
-    try {
-        $s = $pdo->prepare("SELECT id,name,phone,email,city FROM contacts
-            WHERE name LIKE ? OR phone LIKE ? OR email LIKE ? OR tax_no LIKE ? OR city LIKE ?
-            ORDER BY id DESC LIMIT 30");
-        $s->execute([$like,$like,$like,$like,$like]);
-        $contacts = $s->fetchAll();
-    } catch(Throwable $e) { $contacts = []; }
-
-    // Stok
-    try {
-        $s = $pdo->prepare("SELECT id,name,quantity,unit,sale_price FROM stock_items
-            WHERE name LIKE ? OR sku LIKE ? OR description LIKE ?
-            ORDER BY id DESC LIMIT 30");
-        $s->execute([$like,$like,$like]);
-        $stock = $s->fetchAll();
-    } catch(Throwable $e) { $stock = []; }
-
-    // Personel
-    try {
-        $s = $pdo->prepare("SELECT id,name,title,phone,department FROM personnel
-            WHERE name LIKE ? OR title LIKE ? OR department LIKE ? OR phone LIKE ?
-            ORDER BY id DESC LIMIT 20");
-        $s->execute([$like,$like,$like,$like]);
-        $personnel = $s->fetchAll();
-    } catch(Throwable $e) { $personnel = []; }
-
-    $found = count($jobs)+count($contacts)+count($stock)+count($personnel);
+    $r = search_run($pdo, $q);
+    $jobs = $r['jobs']; $contacts = $r['contacts']; $stock = $r['stock']; $personnel = $r['personnel'];
+    $accounts = $r['accounts']; $movements = $r['movements']; $checks = $r['checks']; $quotes = $r['quotes'];
+    $found = search_total_count($r);
 ?>
 <p style="color:#667085;margin-bottom:20px">"<b><?=htmlspecialchars($q)?></b>" için <?=$found?> sonuç</p>
 
@@ -86,11 +43,11 @@ function hl($text, $q) {
     <tr style="border-bottom:1px solid #f1f5f9">
         <td style="padding:10px 8px">
             <a href="job_view.php?id=<?=$j['id']?>" style="color:#101828;text-decoration:none;font-weight:700">
-                <?=hl($j['title'],$q)?>
+                <?=search_hl($j['title'],$q)?>
             </a>
             <div style="font-size:12px;color:#667085;margin-top:2px">
-                <?php if($j['job_no']): ?><?=hl($j['job_no'],$q)?> · <?php endif; ?>
-                <?php if($j['customer']): ?>👤 <?=hl($j['customer'],$q)?><?php endif; ?>
+                <?php if($j['job_no']): ?><?=search_hl($j['job_no'],$q)?> · <?php endif; ?>
+                <?php if($j['customer']): ?>👤 <?=search_hl($j['customer'],$q)?><?php endif; ?>
             </div>
         </td>
         <td style="padding:10px 8px;text-align:right;white-space:nowrap">
@@ -112,15 +69,118 @@ function hl($text, $q) {
     <tr style="border-bottom:1px solid #f1f5f9">
         <td style="padding:10px 8px">
             <a href="contact_view.php?id=<?=$c['id']?>" style="color:#101828;text-decoration:none;font-weight:700">
-                <?=hl($c['name'],$q)?>
+                <?=search_hl($c['name'],$q)?>
             </a>
             <div style="font-size:12px;color:#667085;margin-top:2px">
-                <?php if($c['phone']): ?><?=hl($c['phone'],$q)?><?php endif; ?>
-                <?php if($c['city']): ?> · <?=hl($c['city'],$q)?><?php endif; ?>
+                <?php if($c['phone']): ?><?=search_hl($c['phone'],$q)?><?php endif; ?>
+                <?php if($c['city']): ?> · <?=search_hl($c['city'],$q)?><?php endif; ?>
             </div>
         </td>
         <td style="padding:10px 8px;text-align:right">
-            <?php if($c['email']): ?><span style="font-size:12px;color:#667085"><?=hl($c['email'],$q)?></span><?php endif; ?>
+            <?php if($c['email']): ?><span style="font-size:12px;color:#667085"><?=search_hl($c['email'],$q)?></span><?php endif; ?>
+        </td>
+    </tr>
+    <?php endforeach; ?>
+    </table>
+</div>
+<?php endif; ?>
+
+<?php if ($accounts): ?>
+<div class="panel" style="margin-bottom:20px">
+    <div style="font-weight:900;font-size:16px;margin-bottom:12px">🏦 Finans Hesapları (<?=count($accounts)?>)</div>
+    <table style="width:100%;border-collapse:collapse">
+    <?php foreach($accounts as $a): ?>
+    <tr style="border-bottom:1px solid #f1f5f9">
+        <td style="padding:10px 8px">
+            <a href="finance_account_view.php?id=<?=$a['id']?>" style="color:#101828;text-decoration:none;font-weight:700">
+                <?=search_hl($a['name'],$q)?>
+            </a>
+            <div style="font-size:12px;color:#667085;margin-top:2px">
+                <?=search_hl($a['account_type'],$q)?>
+                <?php if($a['bank_name']): ?> · <?=search_hl($a['bank_name'],$q)?><?php endif; ?>
+                <?php if($a['iban']): ?> · <?=search_hl($a['iban'],$q)?><?php endif; ?>
+            </div>
+        </td>
+        <td style="padding:10px 8px;text-align:right;white-space:nowrap;font-weight:700">
+            <?=money($a['current_balance'])?>
+        </td>
+    </tr>
+    <?php endforeach; ?>
+    </table>
+</div>
+<?php endif; ?>
+
+<?php if ($movements): ?>
+<div class="panel" style="margin-bottom:20px">
+    <div style="font-weight:900;font-size:16px;margin-bottom:12px">💸 Finans Hareketleri (<?=count($movements)?>)</div>
+    <table style="width:100%;border-collapse:collapse">
+    <?php foreach($movements as $m):
+        $dColor = $m['direction']==='in' ? '#16a34a' : '#dc2626';
+    ?>
+    <tr style="border-bottom:1px solid #f1f5f9">
+        <td style="padding:10px 8px">
+            <a href="finance.php" style="color:#101828;text-decoration:none;font-weight:700">
+                <?=$m['description'] ? search_hl($m['description'],$q) : htmlspecialchars($m['payment_channel'])?>
+            </a>
+            <div style="font-size:12px;color:#667085;margin-top:2px">
+                <?=search_hl($m['payment_channel'],$q)?>
+                <?php if($m['contact_name']): ?> · 👤 <?=search_hl($m['contact_name'],$q)?><?php endif; ?>
+                <?php if($m['movement_date']): ?> · <?=htmlspecialchars($m['movement_date'])?><?php endif; ?>
+            </div>
+        </td>
+        <td style="padding:10px 8px;text-align:right;white-space:nowrap;font-weight:700;color:<?=$dColor?>">
+            <?=money($m['amount'])?>
+        </td>
+    </tr>
+    <?php endforeach; ?>
+    </table>
+</div>
+<?php endif; ?>
+
+<?php if ($checks): ?>
+<div class="panel" style="margin-bottom:20px">
+    <div style="font-weight:900;font-size:16px;margin-bottom:12px">🧾 Çek / Senet (<?=count($checks)?>)</div>
+    <table style="width:100%;border-collapse:collapse">
+    <?php foreach($checks as $k):
+        $typeLabel = $k['type']==='senet' ? 'Senet' : 'Çek';
+    ?>
+    <tr style="border-bottom:1px solid #f1f5f9">
+        <td style="padding:10px 8px">
+            <a href="checks_notes.php?type=<?=htmlspecialchars($k['type'])?>" style="color:#101828;text-decoration:none;font-weight:700">
+                <?=$typeLabel?> <?=$k['number'] ? search_hl($k['number'],$q) : ''?>
+            </a>
+            <div style="font-size:12px;color:#667085;margin-top:2px">
+                <?php if($k['bank_name']): ?><?=search_hl($k['bank_name'],$q)?> · <?php endif; ?>
+                <?php if($k['contact_name']): ?>👤 <?=search_hl($k['contact_name'],$q)?> · <?php endif; ?>
+                <?php if($k['due_date']): ?>Vade: <?=htmlspecialchars($k['due_date'])?><?php endif; ?>
+            </div>
+        </td>
+        <td style="padding:10px 8px;text-align:right;white-space:nowrap;font-weight:700">
+            <?=money($k['amount'])?>
+        </td>
+    </tr>
+    <?php endforeach; ?>
+    </table>
+</div>
+<?php endif; ?>
+
+<?php if ($quotes): ?>
+<div class="panel" style="margin-bottom:20px">
+    <div style="font-weight:900;font-size:16px;margin-bottom:12px">📄 Teklifler (<?=count($quotes)?>)</div>
+    <table style="width:100%;border-collapse:collapse">
+    <?php foreach($quotes as $t): ?>
+    <tr style="border-bottom:1px solid #f1f5f9">
+        <td style="padding:10px 8px">
+            <a href="teklif.php?id=<?=$t['id']?>" style="color:#101828;text-decoration:none;font-weight:700">
+                <?=search_hl($t['quote_no'],$q)?>
+            </a>
+            <div style="font-size:12px;color:#667085;margin-top:2px">
+                <?php if($t['customer_name']): ?>👤 <?=search_hl($t['customer_name'],$q)?><?php endif; ?>
+                · <?=htmlspecialchars($t['status'])?>
+            </div>
+        </td>
+        <td style="padding:10px 8px;text-align:right;white-space:nowrap;font-weight:700">
+            <?=money($t['total'])?>
         </td>
     </tr>
     <?php endforeach; ?>
@@ -136,7 +196,7 @@ function hl($text, $q) {
     <tr style="border-bottom:1px solid #f1f5f9">
         <td style="padding:10px 8px">
             <a href="product_view.php?id=<?=$p['id']?>" style="color:#101828;text-decoration:none;font-weight:700">
-                <?=hl($p['name'],$q)?>
+                <?=search_hl($p['name'],$q)?>
             </a>
         </td>
         <td style="padding:10px 8px;text-align:right;white-space:nowrap;color:#667085;font-size:13px">
@@ -156,16 +216,16 @@ function hl($text, $q) {
     <?php foreach($personnel as $p): ?>
     <tr style="border-bottom:1px solid #f1f5f9">
         <td style="padding:10px 8px">
-            <a href="personnel_view.php?id=<?=$p['id']?>" style="color:#101828;text-decoration:none;font-weight:700">
-                <?=hl($p['name'],$q)?>
+            <a href="personnel_edit.php?id=<?=$p['id']?>" style="color:#101828;text-decoration:none;font-weight:700">
+                <?=search_hl($p['name'],$q)?>
             </a>
             <div style="font-size:12px;color:#667085;margin-top:2px">
-                <?php if($p['title']): ?><?=hl($p['title'],$q)?><?php endif; ?>
-                <?php if($p['department']): ?> · <?=hl($p['department'],$q)?><?php endif; ?>
+                <?php if($p['role']): ?><?=search_hl($p['role'],$q)?><?php endif; ?>
+                <?php if($p['work_type']): ?> · <?=search_hl($p['work_type'],$q)?><?php endif; ?>
             </div>
         </td>
         <td style="padding:10px 8px;text-align:right;font-size:12px;color:#667085">
-            <?php if($p['phone']): ?><?=hl($p['phone'],$q)?><?php endif; ?>
+            <?php if($p['phone']): ?><?=search_hl($p['phone'],$q)?><?php endif; ?>
         </td>
     </tr>
     <?php endforeach; ?>

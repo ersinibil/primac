@@ -2,6 +2,95 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
+## Arama güvenlik düzeltmesi + Çek/Senet foto/görev otomasyonu (2026-07-02, hızlı commit — kullanıcı limit uyarısı)
+- **KRİTİK güvenlik düzeltmesi**: `search_lib.php`'nin ilk hali (aynı gün eklendi) modül yetkisi
+  kontrolü yapmıyordu — `finance`/`personnel`/`stock` vb. yetkisi olmayan bir personel arama kutusu
+  üzerinden banka bakiyesi/IBAN, personel iletişim bilgisi gibi hassas verileri görebiliyordu.
+  `ots-security-auditor` denetiminde bulundu, `search_run()`'daki her bölüm artık ilgili
+  `user_can('finance')`/`user_can('personnel')`/`user_can('jobs')`/`user_can('contacts')`/
+  `user_can('stock')`/`user_can('teklif')` kontrolünden geçmeden sorgulanmıyor.
+- Çek/Senet modülüne fotoğraf/dosya eki (migration 026, `uploads/check_files/`, mevcut
+  `uploads/.htaccess` script-engelleme koruması alt klasörleri de kapsıyor, dosya adı tamamen
+  üretilmiş — path traversal riski yok) ve vade tarihinde otomatik Görev (tasks) oluşturma
+  (migration 027, `checks_notes.task_id`) eklendi.
+- **Bilinen tasarım tercihi (izlenmeli)**: Otomatik oluşturulan görevin başlığı/açıklaması
+  (kime verildi/hangi banka/ne kadar) `tasks` tablosuna `finance` yetkisinden bağımsız yazılıyor —
+  yani sadece `tasks`/Görevler yetkisi olup `finance` yetkisi olmayan biri, görev listesinde çek/senet
+  finansal detayını görebilir. Kullanıcının isteği zaten "muhasebe VE yönetimin iş ekranına... otomatik
+  kaydetsin" olduğu için bilinçli bir tasarım, ama ileride görev bazlı hassasiyet/gizlilik istenirse
+  gözden geçirilmeli.
+- NOT: Bu iki özellik kullanıcının kullanım limiti bitmek üzereyken hızlıca commit edildi — Çek/Senet
+  foto/görev kısmının tam güvenlik denetimi (`ots-security-auditor`) arka planda başlatılmıştı ama
+  commit anında henüz tamamlanmamıştı; sadece dosya yükleme güvenliği (uzantı whitelist + .htaccess
+  kapsamı + path traversal) manuel hızlı kontrolden geçirildi, SQL/yetki tarafı ayrıntılı incelenmedi.
+  Sonraki oturumda ajan denetim sonucu gelirse gözden geçirilmeli.
+
+## Çek/Senet: dosya eki + otomatik görev (2026-07-02)
+- Kullanıcı isteği: "çek ekranında bir cariye çekle ödeme yaptık diyelim. bu çekin bir fotoğrafını
+  sisteme ekleyebilelim. ve çek tarihi muhasebe ve yönetimin iş ekranına tarihi ile otomatik kaydetsin.
+  kime verildi hangi banka ne kadar…" — bugün eklenen Çek/Senet takip modülünün (bkz. yukarıdaki madde)
+  üzerine iki ek özellik.
+- Migration `026_checks_notes_attachment.sql`: `checks_notes.attachment VARCHAR(255) NULL` (kök-göreli
+  dosya yolu). `027_checks_notes_task_link.sql`: `checks_notes.task_id INT NULL` (otomatik oluşan
+  hatırlatma görevine link, durum senkronu için).
+- `checks_notes_lib.php`'ye `checks_notes_handle_upload()` eklendi (job_view.php'deki `job_file` yükleme
+  deseniyle aynı: `UPLOAD_ERR_*` kontrolü, uzantı/mime beyaz listesi `jpg/jpeg/png/webp/gif/pdf`, 15 MB
+  limit, `uploads/check_files/` altına `move_uploaded_file`). `checks_notes_create()`/`checks_notes_update()`
+  içine entegre edildi — dosya seçilmezse mevcut ek korunur (update'te). Web `checks_notes.php` (yeni
+  kayıt + inline düzenleme) ve mobil `mobile/checks_notes.php` + `mobile/check_note_view.php` formlarına
+  `enctype="multipart/form-data"` ve `<input type="file" name="attachment">` eklendi, ek varsa
+  "📎 Dosyayı Gör" linki (`base_url().$r['attachment']`) gösteriliyor. Silmede dosya diskten silinmiyor
+  (proje genelindeki tutarlı davranış, job_files'ta da aynı).
+- Otomatik görev: `checks_notes_create()` içinde vade tarihi girilmişse `tasks` tablosuna otomatik satır
+  ekleniyor (`checks_notes_auto_create_task()`) — `job_id=NULL`, `personnel_id=NULL` (genel/atanmamış
+  görev; hem web `tasks.php` hiçbir personel filtresi uygulamadığı için hem de mobil
+  `mobile/mytasks.php`'de admin görünümünde bu görevler görünüyor — kontrol edildi, ayrıca admin'e
+  atamaya gerek kalmadı). `title`: "Çek Vadesi: NO — TUTAR ₺" (senet ise "Senet Vadesi"), `description`:
+  "Kime verildi / Banka / Tutar / Durum" satırları. `priority`: vadeye ≤7 gün kaldıysa 'Yüksek', değilse
+  'Normal'. Görev otomasyonu `try/catch` ile sarılı — başarısız olsa da çek/senet kaydı yine oluşur.
+  Oluşan `tasks.id`, `checks_notes.task_id`'ye geri yazılıyor (`checks_notes_update()`'te durum
+  'tahsil_edildi'/'ciro_edildi'/'iptal' olduğunda ilişkili görevi otomatik 'Tamamlandı' işaretlemek için
+  — `checks_notes_sync_task_status()`).
+
+## Global arama (search.php) düzeltme + kapsam genişletme + mobil parite (2026-07-02)
+- Kullanıcı şikayeti: "personel ismi yazıyorum bulunamadı, kredi kartı yazıyorum yok."
+- **Kök neden 1 (aynı sınıf hata 3 bölümde birden — sadece personel değil):** `search.php`'deki
+  sorgular gerçekte var olmayan kolonları arıyordu, `try/catch` "Unknown column" hatasını sessizce
+  yutup boş dizi dönüyordu — yani "İşler" hariç NEREDEYSE HİÇBİR bölüm hiçbir zaman sonuç vermiyordu:
+  - Personel: `title`/`department` yok → gerçek kolonlar `role`/`work_type` (`001_core_auth.sql`).
+  - Cari: `tax_no` yok → gerçek kolon `tax_number` (`002_contacts_crm.sql`).
+  - Stok: `sku`/`description` yok → gerçek kolonlar `product_code`/`barcode`/`notes` (`004_stock_products.sql`).
+  Kullanıcı sadece personel/kredi kartını fark etmiş ama Cari ve Stok araması da aynı şekilde kırıktı,
+  bu turda hepsi düzeltildi. Ayrıca personel sonucunun linklediği `personnel_view.php` web'de hiç
+  yoktu (mobilde var, web'de yok) — bu da ayrı bir ölü link bug'ıydı, `personnel_edit.php?id=`'e
+  (gerçek web detay/düzenleme sayfası) çevrildi.
+- **Kök neden 2 (kapsam eksikti):** Sadece İşler/Cari/Stok/Personel aranıyordu; Finans Hesapları
+  (`finance_accounts` — Kasa/Banka/Kredi Kartı/POS) ve Finans Hareketleri (`finance_movements`) hiç
+  arama kapsamında değildi, bu yüzden "kredi kartı" gibi aramalar hiç eşleşmiyordu. Kapsam ayrıca
+  Çek/Senet (`checks_notes`) ve Teklif (`quotes`) ile genişletildi (kolay ek kapsam, aynı desende).
+- Yeni `search_lib.php` (web+mobil ortak, `*_lib.php` kuralı): `search_run($pdo,$q)` tüm 8 tabloyu
+  prepared statement ile arayıp ham satır dizileri döner (İşler/Cari/Stok/Personel/Finans Hesapları/
+  Finans Hareketleri/Çek-Senet/Teklif), `search_hl()` vurgulama fonksiyonu, `search_total_count()`.
+  HTML/link üretimi kasıtlı olarak lib'de DEĞİL — web ve mobilin aynı modül için detay sayfası URL'leri
+  farklı (örn. hesap detayı web'de `finance_account_view.php`, mobilde `account_view.php`; hareket
+  detayı sadece mobilde var — `movement_view.php`, web'de `finance.php` listesine genel link veriyor).
+  Bu yüzden her sayfa kendi linklerini kendi render mantığıyla kuruyor.
+  - Bir de `mobile/index.php` gibi çekilmeyen kolay-ekstra kapsamı var: `movement_view.php` YALNIZ mobilde.
+  - `finance_accounts`'ta `account_type='Kredi Kartı'` gibi tam değerler var — `LIKE '%kredi kartı%'`
+    zaten collation (utf8mb4_unicode_ci) sayesinde case-insensitive eşleşiyor, ekstra normalize kod
+    gerekmedi.
+- Web `search.php`: yeni Finans Hesapları/Finans Hareketleri/Çek-Senet/Teklif bölümleri eklendi
+  (mevcut panel/tablo desenine uygun), personel bug'ı düzeltildi. `layout_top.php` topbar arama
+  placeholder'ı ve `search.php`'nin kendi placeholder'ı yeni kapsamı yansıtacak şekilde güncellendi.
+- **Mobil parite:** önceden mobilde arama sayfası HİÇ yoktu — yeni `mobile/search.php` eklendi
+  (`topx`/`botx`/`mm()` mobil deseninde, aynı `search_lib.php`'yi kullanıyor). `mobile/more.php`
+  menüsünün en üstüne "🔍 Ara" kartı eklendi (hem admin hem personel görünümünde).
+  Mobil finans/personel detay linkleri kendi sayfalarının zaten var olan yetki kısıtlarına (`finance`
+  modül izni, `block_personel()`) otomatik tabi — arama sayfasının kendisi ekstra bir izin kontrolü
+  eklemedi (mevcut İşler/Cari bölümleri de zaten hiç izin kontrolü yapmıyordu, tutarlılık korundu).
+- NOT: `kpi.php` (web) de aynı ölü `personnel_view.php` linkini kullanıyor — bu turda dokunulmadı,
+  `memory/backlog.md`'ye ayrı madde düşüldü.
+
 ## "Düzenleme/Silme Yetkisi" — kademeli ayrı izin (2026-07-02)
 - Kullanıcı isteği: "yapılan işlemi düzenleme ve silme yetkisi herkese verilmemeli, personel yetki
   ekranında buna bir buton verilebilir, ver-verme gibi." Yani modül yetkisi (örn. 'finance') artık

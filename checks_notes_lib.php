@@ -1,7 +1,9 @@
 <?php
 /* OTS Çek / Senet Takibi — paylaşılan fonksiyonlar (web + mobil).
  * checks_notes.php / check_note_view.php / mobile/checks_notes.php / mobile/check_note_view.php ortak kullanır.
- * Tablo: database/migrations/024_checks_notes.sql */
+ * Tablo: database/migrations/024_checks_notes.sql
+ * Dosya eki + otomatik görev: database/migrations/026_checks_notes_attachment.sql,
+ * database/migrations/027_checks_notes_task_link.sql */
 
 function checks_notes_types(){
     return ['cek'=>'Çek','senet'=>'Senet'];
@@ -36,6 +38,115 @@ function checks_notes_get($pdo, $id){
     return $r ?: null;
 }
 
+// $_FILES['attachment'] varsa yükler, uploads/check_files altına taşır ve kök-göreli yolu döner.
+// Dosya seçilmediyse null döner (mevcut ek korunur). Gerçek bir yükleme hatası olursa Exception fırlatır.
+function checks_notes_handle_upload(){
+    if(empty($_FILES['attachment']) || $_FILES['attachment']['error']===UPLOAD_ERR_NO_FILE){
+        return null;
+    }
+    $f=$_FILES['attachment'];
+    if($f['error'] !== UPLOAD_ERR_OK){
+        $errors=[
+            UPLOAD_ERR_INI_SIZE=>"Dosya sunucunun izin verdiği boyuttan büyük.",
+            UPLOAD_ERR_FORM_SIZE=>"Dosya form limitinden büyük.",
+            UPLOAD_ERR_PARTIAL=>"Dosya eksik yüklendi.",
+            UPLOAD_ERR_NO_TMP_DIR=>"Sunucuda geçici klasör yok.",
+            UPLOAD_ERR_CANT_WRITE=>"Dosya sunucuya yazılamadı.",
+            UPLOAD_ERR_EXTENSION=>"PHP eklentisi yüklemeyi durdurdu."
+        ];
+        throw new Exception($errors[$f['error']] ?? "Dosya yükleme hatası. Kod: ".$f['error']);
+    }
+
+    $uploadDir=__DIR__.'/uploads/check_files';
+    if(!is_dir($uploadDir)){
+        if(!mkdir($uploadDir,0755,true)){
+            throw new Exception("uploads/check_files klasörü oluşturulamadı.");
+        }
+    }
+    if(!is_writable($uploadDir)){
+        throw new Exception("uploads/check_files klasörü yazılabilir değil. cPanel izinlerini kontrol et.");
+    }
+
+    $original=$f['name'];
+    $tmp=$f['tmp_name'];
+    $size=(int)$f['size'];
+    $ext=strtolower(pathinfo($original, PATHINFO_EXTENSION));
+
+    $allowed=['jpg','jpeg','png','webp','gif','pdf'];
+    if(!in_array($ext,$allowed,true)){
+        throw new Exception("Bu dosya türüne izin verilmiyor: ".$ext.". İzin verilenler: ".implode(', ',$allowed));
+    }
+    if($size > 15*1024*1024){
+        throw new Exception("Dosya 15 MB üzerinde olamaz.");
+    }
+
+    $stored='cn_'.date('YmdHis').'_'.bin2hex(random_bytes(4)).'.'.$ext;
+    $target=$uploadDir.'/'.$stored;
+    if(!move_uploaded_file($tmp,$target)){
+        throw new Exception("Dosya yüklenemedi. Sunucu yazma izni veya dosya limiti olabilir.");
+    }
+    return 'uploads/check_files/'.$stored;
+}
+
+function checks_notes_contact_name($pdo, $contactId){
+    if(!$contactId) return null;
+    try{
+        $s=$pdo->prepare("SELECT name FROM contacts WHERE id=?");
+        $s->execute([(int)$contactId]);
+        $r=$s->fetch();
+        return $r ? $r['name'] : null;
+    }catch(Throwable $e){ return null; }
+}
+
+function checks_notes_task_title($type, $number, $amount){
+    $label = $type==='senet' ? 'Senet Vadesi' : 'Çek Vadesi';
+    $num = trim((string)$number) !== '' ? $number : '(numarasız)';
+    return $label.': '.$num.' — '.number_format((float)$amount,2,',','.').' ₺';
+}
+
+function checks_notes_task_description($pdo, $type, $contactId, $bankName, $amount, $status){
+    $contactName = checks_notes_contact_name($pdo, $contactId) ?: '-';
+    $statuses = checks_notes_statuses();
+    $statusLabel = $statuses[$status] ?? $status;
+    $lines=[];
+    $lines[]='Kime verildi: '.$contactName;
+    if($type==='cek') $lines[]='Banka: '.($bankName !== '' ? $bankName : '-');
+    $lines[]='Tutar: '.number_format((float)$amount,2,',','.').' ₺';
+    $lines[]='Durum: '.$statusLabel;
+    return implode("\n",$lines);
+}
+
+// Yeni çek/senet kaydı için otomatik hatırlatma görevi oluşturur (muhasebe/yönetim iş ekranı — tasks tablosu).
+// job_id=NULL (belirli bir işe bağlı değil), personnel_id=NULL (genel/atanmamış görev — tasks.php ve
+// mobile/mytasks.php admin görünümünde görünür). checks_notes.task_id'ye geri yazılır (durum senkronu için).
+function checks_notes_auto_create_task($pdo, $cnId, array $cn){
+    if(empty($cn['due_date'])) return null; // vadesiz kayıt için hatırlatma görevi oluşturma
+
+    $title = checks_notes_task_title($cn['type'], $cn['number'] ?? '', $cn['amount']);
+    $desc  = checks_notes_task_description($pdo, $cn['type'], $cn['contact_id'] ?? null, $cn['bank_name'] ?? '', $cn['amount'], $cn['status']);
+
+    $daysUntil = (strtotime($cn['due_date']) - strtotime(date('Y-m-d'))) / 86400;
+    $priority = $daysUntil <= 7 ? 'Yüksek' : 'Normal';
+
+    $stmt=$pdo->prepare("INSERT INTO tasks(job_id,personnel_id,title,description,due_date,status,priority) VALUES(NULL,NULL,?,?,?,?,?)");
+    $stmt->execute([$title,$desc,$cn['due_date'],'Açık',$priority]);
+    $taskId=(int)$pdo->lastInsertId();
+
+    $pdo->prepare("UPDATE checks_notes SET task_id=? WHERE id=?")->execute([$taskId,(int)$cnId]);
+    return $taskId;
+}
+
+// Durum "Tahsil Edildi / Ciro Edildi / İptal" olduğunda ilişkili hatırlatma görevini tamamlanmış işaretler.
+function checks_notes_sync_task_status($pdo, $taskId, $status){
+    if(!$taskId) return;
+    $terminal=['tahsil_edildi','ciro_edildi','iptal'];
+    if(!in_array($status,$terminal,true)) return;
+    try{
+        $pdo->prepare("UPDATE tasks SET status='Tamamlandı', completed_at=IF(completed_at IS NULL,NOW(),completed_at) WHERE id=? AND status<>'Tamamlandı'")
+            ->execute([(int)$taskId]);
+    }catch(Throwable $e){ /* görev senkronu ikincil — çek/senet güncellemesini bozmasın */ }
+}
+
 function checks_notes_create($pdo, array $data, $userId=null){
     $type = ($data['type'] ?? 'cek')==='senet' ? 'senet' : 'cek';
     $amount = (float)str_replace(',', '.', (string)($data['amount'] ?? 0));
@@ -44,21 +155,37 @@ function checks_notes_create($pdo, array $data, $userId=null){
     if(!array_key_exists($status, checks_notes_statuses())) $status='portfoyde';
     $dueDate = trim($data['due_date'] ?? '') ?: null;
     $contactId = (int)($data['contact_id'] ?? 0) ?: null;
+    $number = trim($data['number'] ?? '');
+    $bankName = trim($data['bank_name'] ?? '');
 
-    $stmt=$pdo->prepare("INSERT INTO checks_notes(type,number,amount,due_date,contact_id,bank_name,status,notes,created_by)
-        VALUES(?,?,?,?,?,?,?,?,?)");
+    $attachment = checks_notes_handle_upload();
+
+    $stmt=$pdo->prepare("INSERT INTO checks_notes(type,number,amount,due_date,contact_id,bank_name,status,notes,attachment,created_by)
+        VALUES(?,?,?,?,?,?,?,?,?,?)");
     $stmt->execute([
         $type,
-        trim($data['number'] ?? ''),
+        $number,
         $amount,
         $dueDate,
         $contactId,
-        trim($data['bank_name'] ?? ''),
+        $bankName,
         $status,
         trim($data['notes'] ?? ''),
+        $attachment,
         $userId ?: null,
     ]);
-    return (int)$pdo->lastInsertId();
+    $newId = (int)$pdo->lastInsertId();
+
+    // Otomatik görev: vade tarihi girilmişse muhasebe/yönetim iş ekranına (tasks) hatırlatma düşer.
+    // Görev otomasyonu ikincildir — başarısız olsa da çek/senet kaydı yine de oluşmuş olmalı.
+    try{
+        checks_notes_auto_create_task($pdo, $newId, [
+            'type'=>$type,'number'=>$number,'amount'=>$amount,'due_date'=>$dueDate,
+            'contact_id'=>$contactId,'bank_name'=>$bankName,'status'=>$status,
+        ]);
+    }catch(Throwable $e){ /* yut — ana kayıt zaten oluştu */ }
+
+    return $newId;
 }
 
 function checks_notes_update($pdo, $id, array $data){
@@ -74,7 +201,10 @@ function checks_notes_update($pdo, $id, array $data){
     $dueDate = array_key_exists('due_date',$data) ? (trim($data['due_date'] ?? '') ?: null) : $row['due_date'];
     $contactId = array_key_exists('contact_id',$data) ? ((int)$data['contact_id'] ?: null) : $row['contact_id'];
 
-    $pdo->prepare("UPDATE checks_notes SET type=?,number=?,amount=?,due_date=?,contact_id=?,bank_name=?,status=?,notes=? WHERE id=?")
+    $newAttachment = checks_notes_handle_upload();
+    $attachment = $newAttachment !== null ? $newAttachment : $row['attachment'];
+
+    $pdo->prepare("UPDATE checks_notes SET type=?,number=?,amount=?,due_date=?,contact_id=?,bank_name=?,status=?,notes=?,attachment=? WHERE id=?")
         ->execute([
             $type,
             trim($data['number'] ?? $row['number']),
@@ -84,8 +214,13 @@ function checks_notes_update($pdo, $id, array $data){
             trim($data['bank_name'] ?? $row['bank_name']),
             $status,
             trim(array_key_exists('notes',$data) ? $data['notes'] : $row['notes']),
+            $attachment,
             $id,
         ]);
+
+    // Durum "Tahsil Edildi/Ciro Edildi/İptal" olduysa ilişkili hatırlatma görevini tamamlanmış işaretle.
+    checks_notes_sync_task_status($pdo, $row['task_id'] ?? null, $status);
+
     return true;
 }
 

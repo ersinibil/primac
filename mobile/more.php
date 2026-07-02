@@ -1,4 +1,8 @@
 <?php require_once 'common.php'; topx('Menü'); ?>
+<div class="grid">
+  <?php card('Ara','İş, cari, banka/kart, işlem, stok, personel…','🔍','search.php','blue'); ?>
+</div>
+
 <div class="panel" style="text-align:center">
   <b>🔔 Bildirim & Ses</b>
   <button class="btn dark" style="width:100%;padding:13px;margin-top:8px" onclick="var m=window.ACANS_TEST?ACANS_TEST():'hazır değil';document.getElementById('tres').textContent=m;">Bildirimleri Aç / Test Et</button>
