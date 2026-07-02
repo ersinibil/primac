@@ -104,16 +104,13 @@ function checks_notes_task_title($type, $number, $amount){
     return $label.': '.$num.' — '.number_format((float)$amount,2,',','.').' ₺';
 }
 
+// NOT (güvenlik denetimi 2026-07-02): bu açıklama tasks.php üzerinden 'finance' yetkisi olmayan
+// ama 'tasks' yetkisi olan personele de görünür (mobil mytasks.php personnel_id filtreliyor ama
+// web tasks.php filtrelemiyor). Bu yüzden cari/banka/tutar gibi hassas alanlar BURAYA yazılmıyor —
+// sadece Finans modülüne yönlendiren nötr bir metin var. Detay checks_notes.php/check_note_view.php'de.
 function checks_notes_task_description($pdo, $type, $contactId, $bankName, $amount, $status){
-    $contactName = checks_notes_contact_name($pdo, $contactId) ?: '-';
-    $statuses = checks_notes_statuses();
-    $statusLabel = $statuses[$status] ?? $status;
-    $lines=[];
-    $lines[]='Kime verildi: '.$contactName;
-    if($type==='cek') $lines[]='Banka: '.($bankName !== '' ? $bankName : '-');
-    $lines[]='Tutar: '.number_format((float)$amount,2,',','.').' ₺';
-    $lines[]='Durum: '.$statusLabel;
-    return implode("\n",$lines);
+    $label = $type==='senet' ? 'senedin' : 'çekin';
+    return "Vadesi yaklaşan bir ".$label." hatırlatması. Cari/banka/tutar detayı için Finans → Çek/Senet ekranına bakın.";
 }
 
 // Yeni çek/senet kaydı için otomatik hatırlatma görevi oluşturur (muhasebe/yönetim iş ekranı — tasks tablosu).
