@@ -1,6 +1,5 @@
 <?php
 require_once 'common.php';
-block_personel();
 $pdo=db();
 
 // POST işlemini topx'tan ÖNCE yap → header redirect (PRG)

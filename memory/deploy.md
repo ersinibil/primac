@@ -4,7 +4,7 @@
 | Ortam | URL | DB | Not |
 |---|---|---|---|
 | **ACANS prod** | acanstr.com/ots/ | u7883898_primacos | Artık tek ACANS canlısı. |
-| **PRIMAC prod** | primac.tr | KENDİ AYRI DB'si (2026-07-02'de kullanıcı teyit etti) | İkinci marka, ayrı domain, ayrı veri. |
+| **PRIMAC prod** | primac.tr | u7883898_primactr | Kendi ayrı DB'si (2026-07-02'de kullanıcı teyit etti), ikinci marka, ayrı domain, ayrı veri. |
 | Lokal | localhost:8080 | lokal config.php | |
 
 DB'ler ayrı olduğu için `app_settings` (brand_settings.php logo/marka ayarları) iki domain arasında
@@ -40,6 +40,26 @@ güncel export'u), `guncelle.php` (tek-tık güncelleyici), `config.php` (o doma
 Anahtarlar (kod içinde sabit, `~/Desktop/REFERANS/OTS-PROJE-KUNYE.txt`'de de kayıtlı): migrate/temizle
 key = `acans-migrate-2026` · cron key = `acans-cron-2026`. Detaylı Masaüstü klasör düzeni ve gerçek DB
 bilgileri için REFERANS/OTS-PROJE-KUNYE.txt dosyasına bakın (git'e girmez, sadece Masaüstünde).
+
+## 2026-07-02: Gider kategorisi deploy'u — elle migration + schema_migrations tuzağı
+- Commit `26bffcb` (gider kategorisi + marka adı + yetki canlı yenileme) için PHP CLI/sunucu erişimi
+  olmayan bir ortamdan `migrate.php` çalıştırılamadığından, kullanıcı migration'ları (022, 023) ACANS'ta
+  (`u7883898_primacos`) VE PRIMAC'ta (`u7883898_primactr`) phpMyAdmin → İçe Aktar ile elle çalıştırdı.
+- **Tuzak**: `guncelle.php` uygulanan migration'ları `schema_migrations` tablosuyla takip ediyor. Elle
+  phpMyAdmin'den çalıştırınca bu tabloya satır düşmüyor — sonraki `guncelle.php` çalıştırmasında aynı
+  migration'lar TEKRAR uygulanır. `023`'teki `INSERT IGNORE INTO accounting_categories` satırında
+  `name`'e unique kısıt olmadığı için bu, "Personel Yol Gideri"/"Günlük Yemek" kategorilerini
+  MÜKERRER ekleyecekti. Çözüm: elle migration çalıştırıldıktan hemen sonra, aynı DB'de:
+  ```sql
+  CREATE TABLE IF NOT EXISTS schema_migrations(filename VARCHAR(190) NOT NULL PRIMARY KEY, applied_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  INSERT IGNORE INTO schema_migrations (filename) VALUES ('<dosya_adi>.sql');
+  ```
+  çalıştırılıp `guncelle.php`'ye "bu zaten uygulandı" işaretlenmeli. Genel kural: **elle phpMyAdmin'den
+  migration çalıştırılan her durumda bu adım de yapılmalı** — aksi halde bir sonraki `guncelle.php`
+  çalıştırması sessizce mükerrer veri üretebilir (özellikle unique kısıtı olmayan INSERT'lerde).
+- Her iki sitede de `guncelleme.zip` deploy klasörlerinde (`~/Desktop/ACANS-GUNCELLEME/`,
+  `~/Desktop/PRIMAC-GUNCELLEME/`) elle tazelenip (`git archive HEAD` + `vendor/` eklenerek) yüklendi,
+  `guncelle.php` her ikisinde de "0 yeni migration, 23 toplam" ile temiz çıktı verdi — deploy tamamlandı.
 
 ## Güvenlik notları
 - `config.php` düz metin şifre içerir (normal) ama `.htaccess` ile `config.php`, `*.log`, `guncelleme.zip`,

@@ -33,8 +33,18 @@
   card('Yeni Kayıt','Hızlı gider/gelir gir','➕','accounting.php#yeni','orange'); ?>
 </div>
 
-<div style="font-weight:900;margin:16px 4px 8px">📊 Raporlar</div>
+<div style="font-weight:900;margin:16px 4px 8px">👷 Personel & İş</div>
 <div class="grid">
+  <?php card('Personel','Ekip listesi','👷','personnel.php','purple'); card('Görev Ata','Personele görev','🎯','task_new.php','teal');
+  card('İşler','İş takibi','📋','jobs.php','green'); card('Üretim','Aşama panosu','🏭','uretim.php','red'); card('Takvim','Termin takvimi','📅','calendar.php','blue'); card('Performans','Personel KPI','🏆','kpi.php','orange');
+  card('Talepler','Talep onay merkezi','📨','requests.php','orange');
+  card('Müşteri Onayı','Onay bekleyen dosyalar','⏳','approval_waiting.php','yellow');
+  card('Dış İşler','Dış atölye/tedarik','🏭','external.php','blue'); ?>
+</div>
+
+<details class="panel" style="margin:16px 0">
+  <summary style="font-weight:900;cursor:pointer">📊 Raporlar</summary>
+  <div class="grid" style="margin-top:10px">
   <?php
   card('Günlük Rapor','Bugünkü iş özeti','📅','../gunluk_rapor.php?web=1','blue');
   card('Tümü (Yekün)','Hepsi tek sunum','🗂️','report.php?modul=tumu','blue');
@@ -46,20 +56,12 @@
   card('Cari','Bakiye·hareket','👥','report.php?modul=cari','teal');
   card('Stok','Kritik·stok değeri','📦','report.php?modul=stok','red');
   ?>
-</div>
-
-<div style="font-weight:900;margin:16px 4px 8px">👷 Personel & İş</div>
-<div class="grid">
-  <?php card('Personel','Ekip listesi','👷','personnel.php','purple'); card('Görev Ata','Personele görev','🎯','task_new.php','teal');
-  card('İşler','İş takibi','📋','jobs.php','green'); card('Üretim','Aşama panosu','🏭','uretim.php','red'); card('Takvim','Termin takvimi','📅','calendar.php','blue'); card('Performans','Personel KPI','🏆','kpi.php','orange');
-  card('Talepler','Talep onay merkezi','📨','requests.php','orange');
-  card('Müşteri Onayı','Onay bekleyen dosyalar','⏳','approval_waiting.php','yellow');
-  card('Dış İşler','Dış atölye/tedarik','🏭','external.php','blue'); ?>
-</div>
+  </div>
+</details>
 
 <div style="font-weight:900;margin:16px 4px 8px">⚙ Sistem</div>
 <div class="grid">
-  <?php card('Son İşlemler','Aktivite akışı','🕘','activity.php','gray'); card('Web Sürümü','Masaüstü Sürüm','🖥','../dashboard.php?web=1','gray'); card('Profil','Şifre & hesap','👤','profile.php','blue'); card('Kullanıcılar','Yetki yönetimi','👥','users.php','purple'); card('Logo / Marka','Marka ayarları','🎨','../brand_settings.php','gray'); card('Çıkış Yap','Oturumu kapat','🚪','../logout.php','red'); ?>
+  <?php card('Son İşlemler','Aktivite akışı','🕘','activity.php','gray'); card('Web Sürümü','Masaüstü Sürüm','🖥','../dashboard.php?web=1','gray'); card('Profil','Şifre & hesap','👤','profile.php','blue'); card('Kullanıcılar','Yetki yönetimi','👥','users.php','purple'); card('Logo / Marka','Marka ayarları','🎨','../brand_settings.php?web=1','gray'); card('Çıkış Yap','Oturumu kapat','🚪','../logout.php','red'); ?>
 </div>
 <?php else: ?>
 <div class="grid">

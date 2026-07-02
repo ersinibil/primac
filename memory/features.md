@@ -2,6 +2,35 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
+## Finans hesapları düzenle/sil (2026-07-02)
+- `finance_accounts` (Kasa/Banka/Kredi Kartı/POS) için düzenleme hiç yoktu, silme sadece
+  `finance_account_view.php`'de vardı (liste sayfasında yoktu), mobilde ikisi de yoktu.
+- `finance_lib.php` (yeni, web+mobil ortak): `finance_account_types()`, `finance_account_has_movements()`,
+  `finance_account_update()`, `finance_account_delete()`.
+- Silme stratejisi: hesap `finance_movements`de (account_id veya target_account_id) kullanılmışsa
+  referans bütünlüğü bozulmasın diye KALICI silinmiyor, `active=0` yapılıp soft-delete uygulanıyor
+  (projedeki ürün/stok aktif-pasif deseniyle tutarlı). Kullanılmamışsa kalıcı silinir.
+- `finance_accounts.php` (web liste): her satıra ✏️ Düzenle (inline açılır form, job_view.php'deki
+  `<details>` desenine benzer ama tablo satırı içinde JS toggle) ve admin'e özel 🗑 Sil eklendi.
+- `finance_account_view.php` (web detay): `<details>` içinde düzenleme formu eklendi; mevcut
+  `delete_button('account',$id)` (admin-only, sil.php üzerinden) korundu.
+- `sil.php`: `t=account` türü artık genel DELETE akışının dışına alınıp `finance_account_delete()`'e
+  yönlendiriliyor — böylece hem liste sayfasından hem detay sayfasından hem de doğrudan sil.php'ye
+  POST edilse bile aynı güvenli (soft-delete korumalı) yol izleniyor.
+- `mobile/account_view.php`: düzenleme formu (herkes, finance yetkisiyle) + silme butonu (sadece
+  yönetici/admin, `$isAdmin`, `confirm()` ile) eklendi. POST işlemleri PRG deseniyle `topx()`'ten
+  ÖNCE işlenip redirect ediliyor.
+- Silme yetkisi admin-only tutuldu (mevcut `delete_button()`/`sil.php` deseniyle tutarlı — proje
+  genelinde kalıcı silme her yerde admin'e özel), düzenleme ise sadece `finance` modül yetkisiyle
+  (page_module_map üzerinden otomatik) açık — ekstra kısıtlama eklenmedi.
+- Yeni migration gerekmedi — `finance_accounts.active` kolonu zaten 005_finance.sql'de vardı.
+- İnceleme sonrası düzeltmeler: (1) `finance_account_has_movements()` sadece `finance_movements`e bakıyordu,
+  `accounting_entries.account_id` referansını görmüyordu — sadece muhasebe modülünde kullanılmış bir hesap
+  yanlışlıkla kalıcı silinip yetim kayıt bırakabilirdi, düzeltildi (artık ikisini de kontrol ediyor).
+  (2) Mobilde soft-delete başarı mesajı ("pasife alındı") yanlışlıkla kırmızı hata kutusunda gösteriliyordu,
+  düzeltildi. (3) Web liste sayfası detay sayfasından gelen `?deleted=1` parametresini okumuyordu, silme
+  sonrası mesaj görünmüyordu — düzeltildi.
+
 ## Marka adı yaygınlaştırma + yetki canlı yenileme (2026-07-02)
 - 448a28a'da `layout_top.php` için başlatılan "hardcode ACANS OTS → dinamik `app_config()['app_name']`"
   düzeltmesi (PRIMAC başlık sorunu) tamamlanmadan kalmıştı; kalan sabit metinler temizlendi:

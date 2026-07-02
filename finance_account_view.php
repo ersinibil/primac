@@ -2,8 +2,20 @@
 /* Hesap ekstresi — tek banka/kasa/kart/POS hesabının hareketleri ve güncel bakiyesi. */
 require_once __DIR__.'/boot.php';
 require_login();
+require_once __DIR__.'/finance_lib.php';
 $pdo=db();
 $id=(int)($_GET['id'] ?? 0);
+$editError='';
+$editOk='';
+
+if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['edit_account'])){
+    try{
+        finance_account_update($pdo, $id, $_POST);
+        $editOk='Hesap güncellendi.';
+    }catch(Throwable $e){
+        $editError=$e->getMessage();
+    }
+}
 
 $a=null;
 try{ $s=$pdo->prepare("SELECT * FROM finance_accounts WHERE id=?"); $s->execute([$id]); $a=$s->fetch(); }catch(Throwable $e){}
@@ -35,12 +47,39 @@ $isCard = ($a['account_type']==='Kredi Kartı');
   </div>
 </div>
 
+<?php if($editOk): ?><div class="ok"><?=h($editOk)?></div><?php endif; ?>
+<?php if($editError): ?><div class="alert"><?=h($editError)?></div><?php endif; ?>
+
 <div class="cards">
   <div class="card"><small>Güncel Bakiye</small><strong><?=money($a['current_balance'])?></strong></div>
   <div class="card"><small>Açılış Bakiyesi</small><strong><?=money($a['opening_balance'])?></strong></div>
   <div class="card"><small><?=$isCard?'Kart No':'IBAN'?></small><strong style="font-size:16px"><?=h($isCard ? ($a['card_last4']?'**** '.$a['card_last4']:'-') : ($a['iban']?:'-'))?></strong></div>
   <div class="card"><small>Hareket Sayısı</small><strong><?=count($rows)?></strong></div>
 </div>
+
+<section class="panel">
+<details><summary style="font-weight:900;cursor:pointer;font-size:18px">✏️ Hesabı Düzenle</summary>
+<form method="post" class="form-grid" style="margin-top:10px">
+<label>Hesap Adı<input name="name" required value="<?=h($a['name'])?>"></label>
+<label>Hesap Tipi
+<select name="account_type">
+<?php foreach(finance_account_types() as $t): ?><option <?=$a['account_type']===$t?'selected':''?>><?=h($t)?></option><?php endforeach; ?>
+</select>
+</label>
+<label>Banka Adı<input name="bank_name" value="<?=h($a['bank_name'])?>"></label>
+<label>IBAN<input name="iban" value="<?=h($a['iban'])?>"></label>
+<label>Kart Son 4 Hane<input name="card_last4" maxlength="4" value="<?=h($a['card_last4'])?>"></label>
+<label>Para Birimi
+<select name="currency">
+<?php foreach(['TRY','USD','EUR'] as $c): ?><option <?=$a['currency']===$c?'selected':''?>><?=h($c)?></option><?php endforeach; ?>
+</select>
+</label>
+<label class="full">Notlar<textarea name="notes" rows="2"><?=h($a['notes'])?></textarea></label>
+<label class="full"><input type="checkbox" name="active" <?=$a['active']?'checked':''?> style="width:auto"> Aktif</label>
+<button class="btn" name="edit_account" value="1">💾 Kaydet</button>
+</form>
+</details>
+</section>
 
 <?php if($isCard): ?>
 <div class="ok" style="background:#eff6ff;color:#1e40af">💳 Bu bir kredi kartı hesabıdır. Karta yapılan ödemeler (kasa/bankadan) <b>Karta Ödeme</b> ile işlenir; harcamalar <b>+ Çıkış</b> olarak girilir.</div>

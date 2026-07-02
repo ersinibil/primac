@@ -24,6 +24,31 @@ $id = (int)($_POST['id'] ?? 0);
 if($_SERVER['REQUEST_METHOD']!=='POST' || !isset($map[$t]) || $id<1){ redirect('dashboard.php'); }
 
 list($table,$back,$children) = $map[$t];
+
+// Finans hesapları: hareketlerde kullanılmışsa kalıcı silme referans bütünlüğünü bozar —
+// finance_lib.php üzerinden kontrollü sil (kullanılıyorsa pasife al, değilse kalıcı sil).
+if($t==='account'){
+    require_once __DIR__.'/finance_lib.php';
+    try{
+        $res=finance_account_delete($pdo,$id);
+        try{ if(function_exists('activity_log')) activity_log('Silme',$res['msg'],$table.' #'.$id,'','admin',null,$back,'🗑'); }catch(Throwable $e){}
+    }catch(Throwable $e){ exit('Silinemedi: '.htmlspecialchars($e->getMessage())); }
+    redirect($back.'?deleted=1');
+}
+
+// Finans hareketleri (tahsilat/ödeme): silmeden önce ilgili hesabın bakiyesi geri alınmalı ve
+// satış/belge/transfer'den otomatik oluşan satırlar (diğer modüllerle senkron) burada silinemez —
+// finance_lib.php üzerinden kontrollü sil.
+if($t==='finance'){
+    require_once __DIR__.'/finance_lib.php';
+    try{
+        $res=finance_movement_delete($pdo,$id);
+        if(!$res['ok']) exit('Silinemedi: '.htmlspecialchars($res['msg']));
+        try{ if(function_exists('activity_log')) activity_log('Silme',$res['msg'],$table.' #'.$id,'','admin',null,$back,'🗑'); }catch(Throwable $e){}
+    }catch(Throwable $e){ exit('Silinemedi: '.htmlspecialchars($e->getMessage())); }
+    redirect($back.'?deleted=1');
+}
+
 try{
     try{ $pdo->exec("SET FOREIGN_KEY_CHECKS=0"); }catch(Throwable $e){}
     foreach($children as $ct=>$cf){ try{ $pdo->prepare("DELETE FROM `$ct` WHERE `$cf`=?")->execute([$id]); }catch(Throwable $e){} }

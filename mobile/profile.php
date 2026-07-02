@@ -77,7 +77,7 @@ if($pid){
 </div>
 
 <?php if($isAdmin): ?>
-<a class="btn" style="width:100%;background:#334155;color:#fff;margin-bottom:10px" href="../dashboard.php">🖥 Masaüstü Sürüme Geç</a>
+<a class="btn" style="width:100%;background:#334155;color:#fff;margin-bottom:10px" href="../dashboard.php?web=1">🖥 Masaüstü Sürüme Geç</a>
 <?php endif; ?>
 <a class="btn" style="width:100%;background:#7f1d1d;color:#fff" href="../logout.php">🚪 Çıkış Yap</a>
 

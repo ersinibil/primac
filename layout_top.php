@@ -161,6 +161,7 @@ th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;p
         $teklif_pages = ['teklif.php'];
         $finance_pages = ['finance.php','finance_accounts.php','finance_new.php','finance_transfer.php'];
         $stock_pages = ['stock.php','product_new.php','stock_movement_new.php','product_categories.php','product_taxonomy.php','purchase.php'];
+        $report_pages = ['report.php','gunluk_rapor.php'];
         $izleme_pages = ['activity.php','notifications.php'];
         $admin_pages = ['dashboard.php','requests.php','profile.php','users.php','temizle_veri.php','wa_settings.php','logout.php'];
         $hesabim_pages = ['profile.php','request_new.php','logout.php'];
@@ -236,11 +237,6 @@ th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;p
         </details>
         <?php endif; ?>
 
-        <?php if(user_can('report')): ?>
-        <a href="report.php" <?=($cur==='report.php'?'class="active"':'')?>><span>📊</span> Raporlar</a>
-        <a href="gunluk_rapor.php" <?=($cur==='gunluk_rapor.php'?'class="active"':'')?>><span>📅</span> Günlük İş Raporu</a>
-        <?php endif; ?>
-
         <?php if(user_can('stock')): ?>
         <details <?=(in_array($cur,$stock_pages)?'open':'')?>><summary><span>📦</span> Ürün / Stok</summary>
             <div class="sub">
@@ -251,6 +247,15 @@ th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;p
                 <a href="product_categories.php" <?=($cur==='product_categories.php'?'class="active"':'')?>><span>🏷</span> Kategoriler</a>
                 <a href="product_taxonomy.php" <?=($cur==='product_taxonomy.php'?'class="active"':'')?>><span>🔖</span> Marka / Birim</a>
                 <a href="purchase.php" <?=($cur==='purchase.php'?'class="active"':'')?>><span>🛒</span> Satın Alma İşleri</a>
+            </div>
+        </details>
+        <?php endif; ?>
+
+        <?php if(user_can('report')): ?>
+        <details <?=(in_array($cur,$report_pages)?'open':'')?>><summary><span>📊</span> Raporlar</summary>
+            <div class="sub">
+                <a href="report.php" <?=($cur==='report.php'?'class="active"':'')?>><span>📊</span> Raporlar</a>
+                <a href="gunluk_rapor.php" <?=($cur==='gunluk_rapor.php'?'class="active"':'')?>><span>📅</span> Günlük İş Raporu</a>
             </div>
         </details>
         <?php endif; ?>

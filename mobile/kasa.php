@@ -1,6 +1,5 @@
 <?php
 require_once 'common.php';
-block_personel();
 $pdo=db();
 // Yeni hesap ekle (POST topx'tan ÖNCE → redirect)
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['add_account'])){
@@ -18,6 +17,7 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['add_account'])){
 }
 topx('Kasa Durumu');
 if(isset($_GET['ok'])) echo '<div class="ok">Hesap eklendi.</div>';
+if(isset($_GET['deleted'])) echo '<div class="ok">Hesap silindi.</div>';
 if(!empty($_SESSION['kasa_err'])){ echo '<div class="err">'.htmlspecialchars($_SESSION['kasa_err']).'</div>'; unset($_SESSION['kasa_err']); }
 
 function acc_sum($pdo,$type){ try{ $s=$pdo->prepare("SELECT COALESCE(SUM(current_balance),0) s FROM finance_accounts WHERE active=1 AND account_type=?"); $s->execute([$type]); return (float)$s->fetch()['s']; }catch(Throwable $e){ return 0; } }
@@ -69,7 +69,7 @@ try{
   if(!$rows) echo '<p class="muted" style="margin:10px 0 0">Hareket yok.</p>';
   foreach($rows as $m){ $in=$m['direction']==='in';
     $tag=$m['cari'] ?: ($m['kat'] ?: '-');
-    echo '<div class="item"><b style="color:'.($in?'#4ade80':'#f87171').'">'.($in?'Tahsilat':'Ödeme').': '.mm($m['amount']).'</b><br><small>'.htmlspecialchars($tag.' · '.($m['payment_channel']?:'').' · '.($m['movement_date']??'')).'</small></div>';
+    echo '<a class="item" href="movement_view.php?id='.(int)$m['id'].'" style="display:block"><b style="color:'.($in?'#4ade80':'#f87171').'">'.($in?'Tahsilat':'Ödeme').': '.mm($m['amount']).'</b><br><small>'.htmlspecialchars($tag.' · '.($m['payment_channel']?:'').' · '.($m['movement_date']??'')).'</small></a>';
   }
 }catch(Throwable $e){ echo '<div class="err">'.htmlspecialchars($e->getMessage()).'</div>'; }
 ?>
