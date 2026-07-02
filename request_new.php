@@ -1,7 +1,6 @@
 <?php
 require_once __DIR__.'/boot.php';
 require_login();
-require_once __DIR__.'/telegram.php';
 
 $pdo=db();
 $error='';
@@ -23,26 +22,6 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             'Yeni',
             $_SESSION['user']['id'] ?? null
         ]);
-        try{
-            $personnelName = '-';
-            if(!empty($_POST['personnel_id'])){
-                $ps = $pdo->prepare("SELECT name FROM personnel WHERE id=?");
-                $ps->execute([$_POST['personnel_id']]);
-                $row = $ps->fetch();
-                $personnelName = $row['name'] ?? '-';
-            }
-
-            telegram_send(
-                "📨 Yeni Yönetim Talebi\n\n".
-                $reqNo."\n".
-                trim($_POST['title'])."\n\n".
-                "👤 Talep Eden: ".$personnelName."\n".
-                "📂 Kategori: ".$_POST['category']."\n".
-                "⚡ Öncelik: ".$_POST['priority'],
-                erp_url('requests.php')
-            );
-        }catch(Throwable $e){}
-
         header("Location: requests.php");
         exit;
     }catch(Throwable $e){

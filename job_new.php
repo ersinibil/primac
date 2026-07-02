@@ -2,7 +2,6 @@
 require_once __DIR__.'/boot.php';
 require_once __DIR__.'/activity_lib.php';
 require_login();
-require_once __DIR__.'/telegram.php';
 
 $error='';
 $pdo=db();
@@ -88,16 +87,6 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 $personnelName = $row['name'] ?? '-';
             }
 
-            telegram_send(
-                "🆕 Yeni İş Açıldı\n\n".
-                $jobNo."\n".
-                trim($_POST['title'])."\n\n".
-                "👤 Müşteri: ".$customerName."\n".
-                "👷 Sorumlu: ".$personnelName."\n".
-                "📅 Termin: ".($_POST['due_date'] ?: '-')."\n".
-                "🏷 Tip: ".job_type_label($_POST['job_type']),
-                erp_url('job_view.php?id='.$jobId)
-            );
         }catch(Throwable $e){}
 
         // İş atanan personele iç mesaj + bildirim + push (Mesajlar ekranında görünür)

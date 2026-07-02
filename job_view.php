@@ -1,7 +1,6 @@
 <?php
 require_once __DIR__.'/boot.php';
 require_login();
-require_once __DIR__.'/telegram.php';
 
 $id=(int)($_GET['id'] ?? 0);
 $pdo=db();
@@ -37,19 +36,6 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 if($pok){ add_log($id,'Üretim stoğa eklendi: '.$pmsg,'Stok'); $ok.=' · 📦 '.$pmsg; }
             }
             try{
-                if(in_array($_POST['job_status'], ['Tamamlandı','Teslim Edildi','İptal'])){
-                    $js = $pdo->prepare("SELECT job_no,title FROM jobs WHERE id=?");
-                    $js->execute([$id]);
-                    $jj = $js->fetch();
-
-                    telegram_send(
-                        "✅ İş Durumu Güncellendi\n\n".
-                        (($jj['job_no'] ?? 'İş'))."\n".
-                        (($jj['title'] ?? ''))."\n\n".
-                        "Yeni durum: ".$_POST['job_status'],
-                        erp_url('job_view.php?id='.$id)
-                    );
-                }
             }catch(Throwable $e){}
         }
 

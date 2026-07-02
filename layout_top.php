@@ -285,7 +285,12 @@ th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;p
 <main class="main">
 <header class="topbar">
     <button class="menu-toggle" onclick="document.querySelector('.app-shell').classList.toggle('nav-open')" aria-label="Menü">☰</button>
-    <div class="search">🔍 İş, müşteri, stok, personel ara...</div>
+    <form class="search" method="get" action="search.php" role="search">
+        <span style="font-size:15px;flex:0 0 auto">🔍</span>
+        <input name="q" placeholder="İş, müşteri, stok, personel ara…"
+            style="border:0;background:transparent;outline:none;flex:1;font-size:14px;color:#344054;min-width:0"
+            autocomplete="off" value="<?=htmlspecialchars($_GET['q'] ?? '')?>">
+    </form>
     <div class="top-actions">
         <a class="pill <?=$notifCount?'alert-pill':''?>" href="notifications.php">🔔 <?=$notifCount?></a>
         <a class="pill" href="request_new.php">📨 Talep</a>
