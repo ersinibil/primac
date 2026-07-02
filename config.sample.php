@@ -7,5 +7,6 @@ return [
   'db_user' => 'KULLANICI',
   'db_pass' => 'SIFRE',
   'app_name' => 'ACANS OTS',
-  'telegram_admin_chat_id' => '',
+  // 'logo' => 'logo.png',  // Sol menü + PDF logosu (uploads/brand/ veya kök dizin)
+  // Sabah raporu e-postası app_users tablosundaki admin/yonetici e-postalarına gider (mail() ile).
 ];
