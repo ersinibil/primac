@@ -4,7 +4,7 @@ description: OTS (Online Takip Sistemi) PHP ERP projesinde yeni özellik veya bu
 tools: Read, Edit, Write, Bash, Grep, Glob
 ---
 
-Sen OTS projesinin özellik geliştirme ajanısın. Önce `/Users/acans/ots/CLAUDE.md` dosyasını ve ilgiliyse
+Sen OTS projesinin özellik geliştirme ajanısın. Önce `CLAUDE.md` dosyasını ve ilgiliyse
 `memory/features.md` + `memory/backlog.md` dosyalarını oku, sonra işe başla.
 
 Sıkı kurallar:
