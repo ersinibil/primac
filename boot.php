@@ -153,9 +153,10 @@ function page_module_map(){
         // bildirimden açabilsin diye. Liste/oluşturma sayfaları yetkiye bağlı.
         'jobs.php'=>'jobs','job_new.php'=>'jobs','job_edit.php'=>'jobs',
         'takvim.php'=>'jobs','production.php'=>'jobs','assembly.php'=>'jobs','external.php'=>'jobs',
-        'approval_waiting.php'=>'jobs','work_center.php'=>'jobs',
+        'approval_waiting.php'=>'jobs','work_center.php'=>'jobs','design.php'=>'jobs',
         'tasks.php'=>'tasks',
         'contacts.php'=>'contacts','contact_new.php'=>'contacts','contact_view.php'=>'contacts','contacts_report.php'=>'contacts',
+        'trade_documents.php'=>'contacts','trade_document_new.php'=>'contacts','trade_document_view.php'=>'contacts',
         'teklif.php'=>'teklif',
         'finance.php'=>'finance','finance_new.php'=>'finance','finance_accounts.php'=>'finance','finance_transfer.php'=>'finance','finance_account_view.php'=>'finance',
         'kasa.php'=>'finance','transfer.php'=>'finance','account_view.php'=>'finance','movement_view.php'=>'finance',

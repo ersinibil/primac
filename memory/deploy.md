@@ -61,6 +61,17 @@ bilgileri için REFERANS/OTS-PROJE-KUNYE.txt dosyasına bakın (git'e girmez, sa
   `~/Desktop/PRIMAC-GUNCELLEME/`) elle tazelenip (`git archive HEAD` + `vendor/` eklenerek) yüklendi,
   `guncelle.php` her ikisinde de "0 yeni migration, 23 toplam" ile temiz çıktı verdi — deploy tamamlandı.
 
+## Git remote (2026-07-03'e kadar yoktu, artık var)
+Repo 2026-07-03'e kadar hiçbir uzak sunucuya bağlı değildi (sadece lokal `.git`). Bu tarihte
+GitHub'a bağlandı: remote `origin` = `https://github.com/ersinibil/primac.git` (kullanıcının
+`ersinibil@gmail.com` hesabı, `gh auth login --web` ile giriş yapıldı, `gh auth switch` ile aktif
+hesap yapıldı). Tüm 109 commit'lik geçmiş tek seferde push edildi, `main` branch izleniyor.
+
+**NOT**: Bu GitHub reposu deploy mekanizması DEĞİL — sunucuya yükleme hâlâ yukarıdaki
+`guncelle.php`/Masaüstü GUNCELLEME klasörleri yöntemiyle yapılıyor. GitHub sadece kod yedeği/geçmişi
+için. Kullanıcı isteği: bundan sonra her commit'ten hemen sonra otomatik `git push origin main` de
+yapılmalı (elle istenmeden) — bkz. auto-memory `project_github_remote` kaydı.
+
 ## Güvenlik notları
 - `config.php` düz metin şifre içerir (normal) ama `.htaccess` ile `config.php`, `*.log`, `guncelleme.zip`,
   `*.sql` uzantıları `Require all denied` ile korunuyor — bu kural her yeni benzer dosya tipinde güncellenmeli.

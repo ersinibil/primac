@@ -93,7 +93,7 @@ try {
             echo '<td class="muted">' . $rank . '</td>';
             echo '<td style="font-weight:800">';
             // İsme tıklayınca personel sayfasına git (varsa)
-            echo '<a href="personnel_view.php?id=' . (int)$r['id'] . '" style="color:#101828;text-decoration:none">'
+            echo '<a href="personnel_edit.php?id=' . (int)$r['id'] . '" style="color:#101828;text-decoration:none">'
                 . h($r['name']) . '</a>';
             echo '</td>';
             echo '<td class="muted">' . h($r['role'] ?: 'Personel') . '</td>';

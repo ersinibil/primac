@@ -159,8 +159,8 @@ th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;p
         /* Taksonomi — 4 grup (2026-07-03: kullanıcı isteğiyle 6 gruptan sadeleştirildi).
            Raporlar artık ayrı bir grup değil, ilgili alanın içine gömülü (report.php?modul=
            parametreleri DEĞİŞMEDİ, sadece hangi menüden erişildiği değişti). */
-        $personelIsTakip_pages = ['jobs.php','job_new.php','takvim.php','tasks.php','approval_waiting.php','external.php','production.php','assembly.php','requests.php','personnel.php','personnel_new.php','kpi.php','gunluk_rapor.php'];
-        $muhasebe_pages = ['contacts.php','contact_new.php','contacts_report.php','teklif.php','sales.php','purchase.php','stock.php','product_new.php','stock_movement_new.php','product_categories.php','product_taxonomy.php','finance.php','finance_accounts.php','finance_new.php','finance_transfer.php','checks_notes.php','check_note_view.php','accounting.php','accounting_categories.php'];
+        $personelIsTakip_pages = ['jobs.php','job_new.php','takvim.php','tasks.php','approval_waiting.php','external.php','production.php','assembly.php','design.php','work_center.php','requests.php','personnel.php','personnel_new.php','kpi.php','gunluk_rapor.php'];
+        $muhasebe_pages = ['contacts.php','contact_new.php','contacts_report.php','teklif.php','sales.php','purchase.php','stock.php','product_new.php','stock_movement_new.php','product_categories.php','product_taxonomy.php','finance.php','finance_accounts.php','finance_new.php','finance_transfer.php','checks_notes.php','check_note_view.php','accounting.php','accounting_categories.php','trade_documents.php','trade_document_new.php','trade_document_view.php'];
         $mesajRapor_pages = ['notifications.php','activity.php','wa_send_now.php'];
         $sistem_pages = ['users.php','audit_log.php','wa_settings.php','brand_settings.php','profile.php','request_new.php','temizle_veri.php','logout.php'];
         ?>
@@ -176,6 +176,8 @@ th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;p
                 <a href="external.php" <?=($cur==='external.php'?'class="active"':'')?>><span>🔧</span> Dış Tedarik / Atölye</a>
                 <a href="production.php" <?=($cur==='production.php'?'class="active"':'')?>><span>🏭</span> Üretim</a>
                 <a href="assembly.php" <?=($cur==='assembly.php'?'class="active"':'')?>><span>🔩</span> Montaj</a>
+                <a href="design.php" <?=($cur==='design.php'?'class="active"':'')?>><span>🎨</span> Grafik Tasarım</a>
+                <a href="work_center.php" <?=($cur==='work_center.php'?'class="active"':'')?>><span>⚙️</span> İş Motoru</a>
                 <?php endif; ?>
                 <?php if(user_can('tasks')): ?>
                 <a href="tasks.php" <?=($cur==='tasks.php'?'class="active"':'')?>><span>✅</span> Görevler</a>
@@ -205,6 +207,7 @@ th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;p
                 <a href="contacts.php" <?=($cur==='contacts.php'?'class="active"':'')?>><span>📋</span> Tüm Cariler</a>
                 <a href="contact_new.php?type=Müşteri" <?=($cur==='contact_new.php'?'class="active"':'')?>><span>➕</span> Müşteri</a>
                 <a href="contact_new.php?type=Tedarikçi"><span>➕</span> Tedarikçi</a>
+                <a href="trade_documents.php" <?=($cur==='trade_documents.php'?'class="active"':'')?>><span>🧾</span> Alış / Satış Belgeleri</a>
                 <?php endif; ?>
                 <?php if(user_can('teklif')): ?>
                 <a href="teklif.php" <?=($cur==='teklif.php'?'class="active"':'')?>><span>📄</span> Tüm Teklifler</a>

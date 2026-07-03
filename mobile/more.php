@@ -115,6 +115,7 @@
   <?php
   card('Talep Aç','Yönetime talep gönder','📨','request_new.php','orange');
   card('Profil','Şifre & hesap','👤','profile.php','blue');
+  card('Bildirim Kur','Push bildirim kurulum & teşhis','🔔','push_enable.php','yellow');
   card('Web Sürümü','Masaüstü Sürüm','🖥','../dashboard.php?web=1','gray');
   if(user_can('users')) {
     card('Kullanıcılar','Yetki yönetimi','👥','users.php','purple');
