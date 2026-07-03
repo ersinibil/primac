@@ -584,3 +584,10 @@ Bulunan KRİTİK sorunlar (hepsi bu commit'te düzeltildi):
 - layout_top.php sol menü 9 gruptan 6 gruba indirildi (51f9ad1): İş Takip, Ticaret, Finans & Muhasebe,
   Ekip, Rapor, Sistem. mobile/more.php aynı 6 grupla hizalandı (53cd1c8) — kart-grid yapısı korundu,
   sadece başlıklar/gruplama eşleştirildi.
+
+## Cari bakiye tutarsızlığı + Teklif onay/PDF/WhatsApp iyileştirmesi (2026-07-03)
+- contacts.php "Toplam Bakiye" kartı tüm finance_movements'ı (cari_id'siz dahil) topluyordu,
+  cari satırlarıyla uyuşmayan bir rakam üretiyordu — düzeltildi (contacts_report.php'nin
+  doğru per-contact toplama deseniyle hizalandı).
+- quote_approve.php: Open Graph meta etiketleri (WhatsApp önizleme kartı) + "PDF İndir" butonu
+  eklendi (report_share.js). teklif.php/mobile/teklif.php WhatsApp mesaj metni güncellendi.
