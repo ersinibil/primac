@@ -575,3 +575,12 @@ Bulunan KRİTİK sorunlar (hepsi bu commit'te düzeltildi):
 - tasks.php (web): görev durumu güncelleme + silme POST aksiyonları var, salt-okunur değil.
 - Bunlar 2026-06-28 tarihli RAPOR.md'de "yapılmadı" olarak işaretliydi; 2026-07-02 denetiminde kodda
   çözülmüş bulundu. RAPOR.md güncelliğini kaybettiği için kaldırıldı, kalan açık maddeler [[backlog]]'a taşındı.
+
+## Web bildirim merkezi kişiselleştirmesi + sol menü/mobil Menü hizalaması (2026-07-03)
+- notifications.php, layout_top.php (zil sayacı), dashboard.php (Canlı Bildirimler widget'ı): artık
+  mobile/notifications.php'deki gibi `target_user_id IS NULL OR target_user_id=?` ile filtreleniyor.
+  Öncesinde herkes herkesin (örn. personelin kişisel günlük hatırlatmasının) bildirimini görüyordu —
+  kullanıcı canlıda fark etti (yönetici hesabında personele özel bildirim görünüyordu).
+- layout_top.php sol menü 9 gruptan 6 gruba indirildi (51f9ad1): İş Takip, Ticaret, Finans & Muhasebe,
+  Ekip, Rapor, Sistem. mobile/more.php aynı 6 grupla hizalandı (53cd1c8) — kart-grid yapısı korundu,
+  sadece başlıklar/gruplama eşleştirildi.
