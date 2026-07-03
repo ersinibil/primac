@@ -28,7 +28,7 @@
     card('Dış İşler','Dış atölye/tedarik','🏭','external.php','blue');
   }
   if(user_can('tasks')) {
-    card('Tüm Görevler','Görev yönetimi (herkes)','✅','../tasks.php?web=1','teal'); // web'de var, mobilde köprü yoktu
+    card('Tüm Görevler','Görev yönetimi (herkes)','✅','tasks.php','teal');
   }
   if($isAdmin) {
     card('Görev Ata','Personele görev','🎯','task_new.php','teal'); // hâlâ admin-only
@@ -132,7 +132,7 @@
     card('WhatsApp Gönder','Anlık mesaj gönder','📤','wa_send_now.php','green');
     card('WhatsApp Ayarları','Gateway kurulumu','📱','wa_settings.php','gray');
     card('Logo / Marka','Marka ayarları','🎨','brand_settings.php','gray');
-    card('Veri Temizleme','Canlıya hazırlık','🧹','../temizle_veri.php?web=1','red'); // web'de var, mobilde köprü yoktu
+    card('Veri Temizleme','Canlıya hazırlık','🧹','temizle_veri.php','red');
   }
   card('Çıkış Yap','Oturumu kapat','🚪','../logout.php','red');
   ?>
