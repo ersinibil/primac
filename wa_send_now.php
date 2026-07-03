@@ -38,32 +38,38 @@ require_once __DIR__.'/layout_top.php';
 <?php endif; ?>
 <?php if($ok): ?><div class="ok"><?=h($ok)?></div><?php endif; ?>
 
-<form method="post">
-    <label>Kime</label>
-    <select name="phone_pick" onchange="document.getElementById('phone').value=this.value">
-        <option value="">— Listeden seç (opsiyonel) —</option>
-        <?php if($personnel): ?>
-        <optgroup label="Personel">
-            <?php foreach($personnel as $p): ?>
-            <option value="<?=h($p['phone'])?>"><?=h($p['name'])?> — <?=h($p['phone'])?></option>
-            <?php endforeach; ?>
-        </optgroup>
-        <?php endif; ?>
-        <?php if($contacts): ?>
-        <optgroup label="Cari">
-            <?php foreach($contacts as $c): ?>
-            <option value="<?=h($c['phone'])?>"><?=h($c['name'])?> — <?=h($c['phone'])?></option>
-            <?php endforeach; ?>
-        </optgroup>
-        <?php endif; ?>
-    </select>
+<form method="post" class="form-grid">
 
-    <label>Telefon</label>
-    <input type="text" id="phone" name="phone" placeholder="05XX XXX XX XX" value="<?=h($_POST['phone'] ?? '')?>" required>
+<label class="full">Kime (listeden seç — opsiyonel)
+<select name="phone_pick" onchange="document.getElementById('phone').value=this.value">
+    <option value="">— Listeden seç (opsiyonel) —</option>
+    <?php if($personnel): ?>
+    <optgroup label="Personel">
+        <?php foreach($personnel as $p): ?>
+        <option value="<?=h($p['phone'])?>"><?=h($p['name'])?> — <?=h($p['phone'])?></option>
+        <?php endforeach; ?>
+    </optgroup>
+    <?php endif; ?>
+    <?php if($contacts): ?>
+    <optgroup label="Cari">
+        <?php foreach($contacts as $c): ?>
+        <option value="<?=h($c['phone'])?>"><?=h($c['name'])?> — <?=h($c['phone'])?></option>
+        <?php endforeach; ?>
+    </optgroup>
+    <?php endif; ?>
+</select>
+</label>
 
-    <label>Mesaj</label>
-    <textarea name="message" rows="5" placeholder="Mesajınızı yazın…" required><?=h($_POST['message'] ?? '')?></textarea>
+<label class="full">Telefon
+<input type="text" id="phone" name="phone" placeholder="05XX XXX XX XX" value="<?=h($_POST['phone'] ?? '')?>" required>
+</label>
 
-    <button type="submit" class="btn dark" style="margin-top:10px">📤 Gönder</button>
+<label class="full">Mesaj
+<textarea name="message" rows="5" placeholder="Mesajınızı yazın…" required><?=h($_POST['message'] ?? '')?></textarea>
+</label>
+
+<div class="full">
+<button type="submit" class="btn dark">📤 Gönder</button>
+</div>
 </form>
 </section>
