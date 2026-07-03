@@ -17,6 +17,28 @@
 
 ## Çözüldü
 
+- **Web'de bildirime tıklayınca mobile'a zıplama + hayalet "okunmamış mesaj" rozeti + mobil görev
+  yetki açığı** (2026-07-03, commit bb8a710): Kullanıcı PRIMAC'ta test etti — zip iki kere yüklenmiş
+  olmasına rağmen "bildirim var ama mesaj yok" ve "web'de bildirime tıklayınca mobil ekrana düşüyorum"
+  şikayetleri sürdü. Kök nedenler kod incelemesiyle bulundu (deploy sorunu değildi):
+  1. Web'de `mytasks.php` hiç yoktu → `notifications.php`'deki mobile-fallback (dosya web'de yoksa
+     mobile/'a yönlendir) her zaman tetikleniyordu. Web `mytasks.php` eklendi (mobile/mytasks.php
+     paritesi, 'tasks' yetkisi istemiyor), `task_new.php`'nin bildirim action_url'i `tasks.php`'den
+     `mytasks.php`'ye çevrildi, `takvim.php`'deki eski "yetkisizse düz metin" iş-around'ı kaldırıldı.
+  2. `messages.php`/`mobile/messages.php` kişi listesi sadece `active=1` kullanıcıları gösteriyordu;
+     `mobile/common.php`'deki küresel okunmamış-mesaj rozeti ise `active` şartı olmadan sayıyordu —
+     deaktif bir kullanıcıyla (veya sender_user_id NULL hayalet satırla) geçmiş varsa rozet "1"
+     gösteriyor ama hiçbir sohbette mesaj görünmüyordu. Kişi listesi artık geçmişi olan deaktif
+     kullanıcıyı da gösteriyor; rozet sorguları (`unread_msg()`, `poll.php`) NULL sender'ı saymıyor;
+     migration 038 birikmiş hayalet satırları temizliyor (022'nin tekrarı — muhtemelen 022'den sonra
+     yeniden birikmiş veya farklı bir kod yolundan gelmiş).
+  3. Bu incelemenin yan ürünü: `mobile/mytasks.php` görev durumu güncelleme sorgusunda `personnel_id`
+     kontrolü YOKTU — herhangi bir oturum, `tid` bilerek/tahmin ederek başkasının görevini
+     güncelleyebilirdi (ots-code-reviewer denetiminde bulundu, önceden beri vardı). `AND
+     personnel_id=?` eklenerek kapatıldı, web sürümü zaten bu korumayla yazılmıştı.
+  Ayrıca (ilgisiz ama aynı oturumda bulunan görsel bug): mobil mesaj composer'daki emoji butonu
+  (`share_lib.php: emoji_picker_html()`) flex satırında sıkışıp "😀"/"Emo" olarak 2 satıra
+  bölünüyordu → `flex:0 0 auto` + `white-space:nowrap` ile düzeltildi.
 - **Bildirim `action_url` eksikliği + mesaj görünürlük hatası** (2026-07-02): bkz. [[features]] "Bildirim
   action_url + mesaj görünürlük onarımı". Ek olarak: bu düzeltme `notifications.php`'deki tablo adı hatasını
   giderince, daha önce hiç çalışmayan `?go=` redirect kod yolu ilk kez fiilen erişilebilir hale geldi ve

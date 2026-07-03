@@ -94,3 +94,13 @@ Bu, MEVCUT anahtarları taşımak içindir (rotasyon değil) — böylece hiçbi
 bozulmaz. Gerçek bir key ROTASYONU (yeni anahtar üretme) ayrı bir karar — yapılırsa TÜM kullanıcıların
 bildirimleri yeniden açması gerekir, kullanıcıya danışılmadan yapılmadı. Lokal `config.php`'ye zaten
 eklendi (gitignore'da, referans için).
+
+## 2026-07-03: Görevlerim/mesajlaşma düzeltmesi sonrası zip tazeleme
+Commit `bb8a710` (bkz. [[bugs]] "Web'de bildirime tıklayınca mobile'a zıplama...") için her iki
+`guncelleme.zip` (`~/Desktop/ACANS-GUNCELLEME/`, `~/Desktop/PRIMAC-GUNCELLEME/`) `git archive HEAD` +
+`vendor/` eklenerek tazelendi, içerik MD5 ile doğrulandı (repo dosyalarıyla birebir eşleşiyor).
+**Yeni migration 038 var** — `guncelle.php` çalıştırıldığında otomatik uygulanmalı (elle phpMyAdmin
+gerekmiyor bu sefer, CLI/guncelle.php erişimi varsa). Kullanıcı zip'i sunucuya yükleyip
+`guncelle.php`'yi çalıştırdıktan sonra hem web hem mobilde gizli sekmede/hard-refresh ile test etmeli
+(önceki turda bu adım atlanınca "güncelleme almamış" yanlış izlenimi oluşmuştu — aslında zip
+doğruydu, sorun kod tarafındaydı, şimdi giderildi).
