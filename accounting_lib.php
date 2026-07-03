@@ -11,6 +11,27 @@ function acc_categories($pdo, $type=null){
     }catch(Throwable $e){ return []; }
 }
 
+// KDV oranı seçenekleri (TR standart oranları)
+function acc_vat_rates(){ return [1,10,20]; }
+
+// $rawAmount kullanıcının girdiği tutar. mode='dahil' → tutar zaten toplam, KDV ayrıca hesaplanır
+// (bilgi amaçlı, tutar değişmez). mode='haric' → tutar KDV'siz taban kabul edilir, toplam
+// (amount kolonuna yazılacak gerçek tutar) = taban + KDV hesaplanır. mode='yok' → KDV yok.
+// Dönen: ['amount'=>gerçek toplam (DB'ye yazılacak), 'vat_rate'=>..., 'vat_amount'=>...]
+function acc_calc_vat($rawAmount, $mode, $rate){
+    $rawAmount=(float)$rawAmount;
+    if($mode==='haric' && $rate>0){
+        $vatAmount=round($rawAmount*$rate/100,2);
+        return ['amount'=>round($rawAmount+$vatAmount,2),'vat_rate'=>$rate,'vat_amount'=>$vatAmount];
+    }
+    if($mode==='dahil' && $rate>0){
+        // Toplam zaten KDV dahil — içindeki KDV payını geriye doğru ayıkla (bilgi amaçlı)
+        $vatAmount=round($rawAmount-($rawAmount/(1+$rate/100)),2);
+        return ['amount'=>$rawAmount,'vat_rate'=>$rate,'vat_amount'=>$vatAmount];
+    }
+    return ['amount'=>$rawAmount,'vat_rate'=>null,'vat_amount'=>0];
+}
+
 function acc_summary($pdo, $month=null, $year=null){
     $month=$month ?: (int)date('m');
     $year=$year ?: (int)date('Y');
@@ -52,7 +73,11 @@ function accounting_entry_update($pdo, $id, array $data){
     if(!$old) throw new Exception('Kayıt bulunamadı.');
 
     $type=$data['type'] ?? $old['type'];
-    $amount=(float)str_replace(',','.',$data['amount'] ?? $old['amount']);
+    $rawAmount=(float)str_replace(',','.',$data['amount'] ?? $old['amount']);
+    $vatMode=$data['vat_mode'] ?? $old['vat_mode'] ?? 'yok';
+    $vatRate=(float)($data['vat_rate'] ?? $old['vat_rate'] ?? 0);
+    $vc=acc_calc_vat($rawAmount,$vatMode,$vatRate);
+    $amount=$vc['amount'];
     $date=$data['entry_date'] ?? $old['entry_date'];
     $catId=(int)($data['category_id']??$old['category_id']) ?: null;
     $desc=trim($data['description'] ?? $old['description'] ?? '');
@@ -70,8 +95,8 @@ function accounting_entry_update($pdo, $id, array $data){
     }
 
     // Kaydı güncelle
-    $pdo->prepare("UPDATE accounting_entries SET entry_date=?,type=?,category_id=?,amount=?,description=?,reference_no=?,account_id=?,personnel_id=?,payment_type=? WHERE id=?")
-        ->execute([$date,$type,$catId,$amount,$desc,$refNo,$accId,$pid,$pt,$id]);
+    $pdo->prepare("UPDATE accounting_entries SET entry_date=?,type=?,category_id=?,amount=?,vat_mode=?,vat_rate=?,vat_amount=?,description=?,reference_no=?,account_id=?,personnel_id=?,payment_type=? WHERE id=?")
+        ->execute([$date,$type,$catId,$amount,$vatMode,$vc['vat_rate'],$vc['vat_amount'],$desc,$refNo,$accId,$pid,$pt,$id]);
 
     // Yeni hesap bakiyesini uygula
     if($accId){

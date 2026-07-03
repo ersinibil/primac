@@ -30,7 +30,11 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['del_entry'])){
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['save_entry'])){
     try{
         $type=$_POST['type'] ?? 'gider';
-        $amount=(float)str_replace(',','.',$_POST['amount'] ?? '0');
+        $rawAmount=(float)str_replace(',','.',$_POST['amount'] ?? '0');
+        $vatMode=in_array($_POST['vat_mode']??'yok',['dahil','haric','yok'],true)?$_POST['vat_mode']:'yok';
+        $vatRate=(float)($_POST['vat_rate'] ?? 0);
+        $vc=acc_calc_vat($rawAmount,$vatMode,$vatRate);
+        $amount=$vc['amount'];
         $date=$_POST['entry_date'] ?? date('Y-m-d');
         $catId=(int)($_POST['category_id']??0) ?: null;
         $desc=trim($_POST['description'] ?? '');
@@ -39,9 +43,9 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['save_entry'])){
         $pid=(int)($_POST['personnel_id']??0) ?: null;
         $pt=trim($_POST['payment_type'] ?? '');
         if($amount<=0) throw new Exception('Tutar sıfırdan büyük olmalı.');
-        $pdo->prepare("INSERT INTO accounting_entries(entry_date,type,category_id,amount,description,reference_no,account_id,personnel_id,payment_type,created_by)
-            VALUES(?,?,?,?,?,?,?,?,?,?)")
-            ->execute([$date,$type,$catId,$amount,$desc,$refNo,$accId,$pid,$pt,$_SESSION['user']['id'] ?? null]);
+        $pdo->prepare("INSERT INTO accounting_entries(entry_date,type,category_id,amount,vat_mode,vat_rate,vat_amount,description,reference_no,account_id,personnel_id,payment_type,created_by)
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)")
+            ->execute([$date,$type,$catId,$amount,$vatMode,$vc['vat_rate'],$vc['vat_amount'],$desc,$refNo,$accId,$pid,$pt,$_SESSION['user']['id'] ?? null]);
         // Kasa bakiyesi güncelle
         if($accId){
             $dir=$type==='gelir'?'+':'-';
@@ -149,8 +153,25 @@ $groups=acc_group_summary($pdo,$month,$year);
 </label>
 
 <label>Tutar (₺)
-<input type="number" step="0.01" min="0.01" name="amount" required placeholder="0,00">
+<input type="number" step="0.01" min="0.01" name="amount" id="amtInput" required placeholder="0,00" oninput="calcVat()">
 </label>
+
+<label>KDV Durumu
+<select name="vat_mode" id="vatMode" onchange="toggleVatRate()">
+  <option value="yok">KDV Yok / Belirtilmedi</option>
+  <option value="dahil">KDV Dahil (girilen tutar toplam)</option>
+  <option value="haric">KDV Hariç (girilen tutar KDV'siz taban)</option>
+</select>
+</label>
+
+<label id="vatRateLabel" style="display:none">KDV Oranı
+<select name="vat_rate" id="vatRate" onchange="calcVat()">
+  <?php foreach(acc_vat_rates() as $vr): ?>
+  <option value="<?=$vr?>" <?=$vr===20?'selected':''?>>%<?=$vr?></option>
+  <?php endforeach; ?>
+</select>
+</label>
+<div id="vatPreview" class="full" style="display:none;font-size:13px;color:#475467;margin-top:-8px"></div>
 
 <label>Açıklama
 <input name="description" placeholder="İsteğe bağlı">
@@ -215,6 +236,29 @@ function filterCatsEdit(id){
     o.style.display=(o.dataset.type===t)?'':'none';
     if(o.dataset.type!==t&&o.selected) o.selected=false;
   }
+}
+// KDV dahil/hariç hesabı (yeni kayıt formu)
+function toggleVatRate(){
+  var m=document.getElementById('vatMode').value;
+  document.getElementById('vatRateLabel').style.display=(m==='yok')?'none':'block';
+  document.getElementById('vatPreview').style.display=(m==='yok')?'none':'block';
+  calcVat();
+}
+function calcVat(){
+  var m=document.getElementById('vatMode').value;
+  var amt=parseFloat(document.getElementById('amtInput').value)||0;
+  var rate=parseFloat(document.getElementById('vatRate').value)||0;
+  var out=document.getElementById('vatPreview');
+  if(m==='haric'){ var vat=amt*rate/100; var total=amt+vat;
+    out.textContent='KDV: '+vat.toLocaleString('tr-TR',{minimumFractionDigits:2})+' ₺ · Ödenecek/Alınacak Toplam: '+total.toLocaleString('tr-TR',{minimumFractionDigits:2})+' ₺'; }
+  else if(m==='dahil'){ var vat=amt-(amt/(1+rate/100));
+    out.textContent='Girilen tutarın içindeki KDV: '+vat.toLocaleString('tr-TR',{minimumFractionDigits:2})+' ₺ (toplam değişmez)'; }
+  else out.textContent='';
+}
+// Aynı desen — düzenleme formları için (id bazlı)
+function toggleVatRateEdit(id){
+  var m=document.getElementById('editVatMode'+id).value;
+  document.getElementById('editVatRateLabel'+id).style.display=(m==='yok')?'none':'block';
 }
 </script>
 
@@ -288,6 +332,9 @@ foreach($entries as $e):
   </div>
   <div style="text-align:right;flex:0 0 auto;margin-left:10px">
     <div style="font-weight:900;color:<?=$tColor?>;font-size:15px"><?=$isGider?'-':'+' ?><?=money($e['amount'])?></div>
+    <?php if(($e['vat_mode']??'yok')!=='yok' && $e['vat_rate']): ?>
+    <div style="font-size:10.5px;color:#94a3b8;margin-top:2px">KDV %<?=(int)$e['vat_rate']?> <?=$e['vat_mode']==='dahil'?'dahil':'hariç'?> (<?=money($e['vat_amount'])?>)</div>
+    <?php endif; ?>
     <?php if(can_edit_delete()): ?>
     <div style="display:flex;gap:4px;margin:4px 0 0">
       <button class="btn secondary" style="padding:3px 8px;font-size:11px" type="button" onclick="document.getElementById('edit-acc-<?=(int)$e['id']?>').style.display=(document.getElementById('edit-acc-<?=(int)$e['id']?>').style.display==='none'?'block':'none')">✏️ Düzenle</button>
@@ -325,6 +372,20 @@ foreach($entries as $e):
     </label>
     <label>Tutar (₺)
       <input type="number" step="0.01" min="0.01" name="amount" required value="<?=h(str_replace('.',',',$e['amount']))?>">
+    </label>
+    <label>KDV Durumu
+      <select name="vat_mode" id="editVatMode<?=(int)$e['id']?>" onchange="toggleVatRateEdit(<?=(int)$e['id']?>)">
+        <option value="yok" <?=($e['vat_mode']??'yok')==='yok'?'selected':''?>>KDV Yok / Belirtilmedi</option>
+        <option value="dahil" <?=($e['vat_mode']??'')==='dahil'?'selected':''?>>KDV Dahil</option>
+        <option value="haric" <?=($e['vat_mode']??'')==='haric'?'selected':''?>>KDV Hariç</option>
+      </select>
+    </label>
+    <label id="editVatRateLabel<?=(int)$e['id']?>" style="display:<?=in_array($e['vat_mode']??'yok',['dahil','haric'],true)?'block':'none'?>">KDV Oranı
+      <select name="vat_rate">
+        <?php foreach(acc_vat_rates() as $vr): ?>
+        <option value="<?=$vr?>" <?=(int)($e['vat_rate']??20)===$vr?'selected':''?>>%<?=$vr?></option>
+        <?php endforeach; ?>
+      </select>
     </label>
     <label class="full">Açıklama
       <input name="description" value="<?=h($e['description'] ?? '')?>">

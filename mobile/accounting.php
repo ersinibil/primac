@@ -31,7 +31,11 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     if(isset($_POST['save_entry'])){
         try{
             $type=$_POST['type'] ?? 'gider';
-            $amount=(float)str_replace(',','.',$_POST['amount'] ?? '0');
+            $rawAmount=(float)str_replace(',','.',$_POST['amount'] ?? '0');
+            $vatMode=in_array($_POST['vat_mode']??'yok',['dahil','haric','yok'],true)?$_POST['vat_mode']:'yok';
+            $vatRate=(float)($_POST['vat_rate'] ?? 0);
+            $vc=acc_calc_vat($rawAmount,$vatMode,$vatRate);
+            $amount=$vc['amount'];
             $date=$_POST['entry_date'] ?? date('Y-m-d');
             $catId=(int)($_POST['category_id']??0) ?: null;
             $desc=trim($_POST['description'] ?? '');
@@ -39,8 +43,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             $pid=(int)($_POST['personnel_id']??0) ?: null;
             $pt=trim($_POST['payment_type'] ?? '');
             if($amount<=0) throw new Exception('Tutar geçersiz.');
-            $pdo->prepare("INSERT INTO accounting_entries(entry_date,type,category_id,amount,description,account_id,personnel_id,payment_type,created_by) VALUES(?,?,?,?,?,?,?,?,?)")
-                ->execute([$date,$type,$catId,$amount,$desc,$accId,$pid,$pt,$_SESSION['user']['id']??null]);
+            $pdo->prepare("INSERT INTO accounting_entries(entry_date,type,category_id,amount,vat_mode,vat_rate,vat_amount,description,account_id,personnel_id,payment_type,created_by) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)")
+                ->execute([$date,$type,$catId,$amount,$vatMode,$vc['vat_rate'],$vc['vat_amount'],$desc,$accId,$pid,$pt,$_SESSION['user']['id']??null]);
             if($accId){
                 $dir=$type==='gelir'?'+':'-';
                 try{ $pdo->prepare("UPDATE finance_accounts SET current_balance=current_balance{$dir}? WHERE id=?")->execute([$amount,$accId]); }catch(Throwable $e){}
@@ -105,7 +109,22 @@ topx('Muhasebe');
       <?php endforeach; ?>
     </select>
     <label style="color:#94a3b8;font-size:12px">Tutar (₺)</label>
-    <input type="number" step="0.01" min="0.01" name="amount" required placeholder="0,00">
+    <input type="number" step="0.01" min="0.01" name="amount" id="mAmt" required placeholder="0,00" oninput="mCalcVat()">
+    <label style="color:#94a3b8;font-size:12px">KDV Durumu</label>
+    <select name="vat_mode" id="mVatMode" onchange="mToggleVat()">
+      <option value="yok">KDV Yok / Belirtilmedi</option>
+      <option value="dahil">KDV Dahil (girilen tutar toplam)</option>
+      <option value="haric">KDV Hariç (girilen tutar KDV'siz taban)</option>
+    </select>
+    <div id="mVatRateWrap" style="display:none">
+      <label style="color:#94a3b8;font-size:12px">KDV Oranı</label>
+      <select name="vat_rate" id="mVatRate" onchange="mCalcVat()">
+        <?php foreach(acc_vat_rates() as $vr): ?>
+        <option value="<?=$vr?>" <?=$vr===20?'selected':''?>>%<?=$vr?></option>
+        <?php endforeach; ?>
+      </select>
+      <div id="mVatPreview" class="small" style="margin:-6px 0 10px"></div>
+    </div>
     <label style="color:#94a3b8;font-size:12px">Açıklama</label>
     <input name="description" placeholder="İsteğe bağlı">
     <label style="color:#94a3b8;font-size:12px">Hesap</label>
@@ -133,6 +152,26 @@ topx('Muhasebe');
 </details>
 
 <script>
+function mToggleVat(){
+  var m=document.getElementById('mVatMode').value;
+  document.getElementById('mVatRateWrap').style.display=(m==='yok')?'none':'block';
+  mCalcVat();
+}
+function mCalcVat(){
+  var m=document.getElementById('mVatMode').value;
+  var amt=parseFloat(document.getElementById('mAmt').value)||0;
+  var rate=parseFloat(document.getElementById('mVatRate').value)||0;
+  var out=document.getElementById('mVatPreview');
+  if(m==='haric'){ var vat=amt*rate/100; var total=amt+vat;
+    out.textContent='KDV: '+vat.toLocaleString('tr-TR',{minimumFractionDigits:2})+' ₺ · Toplam: '+total.toLocaleString('tr-TR',{minimumFractionDigits:2})+' ₺'; }
+  else if(m==='dahil'){ var vat=amt-(amt/(1+rate/100));
+    out.textContent='İçindeki KDV: '+vat.toLocaleString('tr-TR',{minimumFractionDigits:2})+' ₺ (toplam değişmez)'; }
+  else out.textContent='';
+}
+function mToggleVatEdit(id){
+  var m=document.getElementById('meditVatMode'+id).value;
+  document.getElementById('meditVatRateWrap'+id).style.display=(m==='yok')?'none':'block';
+}
 function mFilterCats(){
   var t=document.getElementById('mtype').value;
   var opts=document.getElementById('mcats').options;
@@ -172,6 +211,9 @@ function mFilterCatsEdit(id){
       </div>
       <div style="text-align:right;flex:0 0 auto;margin-left:8px">
         <b style="color:<?=$tc?>"><?=$ig?'-':'+'?><?=mm($e['amount'])?></b>
+        <?php if(($e['vat_mode']??'yok')!=='yok' && $e['vat_rate']): ?>
+        <div style="font-size:10px;color:#64748b;margin-top:2px">KDV %<?=(int)$e['vat_rate']?> <?=$e['vat_mode']==='dahil'?'dahil':'hariç'?></div>
+        <?php endif; ?>
       </div>
     </summary>
     <?php if($e['description']): ?><div style="font-size:12px;color:#cbd5e1;padding:0 10px;margin-bottom:6px"><?=htmlspecialchars($e['description'])?></div><?php endif; ?>
@@ -196,6 +238,20 @@ function mFilterCatsEdit(id){
         </select>
         <label style="color:#94a3b8;font-size:12px">Tutar (₺)</label>
         <input type="number" step="0.01" min="0.01" name="amount" required value="<?=htmlspecialchars(str_replace('.',',',$e['amount']))?>">
+        <label style="color:#94a3b8;font-size:12px">KDV Durumu</label>
+        <select name="vat_mode" id="meditVatMode<?=(int)$e['id']?>" onchange="mToggleVatEdit(<?=(int)$e['id']?>)">
+          <option value="yok" <?=($e['vat_mode']??'yok')==='yok'?'selected':''?>>KDV Yok / Belirtilmedi</option>
+          <option value="dahil" <?=($e['vat_mode']??'')==='dahil'?'selected':''?>>KDV Dahil</option>
+          <option value="haric" <?=($e['vat_mode']??'')==='haric'?'selected':''?>>KDV Hariç</option>
+        </select>
+        <div id="meditVatRateWrap<?=(int)$e['id']?>" style="display:<?=in_array($e['vat_mode']??'yok',['dahil','haric'],true)?'block':'none'?>">
+          <label style="color:#94a3b8;font-size:12px">KDV Oranı</label>
+          <select name="vat_rate">
+            <?php foreach(acc_vat_rates() as $vr): ?>
+            <option value="<?=$vr?>" <?=(int)($e['vat_rate']??20)===$vr?'selected':''?>>%<?=$vr?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
         <label style="color:#94a3b8;font-size:12px">Açıklama</label>
         <input name="description" value="<?=htmlspecialchars($e['description'] ?? '')?>">
         <label style="color:#94a3b8;font-size:12px">Hesap</label>
