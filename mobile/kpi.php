@@ -1,6 +1,6 @@
 <?php
 require_once 'common.php';
-block_personel(); // sadece yönetici
+block_personel('personnel'); // 2026-07-03: kullanıcı onayı verildi — 'personnel' yetkisi olan da girebilir
 $pdo=db();
 topx('Performans');
 ?>

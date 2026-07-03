@@ -1,7 +1,7 @@
 <?php
 require_once 'common.php';
 require_once __DIR__.'/../share_lib.php';
-block_personel();
+block_personel('personnel');
 $pdo=db(); $id=(int)($_GET['id']??0); $ok=''; $er=''; $waCred='';
 
 /* Personeli sil (admin-only, topx'tan ÖNCE) */

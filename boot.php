@@ -165,7 +165,7 @@ function page_module_map(){
         'sales.php'=>'stock','kpi.php'=>'personnel',
         'report.php'=>'report','gunluk_rapor.php'=>'report',
         'accounting.php'=>'muhasebe','accounting_categories.php'=>'muhasebe',
-        'personnel.php'=>'personnel','personnel_new.php'=>'personnel','personnel_view.php'=>'personnel',
+        'personnel.php'=>'personnel','personnel_new.php'=>'personnel','personnel_view.php'=>'personnel','personnel_edit.php'=>'personnel',
         'users.php'=>'users',
         'brand_settings.php'=>'users',
         'wa_send_now.php'=>'users',

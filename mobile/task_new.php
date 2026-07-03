@@ -1,6 +1,6 @@
 <?php
 require_once 'common.php';
-block_personel();
+block_personel('tasks');
 $pdo=db(); $ok=''; $er='';
 if($_SERVER['REQUEST_METHOD']==='POST'){
     try{

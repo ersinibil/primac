@@ -30,9 +30,11 @@
   if(user_can('tasks')) {
     card('Tüm Görevler','Görev yönetimi (herkes)','✅','tasks.php','teal');
   }
+  if($isAdmin || user_can('tasks')) {
+    card('Görev Ata','Personele görev','🎯','task_new.php','teal');
+  }
   if($isAdmin) {
-    card('Görev Ata','Personele görev','🎯','task_new.php','teal'); // hâlâ admin-only
-    card('Talepler','Talep onay merkezi','📨','requests.php','orange'); // hâlâ admin-only
+    card('Talepler','Talep onay merkezi','📨','requests.php','orange'); // admin-only kalır
   }
   ?>
 </div>
@@ -81,15 +83,14 @@
 </div>
 <?php endif; ?>
 
-<?php if($isAdmin || user_can('users')): ?>
+<?php if($isAdmin || user_can('users') || user_can('personnel')): ?>
 <div style="font-weight:900;margin:16px 4px 8px">👥 Ekip</div>
 <div class="grid">
   <?php
-  // NOT (2026-07-03): personnel.php/kpi.php hâlâ block_personel() (admin-only) kilitli — bu
-  // sayfaların modül-yetkisine (personnel) taşınması ayrı bir karar gerektiriyor (özellikle
-  // personnel.php maaş/IBAN gibi hassas alanlar içeriyor, daha önce kullanıcı bunun admin-only
-  // kalmasını istemişti). Kartlar bu yüzden hâlâ $isAdmin'e bağlı.
-  if($isAdmin) {
+  // 2026-07-03: kullanıcı onayı verildi — "onay verirsem görsün, yetki açık/kapalı sağlıklı
+  // çalışsın" — personnel.php/kpi.php artık 'personnel' yetkisi olan admin-olmayanı da alıyor
+  // (block_personel('personnel'), bkz. mobile/personnel.php/kpi.php). Kartlar buna göre açıldı.
+  if($isAdmin || user_can('personnel')) {
     card('Personel','Ekip listesi','👷','personnel.php','purple');
     card('Performans','Personel KPI','🏆','kpi.php','orange');
   }
@@ -100,7 +101,7 @@
 </div>
 <?php endif; ?>
 
-<?php if($isAdmin): // report.php hâlâ block_personel() — yönetici raporu ?>
+<?php if($isAdmin || user_can('report')): // 2026-07-03: 'report' yetkisi olan da girebilir ?>
 <details class="panel" style="margin:16px 0">
   <summary style="font-weight:900;cursor:pointer">📊 Rapor</summary>
   <div class="grid" style="margin-top:10px">

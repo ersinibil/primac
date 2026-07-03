@@ -1,7 +1,7 @@
 <?php
 require_once 'common.php';
 require_once __DIR__.'/../report_lib.php'; // paylaşımlı rapor mantığı (mobil+web)
-block_personel(); // yönetici raporu
+block_personel('report'); // 2026-07-03: kullanıcı onayı verildi — 'report' yetkisi olan da girebilir
 $pdo=db(); $me=(int)($_SESSION['user']['id']??0);
 $appName = app_config()['app_name'] ?? 'OTS';
 

@@ -1,6 +1,6 @@
 <?php
 require_once 'common.php';
-block_personel();
+block_personel('personnel');
 $pdo=db(); $ok=''; $er='';
 
 if($_SERVER['REQUEST_METHOD']==='POST'){
