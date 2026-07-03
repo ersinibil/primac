@@ -71,24 +71,23 @@ require_once __DIR__.'/layout_top.php';
   <input type="hidden" name="action" value="add_purchase">
 
   <label>Tedarikçi</label>
-  <div style="display:flex;gap:8px">
-    <select name="contact_id" required style="flex:1"><option value="">— Seç —</option>
-    <?php
-    try{
-      $cs=$pdo->query("SELECT id,name FROM contacts WHERE type IN ('Tedarikçi','Her İkisi') OR type IS NULL ORDER BY name")->fetchAll();
-      if(!$cs) $cs=$pdo->query("SELECT id,name FROM contacts ORDER BY name")->fetchAll();
-      foreach($cs as $c): ?><option value="<?=$c['id']?>"><?=htmlspecialchars($c['name'])?></option><?php endforeach;
-    }catch(Throwable $e){}
-    ?>
-    </select>
-    <button type="button" class="btn secondary small" onclick="document.getElementById('dlgContactPurch').showModal()" title="Hızlı tedarikçi ekle">+</button>
+  <select name="contact_id" id="contactSel" required onchange="onSupplierChange()"><option value="">— Seç —</option>
+  <?php
+  try{
+    $cs=$pdo->query("SELECT id,name FROM contacts WHERE type IN ('Tedarikçi','Her İkisi') OR type IS NULL ORDER BY name")->fetchAll();
+    if(!$cs) $cs=$pdo->query("SELECT id,name FROM contacts ORDER BY name")->fetchAll();
+    foreach($cs as $c): ?><option value="<?=$c['id']?>"><?=htmlspecialchars($c['name'])?></option><?php endforeach;
+  }catch(Throwable $e){}
+  ?>
+  <option value="__new__">➕ Listede yok — Yeni Tedarikçi Ekle…</option>
+  </select>
+  <div id="newContactBox" style="display:none;background:#eef4ff;border:1px solid #bfdbfe;border-radius:12px;padding:12px;margin:8px 0">
+    <input type="text" id="contactNamePurch" placeholder="Tedarikçi adı" style="width:100%;border:1px solid #d0d5dd;border-radius:10px;padding:10px;margin-bottom:8px">
+    <button type="button" class="btn" style="width:100%" onclick="quickAddContactPurch(document.getElementById('contactNamePurch').value, 'Tedarikçi')">✓ Ekle ve Seç</button>
   </div>
 
-  <label>Ürün (yoksa otomatik açılır)</label>
-  <div style="display:flex;gap:8px">
-    <input type="text" name="product_name" list="prods" required placeholder="Ürün adı" style="flex:1">
-    <button type="button" class="btn secondary small" onclick="document.getElementById('dlgProductPurch').showModal()" title="Hızlı ürün ekle">+</button>
-  </div>
+  <label>Ürün (yazınca yoksa otomatik yeni ürün olarak eklenir)</label>
+  <input type="text" name="product_name" list="prods" required placeholder="Ürün adı">
   <datalist id="prods">
   <?php
   try{
@@ -169,7 +168,13 @@ document.querySelectorAll('.qty-inp,.price-inp').forEach(function(el){
 });
 updateTotal();
 
-// Hızlı cari/ürün ekleme
+// Dropdown'da "Listede yok — Yeni Ekle" seçilince kutuyu aç (2026-07-03 kullanıcı isteği)
+function onSupplierChange(){
+    var sel=document.getElementById('contactSel');
+    var box=document.getElementById('newContactBox');
+    if(sel.value==='__new__'){ box.style.display='block'; sel.value=''; document.getElementById('contactNamePurch').focus(); }
+    else box.style.display='none';
+}
 function quickAddContactPurch(name, type) {
     if (!name) return;
     const fd = new FormData();
@@ -181,35 +186,14 @@ function quickAddContactPurch(name, type) {
         .then(r => r.json())
         .then(data => {
             if (data.ok) {
-                const sel = document.querySelector('select[name="contact_id"]');
+                const sel = document.getElementById('contactSel');
                 const opt = document.createElement('option');
                 opt.value = data.id;
                 opt.textContent = data.name;
                 opt.selected = true;
-                sel.appendChild(opt);
-                document.getElementById('dlgContactPurch').close();
+                sel.insertBefore(opt, sel.querySelector('option[value="__new__"]'));
                 document.getElementById('contactNamePurch').value = '';
-            } else {
-                alert('Hata: ' + data.message);
-            }
-        })
-        .catch(e => alert('Bağlantı hatası: ' + e));
-}
-
-function quickAddProductPurch(name, unit) {
-    if (!name) return;
-    const fd = new FormData();
-    fd.append('t', 'product');
-    fd.append('name', name);
-    fd.append('unit', unit || 'adet');
-
-    fetch('ajax_quick_add.php', {method: 'POST', body: fd})
-        .then(r => r.json())
-        .then(data => {
-            if (data.ok) {
-                document.querySelector('input[name="product_name"]').value = data.name;
-                document.getElementById('dlgProductPurch').close();
-                document.getElementById('productNamePurch').value = '';
+                document.getElementById('newContactBox').style.display='none';
             } else {
                 alert('Hata: ' + data.message);
             }
@@ -217,35 +201,5 @@ function quickAddProductPurch(name, unit) {
         .catch(e => alert('Bağlantı hatası: ' + e));
 }
 </script>
-
-<!-- Dialog: Hızlı tedarikçi ekleme -->
-<dialog id="dlgContactPurch" style="border:none;border-radius:12px;box-shadow:0 8px 28px rgba(16,24,40,.15);max-width:420px;padding:24px">
-  <h3 style="margin-top:0">Hızlı Tedarikçi Ekle</h3>
-  <div style="margin-bottom:16px">
-    <label style="display:block;font-weight:800;color:#344054;margin-bottom:6px">Tedarikçi Adı</label>
-    <input type="text" id="contactNamePurch" placeholder="Tedarikçi adı" style="width:100%;border:1px solid #d0d5dd;border-radius:12px;padding:11px">
-  </div>
-  <div style="display:flex;gap:8px;justify-content:flex-end">
-    <button onclick="document.getElementById('dlgContactPurch').close()" class="btn secondary">İptal</button>
-    <button onclick="quickAddContactPurch(document.getElementById('contactNamePurch').value, 'Tedarikçi')" class="btn">Ekle</button>
-  </div>
-</dialog>
-
-<!-- Dialog: Hızlı ürün ekleme -->
-<dialog id="dlgProductPurch" style="border:none;border-radius:12px;box-shadow:0 8px 28px rgba(16,24,40,.15);max-width:420px;padding:24px">
-  <h3 style="margin-top:0">Hızlı Ürün Ekle</h3>
-  <div style="margin-bottom:16px">
-    <label style="display:block;font-weight:800;color:#344054;margin-bottom:6px">Ürün Adı</label>
-    <input type="text" id="productNamePurch" placeholder="Ürün adı" style="width:100%;border:1px solid #d0d5dd;border-radius:12px;padding:11px">
-  </div>
-  <div style="margin-bottom:16px">
-    <label style="display:block;font-weight:800;color:#344054;margin-bottom:6px">Birim</label>
-    <input type="text" id="productUnitPurch" placeholder="adet" value="adet" style="width:100%;border:1px solid #d0d5dd;border-radius:12px;padding:11px">
-  </div>
-  <div style="display:flex;gap:8px;justify-content:flex-end">
-    <button onclick="document.getElementById('dlgProductPurch').close()" class="btn secondary">İptal</button>
-    <button onclick="quickAddProductPurch(document.getElementById('productNamePurch').value, document.getElementById('productUnitPurch').value)" class="btn">Ekle</button>
-  </div>
-</dialog>
 
 <?php require_once __DIR__.'/layout_bottom.php'; ?>

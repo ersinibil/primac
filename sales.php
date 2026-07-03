@@ -140,33 +140,41 @@ require_once __DIR__.'/layout_top.php';
 
         <div class="full">
           <label>Cari (Müşteri)</label>
-          <div style="display:flex;gap:8px">
-            <select name="contact_id" class="full" required style="flex:1">
-              <option value="">— Seç —</option>
-              <?php foreach ($contacts as $c): ?>
-                <option value="<?= (int)$c['id'] ?>"><?= h($c['name']) ?></option>
-              <?php endforeach; ?>
+          <select name="contact_id" id="contactSel" class="full" required onchange="onContactChange()">
+            <option value="">— Seç —</option>
+            <?php foreach ($contacts as $c): ?>
+              <option value="<?= (int)$c['id'] ?>"><?= h($c['name']) ?></option>
+            <?php endforeach; ?>
+            <option value="__new__">➕ Listede yok — Yeni Cari Ekle…</option>
+          </select>
+          <div id="newContactBox" class="full" style="display:none;background:#eef4ff;border:1px solid #bfdbfe;border-radius:12px;padding:12px;margin-top:8px">
+            <input type="text" id="contactName" placeholder="Müşteri adı" style="width:100%;border:1px solid #d0d5dd;border-radius:10px;padding:10px;margin-bottom:8px">
+            <select id="contactType" style="width:100%;border:1px solid #d0d5dd;border-radius:10px;padding:10px;margin-bottom:8px">
+              <option>Müşteri</option><option>Tedarikçi</option><option>Diğer</option>
             </select>
-            <button type="button" class="btn secondary small" onclick="document.getElementById('dlgContact').showModal()" title="Hızlı cari ekle">+</button>
+            <button type="button" class="btn" style="width:100%" onclick="quickAddContact(document.getElementById('contactName').value, document.getElementById('contactType').value)">✓ Ekle ve Seç</button>
           </div>
         </div>
 
         <div class="full">
           <label>Ürün</label>
-          <div style="display:flex;gap:8px">
-            <select name="stock_item_id" id="prodSel" required style="flex:1" onchange="salesSetPrice()">
-              <option value="">— Seç —</option>
-              <?php foreach ($products as $pr): ?>
-                <option value="<?= (int)$pr['id'] ?>"
-                        data-price="<?= h($pr['sale_price'] ?? 0) ?>"
-                        data-stock="<?= h($pr['quantity'] ?? 0) ?>"
-                        data-unit="<?= h($pr['unit'] ?? '') ?>">
-                  <?= h($pr['name']) ?>
-                  (Stok: <?= h($pr['quantity'] ?? 0) ?> <?= h($pr['unit'] ?? '') ?>)
-                </option>
-              <?php endforeach; ?>
-            </select>
-            <button type="button" class="btn secondary small" onclick="document.getElementById('dlgProduct').showModal()" title="Hızlı ürün ekle">+</button>
+          <select name="stock_item_id" id="prodSel" class="full" required onchange="salesSetPrice(); onProductChange()">
+            <option value="">— Seç —</option>
+            <?php foreach ($products as $pr): ?>
+              <option value="<?= (int)$pr['id'] ?>"
+                      data-price="<?= h($pr['sale_price'] ?? 0) ?>"
+                      data-stock="<?= h($pr['quantity'] ?? 0) ?>"
+                      data-unit="<?= h($pr['unit'] ?? '') ?>">
+                <?= h($pr['name']) ?>
+                (Stok: <?= h($pr['quantity'] ?? 0) ?> <?= h($pr['unit'] ?? '') ?>)
+              </option>
+            <?php endforeach; ?>
+            <option value="__new__">➕ Listede yok — Yeni Ürün Ekle…</option>
+          </select>
+          <div id="newProductBox" class="full" style="display:none;background:#eef4ff;border:1px solid #bfdbfe;border-radius:12px;padding:12px;margin-top:8px">
+            <input type="text" id="productName" placeholder="Ürün adı" style="width:100%;border:1px solid #d0d5dd;border-radius:10px;padding:10px;margin-bottom:8px">
+            <input type="text" id="productUnit" placeholder="adet" value="adet" style="width:100%;border:1px solid #d0d5dd;border-radius:10px;padding:10px;margin-bottom:8px">
+            <button type="button" class="btn" style="width:100%" onclick="quickAddProduct(document.getElementById('productName').value, document.getElementById('productUnit').value)">✓ Ekle ve Seç</button>
           </div>
         </div>
 
@@ -285,7 +293,21 @@ function salesCalc() {
 }
 salesCalc();
 
-// Hızlı cari/ürün ekleme
+// Dropdown'da "Listede yok — Yeni Ekle" seçilince kutuyu aç (2026-07-03 kullanıcı isteği —
+// önce dropdown'a bakıp yok deyip ayrı bir "+" düğmesine gitmek yerine, seçim anında aynı yerde çıksın).
+function onContactChange(){
+    var sel=document.getElementById('contactSel');
+    var box=document.getElementById('newContactBox');
+    if(sel.value==='__new__'){ box.style.display='block'; sel.value=''; document.getElementById('contactName').focus(); }
+    else box.style.display='none';
+}
+function onProductChange(){
+    var sel=document.getElementById('prodSel');
+    var box=document.getElementById('newProductBox');
+    if(sel.value==='__new__'){ box.style.display='block'; sel.value=''; document.getElementById('productName').focus(); }
+    else box.style.display='none';
+}
+
 function quickAddContact(name, type) {
     if (!name) return;
     const fd = new FormData();
@@ -297,14 +319,14 @@ function quickAddContact(name, type) {
         .then(r => r.json())
         .then(data => {
             if (data.ok) {
-                const sel = document.querySelector('select[name="contact_id"]');
+                const sel = document.getElementById('contactSel');
                 const opt = document.createElement('option');
                 opt.value = data.id;
                 opt.textContent = data.name;
                 opt.selected = true;
-                sel.appendChild(opt);
-                document.getElementById('dlgContact').close();
+                sel.insertBefore(opt, sel.querySelector('option[value="__new__"]'));
                 document.getElementById('contactName').value = '';
+                document.getElementById('newContactBox').style.display='none';
             } else {
                 alert('Hata: ' + data.message);
             }
@@ -328,10 +350,10 @@ function quickAddProduct(name, unit) {
                 opt.value = data.id;
                 opt.textContent = data.name + ' (Stok: 0 ' + (unit || 'adet') + ')';
                 opt.selected = true;
-                sel.appendChild(opt);
+                sel.insertBefore(opt, sel.querySelector('option[value="__new__"]'));
                 salesSetPrice();
-                document.getElementById('dlgProduct').close();
                 document.getElementById('productName').value = '';
+                document.getElementById('newProductBox').style.display='none';
             } else {
                 alert('Hata: ' + data.message);
             }
@@ -339,43 +361,5 @@ function quickAddProduct(name, unit) {
         .catch(e => alert('Bağlantı hatası: ' + e));
 }
 </script>
-
-<!-- Dialog: Hızlı cari ekleme -->
-<dialog id="dlgContact" style="border:none;border-radius:12px;box-shadow:0 8px 28px rgba(16,24,40,.15);max-width:420px;padding:24px">
-  <h3 style="margin-top:0">Hızlı Cari Ekle</h3>
-  <div style="margin-bottom:16px">
-    <label style="display:block;font-weight:800;color:#344054;margin-bottom:6px">Ad / Ünvan</label>
-    <input type="text" id="contactName" placeholder="Müşteri adı" style="width:100%;border:1px solid #d0d5dd;border-radius:12px;padding:11px">
-  </div>
-  <div style="margin-bottom:16px">
-    <label style="display:block;font-weight:800;color:#344054;margin-bottom:6px">Türü</label>
-    <select id="contactType" style="width:100%;border:1px solid #d0d5dd;border-radius:12px;padding:11px">
-      <option>Müşteri</option>
-      <option>Tedarikçi</option>
-      <option>Diğer</option>
-    </select>
-  </div>
-  <div style="display:flex;gap:8px;justify-content:flex-end">
-    <button onclick="document.getElementById('dlgContact').close()" class="btn secondary">İptal</button>
-    <button onclick="quickAddContact(document.getElementById('contactName').value, document.getElementById('contactType').value)" class="btn">Ekle</button>
-  </div>
-</dialog>
-
-<!-- Dialog: Hızlı ürün ekleme -->
-<dialog id="dlgProduct" style="border:none;border-radius:12px;box-shadow:0 8px 28px rgba(16,24,40,.15);max-width:420px;padding:24px">
-  <h3 style="margin-top:0">Hızlı Ürün Ekle</h3>
-  <div style="margin-bottom:16px">
-    <label style="display:block;font-weight:800;color:#344054;margin-bottom:6px">Ürün Adı</label>
-    <input type="text" id="productName" placeholder="Ürün adı" style="width:100%;border:1px solid #d0d5dd;border-radius:12px;padding:11px">
-  </div>
-  <div style="margin-bottom:16px">
-    <label style="display:block;font-weight:800;color:#344054;margin-bottom:6px">Birim</label>
-    <input type="text" id="productUnit" placeholder="adet" value="adet" style="width:100%;border:1px solid #d0d5dd;border-radius:12px;padding:11px">
-  </div>
-  <div style="display:flex;gap:8px;justify-content:flex-end">
-    <button onclick="document.getElementById('dlgProduct').close()" class="btn secondary">İptal</button>
-    <button onclick="quickAddProduct(document.getElementById('productName').value, document.getElementById('productUnit').value)" class="btn">Ekle</button>
-  </div>
-</dialog>
 
 <?php require_once __DIR__.'/layout_bottom.php'; ?>
