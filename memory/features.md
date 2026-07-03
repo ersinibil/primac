@@ -591,3 +591,14 @@ Bulunan KRİTİK sorunlar (hepsi bu commit'te düzeltildi):
   doğru per-contact toplama deseniyle hizalandı).
 - quote_approve.php: Open Graph meta etiketleri (WhatsApp önizleme kartı) + "PDF İndir" butonu
   eklendi (report_share.js). teklif.php/mobile/teklif.php WhatsApp mesaj metni güncellendi.
+
+## Rapor detay linkleri + Hızlı Ekle web paritesi + Muhasebe KDV (2026-07-03)
+- report_lib.php (web+mobil ortak): rapor satırlarına "Detay →" linki eklendi (tahsilat/satış/
+  satın alma → contact_view.php, iş takip → job_view.php, teklif → teklif.php, cari →
+  contact_view.php, stok → product_view.php). Muhasebe modülü ve personel özet satırları
+  bilinçli atlandı (uygun hedef yok / bkz. [[backlog]] eski "Ölü link" maddesi).
+- sales.php/purchase.php/checks_notes.php (web): "+" düğmesi + dialog modal deseni kaldırıldı,
+  mobildeki (118a0f0) gibi dropdown'un son seçeneği "Yeni Ekle" ile entegre edildi — web+mobil
+  artık aynı etkileşim desenini kullanıyor.
+- Muhasebe modülüne KDV Dahil/Hariç girişi eklendi (migration 031, accounting_lib.php
+  acc_calc_vat(), web+mobil formlar) — bkz. commit 4353d71.
