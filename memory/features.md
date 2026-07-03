@@ -628,3 +628,15 @@ Bulunan KRİTİK sorunlar (hepsi bu commit'te düzeltildi):
   artık aynı etkileşim desenini kullanıyor.
 - Muhasebe modülüne KDV Dahil/Hariç girişi eklendi (migration 031, accounting_lib.php
   acc_calc_vat(), web+mobil formlar) — bkz. commit 4353d71.
+
+## Backlog temizliği: ölü link + menü eksikleri + push_enable linki (2026-07-03, commit 1ff6f1e)
+- kpi.php: web'de var olmayan personnel_view.php linki personnel_edit.php'ye düzeltildi.
+- layout_top.php + boot.php: work_center.php ("İş Motoru"), trade_documents.php (alış/satış
+  belgeleri), design.php ("Grafik Tasarım") sol menüye ve page_module_map() yetki eşlemesine
+  eklendi. trade_documents.php öncesinde hiçbir yetki kontrolüne bağlı değildi — artık
+  user_can('contacts') gerektiriyor (bilinçli sıkılaştırma, kod incelemesinde onaylandı).
+- mobile/more.php: push_enable.php'ye "🔔 Bildirim Kur" linki eklendi (gerçek özellik, daha önce
+  hiçbir mobil menüden erişilemiyordu). temizle.php'nin silme listesinde push_enable.php hiç
+  yokmuş — önceki denetimdeki endişe yanlış çıktı, düzeltme gerekmedi.
+- Mobil parite notu: work_center/trade_documents/design.php'nin mobil karşılığı yok, bilinçli
+  olarak bu turun kapsamı dışında bırakıldı → [[backlog]]'a yeni madde olarak taşındı.

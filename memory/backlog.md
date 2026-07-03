@@ -2,28 +2,12 @@
 
 <!-- Açık geliştirme görevleri. Kapanan madde buradan silinip memory/features.md'ye taşınır. -->
 
-## Ölü link — kpi.php web'de var olmayan personnel_view.php'ye linkliyor
-- `kpi.php` (web) satır ~96: `<a href="personnel_view.php?id=...">` — bu dosya web'de hiç yok (sadece
-  mobilde var, `mobile/personnel_view.php`). `search.php`'nin 2026-07-02 düzeltmesinde aynı bug bulunup
-  arama sonuçlarında `personnel_edit.php?id=`'e çevrildi; `kpi.php`'deki link bu turda kapsam dışı
-  bırakıldı, aynı düzeltme (personnel_edit.php?id=) oraya da uygulanmalı.
-
-## Menü eksikleri (kod var, giriş noktası yok)
-- **work_center.php** ("İş Motoru") sol menüde hiç link yok. `layout_top_patch_note.txt`'den taşındı
-  (2026-06-27 tarihli not, hâlâ yapılmamış). boot.php nav eşlemesinde de yok.
-- **trade_documents.php** (alış/satış belgeleri) Cari menüsü altında link yok. `v19_not.txt`'den taşındı.
-  trade_document_new.php / trade_document_view.php sayfaları çalışıyor ama menüden erişilemiyor.
-
-## Yarım/stub sayfa
-- **design.php** ("Grafik Tasarım") — jobs tablosundan `grafik_tasarim` tipini listeliyor ama hiçbir menüde
-  veya boot.php nav eşlemesinde referansı yok (assembly.php'nin aksine — o menüde aktif). job_new.php'de bu
-  tip seçiliyorsa oluşan işler görünmüyor demektir. Ya menüye eklenmeli ya da job_type kaldırılmalı.
-- **mobile/push_enable.php** ("Bildirim Kur & Teşhis") — gerçek bir özellik (push_subscribe.php'ye
-  bağlanıp VAPID abonelik akışını çalıştırıyor), diagnostik değil. Ama hiçbir mobil menüden/profil
-  sayfasından linklenmiyor — kullanıcı bu sayfaya nasıl ulaşacağını bilemez. `temizle.php`'nin silme
-  listesinde yanlışlıkla gerçek tanı dosyalarıyla (kontrol.php vb.) birlikte anılmış; 2026-07-02
-  denetiminde içeriği okunup gerçek özellik olduğu anlaşıldı, `temizle.php`'den de çıkarılmalı. Ya
-  mobil profil/ayarlar sayfasına link eklenmeli ya da bilinçli olarak "gizli URL" kalacaksa not düşülmeli.
+## Mobil parite eksiği — work_center.php, trade_documents.php, design.php sadece web'de
+- 2026-07-03 (commit `1ff6f1e`): bu üç sayfa web sol menüsüne ve `boot.php` yetki eşlemesine
+  eklendi (bkz. features.md). Ama mobilde hiç karşılığı yok (`mobile/work_center.php`,
+  `mobile/trade_documents.php`, `mobile/design.php` gibi dosyalar yok). CLAUDE.md kural 7 ("Yeni
+  özellik hem web hem mobilde olmalı") açısından açık kalan tek madde bu — henüz kapsam belirlenmedi
+  (mobilde ayrı sayfa mı, yoksa mevcut jobs.php/contacts.php içine filtre olarak mı gömülecek).
 
 ## ÇÖZÜLDÜ (yanlış çıktı) — Web tarafı rol kısıtı
 - RAPOR.md'nin (2026-06-28) "web'de rol kısıtı yok" iddiası 2026-07-02 denetiminde YANLIŞ bulundu:
