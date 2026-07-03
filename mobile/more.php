@@ -128,7 +128,7 @@
   card('Web Sürümü','Masaüstü Sürüm','🖥','../dashboard.php?web=1','gray');
   card('Profil','Şifre & hesap','👤','profile.php','blue');
   if(user_can('users')) {
-    card('Denetim Günlüğü','Kim ne değiştirdi','🔍','../audit_log.php?web=1','gray'); // web'de var, mobilde köprü yoktu
+    card('Denetim Günlüğü','Kim ne değiştirdi','🔍','audit_log.php','gray');
     card('WhatsApp Gönder','Anlık mesaj gönder','📤','wa_send_now.php','green');
     card('WhatsApp Ayarları','Gateway kurulumu','📱','wa_settings.php','gray');
     card('Logo / Marka','Marka ayarları','🎨','brand_settings.php','gray');

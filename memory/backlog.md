@@ -30,12 +30,15 @@
   `boot.php`'de `page_module_map()`, `user_can()`, `require_permission()` ile gerçek modül-bazlı yetki
   sistemi var ve `$__pmap` üzerinden sayfa başına otomatik koruma uygulanıyor. Madde kaldırıldı.
 
-## Bildirim merkezi — sadece WEB tarafı kişiselleştirilmemiş
-- `mobile/notifications.php` zaten `target_user_id` ile kişiye özel filtreleniyor (`WHERE target_user_id
-  IS NULL OR target_user_id=?`). Ama web `notifications.php` filtre YAPMIYOR — `SELECT * FROM
-  internal_notifications ... LIMIT 100` ile herkes herkesin bildirimini görüyor. Mobil deseniyle
-  aynı WHERE koşulu web tarafına da eklenmeli (2026-07-02 denetiminde doğrulandı, RAPOR.md'nin genel
-  iddiası yanlıştı ama web-özel kısmı gerçek).
+## Modüllerde dropdown'dan inline "Yeni" ekleme (kullanıcı isteği, 2026-07-03 — daha önce de iletilmiş)
+- İstek: örn. `sales.php`/`mobile/sales.php`'deki "Cari (Müşteri)" dropdown'unda listede olmayan bir
+  cari varsa, sayfadan ayrılmadan orada bir "+ Yeni" seçeneğiyle adını yazıp hemen o alanda
+  açabilmeli (diğer alanlar sonra tamamlanabilir/revize edilebilir). Kullanıcı bunun **tüm
+  modüllerde** (Cari, Ürün, Personel, vb. geçen her dropdown'da) istendiğini belirtti.
+- Kapsam büyük: en az contacts (satış/satın alma/teklif/finans'taki cari seçiciler), stock (ürün
+  seçiciler), personnel (görev atama vb.) dropdown'larını kapsıyor — hem web hem mobil.
+- Henüz tasarlanmadı/başlanmadı. Önce hangi modül/dropdown'dan başlanacağı ve "hızlı ekle" formunun
+  minimum alan seti netleşmeli.
 
 ## Diagnostik dosyalar prod sunucuda kalmış olabilir
 - `temizle.php` (kökte, admin girişi veya `?key=acans-migrate-2026` ile çalışır) install_*.php,
@@ -44,3 +47,12 @@
   (Masaüstü'nde, repo dışı — bkz. [[deploy]]) her deploy'da KENDİ yardımcı dosyalarını zaten siliyor;
   `temizle.php` bundan bağımsız, daha eski legacy artıkları (install_*.php vb.) temizlemek için ayrı
   bir araç — deploy'un zorunlu bir adımı değil, gerektiğinde manuel çalıştırılır.
+
+## Muhasebe: KDV dahil/hariç giriş (kullanıcı isteği, 2026-07-03)
+- İstek: accounting.php (Muhasebe) gider/gelir kaydı girerken "KDV Dahil" / "KDV Hariç" seçimi
+  olmalı. KDV Dahil seçilirse girilen tutar direkt kaydedilir. KDV Hariç seçilirse bir KDV oranı
+  alanı (ör. %1/%10/%20) seçtirilip tutar ona göre hesaplanmalı (muhtemelen KDV'siz tutar + KDV
+  tutarı ayrı gösterilmeli).
+- Henüz tasarlanmadı/başlanmadı. accounting.php + mobile/accounting.php ikisinde de yapılmalı (parite).
+- Netleşmesi gereken: KDV dahil toplam mı saklanacak yoksa KDV hariç taban tutar mı? Rapor/özet
+  ekranlarında KDV ayrımı gösterilecek mi?
