@@ -99,6 +99,13 @@ if(!$cs) $cs=$pdo->query("SELECT id,name FROM contacts ORDER BY name")->fetchAll
   <select name="payment_method"><option>Veresiye</option><option>Peşin</option><option>Banka</option><option>Kredi Kartı</option><option>Çek</option><option>Senet</option></select>
 
   <datalist id="prods"><?php foreach($products as $p): ?><option value="<?=htmlspecialchars($p['name'])?>"><?php endforeach; ?></datalist>
+  <datalist id="vatPresets">
+    <option value="0"></option>
+    <option value="1"></option>
+    <option value="8"></option>
+    <option value="10"></option>
+    <option value="20"></option>
+  </datalist>
 
   <label style="margin-top:10px;font-weight:800">Ürünler <small class="muted">(yoksa otomatik yeni ürün eklenir)</small></label>
   <div id="itemsBody"></div>
@@ -135,7 +142,7 @@ function addItemRow(){
         + '</div>'
         + '<div style="display:flex;gap:8px;margin-top:6px">'
         + '<div style="flex:1"><small class="muted">Birim Alış Fiyatı</small><input type="number" step="0.01" min="0" name="unit_price[]" class="row-price" oninput="calcAll()"></div>'
-        + '<div style="flex:1"><small class="muted">KDV %</small><input type="number" step="0.01" min="0" name="vat_rate[]" class="row-vat" value="20" oninput="calcAll()"></div>'
+        + '<div style="flex:1"><small class="muted">KDV %</small><input type="text" inputmode="decimal" list="vatPresets" name="vat_rate[]" class="row-vat" value="20" oninput="calcAll()"></div>'
         + '</div>'
         + '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">'
         + '<span class="row-sub" style="font-weight:800">0,00 ₺</span>'

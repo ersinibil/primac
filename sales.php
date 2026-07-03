@@ -220,6 +220,13 @@ require_once __DIR__.'/layout_top.php';
           <tbody id="itemsBody"></tbody>
         </table>
         </div>
+        <datalist id="vatPresets">
+          <option value="0"></option>
+          <option value="1"></option>
+          <option value="8"></option>
+          <option value="10"></option>
+          <option value="20"></option>
+        </datalist>
         <button type="button" class="btn secondary small" style="margin-top:8px" onclick="addItemRow()">➕ Satır Ekle</button>
       </div>
 
@@ -319,7 +326,7 @@ function addItemRow(){
         + '</div></td>'
         + '<td style="padding:4px 6px"><input type="number" step="0.01" min="0.01" name="quantity[]" class="row-qty" value="1" required oninput="calcAll()" style="width:80px"></td>'
         + '<td style="padding:4px 6px"><input type="number" step="0.01" min="0" name="unit_price[]" class="row-price" required oninput="calcAll()" style="width:110px"></td>'
-        + '<td style="padding:4px 6px"><input type="number" step="0.01" min="0" name="vat_rate[]" class="row-vat" value="20" oninput="calcAll()" style="width:70px"></td>'
+        + '<td style="padding:4px 6px"><input type="text" inputmode="decimal" list="vatPresets" name="vat_rate[]" class="row-vat" value="20" oninput="calcAll()" style="width:70px"></td>'
         + '<td class="row-sub" style="padding:4px 6px;text-align:right;font-weight:800">0,00 ₺</td>'
         + '<td style="padding:4px 6px"><button type="button" class="btn danger small" onclick="removeRow(this)">🗑</button></td>';
     document.getElementById('itemsBody').appendChild(tr);

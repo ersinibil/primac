@@ -160,6 +160,13 @@ $ps=$pdo->query("SELECT id,name,quantity,unit,sale_price,vat_rate FROM stock_ite
 
   <label style="margin-top:10px;font-weight:800">Ürünler</label>
   <div id="itemsBody"></div>
+  <datalist id="vatPresets">
+    <option value="0"></option>
+    <option value="1"></option>
+    <option value="8"></option>
+    <option value="10"></option>
+    <option value="20"></option>
+  </datalist>
   <button type="button" class="btn" style="width:100%;margin:8px 0;background:rgba(37,99,235,.15)" onclick="addItemRow()">➕ Satır Ekle</button>
 
   <div class="panel" style="background:rgba(37,99,235,.18);margin:14px 0;padding:12px 14px">
@@ -208,7 +215,7 @@ function addItemRow(){
         + '<div style="display:flex;gap:8px">'
         + '<div style="flex:1"><small class="muted">Miktar</small><input type="number" step="0.01" min="0.01" class="row-qty" value="1" oninput="calcAll()"></div>'
         + '<div style="flex:1"><small class="muted">Birim Fiyat</small><input type="number" step="0.01" min="0" class="row-price" oninput="calcAll()"></div>'
-        + '<div style="flex:1"><small class="muted">KDV %</small><input type="number" step="0.01" min="0" class="row-vat" value="20" oninput="calcAll()"></div>'
+        + '<div style="flex:1"><small class="muted">KDV %</small><input type="text" inputmode="decimal" list="vatPresets" class="row-vat" value="20" oninput="calcAll()"></div>'
         + '</div>'
         + '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">'
         + '<span class="row-sub" style="font-weight:800">0,00 ₺</span>'

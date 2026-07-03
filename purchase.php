@@ -84,6 +84,9 @@ if(!empty($_SESSION['purchase_er'])){ $er=$_SESSION['purchase_er']; unset($_SESS
 
 require_once __DIR__.'/layout_top.php';
 ?>
+<style>
+.notice{background:#dcfce7;color:#14532d;padding:12px 16px;border-radius:10px;margin:14px 0;font-size:14px}
+</style>
 <div class="panel-head">
 <h1>Satın Alma</h1>
 </div>
@@ -131,6 +134,13 @@ require_once __DIR__.'/layout_top.php';
 
   <datalist id="prods">
   <?php foreach($products as $p): ?><option value="<?=htmlspecialchars($p['name'])?>"></option><?php endforeach; ?>
+  </datalist>
+  <datalist id="vatPresets">
+    <option value="0"></option>
+    <option value="1"></option>
+    <option value="8"></option>
+    <option value="10"></option>
+    <option value="20"></option>
   </datalist>
 
   <div class="full" style="margin-top:14px">
@@ -210,7 +220,7 @@ function addItemRow(){
         + '<td style="padding:4px 6px"><input type="number" step="0.01" min="0.01" name="quantity[]" class="row-qty" value="1" required oninput="calcAll()" style="width:80px"></td>'
         + '<td style="padding:4px 6px"><input type="text" name="unit[]" class="row-unit" value="adet" style="width:80px"></td>'
         + '<td style="padding:4px 6px"><input type="number" step="0.01" min="0" name="unit_price[]" class="row-price" required oninput="calcAll()" style="width:110px"></td>'
-        + '<td style="padding:4px 6px"><input type="number" step="0.01" min="0" name="vat_rate[]" class="row-vat" value="20" oninput="calcAll()" style="width:70px"></td>'
+        + '<td style="padding:4px 6px"><input type="text" inputmode="decimal" list="vatPresets" name="vat_rate[]" class="row-vat" value="20" oninput="calcAll()" style="width:70px"></td>'
         + '<td class="row-sub" style="padding:4px 6px;text-align:right;font-weight:800">0,00 ₺</td>'
         + '<td style="padding:4px 6px"><button type="button" class="btn danger small" onclick="removeRow(this)">🗑</button></td>';
     document.getElementById('itemsBody').appendChild(tr);
