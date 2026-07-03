@@ -7,7 +7,7 @@ $q = trim($_GET['q'] ?? '');
 topx('Arama');
 ?>
 <form method="get" style="display:flex;gap:8px;margin-bottom:6px">
-    <input name="q" value="<?=htmlspecialchars($q)?>" placeholder="İş, cari, banka/kart, işlem, çek/senet, teklif, stok, personel…" autofocus autocomplete="off" style="margin:0">
+    <input name="q" value="<?=htmlspecialchars($q)?>" placeholder="İş, cari, banka/kart, işlem, çek/senet, teklif, stok, personel…" autofocus autocomplete="off" style="margin:0;flex:1;min-width:0;width:auto">
     <button class="btn dark" type="submit" style="flex:0 0 auto">Ara</button>
 </form>
 

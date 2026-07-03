@@ -113,12 +113,16 @@ if (!function_exists('search_run')) {
             $out['checks'] = $s->fetchAll();
         } catch (Throwable $e) {} }
 
-        // Teklif
+        // Teklif — "çek"/"senet" ile aynı desen (2026-07-03 kullanıcı bildirimi: "teklif" yazınca
+        // 0 sonuç dönüyordu, çünkü bu genel kelime hiçbir teklif no/müşteri adıyla eşleşmiyordu).
+        // Modül adının kendisi yazılırsa (içerikte geçmese bile) son teklifler listelensin.
+        $quoteModuleMatch = in_array($qNorm, ['teklif','teklifler','teklifi'], true);
         if (function_exists('user_can') && user_can('teklif')) { try {
-            $s = $pdo->prepare("SELECT id,quote_no,customer_name,total,status FROM quotes
-                WHERE quote_no LIKE ? OR customer_name LIKE ?
-                ORDER BY id DESC LIMIT 20");
-            $s->execute([$like,$like]);
+            $sql = $quoteModuleMatch
+                ? "SELECT id,quote_no,customer_name,total,status FROM quotes ORDER BY id DESC LIMIT 20"
+                : "SELECT id,quote_no,customer_name,total,status FROM quotes WHERE quote_no LIKE ? OR customer_name LIKE ? ORDER BY id DESC LIMIT 20";
+            $s = $pdo->prepare($sql);
+            $s->execute($quoteModuleMatch ? [] : [$like,$like]);
             $out['quotes'] = $s->fetchAll();
         } catch (Throwable $e) {} }
 
