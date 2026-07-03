@@ -7,7 +7,7 @@ $pdo = db();
 <h1>🔍 Arama</h1>
 
 <form method="get" style="display:flex;gap:10px;margin-bottom:24px">
-    <input name="q" value="<?=htmlspecialchars($q)?>" placeholder="İş, cari, banka/kart, işlem, çek/senet, teklif, stok veya personel ara…"
+    <input name="q" value="<?=htmlspecialchars($q)?>" placeholder="İş, cari, banka/kart, işlem, çek/senet, teklif, belge, stok veya personel ara…"
         style="flex:1;border:1.5px solid #e5e7eb;border-radius:12px;padding:11px 14px;font-size:15px;outline:none"
         autofocus autocomplete="off">
     <button type="submit" style="background:#2563eb;color:#fff;border:0;border-radius:12px;padding:11px 20px;font-weight:800;cursor:pointer">Ara</button>
@@ -16,13 +16,15 @@ $pdo = db();
 <?php if ($q === ''): ?>
 <div style="text-align:center;color:#667085;padding:40px 0">
     <div style="font-size:48px;margin-bottom:12px">🔍</div>
-    <p>İş no, müşteri adı, banka/kart, işlem, çek/senet, teklif, ürün veya personel ismi girin.</p>
+    <p>İş no, müşteri adı, banka/kart, işlem, çek/senet, teklif, belge, ürün veya personel ismi girin.</p>
 </div>
 <?php else:
     $r = search_run($pdo, $q);
     $jobs = $r['jobs']; $contacts = $r['contacts']; $stock = $r['stock']; $personnel = $r['personnel'];
     $accounts = $r['accounts']; $movements = $r['movements']; $checks = $r['checks']; $quotes = $r['quotes'];
+    $documents = $r['documents']; $pages = $r['pages'];
     $found = search_total_count($r);
+    $pageTargets = ['contacts_report'=>'contacts_report.php', 'report'=>'report.php', 'accounting'=>'accounting.php', 'takvim'=>'takvim.php'];
 ?>
 <p style="color:#667085;margin-bottom:20px">"<b><?=htmlspecialchars($q)?></b>" için <?=$found?> sonuç</p>
 
@@ -30,6 +32,23 @@ $pdo = db();
 <div style="text-align:center;color:#667085;padding:40px 0">
     <div style="font-size:48px;margin-bottom:12px">😶</div>
     <p>Sonuç bulunamadı.</p>
+</div>
+<?php endif; ?>
+
+<?php if ($pages): ?>
+<div class="panel" style="margin-bottom:20px">
+    <div style="font-weight:900;font-size:16px;margin-bottom:12px">🔗 Sayfalar (<?=count($pages)?>)</div>
+    <table style="width:100%;border-collapse:collapse">
+    <?php foreach($pages as $pg): $href = $pageTargets[$pg['target']] ?? null; if (!$href) continue; ?>
+    <tr style="border-bottom:1px solid #f1f5f9">
+        <td style="padding:10px 8px">
+            <a href="<?=htmlspecialchars($href)?>" style="color:#101828;text-decoration:none;font-weight:700">
+                <?=$pg['icon']?> <?=htmlspecialchars($pg['label'])?>
+            </a>
+        </td>
+    </tr>
+    <?php endforeach; ?>
+    </table>
 </div>
 <?php endif; ?>
 
@@ -157,6 +176,36 @@ $pdo = db();
         </td>
         <td style="padding:10px 8px;text-align:right;white-space:nowrap;font-weight:700">
             <?=money($k['amount'])?>
+        </td>
+    </tr>
+    <?php endforeach; ?>
+    </table>
+</div>
+<?php endif; ?>
+
+<?php if ($documents): ?>
+<div class="panel" style="margin-bottom:20px">
+    <div style="font-weight:900;font-size:16px;margin-bottom:12px">🧾 Ticari Belgeler (Alış/Satış) (<?=count($documents)?>)</div>
+    <table style="width:100%;border-collapse:collapse">
+    <?php foreach($documents as $d):
+        $docTypeLabel = $d['document_type']==='sale' ? 'Satış' : ($d['document_type']==='purchase' ? 'Alış' : htmlspecialchars($d['document_type']));
+        $remaining = (float)$d['grand_total'] - (float)$d['paid_amount'];
+    ?>
+    <tr style="border-bottom:1px solid #f1f5f9">
+        <td style="padding:10px 8px">
+            <a href="trade_document_view.php?id=<?=$d['id']?>" style="color:#101828;text-decoration:none;font-weight:700">
+                <?=$docTypeLabel?> <?=$d['document_no'] ? search_hl($d['document_no'],$q) : ''?>
+            </a>
+            <div style="font-size:12px;color:#667085;margin-top:2px">
+                <?php if($d['contact_name']): ?>👤 <?=search_hl($d['contact_name'],$q)?> · <?php endif; ?>
+                <?php if($d['document_date']): ?><?=htmlspecialchars($d['document_date'])?><?php endif; ?>
+            </div>
+        </td>
+        <td style="padding:10px 8px;text-align:right;white-space:nowrap">
+            <div style="font-weight:700"><?=money($d['grand_total'])?></div>
+            <?php if($remaining > 0.009): ?>
+            <div style="font-size:11px;color:#dc2626;margin-top:2px">Kalan: <?=money($remaining)?></div>
+            <?php endif; ?>
         </td>
     </tr>
     <?php endforeach; ?>

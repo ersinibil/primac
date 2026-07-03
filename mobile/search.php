@@ -7,20 +7,23 @@ $q = trim($_GET['q'] ?? '');
 topx('Arama');
 ?>
 <form method="get" style="display:flex;gap:8px;margin-bottom:6px">
-    <input name="q" value="<?=htmlspecialchars($q)?>" placeholder="İş, cari, banka/kart, işlem, çek/senet, teklif, stok, personel…" autofocus autocomplete="off" style="margin:0;flex:1;min-width:0;width:auto">
+    <input name="q" value="<?=htmlspecialchars($q)?>" placeholder="İş, cari, banka/kart, işlem, çek/senet, teklif, belge, stok, personel…" autofocus autocomplete="off" style="margin:0;flex:1;min-width:0;width:auto">
     <button class="btn dark" type="submit" style="flex:0 0 auto">Ara</button>
 </form>
 
 <?php if ($q === ''): ?>
 <div class="panel" style="text-align:center;color:#94a3b8">
     <div style="font-size:40px;margin-bottom:8px">🔍</div>
-    <p>İş no, müşteri adı, banka/kart, işlem, çek/senet, teklif, ürün veya personel ismi girin.</p>
+    <p>İş no, müşteri adı, banka/kart, işlem, çek/senet, teklif, belge, ürün veya personel ismi girin.</p>
 </div>
 <?php else:
     $r = search_run($pdo, $q);
     $jobs = $r['jobs']; $contacts = $r['contacts']; $stock = $r['stock']; $personnel = $r['personnel'];
     $accounts = $r['accounts']; $movements = $r['movements']; $checks = $r['checks']; $quotes = $r['quotes'];
+    $documents = $r['documents']; $pages = $r['pages'];
     $found = search_total_count($r);
+    // Web'den farklı: mobil dosya adları kendi rotasına göre kurulur (takvim -> calendar.php).
+    $pageTargets = ['contacts_report'=>'contacts_report.php', 'report'=>'report.php', 'accounting'=>'accounting.php', 'takvim'=>'calendar.php'];
 ?>
 <p class="small" style="margin:10px 2px">"<b><?=htmlspecialchars($q)?></b>" için <?=$found?> sonuç</p>
 
@@ -28,6 +31,16 @@ topx('Arama');
 <div class="panel" style="text-align:center;color:#94a3b8">
     <div style="font-size:40px;margin-bottom:8px">😶</div>
     <p>Sonuç bulunamadı.</p>
+</div>
+<?php endif; ?>
+
+<?php if ($pages): ?>
+<div class="panel"><b>🔗 Sayfalar (<?=count($pages)?>)</b>
+<?php foreach($pages as $pg): $href = $pageTargets[$pg['target']] ?? null; if (!$href) continue; ?>
+    <a class="item" href="<?=htmlspecialchars($href)?>">
+        <b><?=$pg['icon']?> <?=htmlspecialchars($pg['label'])?></b>
+    </a>
+<?php endforeach; ?>
 </div>
 <?php endif; ?>
 
@@ -97,6 +110,24 @@ topx('Arama');
         <small class="muted"><?php if($k['bank_name']): ?><?=search_hl($k['bank_name'],$q)?> · <?php endif; ?><?php if($k['contact_name']): ?>👤 <?=search_hl($k['contact_name'],$q)?><?php endif; ?></small></span>
         <b><?=mm($k['amount'])?></b>
     </a>
+<?php endforeach; ?>
+</div>
+<?php endif; ?>
+
+<?php if ($documents): ?>
+<div class="panel"><b>🧾 Ticari Belgeler (Alış/Satış) (<?=count($documents)?>)</b>
+<?php foreach($documents as $d):
+    $docTypeLabel = $d['document_type']==='sale' ? 'Satış' : ($d['document_type']==='purchase' ? 'Alış' : htmlspecialchars($d['document_type']));
+    $remaining = (float)$d['grand_total'] - (float)$d['paid_amount'];
+?>
+    <div class="item" style="display:flex;justify-content:space-between;align-items:center">
+        <span><b><?=$docTypeLabel?> <?=$d['document_no'] ? search_hl($d['document_no'],$q) : ''?></b><br>
+        <small class="muted"><?php if($d['contact_name']): ?>👤 <?=search_hl($d['contact_name'],$q)?><?php endif; ?></small></span>
+        <span style="text-align:right">
+            <b><?=mm($d['grand_total'])?></b>
+            <?php if($remaining > 0.009): ?><br><small style="color:#f87171">Kalan: <?=mm($remaining)?></small><?php endif; ?>
+        </span>
+    </div>
 <?php endforeach; ?>
 </div>
 <?php endif; ?>

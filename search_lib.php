@@ -28,7 +28,7 @@ if (!function_exists('search_run')) {
      */
     function search_run(PDO $pdo, $q) {
         $q = trim((string)$q);
-        $out = ['jobs'=>[], 'contacts'=>[], 'stock'=>[], 'personnel'=>[], 'accounts'=>[], 'movements'=>[], 'checks'=>[], 'quotes'=>[]];
+        $out = ['jobs'=>[], 'contacts'=>[], 'stock'=>[], 'personnel'=>[], 'accounts'=>[], 'movements'=>[], 'checks'=>[], 'quotes'=>[], 'documents'=>[], 'pages'=>[]];
         if ($q === '') return $out;
         $like = '%'.$q.'%';
 
@@ -125,6 +125,37 @@ if (!function_exists('search_run')) {
             $s->execute($quoteModuleMatch ? [] : [$like,$like]);
             $out['quotes'] = $s->fetchAll();
         } catch (Throwable $e) {} }
+
+        // Ticari Belgeler (Alış/Satış — trade_documents) — "çek"/"teklif" ile aynı desen, daha önce
+        // arama kapsamında HİÇ yoktu (2026-07-03 modül-zinciri denetiminde bulundu). Modül adı
+        // ("belge"/"belgeler") yazılırsa son belgeler, yoksa belge no/cari adına göre eşleşme.
+        $docModuleMatch = in_array($qNorm, ['belge','belgeler','ticari belge','fatura','faturalar'], true);
+        if (function_exists('user_can') && user_can('contacts')) { try {
+            $sql = "SELECT d.id,d.document_no,d.document_type,d.grand_total,d.paid_amount,d.status,d.document_date,c.name contact_name
+                FROM trade_documents d LEFT JOIN contacts c ON c.id=d.contact_id
+                WHERE ".($docModuleMatch ? "1=1" : "d.document_no LIKE ? OR c.name LIKE ?")."
+                ORDER BY d.id DESC LIMIT 20";
+            $s = $pdo->prepare($sql);
+            $s->execute($docModuleMatch ? [] : [$like,$like]);
+            $out['documents'] = $s->fetchAll();
+        } catch (Throwable $e) {} }
+
+        // Sayfa kısayolları — veri satırı değil, doğrudan bir ekrana yönlendirme. Kullanıcı "ekstre"/
+        // "rapor" gibi bir SAYFA adı yazdığında hiçbir veri satırıyla eşleşmediği için (isim hiçbir
+        // kayıtta geçmiyor) sonuç hep boş dönüyordu — 2026-07-03 kullanıcı isteği: "arama kutusuna
+        // her şey bağlı olsun". Web/mobil URL'leri farklı olduğu için burada sadece anahtar/etiket/
+        // ikon döner, gerçek href'i çağıran sayfa (search.php / mobile/search.php) kendi rotasına göre kurar.
+        $pageCatalog = [
+            ['keys'=>['ekstre','ekstresi','cari ekstre'], 'label'=>'Cari Raporu / Toplu Ekstre', 'icon'=>'📊', 'target'=>'contacts_report', 'perm'=>'contacts'],
+            ['keys'=>['rapor','raporlar','raporu'],       'label'=>'Genel Özet Rapor',            'icon'=>'📊', 'target'=>'report',           'perm'=>'report'],
+            ['keys'=>['muhasebe','muhasebe kayıtları'],   'label'=>'Muhasebe Kayıtları',          'icon'=>'📒', 'target'=>'accounting',       'perm'=>'muhasebe'],
+            ['keys'=>['takvim'],                          'label'=>'Takvim',                      'icon'=>'📅', 'target'=>'takvim',           'perm'=>'jobs'],
+        ];
+        foreach ($pageCatalog as $pg) {
+            if (!in_array($qNorm, $pg['keys'], true)) continue;
+            if (function_exists('user_can') && !user_can($pg['perm'])) continue;
+            $out['pages'][] = ['label'=>$pg['label'], 'icon'=>$pg['icon'], 'target'=>$pg['target']];
+        }
 
         return $out;
     }
