@@ -46,6 +46,7 @@
   if(user_can('contacts')) {
     card('Cariler','Müşteri/tedarikçi','👥','contacts.php','purple');
     card('Yeni Cari','Cari ekle','➕','contact_new.php','blue');
+    card('Cari Raporlar','Alacaklı/borçlu · toplu ekstre','📊','contacts_report.php','teal');
   }
   if(user_can('stock')) {
     card('Stok','Ürün listesi','📦','stock.php','red');

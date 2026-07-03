@@ -14,6 +14,7 @@ echo '<div class="panel" style="display:flex;gap:8px;flex-wrap:wrap">
   <a class="btn dark" href="contact_new.php">+ Yeni Cari</a>
   <a class="btn" href="collection.php">+ Tahsilat</a>
   <a class="btn" href="sales.php">+ Satış</a>
+  <a class="btn" href="contacts_report.php">📊 Cari Raporlar</a>
   <a class="btn" href="contacts.php?show_passive='.($showPassive?'0':'1').'">'.($showPassive?'Sadece Aktif':'Pasif Dahil').'</a>
 </div>';
 

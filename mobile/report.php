@@ -9,25 +9,28 @@ $from = preg_match('/^\d{4}-\d{2}-\d{2}$/',$_GET['from']??'')?$_GET['from']:date
 $to   = preg_match('/^\d{4}-\d{2}-\d{2}$/',$_GET['to']??'')?$_GET['to']:date('Y-m-t');
 $modul= $_GET['modul'] ?? 'genel';
 $ref  = (int)($_GET['ref'] ?? 0);
+$bmode= $_GET['mode'] ?? '';   // cari_toplu: '', receivable, payable, zero
+$btype= $_GET['type'] ?? '';   // cari_toplu: '', Müşteri, Tedarikçi, Her İkisi
 $detail = !empty($_GET['detay']);
 
 $MODULES = report_modules();
 
 $isAll = ($modul==='tumu');
-$R = $isAll ? ['title'=>'Tüm Modüller','cards'=>[],'chart'=>null,'table'=>['head'=>[],'rows'=>[]]] : rpt($pdo,$modul,$from,$to,$ref,$detail);
+$isCariToplu = ($modul==='cari_toplu');
+$R = ($isAll || $isCariToplu) ? ($isCariToplu ? cari_toplu_summary($pdo,$bmode,$btype) : ['title'=>'Tüm Modüller','cards'=>[],'chart'=>null,'table'=>['head'=>[],'rows'=>[]]]) : rpt($pdo,$modul,$from,$to,$ref,$detail);
 
 /* CSV indir */
 if(($_GET['export']??'')==='csv'){
   header('Content-Type: text/csv; charset=utf-8');
   header('Content-Disposition: attachment; filename="acans_'.$modul.'_'.$from.'_'.$to.'.csv"');
-  echo $isAll ? build_csv_all($pdo,$appName,$from,$to) : build_csv($R,$appName,$from,$to); exit;
+  echo $isAll ? build_csv_all($pdo,$appName,$from,$to) : ($isCariToplu ? build_csv_cari_toplu($pdo,$appName,$from,$to,$bmode,$btype) : build_csv($R,$appName,$from,$to)); exit;
 }
 /* İç mesaj (CSV ekli) */
 $sent='';
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['send_msg'])){
   $toUser=(int)$_POST['to_user'];
   if($toUser){
-    $csv = $isAll ? build_csv_all($pdo,$appName,$from,$to) : build_csv($R,$appName,$from,$to);
+    $csv = $isAll ? build_csv_all($pdo,$appName,$from,$to) : ($isCariToplu ? build_csv_cari_toplu($pdo,$appName,$from,$to,$bmode,$btype) : build_csv($R,$appName,$from,$to));
     $dir=__DIR__.'/../uploads/job_files'; if(!is_dir($dir)) @mkdir($dir,0777,true);
     $fn='rapor_'.$modul.'_'.bin2hex(random_bytes(4)).'.csv';
     if(@file_put_contents($dir.'/'.$fn,$csv)!==false){
@@ -54,6 +57,7 @@ topx('Rapor');
 <div class="panel noprint" style="padding:10px">
   <form method="get" style="display:flex;gap:8px;align-items:end;flex-wrap:wrap">
     <input type="hidden" name="modul" value="<?=htmlspecialchars($modul)?>"><input type="hidden" name="ref" value="<?=$ref?>">
+    <input type="hidden" name="mode" value="<?=htmlspecialchars($bmode)?>"><input type="hidden" name="type" value="<?=htmlspecialchars($btype)?>">
     <div style="flex:1;min-width:110px"><label>Başlangıç</label><input type="date" name="from" value="<?=$from?>" style="margin:0"></div>
     <div style="flex:1;min-width:110px"><label>Bitiş</label><input type="date" name="to" value="<?=$to?>" style="margin:0"></div>
     <button class="btn dark" style="padding:12px 16px">Getir</button>
@@ -64,11 +68,11 @@ topx('Rapor');
 <?php if(!empty($R['error'])): ?><div class="err"><?=htmlspecialchars($R['error'])?></div><?php endif; ?>
 
 <div class="noprint" style="display:flex;gap:8px;margin-bottom:10px">
-  <a class="btn" href="report.php?modul=<?=$modul?>&from=<?=$from?>&to=<?=$to?>&ref=<?=$ref?>" style="flex:1;text-align:center;background:<?=!$detail?'#2563eb':'#334155'?>;color:#fff">📄 Özet</a>
-  <a class="btn" href="report.php?modul=<?=$modul?>&from=<?=$from?>&to=<?=$to?>&ref=<?=$ref?>&detay=1" style="flex:1;text-align:center;background:<?=$detail?'#2563eb':'#334155'?>;color:#fff">🔍 Detaylı</a>
+  <a class="btn" href="report.php?modul=<?=$modul?>&from=<?=$from?>&to=<?=$to?>&ref=<?=$ref?>&mode=<?=urlencode($bmode)?>&type=<?=urlencode($btype)?>" style="flex:1;text-align:center;background:<?=!$detail?'#2563eb':'#334155'?>;color:#fff">📄 Özet</a>
+  <a class="btn" href="report.php?modul=<?=$modul?>&from=<?=$from?>&to=<?=$to?>&ref=<?=$ref?>&detay=1&mode=<?=urlencode($bmode)?>&type=<?=urlencode($btype)?>" style="flex:1;text-align:center;background:<?=$detail?'#2563eb':'#334155'?>;color:#fff">🔍 Detaylı</a>
 </div>
 
-<div id="repArea"><?= $isAll ? report_render_all($pdo,$appName,$from,$to,$detail) : report_render($R,$appName,$from,$to,$detail) ?></div>
+<div id="repArea"><?= $isAll ? report_render_all($pdo,$appName,$from,$to,$detail) : ($isCariToplu ? report_render_cari_toplu($pdo,$appName,$from,$to,$bmode,$btype,$detail) : report_render($R,$appName,$from,$to,$detail)) ?></div>
 
 <div class="panel noprint">
   <b>📤 Bu raporu paylaş</b>
@@ -76,10 +80,10 @@ topx('Rapor');
   <small class="muted" style="display:block;margin-top:6px">Tüm raporu çok-sayfalı PDF yapıp paylaşım sayfasına yollar.</small>
   <div style="display:flex;gap:8px;margin-top:10px">
     <button onclick="shareReportPDF(this)" class="btn" style="flex:1;background:#2563eb;color:#fff">📄 PDF</button>
-    <a class="btn" href="report.php?modul=<?=$modul?>&export=csv&from=<?=$from?>&to=<?=$to?>&ref=<?=$ref?>" style="flex:1;text-align:center;background:#334155;color:#fff">Ham Veri</a>
+    <a class="btn" href="report.php?modul=<?=$modul?>&export=csv&from=<?=$from?>&to=<?=$to?>&ref=<?=$ref?>&mode=<?=urlencode($bmode)?>&type=<?=urlencode($btype)?>" style="flex:1;text-align:center;background:#334155;color:#fff">Ham Veri</a>
   </div>
   <form method="post" style="margin-top:8px;display:flex;gap:8px">
-    <input type="hidden" name="modul" value="<?=$modul?>"><input type="hidden" name="ref" value="<?=$ref?>"><input type="hidden" name="from" value="<?=$from?>"><input type="hidden" name="to" value="<?=$to?>">
+    <input type="hidden" name="modul" value="<?=$modul?>"><input type="hidden" name="ref" value="<?=$ref?>"><input type="hidden" name="from" value="<?=$from?>"><input type="hidden" name="to" value="<?=$to?>"><input type="hidden" name="mode" value="<?=htmlspecialchars($bmode)?>"><input type="hidden" name="type" value="<?=htmlspecialchars($btype)?>">
     <select name="to_user" required style="flex:1;margin:0"><option value="">İç mesaj — kişi seç</option>
       <?php foreach($users as $u): ?><option value="<?=$u['id']?>"><?=htmlspecialchars($u['full_name']?:$u['username'])?></option><?php endforeach; ?></select>
     <button class="btn dark" name="send_msg" value="1" style="padding:12px 14px">💬</button>

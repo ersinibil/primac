@@ -121,6 +121,7 @@ $totalBalance=array_sum(array_map(fn($r)=>(float)$r['balance'],$rows));
 <a class="btn small secondary" href="contacts_report.php?mode=receivable">Alacaklılar</a>
 <a class="btn small secondary" href="contacts_report.php?mode=payable">Borçlular</a>
 <a class="btn small secondary" href="contacts_report.php">Tümü</a>
+<a class="btn small" style="background:#2563eb;color:#fff" href="report.php?modul=cari_toplu&mode=<?=urlencode($mode)?>&type=<?=urlencode($type)?>&from=<?=date('Y-m-01')?>&to=<?=date('Y-m-t')?>">📊 Toplu Ekstre Oluştur (PDF)</a>
 </div>
 </div>
 <table>

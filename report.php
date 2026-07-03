@@ -9,16 +9,19 @@ $from = preg_match('/^\d{4}-\d{2}-\d{2}$/',$_GET['from']??'')?$_GET['from']:date
 $to   = preg_match('/^\d{4}-\d{2}-\d{2}$/',$_GET['to']??'')?$_GET['to']:date('Y-m-t');
 $modul= $_GET['modul'] ?? 'genel';
 $ref  = (int)($_GET['ref'] ?? 0);
+$bmode= $_GET['mode'] ?? '';   // cari_toplu: '', receivable, payable, zero
+$btype= $_GET['type'] ?? '';   // cari_toplu: '', Müşteri, Tedarikçi, Her İkisi
 $detail = !empty($_GET['detay']);
 $MODULES = report_modules();
 $isAll = ($modul==='tumu');
-$R = $isAll ? ['title'=>'Tüm Modüller','cards'=>[],'chart'=>null,'table'=>['head'=>[],'rows'=>[]]] : rpt($pdo,$modul,$from,$to,$ref,$detail);
+$isCariToplu = ($modul==='cari_toplu');
+$R = ($isAll || $isCariToplu) ? ['title'=>'Tüm Modüller','cards'=>[],'chart'=>null,'table'=>['head'=>[],'rows'=>[]]] : rpt($pdo,$modul,$from,$to,$ref,$detail);
 
 // CSV indir (layout'tan ÖNCE)
 if(($_GET['export']??'')==='csv'){
   header('Content-Type: text/csv; charset=utf-8');
   header('Content-Disposition: attachment; filename="acans_'.$modul.'_'.$from.'_'.$to.'.csv"');
-  echo $isAll ? build_csv_all($pdo,$appName,$from,$to) : build_csv($R,$appName,$from,$to); exit;
+  echo $isAll ? build_csv_all($pdo,$appName,$from,$to) : ($isCariToplu ? build_csv_cari_toplu($pdo,$appName,$from,$to,$bmode,$btype) : build_csv($R,$appName,$from,$to)); exit;
 }
 
 require_once __DIR__.'/layout_top.php';
@@ -57,12 +60,13 @@ table.rt td{padding:7px;border-bottom:1px solid #13233b}
 <div class="card noprint">
   <form method="get" class="rfilter">
     <input type="hidden" name="modul" value="<?=htmlspecialchars($modul)?>"><input type="hidden" name="ref" value="<?=$ref?>">
+    <input type="hidden" name="mode" value="<?=htmlspecialchars($bmode)?>"><input type="hidden" name="type" value="<?=htmlspecialchars($btype)?>">
     <div><label style="display:block;color:#7f95b2;font-size:12px">Başlangıç</label><input type="date" name="from" value="<?=$from?>"></div>
     <div><label style="display:block;color:#7f95b2;font-size:12px">Bitiş</label><input type="date" name="to" value="<?=$to?>"></div>
     <button class="btn" type="submit">Getir</button>
     <button class="btn" type="button" onclick="shareReportPDF(this)" style="background:#16a34a;color:#fff">📲 PDF Paylaş</button>
     <button class="btn" type="button" onclick="shareReportPDF(this)" style="background:#2563eb;color:#fff">📄 PDF</button>
-    <a class="btn ghost" href="report.php?modul=<?=$modul?>&export=csv&from=<?=$from?>&to=<?=$to?>&ref=<?=$ref?>">Ham Veri (CSV)</a>
+    <a class="btn ghost" href="report.php?modul=<?=$modul?>&export=csv&from=<?=$from?>&to=<?=$to?>&ref=<?=$ref?>&mode=<?=urlencode($bmode)?>&type=<?=urlencode($btype)?>">Ham Veri (CSV)</a>
   </form>
 </div>
 <script>window.ACANS_REPORT_NAME='rapor_<?=$modul?>_<?=$from?>';</script>
@@ -73,9 +77,9 @@ table.rt td{padding:7px;border-bottom:1px solid #13233b}
 <?php if(!empty($R['error'])): ?><div class="card" style="color:#fca5a5"><?=htmlspecialchars($R['error'])?></div><?php endif; ?>
 
 <div class="noprint" style="display:flex;gap:8px;margin-bottom:12px;max-width:360px">
-  <a class="btn" href="report.php?modul=<?=$modul?>&from=<?=$from?>&to=<?=$to?>&ref=<?=$ref?>" style="flex:1;text-align:center;background:<?=!$detail?'#2563eb':'#13233b'?>;color:#fff">📄 Özet</a>
-  <a class="btn" href="report.php?modul=<?=$modul?>&from=<?=$from?>&to=<?=$to?>&ref=<?=$ref?>&detay=1" style="flex:1;text-align:center;background:<?=$detail?'#2563eb':'#13233b'?>;color:#fff">🔍 Detaylı</a>
+  <a class="btn" href="report.php?modul=<?=$modul?>&from=<?=$from?>&to=<?=$to?>&ref=<?=$ref?>&mode=<?=urlencode($bmode)?>&type=<?=urlencode($btype)?>" style="flex:1;text-align:center;background:<?=!$detail?'#2563eb':'#13233b'?>;color:#fff">📄 Özet</a>
+  <a class="btn" href="report.php?modul=<?=$modul?>&from=<?=$from?>&to=<?=$to?>&ref=<?=$ref?>&detay=1&mode=<?=urlencode($bmode)?>&type=<?=urlencode($btype)?>" style="flex:1;text-align:center;background:<?=$detail?'#2563eb':'#13233b'?>;color:#fff">🔍 Detaylı</a>
 </div>
-<div id="repArea"><?= $isAll ? report_render_all($pdo,$appName,$from,$to,$detail) : report_render($R,$appName,$from,$to,$detail) ?></div>
+<div id="repArea"><?= $isAll ? report_render_all($pdo,$appName,$from,$to,$detail) : ($isCariToplu ? report_render_cari_toplu($pdo,$appName,$from,$to,$bmode,$btype,$detail) : report_render($R,$appName,$from,$to,$detail)) ?></div>
 </section>
 <?php require_once __DIR__.'/layout_bottom.php'; ?>

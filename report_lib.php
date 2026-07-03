@@ -22,6 +22,77 @@ function build_csv_all($pdo,$appName,$from,$to){
   return $o;
 }
 
+/* ===== Toplu Cari Ekstre — birden çok cariyi (mode/type ile süzülmüş) tek raporda alt alta ekstrelendirir =====
+   mode: ''=Tüm Bakiyeler, 'receivable'=Alacaklı Cariler, 'payable'=Borçlu Cariler, 'zero'=Sıfır Bakiyeler
+   type: ''=Tümü, 'Müşteri', 'Tedarikçi', 'Her İkisi'  (contacts_report.php'deki filtre mantığıyla aynı) */
+function cari_toplu_list($pdo,$mode='',$type=''){
+  $where=[]; $params=[];
+  if($type){ $where[]="c.type=?"; $params[]=$type; }
+  $sqlWhere = $where ? 'WHERE '.implode(' AND ',$where) : '';
+  $sql="SELECT c.id,c.name,COALESCE(c.opening_balance,0)+
+      COALESCE((SELECT SUM(CASE WHEN direction='in' THEN amount ELSE -amount END) FROM finance_movements WHERE contact_id=c.id),0) bal
+      FROM contacts c $sqlWhere ORDER BY c.name";
+  $st=$pdo->prepare($sql); $st->execute($params);
+  $list=[];
+  foreach($st->fetchAll() as $r){
+    $bal=(float)$r['bal'];
+    if($mode==='receivable' && $bal<=0) continue;
+    if($mode==='payable' && $bal>=0) continue;
+    if($mode==='zero' && abs($bal)>0.01) continue;
+    $list[]=['id'=>(int)$r['id'],'name'=>$r['name'],'bal'=>$bal];
+  }
+  return $list;
+}
+
+function cari_toplu_mode_label($mode){
+  return $mode==='receivable'?'Alacaklı Cariler':($mode==='payable'?'Borçlu Cariler':($mode==='zero'?'Sıfır Bakiyeler':'Tüm Cariler'));
+}
+
+// Özet başlık $R'ı üretir (kartlar + cari listesi tablosu) — $list dışarıdan verilirse tekrar sorgulanmaz
+function cari_toplu_summary($pdo,$mode='',$type='',$list=null){
+  if($list===null) $list=cari_toplu_list($pdo,$mode,$type);
+  $totAlacak=0;$totBorc=0; foreach($list as $c){ if($c['bal']>0)$totAlacak+=$c['bal']; else $totBorc+=abs($c['bal']); }
+  $S=['title'=>'Toplu Cari Ekstre — '.cari_toplu_mode_label($mode).' ('.($type?:'Tümü').')',
+      'cards'=>[['👥','Cari Sayısı',count($list),'#a78bfa'],['🟢','Toplam Alacak',tl($totAlacak),'#22c55e'],['🔴','Toplam Borç',tl($totBorc),'#f87171']],
+      'chart'=>null,'table'=>['head'=>['Cari','Bakiye'],'rows'=>[],'links'=>[]]];
+  foreach($list as $c){ $S['table']['rows'][]=[$c['name'],tl($c['bal'])]; $S['table']['links'][]='contact_view.php?id='.$c['id']; }
+  return $S;
+}
+
+// Özet kart + HER cari için tekil cari_detay ekstresini alt alta render eder (report_render_all ile aynı teknik)
+function report_render_cari_toplu($pdo,$appName,$from,$to,$mode='',$type='',$detail=false){
+  $out='';
+  try{
+    $list=cari_toplu_list($pdo,$mode,$type);
+    $S=cari_toplu_summary($pdo,$mode,$type,$list);
+    $out.=report_render($S,$appName,$from,$to,$detail).'<div style="height:20px"></div>';
+    foreach($list as $c){
+      $R=rpt($pdo,'cari_detay',$from,$to,$c['id'],$detail);
+      $out.=report_render($R,$appName,$from,$to,$detail).'<div style="height:20px"></div>';
+    }
+  }catch(Throwable $e){ $out.='<div class="rep-card" style="color:#fca5a5">'.htmlspecialchars($e->getMessage()).'</div>'; }
+  return $out;
+}
+
+// Toplu ekstrenin CSV'si — özet + her carinin kendi ekstresi tek dosyada (build_csv_all ile aynı teknik)
+function build_csv_cari_toplu($pdo,$appName,$from,$to,$mode='',$type=''){
+  $o="\xEF\xBB\xBF";
+  $list=cari_toplu_list($pdo,$mode,$type);
+  $S=cari_toplu_summary($pdo,$mode,$type,$list);
+  $o.=csv_cell('=== '.$S['title'].' ===')."\r\n";
+  foreach($S['cards'] as $c){ $o.=csv_cell($c[1]).';'.csv_cell($c[2])."\r\n"; }
+  $o.="\r\n";
+  foreach($list as $c){
+    $R=rpt($pdo,'cari_detay',$from,$to,$c['id']);
+    $o.=csv_cell('=== '.$R['title'].' ===')."\r\n";
+    foreach($R['cards'] as $cd){ $o.=csv_cell($cd[1]).';'.csv_cell($cd[2])."\r\n"; }
+    $o.="\r\n".implode(';',array_map('csv_cell',$R['table']['head']))."\r\n";
+    foreach($R['table']['rows'] as $row){ $o.=implode(';',array_map('csv_cell',$row))."\r\n"; }
+    $o.="\r\n\r\n";
+  }
+  return $o;
+}
+
 function tl($v){ return number_format((float)$v,2,',','.').' ₺'; }
 
 function rpt($pdo,$modul,$from,$to,$ref=0,$detail=false){
@@ -222,10 +293,14 @@ function rpt($pdo,$modul,$from,$to,$ref=0,$detail=false){
     $ss=$pdo->prepare("SELECT COALESCE(SUM(amount),0) s FROM finance_movements WHERE movement_type LIKE '%sale%' AND DATE(movement_date) BETWEEN ? AND ?"); $ss->execute([$from,$to]); $sale=(float)$ss->fetch()['s'];
     $jo=$pdo->prepare("SELECT COUNT(*) n FROM jobs WHERE DATE(created_at) BETWEEN ? AND ?"); $jo->execute([$from,$to]); $acilan=(int)$jo->fetch()['n'];
     $jd=$pdo->prepare("SELECT COUNT(*) n FROM jobs WHERE status IN ('Tamamlandı','Teslim Edildi') AND DATE(created_at) BETWEEN ? AND ?"); $jd->execute([$from,$to]); $tamam=(int)$jd->fetch()['n'];
-    $R['cards']=[['💰','Tahsilat',tl($t['tin']),'#22c55e'],['💸','Ödeme',tl($t['tout']),'#f87171'],['📈','Net',tl($t['tin']-$t['tout']),'#3b82f6'],['🧾','Satış',tl($sale),'#f97316'],['📋','Açılan İş',$acilan,'#a78bfa'],['✓','Tamamlanan',$tamam,'#14b8a6']];
+    $lFin='report.php?modul=tahsilat&from='.urlencode($from).'&to='.urlencode($to);
+    $lSatis='report.php?modul=satis&from='.urlencode($from).'&to='.urlencode($to);
+    $lIs='report.php?modul=is&from='.urlencode($from).'&to='.urlencode($to);
+    $R['cards']=[['💰','Tahsilat',tl($t['tin']),'#22c55e',$lFin],['💸','Ödeme',tl($t['tout']),'#f87171',$lFin],['📈','Net',tl($t['tin']-$t['tout']),'#3b82f6',$lFin],['🧾','Satış',tl($sale),'#f97316',$lSatis],['📋','Açılan İş',$acilan,'#a78bfa',$lIs],['✓','Tamamlanan',$tamam,'#14b8a6',$lIs]];
     $R['chart']=['Genel',['Tahsilat'=>(float)$t['tin'],'Ödeme'=>(float)$t['tout'],'Satış'=>$sale]];
     $R['table']['head']=['Kalem','Değer'];
     $R['table']['rows']=[['Tahsilat',tl($t['tin'])],['Ödeme',tl($t['tout'])],['Net',tl($t['tin']-$t['tout'])],['Satış',tl($sale)],['Açılan İş',$acilan],['Tamamlanan İş',$tamam]];
+    $R['table']['links']=[$lFin,$lFin,$lFin,$lSatis,$lIs,$lIs];
   }}catch(Throwable $e){ $R['error']=$e->getMessage(); }
   return $R;
 }
@@ -290,10 +365,10 @@ table.rep-tbl tr:nth-child(even) td{background:rgba(255,255,255,.025)}
   </div>
 
   <div class="rep-tiles">
-    <?php foreach($R['cards'] as $c): $col=$c[3]; ?>
-      <div class="rep-tile" style="background:linear-gradient(135deg,<?=$col?> 0%,<?=$col?>cc 100%)">
+    <?php foreach($R['cards'] as $c): $col=$c[3]; $clink=$c[4] ?? null; $tag=$clink?'a':'div'; ?>
+      <<?=$tag?> class="rep-tile"<?=$clink?' href="'.htmlspecialchars($clink).'"':''?> style="background:linear-gradient(135deg,<?=$col?> 0%,<?=$col?>cc 100%)<?=$clink?';text-decoration:none;cursor:pointer':''?>">
         <div class="ic"><?=$c[0]?></div><div class="vl"><?=htmlspecialchars($c[2])?></div><div class="lb"><?=htmlspecialchars($c[1])?></div>
-      </div>
+      </<?=$tag?>>
     <?php endforeach; ?>
   </div>
 
