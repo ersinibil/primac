@@ -74,6 +74,7 @@ h1{margin:10px 0 18px;font-size:30px}.muted{color:#667085;font-size:12px}
 .panel-head h2,.panel h2{margin:0}
 .btn,button{border:0;border-radius:12px;background:#111827;color:#fff;text-decoration:none;padding:10px 14px;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
 .btn.secondary{background:#eef2f6;color:#101828}.btn.danger{background:#b42318}.btn.small{padding:7px 10px;font-size:12px}
+.btn.ghost{background:transparent;color:#374151;border:1px solid #d0d5dd}.btn.ghost:hover{background:#f7f9fc}
 table{width:100%;border-collapse:collapse}th,td{text-align:left;border-bottom:1px solid #eef2f6;padding:11px;vertical-align:top}
 th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;padding:5px 9px;font-size:12px;font-weight:900}
 .badge.gray{background:#f2f4f7;color:#344054}.badge.blue{background:#dbeafe;color:#1e40af}.badge.yellow{background:#fef3c7;color:#92400e}.badge.purple{background:#ede9fe;color:#5b21b6}.badge.orange{background:#ffedd5;color:#9a3412}.badge.teal{background:#ccfbf1;color:#115e59}.badge.green{background:#dcfce7;color:#166534}.badge.red{background:#fee2e2;color:#991b1b}

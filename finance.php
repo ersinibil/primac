@@ -26,6 +26,17 @@ $pos=safe_sum("SELECT COALESCE(SUM(current_balance),0) s FROM finance_accounts W
 .ft-card{background:linear-gradient(135deg,#fee2e2,#fff1f2)}
 .ft-pos{background:linear-gradient(135deg,#fef3c7,#fffbeb)}
 @media(max-width:960px){.finance-grid{grid-template-columns:1fr}}
+.command-grid{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:14px;margin:0 0 20px}
+.command-card{display:block;text-decoration:none;background:#fff;border-radius:20px;padding:18px;box-shadow:0 8px 28px rgba(16,24,40,.06);border:1px solid #eef2f6;color:#101828;transition:transform .12s ease,box-shadow .12s ease}
+.command-card:hover{transform:translateY(-2px);box-shadow:0 14px 36px rgba(16,24,40,.11)}
+.command-card small{display:block;color:#667085;font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+.command-card strong{display:block;font-size:30px;margin:8px 0;line-height:1}
+.command-card span{color:#667085;font-size:13px}
+.command-card.green{border-left:6px solid #22c55e}
+.command-card.red{border-left:6px solid #ef4444}
+.command-card.blue{border-left:6px solid #3b82f6}
+.command-card.purple{border-left:6px solid #8b5cf6}
+@media(max-width:960px){.command-grid{grid-template-columns:1fr}}
 </style>
 
 <div class="panel-head">

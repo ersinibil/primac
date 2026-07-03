@@ -46,6 +46,10 @@ $brands=$pdo->query("SELECT * FROM product_brands ORDER BY active DESC, name")->
 $units=$pdo->query("SELECT * FROM product_units ORDER BY active DESC, name")->fetchAll();
 ?>
 
+<style>
+.mini-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+</style>
+
 <div class="panel-head">
 <h1>Marka & Birim Yönetimi</h1>
 <div class="actions">
