@@ -113,11 +113,10 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                             continue;
                         }
 
-                        // WhatsApp ile gönder
-                        $wa_link=cred_wa($phone,$username,$password);
-                        // API gönderimi deneyeceğiz
+                        // WhatsApp ile gönder — cred_wa()'nın kurduğu metinle aynı (uygulama adresi dahil)
                         $appName=(app_config()['app_name'] ?? 'OTS');
-                        $txt="🔐 ".$appName." giriş bilgileriniz\nKullanıcı: ".$username."\nŞifre: ".$password;
+                        $appUrl=base_url();
+                        $txt="🔐 ".$appName." giriş bilgileriniz\nKullanıcı: ".$username."\nŞifre: ".$password.($appUrl?"\nAdres: ".$appUrl:'');
                         $sent=wa_send($phone,$txt);
 
                         if($sent){
