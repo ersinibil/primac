@@ -82,7 +82,9 @@
     if($isAdmin) card('Muhasebe Kategorileri','Kategori yönetimi','⚙️','accounting_categories.php','gray');
   }
   if($isAdmin || user_can('report')) {
+    card('Finans/Tahsilat','Tahsilat·ödeme·net','💰','report.php?modul=tahsilat','green');
     card('Muhasebe Raporu','Kategori gelir/gider','📒','report.php?modul=muhasebe','purple');
+    card('Cari','Bakiye·hareket','👥','report.php?modul=cari','teal');
     card('Satış Raporu','Satış dökümü','🧾','report.php?modul=satis','yellow');
     card('Satın Alma Raporu','Alış dökümü','📥','report.php?modul=satinalma','green');
     card('Teklif Raporu','Teklif dökümü','📄','report.php?modul=teklif','blue');
@@ -99,7 +101,8 @@
   card('Bildirimler','Tüm bildirimler','🔔','notifications.php','yellow');
   if($isAdmin) card('Son İşlemler','Aktivite akışı','🕘','activity.php','gray'); // activity.php block_personel()
   if($isAdmin || user_can('report')) {
-    card('Genel Özet Rapor','Hepsi tek sunum','🗂️','report.php?modul=genel','blue');
+    card('Genel Özet Rapor','Yekün özet','📊','report.php?modul=genel','blue');
+    card('Tüm Modüller','Hepsi tek sunum','🗂️','report.php?modul=tumu','blue');
   }
   if(user_can('users')) {
     card('WhatsApp Gönder','Anlık mesaj gönder','📤','wa_send_now.php','green');

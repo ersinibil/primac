@@ -165,7 +165,7 @@ th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;p
         $sistem_pages = ['users.php','audit_log.php','wa_settings.php','brand_settings.php','profile.php','request_new.php','temizle_veri.php','logout.php'];
         ?>
 
-        <?php if(user_can('jobs')||user_can('tasks')||user_can('personnel')): ?>
+        <?php if(user_can('jobs')||user_can('tasks')||user_can('personnel')||user_can('users')): ?>
         <details <?=(in_array($cur,$personelIsTakip_pages)?'open':'')?>><summary><span>🧭</span> Personel İş Takip Yönetimi</summary>
             <div class="sub">
                 <?php if(user_can('jobs')): ?>
@@ -236,8 +236,10 @@ th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;p
                 <?php if(is_admin()): ?><a href="accounting_categories.php" <?=($cur==='accounting_categories.php'?'class="active"':'')?>><span>⚙</span> Muhasebe Kategorileri</a><?php endif; ?>
                 <?php endif; ?>
                 <?php if(user_can('report')): ?>
-                <a href="contacts_report.php" <?=($cur==='contacts_report.php'?'class="active"':'')?>><span>📊</span> Cari Raporu / Toplu Ekstre</a>
+                <a href="report.php?modul=tahsilat"><span>📊</span> Finans / Tahsilat Raporu</a>
                 <a href="report.php?modul=muhasebe"><span>📊</span> Muhasebe Raporu</a>
+                <a href="report.php?modul=cari"><span>📊</span> Cari Bakiye Raporu</a>
+                <a href="contacts_report.php" <?=($cur==='contacts_report.php'?'class="active"':'')?>><span>📊</span> Cari Raporu / Toplu Ekstre</a>
                 <a href="report.php?modul=satis"><span>📊</span> Satış Raporu</a>
                 <a href="report.php?modul=satinalma"><span>📊</span> Satın Alma Raporu</a>
                 <a href="report.php?modul=teklif"><span>📊</span> Teklif Raporu</a>
@@ -253,6 +255,7 @@ th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;p
                 <a href="activity.php" <?=($cur==='activity.php'?'class="active"':'')?>><span>📜</span> Son İşlemler</a>
                 <?php if(user_can('report')): ?>
                 <a href="report.php" <?=($cur==='report.php'?'class="active"':'')?>><span>📊</span> Genel Özet Rapor</a>
+                <a href="report.php?modul=tumu"><span>🗂️</span> Tüm Modüller (Detaylı)</a>
                 <?php endif; ?>
                 <?php if(user_can('users')): ?>
                 <a href="wa_send_now.php" <?=($cur==='wa_send_now.php'?'class="active"':'')?>><span>📤</span> WhatsApp Mesaj Gönder</a>
