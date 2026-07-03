@@ -1,7 +1,8 @@
 <?php require_once __DIR__.'/boot.php'; require_login();
 if(file_exists(__DIR__.'/activity_lib.php')) require_once __DIR__.'/activity_lib.php';
 $notifCount = 0;
-try { $notifCount = safe_count("SELECT COUNT(*) c FROM internal_notifications WHERE is_read=0"); } catch(Throwable $e) {}
+$__me=(int)(current_user()['id'] ?? 0);
+try { $notifCount = safe_count("SELECT COUNT(*) c FROM internal_notifications WHERE is_read=0 AND (target_user_id IS NULL OR target_user_id=$__me)"); } catch(Throwable $e) {}
 $cur = basename($_SERVER['SCRIPT_NAME']);
 ?>
 <!doctype html>

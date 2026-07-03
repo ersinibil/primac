@@ -3,11 +3,12 @@ require_once __DIR__.'/boot.php';
 require_login();
 
 $pdo=db();
+$ME=(int)(current_user()['id'] ?? 0);
 
 if(isset($_GET['read'])){
     $id=(int)$_GET['read'];
-    $stmt=$pdo->prepare("UPDATE internal_notifications SET is_read=1 WHERE id=?");
-    $stmt->execute([$id]);
+    $stmt=$pdo->prepare("UPDATE internal_notifications SET is_read=1 WHERE id=? AND (target_user_id IS NULL OR target_user_id=?)");
+    $stmt->execute([$id,$ME]);
     if(!empty($_GET['go'])){
         $go=$_GET['go'];
         if(preg_match('#^(https?:)?//#i',$go)) $go='dashboard.php'; // open redirect koruması: sadece site-içi göreli path
@@ -26,7 +27,8 @@ if(isset($_GET['read'])){
 }
 
 if(isset($_GET['all_read'])){
-    $pdo->exec("UPDATE internal_notifications SET is_read=1 WHERE is_read=0");
+    $stmt=$pdo->prepare("UPDATE internal_notifications SET is_read=1 WHERE is_read=0 AND (target_user_id IS NULL OR target_user_id=?)");
+    $stmt->execute([$ME]);
     header("Location: notifications.php");
     exit;
 }
@@ -35,7 +37,9 @@ require_once __DIR__.'/layout_top.php';
 
 $rows=[];
 try{
-    $rows=$pdo->query("SELECT * FROM internal_notifications ORDER BY is_read ASC, id DESC LIMIT 100")->fetchAll();
+    $stmt=$pdo->prepare("SELECT * FROM internal_notifications WHERE (target_user_id IS NULL OR target_user_id=?) ORDER BY is_read ASC, id DESC LIMIT 100");
+    $stmt->execute([$ME]);
+    $rows=$stmt->fetchAll();
 }catch(Throwable $e){
     echo "<div class='alert'>".h($e->getMessage())."</div>";
 }

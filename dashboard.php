@@ -405,7 +405,10 @@ try{
 </div>
 <?php
 try{
-$notifs=db()->query("SELECT * FROM internal_notifications ORDER BY is_read ASC, id DESC LIMIT 6")->fetchAll();
+$__me=(int)(current_user()['id'] ?? 0);
+$notifs=$pdo->prepare("SELECT * FROM internal_notifications WHERE (target_user_id IS NULL OR target_user_id=?) ORDER BY is_read ASC, id DESC LIMIT 6");
+$notifs->execute([$__me]);
+$notifs=$notifs->fetchAll();
 if($notifs):
 ?>
 <div class="notif-list">
