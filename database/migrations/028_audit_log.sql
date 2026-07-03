@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS audit_log (
   record_id INT NULL COMMENT 'etkilenen satırın PK',
   old_value LONGTEXT NULL COMMENT 'güncelleme/silme öncesi JSON — null=yeni kayıt',
   new_value LONGTEXT NULL COMMENT 'güncelleme/yeni kayıt sonrası JSON — null=silme',
-  ip_address VARCHAR(45) NULL COMMENT 'IPv4/IPv6 müşteri IP'si',
+  ip_address VARCHAR(45) NULL COMMENT 'İstemci IP adresi (IPv4/IPv6)',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'işlem zamanı (sunucu saati)',
   KEY idx_user_action (user_id, action),
   KEY idx_table_record (table_name, record_id),
