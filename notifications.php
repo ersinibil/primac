@@ -7,8 +7,13 @@ $ME=(int)(current_user()['id'] ?? 0);
 
 if(isset($_GET['read'])){
     $id=(int)$_GET['read'];
-    $stmt=$pdo->prepare("UPDATE internal_notifications SET is_read=1 WHERE id=? AND (target_user_id IS NULL OR target_user_id=?)");
-    $stmt->execute([$id,$ME]);
+    // target_user_id kolonu eski/temiz kurulumlarda (migration 007 öncesi) eksik olabilir —
+    // mobile/notifications.php'deki try/catch'li eşdeğeriyle tutarlı hale getirildi (2026-07-03
+    // kod incelemesinde bulundu: bu blok korumasızdı, kolon eksikse fatal hataya düşerdi).
+    try{
+        $stmt=$pdo->prepare("UPDATE internal_notifications SET is_read=1 WHERE id=? AND (target_user_id IS NULL OR target_user_id=?)");
+        $stmt->execute([$id,$ME]);
+    }catch(Throwable $e){}
     if(!empty($_GET['go'])){
         $go=$_GET['go'];
         if(preg_match('#^(https?:)?//#i',$go)) $go='dashboard.php'; // open redirect koruması: sadece site-içi göreli path
@@ -27,8 +32,10 @@ if(isset($_GET['read'])){
 }
 
 if(isset($_GET['all_read'])){
-    $stmt=$pdo->prepare("UPDATE internal_notifications SET is_read=1 WHERE is_read=0 AND (target_user_id IS NULL OR target_user_id=?)");
-    $stmt->execute([$ME]);
+    try{
+        $stmt=$pdo->prepare("UPDATE internal_notifications SET is_read=1 WHERE is_read=0 AND (target_user_id IS NULL OR target_user_id=?)");
+        $stmt->execute([$ME]);
+    }catch(Throwable $e){}
     header("Location: notifications.php");
     exit;
 }

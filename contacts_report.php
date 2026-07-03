@@ -101,10 +101,12 @@ try{
     echo "<div class='alert'>".h($e->getMessage())."</div>";
 }
 
-$totalOpening=array_sum(array_map(fn($r)=>(float)$r['opening_balance'],$rows));
-$totalIn=array_sum(array_map(fn($r)=>(float)$r['total_in'],$rows));
-$totalOut=array_sum(array_map(fn($r)=>(float)$r['total_out'],$rows));
-$totalBalance=array_sum(array_map(fn($r)=>(float)$r['balance'],$rows));
+// PHP 7.2 uyumluluğu: fn() arrow function PHP 7.4+ gerektirir (2026-07-03 denetiminde bulundu,
+// önceden buradaydı, sunucu PHP 7.2 ise bu sayfa parse error verip hiç açılmıyordu).
+$totalOpening=array_sum(array_map(function($r){ return (float)$r['opening_balance']; },$rows));
+$totalIn=array_sum(array_map(function($r){ return (float)$r['total_in']; },$rows));
+$totalOut=array_sum(array_map(function($r){ return (float)$r['total_out']; },$rows));
+$totalBalance=array_sum(array_map(function($r){ return (float)$r['balance']; },$rows));
 ?>
 
 <section class="report-grid">
