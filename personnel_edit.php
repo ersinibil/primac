@@ -1,11 +1,13 @@
 <?php
 require_once __DIR__.'/boot.php';
 require_login();
+require_once __DIR__.'/personnel_lib.php';
 
 $pdo=db();
 $id=(int)($_GET['id'] ?? 0);
 $error='';
 $ok='';
+$hasCvCol = personnel_has_cv_column($pdo);
 
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['regen_telegram_code'])){
     try{
@@ -36,27 +38,88 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['save_perms'])){
     }catch(Throwable $e){ $error=$e->getMessage(); }
 }
 
-if($_SERVER['REQUEST_METHOD']==='POST' && !isset($_POST['regen_telegram_code']) && !isset($_POST['clear_telegram_binding']) && !isset($_POST['save_perms'])){
+if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['clear_cv'])){
     try{
-        $stmt=$pdo->prepare("UPDATE personnel SET
-            name=?, role=?, phone=?, email=?, hourly_rate=?, daily_wage=?, active=?, address=?, start_date=?, work_type=?, iban=?, notes=?
-            WHERE id=?
-        ");
-        $stmt->execute([
-            trim($_POST['name']),
-            trim($_POST['role']),
-            trim($_POST['phone']),
-            trim($_POST['email']),
-            (float)$_POST['hourly_rate'],
-            (float)$_POST['daily_wage'],
-            isset($_POST['active']) ? 1 : 0,
-            trim($_POST['address']),
-            $_POST['start_date'] ?: null,
-            $_POST['work_type'],
-            trim($_POST['iban']),
-            trim($_POST['notes']),
-            $id
-        ]);
+        if($hasCvCol){
+            $cur=$pdo->prepare("SELECT cv_path FROM personnel WHERE id=?"); $cur->execute([$id]); $row=$cur->fetch();
+            if($row && !empty($row['cv_path'])){
+                $full=__DIR__.'/'.$row['cv_path'];
+                if(is_file($full)) @unlink($full);
+            }
+            $pdo->prepare("UPDATE personnel SET cv_path=NULL WHERE id=?")->execute([$id]);
+        }
+        $ok='CV kaldırıldı.';
+    }catch(Throwable $e){ $error=$e->getMessage(); }
+}
+
+if($_SERVER['REQUEST_METHOD']==='POST' && !isset($_POST['regen_telegram_code']) && !isset($_POST['clear_telegram_binding']) && !isset($_POST['save_perms']) && !isset($_POST['clear_cv'])){
+    try{
+        $cvPath = $hasCvCol ? personnel_handle_cv_upload() : null;
+
+        if($hasCvCol){
+            if($cvPath !== null){
+                $stmt=$pdo->prepare("UPDATE personnel SET
+                    name=?, role=?, phone=?, email=?, hourly_rate=?, daily_wage=?, active=?, address=?, start_date=?, work_type=?, iban=?, notes=?, cv_path=?
+                    WHERE id=?
+                ");
+                $stmt->execute([
+                    trim($_POST['name']),
+                    trim($_POST['role']),
+                    trim($_POST['phone']),
+                    trim($_POST['email']),
+                    (float)$_POST['hourly_rate'],
+                    (float)$_POST['daily_wage'],
+                    isset($_POST['active']) ? 1 : 0,
+                    trim($_POST['address']),
+                    $_POST['start_date'] ?: null,
+                    $_POST['work_type'],
+                    trim($_POST['iban']),
+                    trim($_POST['notes']),
+                    $cvPath,
+                    $id
+                ]);
+            }else{
+                $stmt=$pdo->prepare("UPDATE personnel SET
+                    name=?, role=?, phone=?, email=?, hourly_rate=?, daily_wage=?, active=?, address=?, start_date=?, work_type=?, iban=?, notes=?
+                    WHERE id=?
+                ");
+                $stmt->execute([
+                    trim($_POST['name']),
+                    trim($_POST['role']),
+                    trim($_POST['phone']),
+                    trim($_POST['email']),
+                    (float)$_POST['hourly_rate'],
+                    (float)$_POST['daily_wage'],
+                    isset($_POST['active']) ? 1 : 0,
+                    trim($_POST['address']),
+                    $_POST['start_date'] ?: null,
+                    $_POST['work_type'],
+                    trim($_POST['iban']),
+                    trim($_POST['notes']),
+                    $id
+                ]);
+            }
+        }else{
+            $stmt=$pdo->prepare("UPDATE personnel SET
+                name=?, role=?, phone=?, email=?, hourly_rate=?, daily_wage=?, active=?, address=?, start_date=?, work_type=?, iban=?, notes=?
+                WHERE id=?
+            ");
+            $stmt->execute([
+                trim($_POST['name']),
+                trim($_POST['role']),
+                trim($_POST['phone']),
+                trim($_POST['email']),
+                (float)$_POST['hourly_rate'],
+                (float)$_POST['daily_wage'],
+                isset($_POST['active']) ? 1 : 0,
+                trim($_POST['address']),
+                $_POST['start_date'] ?: null,
+                $_POST['work_type'],
+                trim($_POST['iban']),
+                trim($_POST['notes']),
+                $id
+            ]);
+        }
         $ok='Personel profili güncellendi.';
     }catch(Throwable $e){
         $error=$e->getMessage();
@@ -108,7 +171,7 @@ try{ $uu=$pdo->prepare("SELECT id,permissions,role FROM app_users WHERE personne
 
 <section class="panel">
 <h2>Profil Bilgileri</h2>
-<form method="post" class="form-grid">
+<form method="post" class="form-grid" enctype="multipart/form-data">
 
 <label>Ad Soyad
 <input name="name" required value="<?=h($p['name'])?>">
@@ -158,6 +221,15 @@ try{ $uu=$pdo->prepare("SELECT id,permissions,role FROM app_users WHERE personne
 <textarea name="notes" rows="4"><?=h($p['notes'] ?? '')?></textarea>
 </label>
 
+<?php if($hasCvCol): ?>
+<label class="full">CV / Özgeçmiş <small style="font-weight:400;color:#667085">(opsiyonel — pdf/doc/docx/jpg/jpeg/png, en fazla 15 MB. Yeni dosya seçilirse eskisinin yerine geçer, boş bırakılırsa mevcut korunur)</small>
+<?php if(!empty($p['cv_path'])): ?>
+<div style="margin:4px 0 8px"><a href="<?=h(base_url().$p['cv_path'])?>" target="_blank">📎 Mevcut CV'yi görüntüle</a></div>
+<?php endif; ?>
+<input type="file" name="cv" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
+</label>
+<?php endif; ?>
+
 <label class="full">
 <input type="checkbox" name="active" <?=$p['active']?'checked':''?> style="width:auto"> Aktif personel
 </label>
@@ -165,6 +237,11 @@ try{ $uu=$pdo->prepare("SELECT id,permissions,role FROM app_users WHERE personne
 <button class="btn">Profili Kaydet</button>
 
 </form>
+<?php if($hasCvCol && !empty($p['cv_path'])): ?>
+<form method="post" style="margin-top:10px" onsubmit="return confirm('CV dosyasını kaldırmak istediğinize emin misiniz?')">
+<button class="btn secondary" name="clear_cv" value="1">🗑 CV'yi Kaldır</button>
+</form>
+<?php endif; ?>
 </section>
 
 <section class="panel">

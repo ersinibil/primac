@@ -1,8 +1,10 @@
 <?php
 require_once 'common.php';
 require_once __DIR__.'/../share_lib.php';
+require_once __DIR__.'/../personnel_lib.php';
 block_personel('personnel');
 $pdo=db(); $id=(int)($_GET['id']??0); $ok=''; $er=''; $waCred='';
+$hasCvCol = personnel_has_cv_column($pdo);
 
 /* Personeli sil (admin-only, topx'tan ÖNCE) */
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['delete_personnel'])){
@@ -29,13 +31,36 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['delete_personnel'])){
     }
 }
 
+if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['clear_cv'])){
+    try{
+        if($hasCvCol){
+            $cur=$pdo->prepare("SELECT cv_path FROM personnel WHERE id=?"); $cur->execute([$id]); $row=$cur->fetch();
+            if($row && !empty($row['cv_path'])){
+                $full=dirname(__DIR__).'/'.$row['cv_path'];
+                if(is_file($full)) @unlink($full);
+            }
+            $pdo->prepare("UPDATE personnel SET cv_path=NULL WHERE id=?")->execute([$id]);
+        }
+        $_SESSION['pers_ok']='CV kaldırıldı.';
+    }catch(Throwable $e){ $_SESSION['pers_err']=$e->getMessage(); }
+    header('Location: personnel_view.php?id='.$id); exit;
+}
+
 if($_SERVER['REQUEST_METHOD']==='POST'){
     try{
         if(isset($_POST['save'])){
-            $pdo->prepare("UPDATE personnel SET name=?,role=?,phone=?,email=?,work_type=?,start_date=?,iban=?,notes=?,active=? WHERE id=?")
-                ->execute([trim($_POST['name']),trim($_POST['role']??''),trim($_POST['phone']??''),trim($_POST['email']??''),
-                           trim($_POST['work_type']??''),($_POST['start_date']??'')?:null,trim($_POST['iban']??''),trim($_POST['notes']??''),
-                           isset($_POST['active'])?1:0,$id]);
+            $cvPath = $hasCvCol ? personnel_handle_cv_upload() : null;
+            if($hasCvCol && $cvPath !== null){
+                $pdo->prepare("UPDATE personnel SET name=?,role=?,phone=?,email=?,work_type=?,start_date=?,iban=?,notes=?,active=?,cv_path=? WHERE id=?")
+                    ->execute([trim($_POST['name']),trim($_POST['role']??''),trim($_POST['phone']??''),trim($_POST['email']??''),
+                               trim($_POST['work_type']??''),($_POST['start_date']??'')?:null,trim($_POST['iban']??''),trim($_POST['notes']??''),
+                               isset($_POST['active'])?1:0,$cvPath,$id]);
+            }else{
+                $pdo->prepare("UPDATE personnel SET name=?,role=?,phone=?,email=?,work_type=?,start_date=?,iban=?,notes=?,active=? WHERE id=?")
+                    ->execute([trim($_POST['name']),trim($_POST['role']??''),trim($_POST['phone']??''),trim($_POST['email']??''),
+                               trim($_POST['work_type']??''),($_POST['start_date']??'')?:null,trim($_POST['iban']??''),trim($_POST['notes']??''),
+                               isset($_POST['active'])?1:0,$id]);
+            }
             $ok='Bilgiler güncellendi.';
         }
         if(isset($_POST['make_login']) && trim($_POST['username']??'')!=='' && trim($_POST['password']??'')!==''){
@@ -87,16 +112,28 @@ try{
 </div>
 
 <div class="panel"><b>✏️ Bilgileri Düzenle</b>
-<form method="post" style="margin-top:8px">
+<form method="post" style="margin-top:8px" enctype="multipart/form-data">
   <label>Ad Soyad</label><input name="name" value="<?=htmlspecialchars($p['name'])?>" required>
   <label>Görev / Rol</label><input name="role" value="<?=htmlspecialchars($p['role']??'')?>">
   <div style="display:flex;gap:10px"><div style="flex:1"><label>Telefon</label><input name="phone" value="<?=htmlspecialchars($p['phone']??'')?>"></div><div style="flex:1"><label>E-posta</label><input name="email" value="<?=htmlspecialchars($p['email']??'')?>"></div></div>
   <div style="display:flex;gap:10px"><div style="flex:1"><label>Çalışma Tipi</label><input name="work_type" value="<?=htmlspecialchars($p['work_type']??'')?>"></div><div style="flex:1"><label>Başlangıç</label><input type="date" name="start_date" value="<?=htmlspecialchars($p['start_date']??'')?>"></div></div>
   <label>IBAN</label><input name="iban" value="<?=htmlspecialchars($p['iban']??'')?>">
   <label>Not</label><textarea name="notes" rows="2"><?=htmlspecialchars($p['notes']??'')?></textarea>
+  <?php if($hasCvCol): ?>
+  <label>CV / Özgeçmiş <small class="muted">(opsiyonel — pdf/doc/docx/jpg/jpeg/png, en fazla 15 MB)</small></label>
+  <?php if(!empty($p['cv_path'])): ?>
+  <div style="margin:4px 0 8px"><a href="<?=htmlspecialchars(base_url().$p['cv_path'])?>" target="_blank">📎 Mevcut CV'yi görüntüle</a></div>
+  <?php endif; ?>
+  <input type="file" name="cv" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
+  <?php endif; ?>
   <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" name="active" value="1" <?=$p['active']?'checked':''?> style="width:auto;margin:0"> Aktif</label>
   <button class="btn dark" name="save" value="1" style="width:100%;padding:13px;margin-top:8px">💾 Kaydet</button>
 </form>
+<?php if($hasCvCol && !empty($p['cv_path'])): ?>
+<form method="post" style="margin-top:8px" onsubmit="return confirm('CV dosyasını kaldırmak istediğinize emin misiniz?')">
+  <button class="btn" name="clear_cv" value="1" style="width:100%;background:#334155;color:#fff;padding:12px;border-radius:14px">🗑 CV'yi Kaldır</button>
+</form>
+<?php endif; ?>
 </div>
 
 <?php if($isAdmin): ?>

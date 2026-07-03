@@ -1,29 +1,54 @@
 <?php
 require_once __DIR__.'/boot.php';
 require_login();
+require_once __DIR__.'/personnel_lib.php';
 
 $pdo=db();
 $error='';
+$hasCvCol = personnel_has_cv_column($pdo);
 
 if($_SERVER['REQUEST_METHOD']==='POST'){
     try{
-        $stmt=$pdo->prepare("INSERT INTO personnel(
-            name,role,phone,email,hourly_rate,daily_wage,active,address,start_date,work_type,iban,notes
-        ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)");
-        $stmt->execute([
-            trim($_POST['name']),
-            trim($_POST['role']),
-            trim($_POST['phone']),
-            trim($_POST['email']),
-            (float)$_POST['hourly_rate'],
-            (float)$_POST['daily_wage'],
-            isset($_POST['active']) ? 1 : 0,
-            trim($_POST['address']),
-            $_POST['start_date'] ?: null,
-            $_POST['work_type'],
-            trim($_POST['iban']),
-            trim($_POST['notes'])
-        ]);
+        $cvPath = $hasCvCol ? personnel_handle_cv_upload() : null;
+
+        if($hasCvCol){
+            $stmt=$pdo->prepare("INSERT INTO personnel(
+                name,role,phone,email,hourly_rate,daily_wage,active,address,start_date,work_type,iban,notes,cv_path
+            ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)");
+            $stmt->execute([
+                trim($_POST['name']),
+                trim($_POST['role']),
+                trim($_POST['phone']),
+                trim($_POST['email']),
+                (float)$_POST['hourly_rate'],
+                (float)$_POST['daily_wage'],
+                isset($_POST['active']) ? 1 : 0,
+                trim($_POST['address']),
+                $_POST['start_date'] ?: null,
+                $_POST['work_type'],
+                trim($_POST['iban']),
+                trim($_POST['notes']),
+                $cvPath
+            ]);
+        }else{
+            $stmt=$pdo->prepare("INSERT INTO personnel(
+                name,role,phone,email,hourly_rate,daily_wage,active,address,start_date,work_type,iban,notes
+            ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)");
+            $stmt->execute([
+                trim($_POST['name']),
+                trim($_POST['role']),
+                trim($_POST['phone']),
+                trim($_POST['email']),
+                (float)$_POST['hourly_rate'],
+                (float)$_POST['daily_wage'],
+                isset($_POST['active']) ? 1 : 0,
+                trim($_POST['address']),
+                $_POST['start_date'] ?: null,
+                $_POST['work_type'],
+                trim($_POST['iban']),
+                trim($_POST['notes'])
+            ]);
+        }
         $newId = $pdo->lastInsertId();
         try{
             $code = (string)random_int(100000,999999);
@@ -51,7 +76,7 @@ require_once __DIR__.'/layout_top.php';
 <?php if($error): ?><div class="alert"><?=h($error)?></div><?php endif; ?>
 
 <section class="panel">
-<form method="post" class="form-grid">
+<form method="post" class="form-grid" enctype="multipart/form-data">
 
 <label>Ad Soyad
 <input name="name" required placeholder="Örn: Faruk Gündoğdu">
@@ -102,6 +127,12 @@ require_once __DIR__.'/layout_top.php';
 <label class="full">Notlar
 <textarea name="notes" rows="4"></textarea>
 </label>
+
+<?php if($hasCvCol): ?>
+<label class="full">CV / Özgeçmiş <small style="font-weight:400;color:#667085">(opsiyonel — pdf/doc/docx/jpg/jpeg/png, en fazla 15 MB)</small>
+<input type="file" name="cv" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
+</label>
+<?php endif; ?>
 
 <label class="full">
 <input type="checkbox" name="active" checked style="width:auto"> Aktif personel
