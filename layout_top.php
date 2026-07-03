@@ -11,6 +11,17 @@ $cur = basename($_SERVER['SCRIPT_NAME']);
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title><?=htmlspecialchars(app_config()['app_name'] ?? 'OTS')?> — Online Takip Sistemi</title>
+<?php
+// Favicon — masaüstü web tarafında hiç <link rel="icon"> yoktu (mobil PWA'da vardı, bkz.
+// mobile/common.php icon.php), tarayıcı sekmesinde marka görünmüyordu — kullanıcı bildirimi:
+// "her iki site için de daha önce aktif faviconlar vardı, yeniden ayarla, tarayıcıda çıksın".
+// brand_icon() zaten ACANS/PRIMAC'ın kendi app_settings'inden (ayrı DB) doğru ikonu döndürüyor.
+$__favicon = brand_icon();
+$__faviconExt = strtolower(pathinfo($__favicon, PATHINFO_EXTENSION));
+$__faviconType = ['png'=>'image/png','jpg'=>'image/jpeg','jpeg'=>'image/jpeg','webp'=>'image/webp','gif'=>'image/gif'][$__faviconExt] ?? 'image/png';
+?>
+<link rel="icon" type="<?=$__faviconType?>" href="<?=h($__favicon)?>?v=<?=@filemtime(__DIR__.'/'.$__favicon)?>">
+<link rel="apple-touch-icon" href="<?=h($__favicon)?>?v=<?=@filemtime(__DIR__.'/'.$__favicon)?>">
 <style>
 *{box-sizing:border-box}
 html,body{max-width:100%;overflow-x:hidden}
@@ -78,8 +89,12 @@ h1{margin:10px 0 18px;font-size:30px}.muted{color:#667085;font-size:12px}
 table{width:100%;border-collapse:collapse}th,td{text-align:left;border-bottom:1px solid #eef2f6;padding:11px;vertical-align:top}
 th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;padding:5px 9px;font-size:12px;font-weight:900}
 .badge.gray{background:#f2f4f7;color:#344054}.badge.blue{background:#dbeafe;color:#1e40af}.badge.yellow{background:#fef3c7;color:#92400e}.badge.purple{background:#ede9fe;color:#5b21b6}.badge.orange{background:#ffedd5;color:#9a3412}.badge.teal{background:#ccfbf1;color:#115e59}.badge.green{background:#dcfce7;color:#166534}.badge.red{background:#fee2e2;color:#991b1b}
-.form-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}.form-grid label{font-weight:800;color:#344054}
-.form-grid input,.form-grid select,.form-grid textarea,.inline select,.inline input{width:100%;border:1px solid #d0d5dd;border-radius:12px;padding:11px;margin-top:6px;background:#fff}
+/* 2026-07-03: formlar sistem genelinde büyütüldü — kullanıcı isteği: "biraz daha büyük olsun,
+   gözü küçük ya da büyük olarak yormasın". input/select/textarea 16px'ten büyük tarayıcı zoom
+   tetiklemediği için mobilde de güvenli. */
+input,select,textarea{font-size:16px}
+.form-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}.form-grid label{font-weight:800;color:#344054;font-size:15.5px;display:block;margin-bottom:2px}
+.form-grid input,.form-grid select,.form-grid textarea,.inline select,.inline input{width:100%;border:1.5px solid #d0d5dd;border-radius:12px;padding:13px 14px;margin-top:6px;background:#fff;font-size:16px}
 .form-grid .full{grid-column:1/-1}.inline{display:flex;gap:8px;align-items:center}
 .filters{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 16px}.filters a{background:#fff;color:#101828;text-decoration:none;border-radius:999px;padding:9px 12px;font-weight:700}
 .alert{background:#fee2e2;color:#991b1b;border-radius:14px;padding:12px;margin:10px 0}.ok{background:#dcfce7;color:#166534;border-radius:14px;padding:12px;margin:10px 0}
