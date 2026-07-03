@@ -161,7 +161,7 @@ th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;p
         $finansMuhasebe_pages = ['finance.php','finance_accounts.php','finance_new.php','finance_transfer.php','checks_notes.php','check_note_view.php','accounting.php','accounting_categories.php'];
         $ekip_pages = ['personnel.php','personnel_new.php','kpi.php','users.php'];
         $rapor_pages = ['report.php','gunluk_rapor.php'];
-        $sistem_pages = ['activity.php','notifications.php','audit_log.php','wa_settings.php','brand_settings.php','profile.php','request_new.php','temizle_veri.php','logout.php'];
+        $sistem_pages = ['activity.php','notifications.php','audit_log.php','wa_settings.php','wa_send_now.php','brand_settings.php','profile.php','request_new.php','temizle_veri.php','logout.php'];
         ?>
 
         <?php if(user_can('jobs')||user_can('tasks')||user_can('personnel')||user_can('users')): ?>
@@ -266,6 +266,7 @@ th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;p
                 <a href="request_new.php" <?=($cur==='request_new.php'?'class="active"':'')?>><span>📨</span> Talep Oluştur</a>
                 <?php if(user_can('users')): ?>
                 <a href="audit_log.php" <?=($cur==='audit_log.php'?'class="active"':'')?>><span>🔍</span> Denetim Günlüğü</a>
+                <a href="wa_send_now.php" <?=($cur==='wa_send_now.php'?'class="active"':'')?>><span>📤</span> WhatsApp Mesaj Gönder</a>
                 <a href="wa_settings.php" <?=($cur==='wa_settings.php'?'class="active"':'')?>><span>📱</span> WhatsApp Ayarları</a>
                 <a href="brand_settings.php" <?=($cur==='brand_settings.php'?'class="active"':'')?>><span>🎨</span> Logo / Marka</a>
                 <a href="temizle_veri.php" <?=($cur==='temizle_veri.php'?'class="active"':'')?> style="color:#fca5a5"><span>🧹</span> Veri Temizleme (canlıya hazırlık)</a>

@@ -168,6 +168,7 @@ function page_module_map(){
         'personnel.php'=>'personnel','personnel_new.php'=>'personnel','personnel_view.php'=>'personnel',
         'users.php'=>'users',
         'brand_settings.php'=>'users',
+        'wa_send_now.php'=>'users',
     ];
 }
 

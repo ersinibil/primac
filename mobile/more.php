@@ -120,6 +120,7 @@
   card('Web Sürümü','Masaüstü Sürüm','🖥','../dashboard.php?web=1','gray');
   card('Profil','Şifre & hesap','👤','profile.php','blue');
   if(user_can('users')) {
+    card('WhatsApp Gönder','Anlık mesaj gönder','📤','../wa_send_now.php?web=1','green');
     card('Logo / Marka','Marka ayarları','🎨','../brand_settings.php?web=1','gray');
   }
   card('Çıkış Yap','Oturumu kapat','🚪','../logout.php','red');
