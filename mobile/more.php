@@ -50,9 +50,9 @@
     card('Yeni Ürün','Ürün ekle','➕','product_new.php','green');
     card('Satış','Satış yap','🧾','sales.php','orange');
     card('Satın Alma','Alış + stok kartı','🛒','purchase.php','green');
-    card('Stok Giriş/Çıkış','Manuel stok hareketi','↕️','../stock_movement_new.php?web=1','yellow'); // web'de var, mobilde köprü yoktu
-    card('Ürün Kategorileri','Kategori yönetimi','🏷️','../product_categories.php?web=1','gray'); // web'de var, mobilde köprü yoktu
-    card('Marka / Birim','Taksonomi yönetimi','🔖','../product_taxonomy.php?web=1','gray'); // web'de var, mobilde köprü yoktu
+    card('Stok Giriş/Çıkış','Manuel stok hareketi','↕️','stock_movement_new.php','yellow');
+    card('Ürün Kategorileri','Kategori yönetimi','🏷️','product_categories.php','gray');
+    card('Marka / Birim','Taksonomi yönetimi','🔖','product_taxonomy.php','gray');
   }
   if(user_can('teklif')) {
     card('Teklif','Teklif hazırla/gönder','📄','teklif.php','blue');
@@ -75,7 +75,7 @@
   if(user_can('muhasebe')) {
     card('Muhasebe','Gider · Gelir · Personel','📒','accounting.php','purple');
     card('Yeni Kayıt','Hızlı gider/gelir gir','➕','accounting.php#yeni','orange');
-    if($isAdmin) card('Muhasebe Kategorileri','Kategori yönetimi','⚙️','../accounting_categories.php?web=1','gray'); // web'de var, mobilde köprü yoktu
+    if($isAdmin) card('Muhasebe Kategorileri','Kategori yönetimi','⚙️','accounting_categories.php','gray');
   }
   ?>
 </div>
@@ -105,7 +105,7 @@
   <summary style="font-weight:900;cursor:pointer">📊 Rapor</summary>
   <div class="grid" style="margin-top:10px">
   <?php
-  card('Günlük Rapor','Bugünkü iş özeti','📅','../gunluk_rapor.php?web=1','blue');
+  card('Günlük Rapor','Bugünkü iş özeti','📅','gunluk_rapor.php','blue');
   card('Tümü (Yekün)','Hepsi tek sunum','🗂️','report.php?modul=tumu','blue');
   card('Finans/Tahsilat','Tahsilat·ödeme·net','💰','report.php?modul=tahsilat','green');
   card('İş Takip','Açılan·tamamlanan·geciken','📋','report.php?modul=is','purple');
