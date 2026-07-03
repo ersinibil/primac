@@ -99,34 +99,30 @@ $cs=$pdo->query("SELECT id,name FROM contacts ORDER BY name")->fetchAll();
 $ps=$pdo->query("SELECT id,name,quantity,unit,sale_price FROM stock_items WHERE COALESCE(active,1)=1 ORDER BY name")->fetchAll();
 ?>
 
-<details open style="margin-bottom:14px"><summary>Hızlı Cari Ekle</summary>
-<div style="padding:10px;border-top:1px solid #e5e7eb;margin-top:10px">
-  <input type="text" id="qsContactName" placeholder="Müşteri adı" style="width:100%;border:1px solid #d0d5dd;border-radius:8px;padding:9px;margin-bottom:8px">
-  <button type="button" class="btn dark" style="width:100%" onclick="quickContactSales(document.getElementById('qsContactName').value, 'Müşteri')">✓ Ekle</button>
-</div>
-</details>
-
-<details open style="margin-bottom:14px"><summary>Hızlı Ürün Ekle</summary>
-<div style="padding:10px;border-top:1px solid #e5e7eb;margin-top:10px">
-  <input type="text" id="qsProductName" placeholder="Ürün adı" style="width:100%;border:1px solid #d0d5dd;border-radius:8px;padding:9px;margin-bottom:8px">
-  <input type="text" id="qsProductUnit" placeholder="adet" value="adet" style="width:100%;border:1px solid #d0d5dd;border-radius:8px;padding:9px;margin-bottom:8px">
-  <button type="button" class="btn dark" style="width:100%" onclick="quickProductSales(document.getElementById('qsProductName').value, document.getElementById('qsProductUnit').value)">✓ Ekle</button>
-</div>
-</details>
-
 <div class="panel">
 <form method="post">
   <label>Cari (Müşteri)</label>
-  <select name="contact_id" required>
+  <select name="contact_id" id="contactSel" required onchange="onContactChange()">
     <option value="">— Seç —</option>
     <?php foreach($cs as $c): ?><option value="<?=$c['id']?>" <?=$cid===(int)$c['id']?'selected':''?>><?=htmlspecialchars($c['name'])?></option><?php endforeach; ?>
+    <option value="__new__">➕ Listede yok — Yeni Cari Ekle…</option>
   </select>
+  <div id="newContactBox" style="display:none;background:rgba(37,99,235,.12);border-radius:12px;padding:10px;margin:6px 0 12px">
+    <input type="text" id="qsContactName" placeholder="Müşteri adı">
+    <button type="button" class="btn dark" style="width:100%" onclick="quickContactSales(document.getElementById('qsContactName').value, 'Müşteri')">✓ Ekle ve Seç</button>
+  </div>
 
   <label>Ürün</label>
-  <select name="stock_item_id" id="prod" required onchange="setPrice()">
+  <select name="stock_item_id" id="prod" required onchange="setPrice(); onProductChange()">
     <option value="">— Seç —</option>
     <?php foreach($ps as $p): ?><option value="<?=$p['id']?>" data-price="<?=htmlspecialchars($p['sale_price']??0)?>"><?=htmlspecialchars($p['name'].' (Stok: '.$p['quantity'].' '.$p['unit'].')')?></option><?php endforeach; ?>
+    <option value="__new__">➕ Listede yok — Yeni Ürün Ekle…</option>
   </select>
+  <div id="newProductBox" style="display:none;background:rgba(37,99,235,.12);border-radius:12px;padding:10px;margin:6px 0 12px">
+    <input type="text" id="qsProductName" placeholder="Ürün adı">
+    <input type="text" id="qsProductUnit" placeholder="adet" value="adet">
+    <button type="button" class="btn dark" style="width:100%" onclick="quickProductSales(document.getElementById('qsProductName').value, document.getElementById('qsProductUnit').value)">✓ Ekle ve Seç</button>
+  </div>
 
   <div style="display:flex;gap:10px">
     <div style="flex:1"><label>Miktar</label><input type="number" step="0.01" name="quantity" id="qty" value="1" required oninput="calc()"></div>
@@ -153,7 +149,22 @@ function setPrice(){var o=document.getElementById('prod').selectedOptions[0];if(
 function calc(){var q=parseFloat(document.getElementById('qty').value)||0;var p=parseFloat(document.getElementById('price').value)||0;var t=q*p;document.getElementById('tot').textContent=t.toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2})+' ₺';}
 calc();
 
-// Hızlı cari/ürün ekleme
+// Dropdown'da "Listede yok — Yeni Ekle" seçilince ilgili kutuyu aç (2026-07-03: kullanıcı isteği —
+// önce dropdown'a bakıp "yok" deyip sonra ayrı bir hızlı-ekle alanına gitmek yerine, seçim anında
+// aynı yerde çıksın).
+function onContactChange(){
+    var sel=document.getElementById('contactSel');
+    var box=document.getElementById('newContactBox');
+    if(sel.value==='__new__'){ box.style.display='block'; sel.value=''; document.getElementById('qsContactName').focus(); }
+    else box.style.display='none';
+}
+function onProductChange(){
+    var sel=document.getElementById('prod');
+    var box=document.getElementById('newProductBox');
+    if(sel.value==='__new__'){ box.style.display='block'; sel.value=''; document.getElementById('qsProductName').focus(); }
+    else box.style.display='none';
+}
+
 function quickContactSales(name, type) {
     if (!name) { alert('Ad girin'); return; }
     const fd = new FormData();
@@ -164,14 +175,14 @@ function quickContactSales(name, type) {
         .then(r => r.json())
         .then(data => {
             if (data.ok) {
-                const sel = document.querySelector('select[name="contact_id"]');
+                const sel = document.getElementById('contactSel');
                 const opt = document.createElement('option');
                 opt.value = data.id;
                 opt.textContent = data.name;
                 opt.selected = true;
-                sel.appendChild(opt);
+                sel.insertBefore(opt, sel.querySelector('option[value="__new__"]'));
                 document.getElementById('qsContactName').value = '';
-                alert('Cari eklendi');
+                document.getElementById('newContactBox').style.display='none';
             } else alert('Hata: ' + data.message);
         })
         .catch(e => alert('Hata: ' + e));
@@ -192,10 +203,10 @@ function quickProductSales(name, unit) {
                 opt.dataset.price = 0;
                 opt.textContent = data.name + ' (Stok: 0 ' + (unit || 'adet') + ')';
                 opt.selected = true;
-                sel.appendChild(opt);
+                sel.insertBefore(opt, sel.querySelector('option[value="__new__"]'));
                 setPrice();
                 document.getElementById('qsProductName').value = '';
-                alert('Ürün eklendi');
+                document.getElementById('newProductBox').style.display='none';
             } else alert('Hata: ' + data.message);
         })
         .catch(e => alert('Hata: ' + e));

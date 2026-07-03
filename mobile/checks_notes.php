@@ -44,15 +44,14 @@ foreach($rows as $r){ if($r['status']==='portfoyde') $countPortfoyde++; }
   <label>Vade Tarihi</label>
   <input type="date" name="due_date">
   <label>Cari <small class="muted">(opsiyonel)</small></label>
-  <select name="contact_id"><option value="">— Cari seçilmedi —</option>
-  <?php foreach($contacts as $c): ?><option value="<?=$c['id']?>"><?=htmlspecialchars($c['name'])?></option><?php endforeach; ?></select>
-
-  <details style="margin-top:10px"><summary style="font-weight:700;cursor:pointer;color:#2563eb">+ Hızlı Cari Ekle</summary>
-  <div style="padding:8px;margin-top:8px;border-top:1px solid #e5e7eb">
-    <input type="text" id="qnContactName" placeholder="Müşteri adı" style="width:100%;border:1px solid #d0d5dd;border-radius:8px;padding:9px;margin-bottom:8px">
-    <button type="button" class="btn dark" style="width:100%" onclick="quickContactCheckMob(document.getElementById('qnContactName').value)">✓ Ekle</button>
+  <select name="contact_id" id="contactSel" onchange="onCnContactChange()"><option value="">— Cari seçilmedi —</option>
+  <?php foreach($contacts as $c): ?><option value="<?=$c['id']?>"><?=htmlspecialchars($c['name'])?></option><?php endforeach; ?>
+  <option value="__new__">➕ Listede yok — Yeni Cari Ekle…</option>
+  </select>
+  <div id="newContactBox" style="display:none;background:rgba(37,99,235,.12);border-radius:12px;padding:10px;margin:6px 0 12px">
+    <input type="text" id="qnContactName" placeholder="Müşteri adı">
+    <button type="button" class="btn dark" style="width:100%" onclick="quickContactCheckMob(document.getElementById('qnContactName').value)">✓ Ekle ve Seç</button>
   </div>
-  </details>
   <label>Banka Adı <small class="muted">(çek ise)</small></label>
   <input name="bank_name">
   <label>Durum</label>
@@ -90,6 +89,12 @@ foreach($rows as $r){
 </div>
 
 <script>
+function onCnContactChange(){
+    var sel=document.getElementById('contactSel');
+    var box=document.getElementById('newContactBox');
+    if(sel.value==='__new__'){ box.style.display='block'; sel.value=''; document.getElementById('qnContactName').focus(); }
+    else box.style.display='none';
+}
 function quickContactCheckMob(name) {
     if (!name) { alert('Ad girin'); return; }
     const fd = new FormData();
@@ -100,14 +105,14 @@ function quickContactCheckMob(name) {
         .then(r => r.json())
         .then(data => {
             if (data.ok) {
-                const sel = document.querySelector('select[name="contact_id"]');
+                const sel = document.getElementById('contactSel');
                 const opt = document.createElement('option');
                 opt.value = data.id;
                 opt.textContent = data.name;
                 opt.selected = true;
-                sel.appendChild(opt);
+                sel.insertBefore(opt, sel.querySelector('option[value="__new__"]'));
                 document.getElementById('qnContactName').value = '';
-                alert('Cari eklendi');
+                document.getElementById('newContactBox').style.display='none';
             } else alert('Hata: ' + data.message);
         })
         .catch(e => alert('Hata: ' + e));
