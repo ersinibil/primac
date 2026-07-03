@@ -110,10 +110,6 @@ function cmd_card($title,$value,$desc,$url,$tone='blue'){
     echo '<span>'.h($desc).'</span>';
     echo '</a>';
 }
-
-function money($v) {
-    return number_format((float)$v, 2, ',', '.') . ' ₺';
-}
 ?>
 <style>
 /* ── Komuta kartları ── */
