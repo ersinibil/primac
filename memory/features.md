@@ -640,3 +640,13 @@ Bulunan KRİTİK sorunlar (hepsi bu commit'te düzeltildi):
   yokmuş — önceki denetimdeki endişe yanlış çıktı, düzeltme gerekmedi.
 - Mobil parite notu: work_center/trade_documents/design.php'nin mobil karşılığı yok, bilinçli
   olarak bu turun kapsamı dışında bırakıldı → [[backlog]]'a yeni madde olarak taşındı.
+
+## Personel CV/Özgeçmiş yükleme (2026-07-03, commit f606cf9)
+Personel kartına opsiyonel CV dosyası (pdf/doc/docx/jpg/jpeg/png, 15 MB) eklendi — `uploads/
+personnel_cv/` altında saklanıyor, `personnel.cv_path` (migration 036). Ortak yükleme mantığı yeni
+`personnel_lib.php::personnel_handle_cv_upload()`'da, `checks_notes_handle_upload()` deseniyle
+birebir aynı güvenlik seviyesinde. Web (personnel_new.php/personnel_edit.php, indirme+kaldırma
+linki) ve mobil (mobile/personnel_new.php/mobile/personnel_view.php) ikisinde de çalışıyor.
+`personnel_has_cv_column()` ile migration henüz çalışmamış ortamda (ACANS/PRIMAC ayrı DB) sayfa
+kırılmıyor. Kullanıcı isteği: SİSTEM YENİDEN GRUPLAMA notunda ("cvs dedin") sorulmuş, karar
+Claude'a bırakılmıştı — "evet ekle" kararı verildi.
