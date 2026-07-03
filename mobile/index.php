@@ -19,7 +19,6 @@ function getKpiMetricsMobile($pdo, $from, $to) {
 $currM = getKpiMetricsMobile($pdo, $monthStart, $monthEnd);
 $prevM = getKpiMetricsMobile($pdo, $prevMonthStart, $prevMonthEnd);
 
-function money($v) { return number_format((float)$v, 2, ',', '.') . ' ₺'; }
 
 // Kritik stok her zaman gerekli (hem admin hem personel için uyarı panelinde)
 $crit=mc("SELECT COUNT(*) c FROM stock_items WHERE quantity<=critical_level");
