@@ -11,48 +11,7 @@ if(!is_dir($uploads)) mkdir($uploads, 0755, true);
 $msg = '';
 $err = '';
 
-// İzin verilen resim uzantıları
-$allowed_ext = ['jpg','jpeg','png','webp','gif'];
-
-function _brand_upload($field, $dest_path, &$err){
-    global $allowed_ext;
-    if(empty($_FILES[$field]['tmp_name'])) return false;
-    $f = $_FILES[$field];
-    if($f['error'] !== UPLOAD_ERR_OK){
-        $err = 'Dosya yükleme hatası (kod: '.$f['error'].')';
-        return false;
-    }
-    $orig = strtolower(pathinfo($f['name'], PATHINFO_EXTENSION));
-    if(!in_array($orig, $allowed_ext, true)){
-        $err = 'Geçersiz dosya türü. Sadece: '.implode(', ', $allowed_ext);
-        return false;
-    }
-    // Gerçek MIME kontrolü (imagecreatefromstring ile)
-    $raw = @file_get_contents($f['tmp_name'], false, null, 0, 12);
-    $is_img = (
-        (substr($raw,0,8) === "\x89PNG\r\n\x1a\n") ||  // PNG
-        (substr($raw,0,3) === "\xff\xd8\xff") ||         // JPG
-        (substr($raw,0,6) === 'GIF87a' || substr($raw,0,6) === 'GIF89a') || // GIF
-        (substr($raw,0,4) === 'RIFF')                    // WEBP (RIFF...WEBP)
-    );
-    // webp: RIFF....WEBP
-    if(substr($raw,0,4) === 'RIFF'){
-        $chunk = @file_get_contents($f['tmp_name'], false, null, 8, 4);
-        $is_img = ($chunk === 'WEBP');
-    }
-    if(!$is_img && function_exists('exif_imagetype')){
-        $is_img = (exif_imagetype($f['tmp_name']) !== false);
-    }
-    if(!$is_img){
-        $err = 'Yüklenen dosya geçerli bir resim değil.';
-        return false;
-    }
-    if(!move_uploaded_file($f['tmp_name'], $dest_path)){
-        $err = 'Dosya kaydedilemedi. uploads/ klasörü yazılabilir mi?';
-        return false;
-    }
-    return true;
-}
+// İzin verilen resim uzantıları — _brand_upload() artık share_lib.php'de (web+mobil ortak)
 
 if($_SERVER['REQUEST_METHOD']==='POST'){
     $action = $_POST['action'] ?? 'upload';

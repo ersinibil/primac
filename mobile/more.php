@@ -129,9 +129,9 @@
   card('Profil','Şifre & hesap','👤','profile.php','blue');
   if(user_can('users')) {
     card('Denetim Günlüğü','Kim ne değiştirdi','🔍','../audit_log.php?web=1','gray'); // web'de var, mobilde köprü yoktu
-    card('WhatsApp Gönder','Anlık mesaj gönder','📤','../wa_send_now.php?web=1','green');
-    card('WhatsApp Ayarları','Gateway kurulumu','📱','../wa_settings.php?web=1','gray'); // web'de var, mobilde köprü yoktu
-    card('Logo / Marka','Marka ayarları','🎨','../brand_settings.php?web=1','gray');
+    card('WhatsApp Gönder','Anlık mesaj gönder','📤','wa_send_now.php','green');
+    card('WhatsApp Ayarları','Gateway kurulumu','📱','wa_settings.php','gray');
+    card('Logo / Marka','Marka ayarları','🎨','brand_settings.php','gray');
     card('Veri Temizleme','Canlıya hazırlık','🧹','../temizle_veri.php?web=1','red'); // web'de var, mobilde köprü yoktu
   }
   card('Çıkış Yap','Oturumu kapat','🚪','../logout.php','red');
