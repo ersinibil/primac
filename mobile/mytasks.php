@@ -31,8 +31,8 @@ topx('Görevlerim');
 try{
   if(!$pid && !$isAdmin){ echo '<div class="panel muted" style="text-align:center">Sana bağlı personel kaydı yok.</div>'; }
   $w = $f==='done' ? "t.status='Tamamlandı'" : "t.status NOT IN ('Tamamlandı','İptal')";
-  // Personel: kendi görevleri · Admin: herkesinki
-  $cond = $isAdmin ? $w : "$w AND t.personnel_id=".(int)$pid;
+  // "Görevlerim" = sadece sana atanan görevler. Admin dahil herkesin görevleri için tasks.php ("Tüm Görevler") kullanılır.
+  $cond = "$w AND t.personnel_id=".(int)$pid;
   $rows=$pdo->query("SELECT t.*, j.id job_real, j.job_no, p.name pname, p.phone pphone FROM tasks t LEFT JOIN jobs j ON j.id=t.job_id LEFT JOIN personnel p ON p.id=t.personnel_id WHERE $cond ORDER BY (t.due_date IS NULL), t.due_date, t.id DESC LIMIT 100")->fetchAll();
   if(!$rows) echo '<div class="panel muted" style="text-align:center">'.($f==='done'?'Tamamlanan görev yok.':'Açık görev yok 🎉').'</div>';
   foreach($rows as $t){
