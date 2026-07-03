@@ -93,9 +93,10 @@ foreach($rows as $r){
     $att = !empty($r['attachment']) ? ' 📎' : '';
     $rDir = $r['direction'] ?? 'alinan';
     $dirIc = $rDir==='verilen' ? '📤' : '📥';
+    $finIc = !empty($r['finance_movement_id']) ? ' 💰' : (!empty($r['contact_id']) ? ' ⚠️' : '');
     echo '<a class="item" href="check_note_view.php?id='.(int)$r['id'].'" style="display:flex;justify-content:space-between;align-items:center">'
        .'<span>'.$dirIc.$ic.' <b>'.htmlspecialchars($typeOpts[$r['type']]??$r['type']).' '.htmlspecialchars($r['number']?:'').$att.'</b><br>'
-       .'<small class="muted">'.htmlspecialchars(($r['contact_name']?:'-').' · '.($r['due_date']?:'Vadesiz').($overdue?' ⚠️':($upcoming?' ⏳':''))).'</small></span>'
+       .'<small class="muted">'.htmlspecialchars(($r['contact_name']?:'-').' · '.($r['due_date']?:'Vadesiz').($overdue?' ⚠️':($upcoming?' ⏳':''))).$finIc.'</small></span>'
        .'<b style="color:'.$color.'">'.mm($r['amount']).'</b></a>';
 }
 ?>

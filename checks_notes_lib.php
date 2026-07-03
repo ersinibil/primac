@@ -161,6 +161,40 @@ function checks_notes_sync_task_status($pdo, $taskId, $status){
     }catch(Throwable $e){ /* görev senkronu ikincil — çek/senet güncellemesini bozmasın */ }
 }
 
+// Çek/senedin cari bakiyeye yansıyan gerçek finans hareketini oluşturur/günceller.
+// Alınan = Tahsilat (direction='in'), Verilen = Ödeme (direction='out') — finance_new.php'deki
+// Tahsilat/Ödeme ekranıyla BİREBİR aynı mantık (account_id=NULL: çek tahsil/ödenene kadar fiziken
+// bir banka/kasa hesabında değildir, Veresiye satın almadaki mevcut davranışla tutarlı — sadece
+// cari bakiyeyi etkiler, hesap bakiyesini değil). Migration: 034_checks_notes_finance_link.sql.
+function checks_notes_sync_finance($pdo, $cnId, $type, $direction, $amount, $contactId, $bankName, $number, $existingFmId=null){
+    if(!$contactId){
+        // Cari seçilmemişse bağlı bir finans hareketi olamaz — varsa eskisini kaldır.
+        if($existingFmId) checks_notes_reverse_finance($pdo, $existingFmId);
+        return null;
+    }
+    $fmDirection = $direction==='verilen' ? 'out' : 'in';
+    $channel = $type==='senet' ? 'Senet' : 'Çek';
+    $status = $fmDirection==='in' ? 'Tahsil Edildi' : 'Ödendi';
+    $desc = ($channel).($number?' No: '.$number:'').($bankName?' · '.$bankName:'');
+
+    if($existingFmId){
+        $pdo->prepare("UPDATE finance_movements SET contact_id=?,direction=?,amount=?,payment_channel=?,status=?,description=? WHERE id=?")
+            ->execute([$contactId,$fmDirection,$amount,$channel,$status,$desc,$existingFmId]);
+        return $existingFmId;
+    }
+
+    $pdo->prepare("INSERT INTO finance_movements(contact_id,direction,amount,payment_channel,status,movement_date,description,movement_type)
+        VALUES(?,?,?,?,?,?,?,'cek_senet')")
+        ->execute([$contactId,$fmDirection,$amount,$channel,$status,date('Y-m-d'),$desc]);
+    return (int)$pdo->lastInsertId();
+}
+
+function checks_notes_reverse_finance($pdo, $financeMovementId){
+    if(!$financeMovementId) return;
+    try{ $pdo->prepare("DELETE FROM finance_movements WHERE id=? AND movement_type='cek_senet'")->execute([(int)$financeMovementId]); }
+    catch(Throwable $e){ /* finans senkronu ikincil — çek/senet işlemini bozmasın */ }
+}
+
 function checks_notes_create($pdo, array $data, $userId=null){
     $type = ($data['type'] ?? 'cek')==='senet' ? 'senet' : 'cek';
     $direction = ($data['direction'] ?? 'alinan')==='verilen' ? 'verilen' : 'alinan';
@@ -191,6 +225,13 @@ function checks_notes_create($pdo, array $data, $userId=null){
         $userId ?: null,
     ]);
     $newId = (int)$pdo->lastInsertId();
+
+    // Cari seçiliyse gerçek bir finans hareketi oluştur (Alınan=Tahsilat/Verilen=Ödeme) — bu kayıt
+    // artık cari bakiyeyi gerçekten etkiler, sadece bir takip kartı olmaktan çıktı (2026-07-03).
+    try{
+        $fmId = checks_notes_sync_finance($pdo, $newId, $type, $direction, $amount, $contactId, $bankName, $number);
+        if($fmId) $pdo->prepare("UPDATE checks_notes SET finance_movement_id=? WHERE id=?")->execute([$fmId,$newId]);
+    }catch(Throwable $e){ /* finans senkronu ikincil — çek/senet kaydı yine de oluşmuş olmalı */ }
 
     // Otomatik görev: vade tarihi girilmişse muhasebe/yönetim iş ekranına (tasks) hatırlatma düşer.
     // Görev otomasyonu ikincildir — başarısız olsa da çek/senet kaydı yine de oluşmuş olmalı.
@@ -239,6 +280,12 @@ function checks_notes_update($pdo, $id, array $data){
     // Durum "Tahsil Edildi/Ciro Edildi/İptal" olduysa ilişkili hatırlatma görevini tamamlanmış işaretle.
     checks_notes_sync_task_status($pdo, $row['task_id'] ?? null, $status);
 
+    // Bağlı finans hareketini (cari bakiye) yeni değerlerle senkronize et.
+    try{
+        $fmId = checks_notes_sync_finance($pdo, $id, $type, $direction, $amount, $contactId, trim($data['bank_name'] ?? $row['bank_name']), trim($data['number'] ?? $row['number']), $row['finance_movement_id'] ?? null);
+        if($fmId && $fmId != ($row['finance_movement_id'] ?? null)) $pdo->prepare("UPDATE checks_notes SET finance_movement_id=? WHERE id=?")->execute([$fmId,$id]);
+    }catch(Throwable $e){ /* finans senkronu ikincil — çek/senet güncellemesini bozmasın */ }
+
     return true;
 }
 
@@ -248,8 +295,9 @@ function checks_notes_delete($pdo, $id){
     if($id<1) return ['ok'=>false,'msg'=>'Geçersiz kayıt.'];
     $row=checks_notes_get($pdo,$id);
     if(!$row) return ['ok'=>false,'msg'=>'Kayıt bulunamadı.'];
+    if(!empty($row['finance_movement_id'])) checks_notes_reverse_finance($pdo, $row['finance_movement_id']);
     $pdo->prepare("DELETE FROM checks_notes WHERE id=?")->execute([$id]);
-    return ['ok'=>true,'msg'=>'Kayıt silindi.'];
+    return ['ok'=>true,'msg'=>'Kayıt silindi (bağlı finans hareketi de kaldırıldı).'];
 }
 
 // Vadesi geçmiş ama hâlâ portföyde olan çek/senet sayısı — dashboard/uyarı amaçlı kullanılabilir.

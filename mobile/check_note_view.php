@@ -54,6 +54,15 @@ try{
     <small class="muted">Vade: <?=htmlspecialchars($r['due_date']?:'Vadesiz')?><?=$overdue?' ⚠️ Vadesi geçti':''?></small>
     <small class="muted">Durum: <?=htmlspecialchars($statusOpts[$r['status']]??$r['status'])?></small>
   </div>
+  <?php if(!empty($r['contact_id'])): ?>
+  <div style="margin-top:6px">
+    <?php if(!empty($r['finance_movement_id'])): ?>
+    <small style="color:#4ade80">💰 Cari bakiyeye işlendi</small>
+    <?php else: ?>
+    <small style="color:#f87171">⚠️ Finans hareketi oluşturulamadı</small>
+    <?php endif; ?>
+  </div>
+  <?php endif; ?>
   <?php if($r['notes']): ?><div style="margin-top:8px"><?=nl2br(htmlspecialchars($r['notes']))?></div><?php endif; ?>
   <?php if(!empty($r['attachment'])): ?><div style="margin-top:8px"><a href="<?=htmlspecialchars(base_url().$r['attachment'])?>" target="_blank">📎 Dosyayı Gör</a></div><?php endif; ?>
   <?php if(can_edit_delete()): ?>

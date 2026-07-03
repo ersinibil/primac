@@ -173,7 +173,7 @@ foreach($rows as $r){
     echo "<td>".h($r['number'] ?: '-')."</td>";
     echo "<td>".money($r['amount'])."</td>";
     echo "<td>".h($r['due_date'] ?: '-').($overdue?' ⚠️ Vadesi geçti':($upcoming?' ⏳ Yaklaşıyor':''))."</td>";
-    echo "<td>".h($r['contact_name'] ?: '-')."</td>";
+    echo "<td>".h($r['contact_name'] ?: '-').(!empty($r['finance_movement_id'])?' <span title="Cari bakiyeye işlendi" style="color:#16a34a">💰</span>':(!empty($r['contact_id'])?' <span title="Finans hareketi oluşturulamadı" style="color:#dc2626">⚠️</span>':''))."</td>";
     echo "<td>".h($r['bank_name'] ?: '-')."</td>";
     echo "<td>".badge($rStatusOpts[$r['status']] ?? $r['status'], $statusTone)."</td>";
     echo "<td>";
