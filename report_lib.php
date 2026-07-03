@@ -117,19 +117,22 @@ function rpt($pdo,$modul,$from,$to,$ref=0,$detail=false){
     break;
 
   case 'muhasebe':
+    // 2026-07-03: Muhasebe artık finance_movements'ta movement_type='muhasebe' olan satırlar
+    // (bkz. database/migrations/035_finance_accounting_merge.sql) — ayrı bir accounting_entries
+    // tablosu değil, finans genelinden okunur.
     $R['title']='Muhasebe (Kategori Gider/Gelir)';
-    $s=$pdo->prepare("SELECT COALESCE(SUM(CASE WHEN type='gelir' THEN amount END),0) gelir, COALESCE(SUM(CASE WHEN type='gider' THEN amount END),0) gider, COUNT(*) n FROM accounting_entries WHERE entry_date BETWEEN ? AND ?");
+    $s=$pdo->prepare("SELECT COALESCE(SUM(CASE WHEN direction='in' THEN amount END),0) gelir, COALESCE(SUM(CASE WHEN direction='out' THEN amount END),0) gider, COUNT(*) n FROM finance_movements WHERE movement_type='muhasebe' AND movement_date BETWEEN ? AND ?");
     $s->execute([$from,$to]); $t=$s->fetch();
     $R['cards']=[['📈','Gelir',tl($t['gelir']),'#22c55e'],['📉','Gider',tl($t['gider']),'#f87171'],['📊','Net',tl($t['gelir']-$t['gider']),'#3b82f6'],['🔢','Kayıt',$t['n'],'#a78bfa']];
-    $cc=$pdo->prepare("SELECT COALESCE(ac.name,'Kategorisiz') k, SUM(ae.amount) s FROM accounting_entries ae LEFT JOIN accounting_categories ac ON ac.id=ae.category_id WHERE ae.type='gider' AND ae.entry_date BETWEEN ? AND ? GROUP BY k ORDER BY s DESC LIMIT 12");
+    $cc=$pdo->prepare("SELECT COALESCE(ac.name,'Kategorisiz') k, SUM(fm.amount) s FROM finance_movements fm LEFT JOIN accounting_categories ac ON ac.id=fm.category_id WHERE fm.movement_type='muhasebe' AND fm.direction='out' AND fm.movement_date BETWEEN ? AND ? GROUP BY k ORDER BY s DESC LIMIT 12");
     $cc->execute([$from,$to]); $cd=[]; foreach($cc->fetchAll() as $r)$cd[$r['k']]=(float)$r['s'];
     $R['chart']=['Gider — kategoriye göre',$cd];
-    $cc2=$pdo->prepare("SELECT COALESCE(ac.name,'Kategorisiz') k, SUM(ae.amount) s FROM accounting_entries ae LEFT JOIN accounting_categories ac ON ac.id=ae.category_id WHERE ae.type='gelir' AND ae.entry_date BETWEEN ? AND ? GROUP BY k ORDER BY s DESC LIMIT 12");
+    $cc2=$pdo->prepare("SELECT COALESCE(ac.name,'Kategorisiz') k, SUM(fm.amount) s FROM finance_movements fm LEFT JOIN accounting_categories ac ON ac.id=fm.category_id WHERE fm.movement_type='muhasebe' AND fm.direction='in' AND fm.movement_date BETWEEN ? AND ? GROUP BY k ORDER BY s DESC LIMIT 12");
     $cc2->execute([$from,$to]); $cd2=[]; foreach($cc2->fetchAll() as $r)$cd2[$r['k']]=(float)$r['s'];
     $R['chart2']=['Gelir — kategoriye göre',$cd2];
-    $m=$pdo->prepare("SELECT ae.entry_date,ae.type,COALESCE(ac.name,'Kategorisiz') kat,ae.amount,ae.description FROM accounting_entries ae LEFT JOIN accounting_categories ac ON ac.id=ae.category_id WHERE ae.entry_date BETWEEN ? AND ? ORDER BY ae.entry_date DESC,ae.id DESC");
+    $m=$pdo->prepare("SELECT fm.movement_date entry_date,fm.direction,COALESCE(ac.name,'Kategorisiz') kat,fm.amount,fm.description FROM finance_movements fm LEFT JOIN accounting_categories ac ON ac.id=fm.category_id WHERE fm.movement_type='muhasebe' AND fm.movement_date BETWEEN ? AND ? ORDER BY fm.movement_date DESC,fm.id DESC");
     $m->execute([$from,$to]); $R['table']['head']=['Tarih','Tür','Kategori','Tutar','Açıklama'];
-    foreach($m->fetchAll() as $r)$R['table']['rows'][]=[$r['entry_date'],$r['type']==='gelir'?'Gelir':'Gider',$r['kat'],($r['type']==='gider'?'-':'').tl($r['amount']),$r['description']];
+    foreach($m->fetchAll() as $r)$R['table']['rows'][]=[$r['entry_date'],$r['direction']==='in'?'Gelir':'Gider',$r['kat'],($r['direction']==='out'?'-':'').tl($r['amount']),$r['description']];
     break;
 
   case 'is':

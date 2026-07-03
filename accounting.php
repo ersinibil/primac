@@ -42,13 +42,17 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['save_entry'])){
         $accId=(int)($_POST['account_id']??0) ?: null;
         $pid=(int)($_POST['personnel_id']??0) ?: null;
         $pt=trim($_POST['payment_type'] ?? '');
+        $contactId=(int)($_POST['contact_id']??0) ?: null;
+        $direction = $type==='gelir' ? 'in' : 'out';
         if($amount<=0) throw new Exception('Tutar sıfırdan büyük olmalı.');
-        $pdo->prepare("INSERT INTO accounting_entries(entry_date,type,category_id,amount,vat_mode,vat_rate,vat_amount,description,reference_no,account_id,personnel_id,payment_type,created_by)
-            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)")
-            ->execute([$date,$type,$catId,$amount,$vatMode,$vc['vat_rate'],$vc['vat_amount'],$desc,$refNo,$accId,$pid,$pt,$_SESSION['user']['id'] ?? null]);
+        // 2026-07-03: Muhasebe kayıtları artık finance_movements'a yazılır (movement_type='muhasebe')
+        // — böylece cari (varsa) ekstresinde ve genel finans raporlarında otomatik görünür.
+        $pdo->prepare("INSERT INTO finance_movements(contact_id,category_id,direction,amount,vat_mode,vat_rate,vat_amount,account_id,personnel_id,payment_type,status,movement_date,description,reference_no,movement_type)
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,'muhasebe')")
+            ->execute([$contactId,$catId,$direction,$amount,$vatMode,$vc['vat_rate'],$vc['vat_amount'],$accId,$pid,$pt,($direction==='in'?'Tahsil Edildi':'Ödendi'),$date,$desc,$refNo]);
         // Kasa bakiyesi güncelle
         if($accId){
-            $dir=$type==='gelir'?'+':'-';
+            $dir=$direction==='in'?'+':'-';
             try{ $pdo->prepare("UPDATE finance_accounts SET current_balance=current_balance{$dir}? WHERE id=?")->execute([$amount,$accId]); }catch(Throwable $e){}
         }
         $msg='Kayıt eklendi.';
@@ -62,20 +66,24 @@ $giderCats=array_filter($cats,function($c){ return $c['type']==='gider'; });
 $gelirCats=array_filter($cats,function($c){ return $c['type']==='gelir'; });
 try{ $accounts=$pdo->query("SELECT id,name,account_type FROM finance_accounts WHERE active=1 ORDER BY name")->fetchAll(); }catch(Throwable $e){ $accounts=[]; }
 try{ $personnel=$pdo->query("SELECT id,name FROM personnel WHERE COALESCE(active,1)=1 ORDER BY name")->fetchAll(); }catch(Throwable $e){ $personnel=[]; }
+try{ $contacts=$pdo->query("SELECT id,name FROM contacts ORDER BY name")->fetchAll(); }catch(Throwable $e){ $contacts=[]; }
 
-// Kayıtlar listesi
-$where="WHERE YEAR(ae.entry_date)=$year AND MONTH(ae.entry_date)=$month";
+// Kayıtlar listesi — finance_movements (movement_type='muhasebe')
+$where="WHERE fm.movement_type='muhasebe' AND YEAR(fm.movement_date)=$year AND MONTH(fm.movement_date)=$month";
 $typeF=$_GET['type'] ?? '';
-if($typeF==='gelir'||$typeF==='gider') $where.=" AND ae.type='$typeF'";
+if($typeF==='gelir') $where.=" AND fm.direction='in'";
+elseif($typeF==='gider') $where.=" AND fm.direction='out'";
 $catF=(int)($_GET['cat'] ?? 0);
-if($catF) $where.=" AND ae.category_id=$catF";
+if($catF) $where.=" AND fm.category_id=$catF";
 try{
-    $entries=$pdo->query("SELECT ae.*,ac.name cat_name,ac.group_name,fa.name acc_name,p.name pers_name
-        FROM accounting_entries ae
-        LEFT JOIN accounting_categories ac ON ac.id=ae.category_id
-        LEFT JOIN finance_accounts fa ON fa.id=ae.account_id
-        LEFT JOIN personnel p ON p.id=ae.personnel_id
-        $where ORDER BY ae.entry_date DESC,ae.id DESC LIMIT 200")->fetchAll();
+    $entries=$pdo->query("SELECT fm.*, fm.movement_date entry_date, IF(fm.direction='in','gelir','gider') type,
+        ac.name cat_name,ac.group_name,fa.name acc_name,p.name pers_name,c.name contact_name
+        FROM finance_movements fm
+        LEFT JOIN accounting_categories ac ON ac.id=fm.category_id
+        LEFT JOIN finance_accounts fa ON fa.id=fm.account_id
+        LEFT JOIN personnel p ON p.id=fm.personnel_id
+        LEFT JOIN contacts c ON c.id=fm.contact_id
+        $where ORDER BY fm.movement_date DESC,fm.id DESC LIMIT 200")->fetchAll();
 }catch(Throwable $e){ $entries=[]; }
 
 $prevM=$month===1?12:$month-1; $prevY=$month===1?$year-1:$year;
@@ -186,6 +194,15 @@ $groups=acc_group_summary($pdo,$month,$year);
   <option value="">— Seçme —</option>
   <?php foreach($accounts as $a): ?>
   <option value="<?=(int)$a['id']?>"><?=h($a['name'])?> (<?=h($a['account_type'])?>)</option>
+  <?php endforeach; ?>
+</select>
+</label>
+
+<label>Cari <small style="font-weight:400;color:#667085">(opsiyonel — bir tedarikçi/müşteriye bağlıysa, o carinin ekstresinde de görünür)</small>
+<select name="contact_id">
+  <option value="">— Cari seçilmedi —</option>
+  <?php foreach($contacts as $c): ?>
+  <option value="<?=(int)$c['id']?>"><?=h($c['name'])?></option>
   <?php endforeach; ?>
 </select>
 </label>
@@ -324,6 +341,7 @@ foreach($entries as $e):
     <div style="font-weight:700;font-size:14px"><?=h($e['cat_name'] ?: 'Kategorisiz')?></div>
     <div style="font-size:12px;color:#667085;margin-top:2px">
       <?=h(date('d.m.Y',strtotime($e['entry_date'])))?>
+      <?php if($e['contact_name']): ?> · 🤝 <?=h($e['contact_name'])?><?php endif; ?>
       <?php if($e['pers_name']): ?> · 👷 <?=h($e['pers_name'])?><?php endif; ?>
       <?php if($e['acc_name']): ?> · 🏦 <?=h($e['acc_name'])?><?php endif; ?>
       <?php if($e['reference_no']): ?> · #<?=h($e['reference_no'])?><?php endif; ?>
@@ -398,6 +416,14 @@ foreach($entries as $e):
         <option value="">— Seçme —</option>
         <?php foreach($accounts as $a): ?>
         <option value="<?=(int)$a['id']?>" <?=$e['account_id']==$a['id']?'selected':''?>><?=h($a['name'])?> (<?=h($a['account_type'])?>)</option>
+        <?php endforeach; ?>
+      </select>
+    </label>
+    <label>Cari <small style="font-weight:400;color:#667085">(opsiyonel)</small>
+      <select name="contact_id">
+        <option value="">— Cari seçilmedi —</option>
+        <?php foreach($contacts as $c): ?>
+        <option value="<?=(int)$c['id']?>" <?=$e['contact_id']==$c['id']?'selected':''?>><?=h($c['name'])?></option>
         <?php endforeach; ?>
       </select>
     </label>

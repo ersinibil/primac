@@ -42,11 +42,14 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             $accId=(int)($_POST['account_id']??0) ?: null;
             $pid=(int)($_POST['personnel_id']??0) ?: null;
             $pt=trim($_POST['payment_type'] ?? '');
+            $contactId=(int)($_POST['contact_id']??0) ?: null;
+            $direction = $type==='gelir' ? 'in' : 'out';
             if($amount<=0) throw new Exception('Tutar geçersiz.');
-            $pdo->prepare("INSERT INTO accounting_entries(entry_date,type,category_id,amount,vat_mode,vat_rate,vat_amount,description,account_id,personnel_id,payment_type,created_by) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)")
-                ->execute([$date,$type,$catId,$amount,$vatMode,$vc['vat_rate'],$vc['vat_amount'],$desc,$accId,$pid,$pt,$_SESSION['user']['id']??null]);
+            // 2026-07-03: Muhasebe kayıtları artık finance_movements'a yazılır (movement_type='muhasebe')
+            $pdo->prepare("INSERT INTO finance_movements(contact_id,category_id,direction,amount,vat_mode,vat_rate,vat_amount,account_id,personnel_id,payment_type,status,movement_date,description,movement_type) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,'muhasebe')")
+                ->execute([$contactId,$catId,$direction,$amount,$vatMode,$vc['vat_rate'],$vc['vat_amount'],$accId,$pid,$pt,($direction==='in'?'Tahsil Edildi':'Ödendi'),$date,$desc]);
             if($accId){
-                $dir=$type==='gelir'?'+':'-';
+                $dir=$direction==='in'?'+':'-';
                 try{ $pdo->prepare("UPDATE finance_accounts SET current_balance=current_balance{$dir}? WHERE id=?")->execute([$amount,$accId]); }catch(Throwable $e){}
             }
             $ok='Kayıt eklendi.';
@@ -60,12 +63,16 @@ $net=$sum['gelir']-$sum['gider'];
 $cats=acc_categories($pdo);
 try{ $accounts=$pdo->query("SELECT id,name FROM finance_accounts WHERE active=1 ORDER BY name")->fetchAll(); }catch(Throwable $e){ $accounts=[]; }
 try{ $personnel=$pdo->query("SELECT id,name FROM personnel WHERE COALESCE(active,1)=1 ORDER BY name")->fetchAll(); }catch(Throwable $e){ $personnel=[]; }
+try{ $contacts=$pdo->query("SELECT id,name FROM contacts ORDER BY name")->fetchAll(); }catch(Throwable $e){ $contacts=[]; }
 try{
-    $entries=$pdo->query("SELECT ae.*,ac.name cat_name,p.name pers_name FROM accounting_entries ae
-        LEFT JOIN accounting_categories ac ON ac.id=ae.category_id
-        LEFT JOIN personnel p ON p.id=ae.personnel_id
-        WHERE YEAR(ae.entry_date)=$year AND MONTH(ae.entry_date)=$month
-        ORDER BY ae.entry_date DESC,ae.id DESC LIMIT 80")->fetchAll();
+    $entries=$pdo->query("SELECT fm.*, fm.movement_date entry_date, IF(fm.direction='in','gelir','gider') type,
+        ac.name cat_name,p.name pers_name,c.name contact_name
+        FROM finance_movements fm
+        LEFT JOIN accounting_categories ac ON ac.id=fm.category_id
+        LEFT JOIN personnel p ON p.id=fm.personnel_id
+        LEFT JOIN contacts c ON c.id=fm.contact_id
+        WHERE fm.movement_type='muhasebe' AND YEAR(fm.movement_date)=$year AND MONTH(fm.movement_date)=$month
+        ORDER BY fm.movement_date DESC,fm.id DESC LIMIT 80")->fetchAll();
 }catch(Throwable $e){ $entries=[]; }
 
 $prevM=$month===1?12:$month-1; $prevY=$month===1?$year-1:$year;
@@ -131,6 +138,11 @@ topx('Muhasebe');
     <select name="account_id">
       <option value="">— Seçme —</option>
       <?php foreach($accounts as $a): ?><option value="<?=(int)$a['id']?>"><?=htmlspecialchars($a['name'])?></option><?php endforeach; ?>
+    </select>
+    <label style="color:#94a3b8;font-size:12px">Cari (opsiyonel)</label>
+    <select name="contact_id">
+      <option value="">— Cari seçilmedi —</option>
+      <?php foreach($contacts as $c): ?><option value="<?=(int)$c['id']?>"><?=htmlspecialchars($c['name'])?></option><?php endforeach; ?>
     </select>
     <label style="color:#94a3b8;font-size:12px">Personel (ödeme ise)</label>
     <select name="personnel_id">
@@ -206,6 +218,7 @@ function mFilterCatsEdit(id){
         <b style="font-size:14px"><?=htmlspecialchars($e['cat_name'] ?: 'Kategorisiz')?></b>
         <div style="font-size:11px;color:#94a3b8;margin-top:2px">
           <?=htmlspecialchars(date('d.m.Y',strtotime($e['entry_date'])))?>
+          <?php if($e['contact_name']): ?> · 🤝 <?=htmlspecialchars($e['contact_name'])?><?php endif; ?>
           <?php if($e['pers_name']): ?> · <?=htmlspecialchars($e['pers_name'])?><?php endif; ?>
         </div>
       </div>
