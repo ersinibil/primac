@@ -90,6 +90,37 @@ $new=!empty($_GET['new']);
 $editMode=($id && !empty($_GET['edit']));
 require_once __DIR__.'/layout_top.php';
 
+// Kalemler için sepet-tarzı JS (Yeni + Düzenle formunda ortak) — 2026-07-03: eskiden etiketsiz
+// flex satırlardı, kullanıcı "hangi kutu ne işe yarıyor" diye şikayet etti. sales.php/purchase.php
+// ile aynı desen: başlıklı tablo + her satırda canlı tutar.
+function teklif_items_js(){ ?>
+function fmt(n){ return n.toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2})+' ₺'; }
+function num(v){ return parseFloat(String(v||'').replace(/\./g,'').replace(',','.'))||0; }
+function addRow(nm,q,p){
+  var tr=document.createElement('tr');
+  tr.innerHTML='<td style="padding:4px 6px"><input name="item_name[]" placeholder="Ürün/hizmet adı" style="width:100%" value="'+(nm||'').replace(/"/g,'&quot;')+'"></td>'
+    +'<td style="padding:4px 6px"><input name="item_qty[]" inputmode="decimal" placeholder="1" style="width:80px" value="'+(q!==undefined?q:'1')+'" oninput="calc()"></td>'
+    +'<td style="padding:4px 6px"><input name="item_price[]" inputmode="decimal" placeholder="0,00" style="width:110px" value="'+(p||'')+'" oninput="calc()"></td>'
+    +'<td class="row-sub" style="padding:4px 6px;text-align:right;font-weight:800">0,00 ₺</td>'
+    +'<td style="padding:4px 6px"><button type="button" class="btn danger small" onclick="this.closest(\'tr\').remove();calc()">🗑</button></td>';
+  document.getElementById('rows').appendChild(tr);
+  tr.addEventListener('input',calc);
+}
+function calc(){
+  var qs=document.getElementsByName('item_qty[]'), ps=document.getElementsByName('item_price[]'), sub=0;
+  document.querySelectorAll('#rows tr').forEach(function(tr,i){
+    var q=num(qs[i].value), p=num(ps[i].value), lt=q*p;
+    tr.querySelector('.row-sub').textContent=fmt(lt);
+    sub+=lt;
+  });
+  var vr=num(document.getElementsByName('vat_rate')[0].value), vat=sub*vr/100;
+  document.getElementById('tSub').textContent=fmt(sub);
+  document.getElementById('tVat').textContent=fmt(vat);
+  document.getElementById('tTot').textContent=fmt(sub+vat);
+}
+document.getElementsByName('vat_rate')[0].addEventListener('input',calc);
+<?php }
+
 /* ---------- GÖRÜNÜM ---------- */
 if($id && !$editMode){
   $q=null; try{ $s=$pdo->prepare("SELECT * FROM quotes WHERE id=?"); $s->execute([$id]); $q=$s->fetch(); }catch(Throwable $e){}
@@ -201,53 +232,51 @@ if($editMode && is_admin()){
 ?>
 <div class="panel-head"><h1>Teklif Düzenle: <?=h($q['quote_no'])?></h1><div class="actions"><a class="btn secondary" href="teklif.php?id=<?=$id?>">İptal</a></div></div>
 <?php if($error): ?><div class="alert"><?=h($error)?></div><?php endif; ?>
-<section class="panel" style="max-width:620px">
+<section class="panel" style="max-width:720px">
 <form method="post">
   <input type="hidden" name="edit_id" value="<?=$id?>">
-  <label>Teklifi veren firma (opsiyonel — logo/iletişim ekler)</label>
-  <select name="firm" style="width:100%"><option value="">— Firma yok (sade) —</option><option value="ACANS"<?=$q['firm']==='ACANS'?' selected':''?>>ACANS Reklam</option><option value="PRIMAC"<?=$q['firm']==='PRIMAC'?' selected':''?>>PRIMAC</option></select>
-  <label style="margin-top:6px">Müşteri</label>
-  <select name="customer_id" style="width:100%"><option value="">— Cari seç (veya alta yaz) —</option><?php foreach($cs as $c): ?><option value="<?=$c['id']?>"<?=(int)$q['customer_id']===(int)$c['id']?' selected':''?>><?=h($c['name'])?></option><?php endforeach; ?></select>
-  <input name="customer_name" placeholder="veya müşteri adı yaz" style="width:100%;margin-top:6px" value="<?=h($q['customer_name'])?>">
-  <label style="margin-top:8px;display:block">Giriş Açıklaması (SAYIN altında görünür)</label>
-  <textarea name="intro_note" rows="3" style="width:100%"><?=h($q['intro_note']??'')?></textarea>
-  <div style="display:flex;gap:10px;margin-top:6px">
-    <div style="flex:1"><label>Geçerlilik</label><input type="date" name="valid_until" style="width:100%" value="<?=h($q['valid_until']??'')?>"></div>
-    <div style="flex:1"><label>KDV %</label><input name="vat_rate" value="<?=h(rtrim(rtrim(number_format((float)$q['vat_rate'],2,'.',''),'0'),'.'))?>" style="width:100%"></div>
+  <div class="form-grid">
+    <div class="full">
+      <label>Teklifi veren firma (opsiyonel — logo/iletişim ekler)</label>
+      <select name="firm" class="full"><option value="">— Firma yok (sade) —</option><option value="ACANS"<?=$q['firm']==='ACANS'?' selected':''?>>ACANS Reklam</option><option value="PRIMAC"<?=$q['firm']==='PRIMAC'?' selected':''?>>PRIMAC</option></select>
+    </div>
+    <div class="full">
+      <label>Müşteri</label>
+      <select name="customer_id" class="full"><option value="">— Cari seç (veya alta yaz) —</option><?php foreach($cs as $c): ?><option value="<?=$c['id']?>"<?=(int)$q['customer_id']===(int)$c['id']?' selected':''?>><?=h($c['name'])?></option><?php endforeach; ?></select>
+      <input name="customer_name" placeholder="veya müşteri adı yaz" style="width:100%;margin-top:6px" value="<?=h($q['customer_name'])?>">
+    </div>
+    <div class="full">
+      <label>Giriş Açıklaması (SAYIN altında görünür)</label>
+      <textarea name="intro_note" rows="3" class="full"><?=h($q['intro_note']??'')?></textarea>
+    </div>
+    <div><label>Geçerlilik</label><input type="date" name="valid_until" value="<?=h($q['valid_until']??'')?>"></div>
+    <div><label>KDV %</label><input name="vat_rate" value="<?=h(rtrim(rtrim(number_format((float)$q['vat_rate'],2,'.',''),'0'),'.'))?>"></div>
   </div>
-  <label style="margin-top:10px;display:block">Kalemler</label>
-  <div id="rows"></div>
-  <button type="button" class="btn secondary" onclick="addRow()" style="margin-top:6px">+ Kalem Ekle</button>
-  <div class="panel" style="margin-top:10px;background:rgba(34,197,94,.08)">
+  <div class="full" style="margin-top:14px">
+    <label style="font-weight:800">Kalemler</label>
+    <div style="overflow:auto">
+    <table style="width:100%;border-collapse:collapse">
+      <thead><tr style="text-align:left;font-size:12px;color:#667085">
+        <th style="padding:4px 6px">Ürün/Hizmet</th><th style="padding:4px 6px;width:90px">Miktar</th>
+        <th style="padding:4px 6px;width:120px">Birim Fiyat</th><th style="padding:4px 6px;width:110px;text-align:right">Tutar</th><th style="width:36px"></th>
+      </tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+    </div>
+    <button type="button" class="btn secondary small" onclick="addRow()" style="margin-top:8px">➕ Kalem Ekle</button>
+  </div>
+  <div class="panel" style="margin-top:14px;background:rgba(34,197,94,.08)">
     <div style="display:flex;justify-content:space-between"><span>Ara Toplam</span><b id="tSub">0,00 ₺</b></div>
     <div style="display:flex;justify-content:space-between"><span>KDV</span><b id="tVat">0,00 ₺</b></div>
     <div style="display:flex;justify-content:space-between;font-size:18px;margin-top:4px"><span><b>Toplam</b></span><b id="tTot" style="color:#22c55e">0,00 ₺</b></div>
   </div>
-  <label style="margin-top:8px;display:block">Not</label><textarea name="notes" rows="2" style="width:100%"><?=h($q['notes']??'')?></textarea>
+  <label class="full" style="margin-top:8px;display:block">Not</label><textarea name="notes" rows="2" class="full"><?=h($q['notes']??'')?></textarea>
   <button class="btn" name="edit_quote" value="1" style="margin-top:10px;background:#0369a1">💾 Değişiklikleri Kaydet</button>
 </form>
 </section>
 <script>
 var initItems=<?=json_encode(array_values(array_map(function($it){ return [$it['name'],(float)$it['qty'],(float)$it['unit_price']]; },$items)))?>;
-function fmt(n){ return n.toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2})+' ₺'; }
-function num(v){ return parseFloat(String(v||'').replace(/\./g,'').replace(',','.'))||0; }
-function addRow(nm,q,p){
-  var d=document.createElement('div'); d.style.cssText='display:flex;gap:6px;margin-bottom:6px';
-  d.innerHTML='<input name="item_name[]" placeholder="Ürün/hizmet" style="flex:2" value="'+(nm||'')+'">'+
-    '<input name="item_qty[]" placeholder="Adet" style="flex:1" value="'+(q!==undefined?q:'1')+'">'+
-    '<input name="item_price[]" placeholder="Birim ₺" style="flex:1" value="'+(p||'')+'">'+
-    '<button type="button" onclick="this.parentNode.remove();calc()" class="btn" style="background:#7f1d1d">×</button>';
-  document.getElementById('rows').appendChild(d); d.addEventListener('input',calc);
-}
-function calc(){
-  var qs=document.getElementsByName('item_qty[]'), ps=document.getElementsByName('item_price[]'), sub=0;
-  for(var i=0;i<qs.length;i++){ sub+=num(qs[i].value)*num(ps[i].value); }
-  var vr=num(document.getElementsByName('vat_rate')[0].value), vat=sub*vr/100;
-  document.getElementById('tSub').textContent=fmt(sub);
-  document.getElementById('tVat').textContent=fmt(vat);
-  document.getElementById('tTot').textContent=fmt(sub+vat);
-}
-document.getElementsByName('vat_rate')[0].addEventListener('input',calc);
+<?php teklif_items_js(); ?>
 for(var i=0;i<initItems.length;i++){ addRow(initItems[i][0],initItems[i][1],initItems[i][2]); }
 if(!initItems.length) addRow();
 calc();
@@ -260,51 +289,49 @@ if($new){
 ?>
 <div class="panel-head"><h1>Yeni Teklif</h1><a class="btn secondary" href="teklif.php">Liste</a></div>
 <?php if($error): ?><div class="alert"><?=h($error)?></div><?php endif; ?>
-<section class="panel" style="max-width:620px">
+<section class="panel" style="max-width:720px">
 <form method="post">
-  <label>Teklifi veren firma (opsiyonel — logo/iletişim ekler)</label>
-  <select name="firm" style="width:100%"><option value="">— Firma yok (sade) —</option><option value="ACANS">ACANS Reklam</option><option value="PRIMAC">PRIMAC</option></select>
-  <label style="margin-top:6px">Müşteri</label>
-  <select name="customer_id" style="width:100%"><option value="">— Cari seç (veya alta yaz) —</option><?php foreach($cs as $c): ?><option value="<?=$c['id']?>"><?=h($c['name'])?></option><?php endforeach; ?></select>
-  <input name="customer_name" placeholder="veya müşteri adı yaz" style="width:100%;margin-top:6px">
-  <label style="margin-top:8px;display:block">Giriş Açıklaması (SAYIN altında görünür)</label>
-  <textarea name="intro_note" rows="3" style="width:100%" placeholder="Örn: Firmamızdan talep etmiş olduğunuz ürün/hizmetler için hazırladığımız teklifimiz aşağıdaki gibidir."></textarea>
-  <div style="display:flex;gap:10px;margin-top:6px">
-    <div style="flex:1"><label>Geçerlilik</label><input type="date" name="valid_until" style="width:100%"></div>
-    <div style="flex:1"><label>KDV %</label><input name="vat_rate" value="20" style="width:100%"></div>
+  <div class="form-grid">
+    <div class="full">
+      <label>Teklifi veren firma (opsiyonel — logo/iletişim ekler)</label>
+      <select name="firm" class="full"><option value="">— Firma yok (sade) —</option><option value="ACANS">ACANS Reklam</option><option value="PRIMAC">PRIMAC</option></select>
+    </div>
+    <div class="full">
+      <label>Müşteri</label>
+      <select name="customer_id" class="full"><option value="">— Cari seç (veya alta yaz) —</option><?php foreach($cs as $c): ?><option value="<?=$c['id']?>"><?=h($c['name'])?></option><?php endforeach; ?></select>
+      <input name="customer_name" placeholder="veya müşteri adı yaz" style="width:100%;margin-top:6px">
+    </div>
+    <div class="full">
+      <label>Giriş Açıklaması (SAYIN altında görünür)</label>
+      <textarea name="intro_note" rows="3" class="full" placeholder="Örn: Firmamızdan talep etmiş olduğunuz ürün/hizmetler için hazırladığımız teklifimiz aşağıdaki gibidir."></textarea>
+    </div>
+    <div><label>Geçerlilik</label><input type="date" name="valid_until"></div>
+    <div><label>KDV %</label><input name="vat_rate" value="20"></div>
   </div>
-  <label style="margin-top:10px;display:block">Kalemler</label>
-  <div id="rows"></div>
-  <button type="button" class="btn secondary" onclick="addRow()" style="margin-top:6px">+ Kalem Ekle</button>
-  <div class="panel" style="margin-top:10px;background:rgba(34,197,94,.08)">
+  <div class="full" style="margin-top:14px">
+    <label style="font-weight:800">Kalemler</label>
+    <div style="overflow:auto">
+    <table style="width:100%;border-collapse:collapse">
+      <thead><tr style="text-align:left;font-size:12px;color:#667085">
+        <th style="padding:4px 6px">Ürün/Hizmet</th><th style="padding:4px 6px;width:90px">Miktar</th>
+        <th style="padding:4px 6px;width:120px">Birim Fiyat</th><th style="padding:4px 6px;width:110px;text-align:right">Tutar</th><th style="width:36px"></th>
+      </tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+    </div>
+    <button type="button" class="btn secondary small" onclick="addRow()" style="margin-top:8px">➕ Kalem Ekle</button>
+  </div>
+  <div class="panel" style="margin-top:14px;background:rgba(34,197,94,.08)">
     <div style="display:flex;justify-content:space-between"><span>Ara Toplam</span><b id="tSub">0,00 ₺</b></div>
     <div style="display:flex;justify-content:space-between"><span>KDV</span><b id="tVat">0,00 ₺</b></div>
     <div style="display:flex;justify-content:space-between;font-size:18px;margin-top:4px"><span><b>Toplam</b></span><b id="tTot" style="color:#22c55e">0,00 ₺</b></div>
   </div>
-  <label style="margin-top:8px;display:block">Not</label><textarea name="notes" rows="2" style="width:100%" placeholder="Teslim, ödeme koşulu vb."></textarea>
+  <label class="full" style="margin-top:8px;display:block">Not</label><textarea name="notes" rows="2" class="full" placeholder="Teslim, ödeme koşulu vb."></textarea>
   <button class="btn" name="save_quote" value="1" style="margin-top:10px">💾 Teklifi Oluştur</button>
 </form>
 </section>
 <script>
-function fmt(n){ return n.toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2})+' ₺'; }
-function num(v){ return parseFloat(String(v||'').replace(/\./g,'').replace(',','.'))||0; }
-function addRow(nm,q,p){
-  var d=document.createElement('div'); d.style.cssText='display:flex;gap:6px;margin-bottom:6px';
-  d.innerHTML='<input name="item_name[]" placeholder="Ürün/hizmet" style="flex:2" value="'+(nm||'')+'">'+
-    '<input name="item_qty[]" placeholder="Adet" style="flex:1" value="'+(q||'1')+'">'+
-    '<input name="item_price[]" placeholder="Birim ₺" style="flex:1" value="'+(p||'')+'">'+
-    '<button type="button" onclick="this.parentNode.remove();calc()" class="btn" style="background:#7f1d1d">×</button>';
-  document.getElementById('rows').appendChild(d); d.addEventListener('input',calc);
-}
-function calc(){
-  var qs=document.getElementsByName('item_qty[]'), ps=document.getElementsByName('item_price[]'), sub=0;
-  for(var i=0;i<qs.length;i++){ sub+=num(qs[i].value)*num(ps[i].value); }
-  var vr=num(document.getElementsByName('vat_rate')[0].value), vat=sub*vr/100;
-  document.getElementById('tSub').textContent=fmt(sub);
-  document.getElementById('tVat').textContent=fmt(vat);
-  document.getElementById('tTot').textContent=fmt(sub+vat);
-}
-document.getElementsByName('vat_rate')[0].addEventListener('input',calc);
+<?php teklif_items_js(); ?>
 addRow(); calc();
 </script>
 <?php require __DIR__.'/layout_bottom.php'; exit; }

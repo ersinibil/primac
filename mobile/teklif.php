@@ -101,6 +101,40 @@ $id=(int)($_GET['id']??0);
 $new=!empty($_GET['new']);
 $editMode=($id && !empty($_GET['edit']));
 
+// Kalemler için ortak JS (Yeni + Düzenle) — 2026-07-03: web teklif.php ile aynı iyileştirme,
+// eskiden etiketsiz flex satırlardı, şimdi her satırda ayrı etiketli alan + canlı tutar var.
+function teklif_items_js_mobile(){ ?>
+function fmt(n){ return n.toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2})+' ₺'; }
+function num(v){ return parseFloat(String(v||'').replace(/\./g,'').replace(',','.'))||0; }
+function addRow(nm,q,p){
+  var row=document.createElement('div'); row.className='panel qrow'; row.style.cssText='margin-bottom:10px;padding:10px';
+  row.innerHTML='<input name="item_name[]" placeholder="Ürün/hizmet adı" style="margin-bottom:6px" value="'+(nm||'').replace(/"/g,'&quot;')+'">'
+    +'<div style="display:flex;gap:8px">'
+    +'<div style="flex:1"><small class="muted">Miktar</small><input name="item_qty[]" inputmode="decimal" value="'+(q!==undefined?q:'1')+'" oninput="calc()"></div>'
+    +'<div style="flex:1"><small class="muted">Birim Fiyat</small><input name="item_price[]" inputmode="decimal" value="'+(p||'')+'" oninput="calc()"></div>'
+    +'</div>'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">'
+    +'<span class="row-sub" style="font-weight:800">0,00 ₺</span>'
+    +'<button type="button" class="btn" style="background:rgba(220,38,38,.2)" onclick="this.closest(\'.qrow\').remove();calc()">🗑 Sil</button>'
+    +'</div>';
+  document.getElementById('rows').appendChild(row);
+  row.addEventListener('input',calc);
+}
+function calc(){
+  var qs=document.getElementsByName('item_qty[]'), ps=document.getElementsByName('item_price[]'), sub=0;
+  document.querySelectorAll('#rows .qrow').forEach(function(row,i){
+    var q=num(qs[i].value), p=num(ps[i].value), lt=q*p;
+    row.querySelector('.row-sub').textContent=fmt(lt);
+    sub+=lt;
+  });
+  var vr=num(document.getElementsByName('vat_rate')[0].value), vat=sub*vr/100;
+  document.getElementById('tSub').textContent=fmt(sub);
+  document.getElementById('tVat').textContent=fmt(vat);
+  document.getElementById('tTot').textContent=fmt(sub+vat);
+}
+document.getElementsByName('vat_rate')[0].addEventListener('input',calc);
+<?php }
+
 /* ---------- TEKLİF GÖRÜNÜMÜ (PDF/paylaş) ---------- */
 if($id && !$editMode){
   $q=null; try{ $s=$pdo->prepare("SELECT * FROM quotes WHERE id=?"); $s->execute([$id]); $q=$s->fetch(); }catch(Throwable $e){}
@@ -242,26 +276,7 @@ if($editMode && $isAdmin){
   <a class="btn dark" href="teklif.php?id=<?=$id?>" style="display:block;text-align:center;margin-top:8px">← İptal</a>
   <script>
   var initItems=<?=json_encode(array_values(array_map(function($it){ return [$it['name'],(float)$it['qty'],(float)$it['unit_price']]; },$items)))?>;
-  function fmt(n){ return n.toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2})+' ₺'; }
-  function num(v){ return parseFloat(String(v||'').replace(/\./g,'').replace(',','.'))||0; }
-  function addRow(nm,q,p){
-    var d=document.createElement('div'); d.className='qrow'; d.style.cssText='display:flex;gap:6px;margin-bottom:6px';
-    d.innerHTML='<input name="item_name[]" placeholder="Ürün/hizmet" style="flex:2;margin:0" value="'+(nm||'')+'">'+
-      '<input name="item_qty[]" inputmode="decimal" placeholder="Adet" style="flex:1;margin:0" value="'+(q!==undefined?q:'1')+'">'+
-      '<input name="item_price[]" inputmode="decimal" placeholder="Birim ₺" style="flex:1;margin:0" value="'+(p||'')+'">'+
-      '<button type="button" onclick="this.parentNode.remove();calc()" class="btn" style="background:#7f1d1d;color:#fff;padding:0 10px">×</button>';
-    document.getElementById('rows').appendChild(d);
-    d.addEventListener('input',calc);
-  }
-  function calc(){
-    var qs=document.getElementsByName('item_qty[]'), ps=document.getElementsByName('item_price[]'), sub=0;
-    for(var i=0;i<qs.length;i++){ sub+=num(qs[i].value)*num(ps[i].value); }
-    var vr=num(document.getElementsByName('vat_rate')[0].value), vat=sub*vr/100;
-    document.getElementById('tSub').textContent=fmt(sub);
-    document.getElementById('tVat').textContent=fmt(vat);
-    document.getElementById('tTot').textContent=fmt(sub+vat);
-  }
-  document.getElementsByName('vat_rate')[0].addEventListener('input',calc);
+  <?php teklif_items_js_mobile(); ?>
   for(var i=0;i<initItems.length;i++){ addRow(initItems[i][0],initItems[i][1],initItems[i][2]); }
   if(!initItems.length) addRow();
   calc();
@@ -302,26 +317,7 @@ if($new){
   </form>
   </div>
   <script>
-  function fmt(n){ return n.toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2})+' ₺'; }
-  function num(v){ return parseFloat(String(v||'').replace(/\./g,'').replace(',','.'))||0; }
-  function addRow(nm,q,p){
-    var d=document.createElement('div'); d.className='qrow'; d.style.cssText='display:flex;gap:6px;margin-bottom:6px';
-    d.innerHTML='<input name="item_name[]" placeholder="Ürün/hizmet" style="flex:2;margin:0" value="'+(nm||'')+'">'+
-      '<input name="item_qty[]" inputmode="decimal" placeholder="Adet" style="flex:1;margin:0" value="'+(q||'1')+'">'+
-      '<input name="item_price[]" inputmode="decimal" placeholder="Birim ₺" style="flex:1;margin:0" value="'+(p||'')+'">'+
-      '<button type="button" onclick="this.parentNode.remove();calc()" class="btn" style="background:#7f1d1d;color:#fff;padding:0 10px">×</button>';
-    document.getElementById('rows').appendChild(d);
-    d.addEventListener('input',calc);
-  }
-  function calc(){
-    var qs=document.getElementsByName('item_qty[]'), ps=document.getElementsByName('item_price[]'), sub=0;
-    for(var i=0;i<qs.length;i++){ sub+=num(qs[i].value)*num(ps[i].value); }
-    var vr=num(document.getElementsByName('vat_rate')[0].value), vat=sub*vr/100;
-    document.getElementById('tSub').textContent=fmt(sub);
-    document.getElementById('tVat').textContent=fmt(vat);
-    document.getElementById('tTot').textContent=fmt(sub+vat);
-  }
-  document.getElementsByName('vat_rate')[0].addEventListener('input',calc);
+  <?php teklif_items_js_mobile(); ?>
   addRow(); calc();
   </script>
   <?php botx(); exit;
