@@ -33,10 +33,12 @@ if(!empty($_GET['ok'])) echo '<div class="ok">Kayıt güncellendi.</div>';
 if(!empty($_SESSION['cn_err'])){ echo '<div class="err">'.htmlspecialchars($_SESSION['cn_err']).'</div>'; unset($_SESSION['cn_err']); }
 
 $typeOpts=checks_notes_types();
-$statusOpts=checks_notes_statuses();
+$dirOpts=checks_notes_directions();
 try{
     $r=checks_notes_get($pdo,$id);
     if(!$r) throw new Exception('Kayıt bulunamadı.');
+    $rDir = $r['direction'] ?? 'alinan';
+    $statusOpts=checks_notes_statuses($rDir);
     $today=date('Y-m-d');
     $overdue = $r['status']==='portfoyde' && $r['due_date'] && $r['due_date']<$today;
     $ic = $r['type']==='senet' ? '📝' : '🧾';
@@ -48,6 +50,7 @@ try{
   <div class="muted"><?=htmlspecialchars(($r['contact_name']?:'Cari seçilmedi').($r['bank_name']?' · '.$r['bank_name']:''))?></div>
   <div style="font-size:28px;font-weight:900;margin-top:10px"><?=mm($r['amount'])?></div>
   <div style="display:flex;gap:14px;margin-top:6px;flex-wrap:wrap">
+    <small class="muted">Yön: <?=htmlspecialchars($dirOpts[$rDir]??$rDir)?></small>
     <small class="muted">Vade: <?=htmlspecialchars($r['due_date']?:'Vadesiz')?><?=$overdue?' ⚠️ Vadesi geçti':''?></small>
     <small class="muted">Durum: <?=htmlspecialchars($statusOpts[$r['status']]??$r['status'])?></small>
   </div>
@@ -67,6 +70,8 @@ try{
 <details class="panel">
   <summary style="font-weight:900;cursor:pointer">✏️ Kaydı Düzenle</summary>
   <form method="post" style="margin-top:10px" enctype="multipart/form-data">
+    <label>Yön</label>
+    <select name="direction" id="cn-dir-edit" onchange="updateCnStatusLabels(this)"><?php foreach($dirOpts as $dk=>$dl): ?><option value="<?=$dk?>" <?=$rDir===$dk?'selected':''?>><?=htmlspecialchars($dl)?></option><?php endforeach; ?></select>
     <label>Tür</label>
     <select name="type"><?php foreach($typeOpts as $tk=>$tl): ?><option value="<?=$tk?>" <?=$r['type']===$tk?'selected':''?>><?=htmlspecialchars($tl)?></option><?php endforeach; ?></select>
     <label>Numara</label>
@@ -81,7 +86,7 @@ try{
     <label>Banka Adı <small class="muted">(çek ise)</small></label>
     <input name="bank_name" value="<?=htmlspecialchars($r['bank_name']??'')?>">
     <label>Durum</label>
-    <select name="status"><?php foreach($statusOpts as $sk=>$sl): ?><option value="<?=$sk?>" <?=$r['status']===$sk?'selected':''?>><?=htmlspecialchars($sl)?></option><?php endforeach; ?></select>
+    <select name="status" id="cn-status-edit"><?php foreach($statusOpts as $sk=>$sl): ?><option value="<?=$sk?>" <?=$r['status']===$sk?'selected':''?>><?=htmlspecialchars($sl)?></option><?php endforeach; ?></select>
     <label>Not</label>
     <textarea name="notes" rows="2"><?=htmlspecialchars($r['notes']??'')?></textarea>
     <label>Fotoğraf / Dosya <small class="muted">(yeni seçilirse eskisinin yerine geçer, boş bırakılırsa korunur)</small></label>
@@ -90,6 +95,24 @@ try{
   </form>
 </details>
 <?php endif; ?>
+<script>
+var CN_STATUS_LABELS = {
+  portfoyde: {alinan:'Portföyde', verilen:'Verildi (Bekliyor)'},
+  tahsil_edildi: {alinan:'Tahsil Edildi', verilen:'Ödendi'},
+  ciro_edildi: {alinan:'Ciro Edildi', verilen:'Ciro Edildi'},
+  karsiliksiz: {alinan:'Karşılıksız', verilen:'Karşılıksız Döndü'},
+  iptal: {alinan:'İptal', verilen:'İptal'}
+};
+function updateCnStatusLabels(dirSel){
+    var form = dirSel.closest('form');
+    var statusSel = form ? form.querySelector('select[name="status"]') : null;
+    if(!statusSel) return;
+    Array.prototype.forEach.call(statusSel.options, function(opt){
+        var lbl = CN_STATUS_LABELS[opt.value];
+        if(lbl) opt.textContent = lbl[dirSel.value] || lbl.alinan;
+    });
+}
+</script>
 <?php
 }catch(Throwable $e){ echo '<div class="err">'.htmlspecialchars($e->getMessage()).'</div>'; }
 botx();

@@ -9,7 +9,23 @@ function checks_notes_types(){
     return ['cek'=>'Çek','senet'=>'Senet'];
 }
 
-function checks_notes_statuses(){
+// Yön: bu çeki/senedi BİZ mi verdik (kendi ödeme çekimiz) yoksa BİZE mi verildi (tahsilat çeki).
+// Migration: 033_checks_notes_direction.sql. Aynı status makinesini kullanır, sadece
+// checks_notes_statuses() etiketleri yöne göre değişir (ör. "Portföyde" verilen çek için anlamsızdı).
+function checks_notes_directions(){
+    return ['alinan'=>'Alınan (Tahsilat)','verilen'=>'Verilen (Ödeme)'];
+}
+
+function checks_notes_statuses($direction='alinan'){
+    if($direction==='verilen'){
+        return [
+            'portfoyde'=>'Verildi (Bekliyor)',
+            'tahsil_edildi'=>'Ödendi',
+            'ciro_edildi'=>'Ciro Edildi',
+            'karsiliksiz'=>'Karşılıksız Döndü',
+            'iptal'=>'İptal',
+        ];
+    }
     return [
         'portfoyde'=>'Portföyde',
         'tahsil_edildi'=>'Tahsil Edildi',
@@ -19,12 +35,13 @@ function checks_notes_statuses(){
     ];
 }
 
-// Liste + filtre (tür/durum). En yakın vadeli en üstte.
-function checks_notes_list($pdo, $type=null, $status=null){
+// Liste + filtre (tür/durum/yön). En yakın vadeli en üstte.
+function checks_notes_list($pdo, $type=null, $status=null, $direction=null){
     $sql="SELECT cn.*, c.name contact_name FROM checks_notes cn LEFT JOIN contacts c ON c.id=cn.contact_id WHERE 1=1";
     $params=[];
     if($type){ $sql.=" AND cn.type=?"; $params[]=$type; }
     if($status){ $sql.=" AND cn.status=?"; $params[]=$status; }
+    if($direction){ $sql.=" AND cn.direction=?"; $params[]=$direction; }
     $sql.=" ORDER BY (cn.status='portfoyde') DESC, cn.due_date IS NULL, cn.due_date ASC, cn.id DESC";
     $s=$pdo->prepare($sql);
     $s->execute($params);
@@ -146,10 +163,11 @@ function checks_notes_sync_task_status($pdo, $taskId, $status){
 
 function checks_notes_create($pdo, array $data, $userId=null){
     $type = ($data['type'] ?? 'cek')==='senet' ? 'senet' : 'cek';
+    $direction = ($data['direction'] ?? 'alinan')==='verilen' ? 'verilen' : 'alinan';
     $amount = (float)str_replace(',', '.', (string)($data['amount'] ?? 0));
     if($amount<=0) throw new Exception('Tutar sıfırdan büyük olmalı.');
     $status = $data['status'] ?? 'portfoyde';
-    if(!array_key_exists($status, checks_notes_statuses())) $status='portfoyde';
+    if(!array_key_exists($status, checks_notes_statuses($direction))) $status='portfoyde';
     $dueDate = trim($data['due_date'] ?? '') ?: null;
     $contactId = (int)($data['contact_id'] ?? 0) ?: null;
     $number = trim($data['number'] ?? '');
@@ -157,10 +175,11 @@ function checks_notes_create($pdo, array $data, $userId=null){
 
     $attachment = checks_notes_handle_upload();
 
-    $stmt=$pdo->prepare("INSERT INTO checks_notes(type,number,amount,due_date,contact_id,bank_name,status,notes,attachment,created_by)
-        VALUES(?,?,?,?,?,?,?,?,?,?)");
+    $stmt=$pdo->prepare("INSERT INTO checks_notes(type,direction,number,amount,due_date,contact_id,bank_name,status,notes,attachment,created_by)
+        VALUES(?,?,?,?,?,?,?,?,?,?,?)");
     $stmt->execute([
         $type,
+        $direction,
         $number,
         $amount,
         $dueDate,
@@ -191,19 +210,21 @@ function checks_notes_update($pdo, $id, array $data){
     if(!$row) throw new Exception('Kayıt bulunamadı.');
 
     $type = ($data['type'] ?? $row['type'])==='senet' ? 'senet' : 'cek';
+    $direction = ($data['direction'] ?? ($row['direction'] ?? 'alinan'))==='verilen' ? 'verilen' : 'alinan';
     $amount = (float)str_replace(',', '.', (string)($data['amount'] ?? $row['amount']));
     if($amount<=0) throw new Exception('Tutar sıfırdan büyük olmalı.');
     $status = $data['status'] ?? $row['status'];
-    if(!array_key_exists($status, checks_notes_statuses())) $status=$row['status'];
+    if(!array_key_exists($status, checks_notes_statuses($direction))) $status=$row['status'];
     $dueDate = array_key_exists('due_date',$data) ? (trim($data['due_date'] ?? '') ?: null) : $row['due_date'];
     $contactId = array_key_exists('contact_id',$data) ? ((int)$data['contact_id'] ?: null) : $row['contact_id'];
 
     $newAttachment = checks_notes_handle_upload();
     $attachment = $newAttachment !== null ? $newAttachment : $row['attachment'];
 
-    $pdo->prepare("UPDATE checks_notes SET type=?,number=?,amount=?,due_date=?,contact_id=?,bank_name=?,status=?,notes=?,attachment=? WHERE id=?")
+    $pdo->prepare("UPDATE checks_notes SET type=?,direction=?,number=?,amount=?,due_date=?,contact_id=?,bank_name=?,status=?,notes=?,attachment=? WHERE id=?")
         ->execute([
             $type,
+            $direction,
             trim($data['number'] ?? $row['number']),
             $amount,
             $dueDate,

@@ -20,11 +20,13 @@ if(isset($_GET['deleted'])) echo '<div class="ok">Kayıt silindi.</div>';
 if(!empty($_SESSION['cn_err'])){ echo '<div class="err">'.htmlspecialchars($_SESSION['cn_err']).'</div>'; unset($_SESSION['cn_err']); }
 
 $typeOpts=checks_notes_types();
-$statusOpts=checks_notes_statuses();
+$dirOpts=checks_notes_directions();
+$statusOpts=checks_notes_statuses('alinan');
 $typeFilter=$_GET['type'] ?? '';
+$dirFilter=$_GET['direction'] ?? '';
 $contacts=[];
 try{ $contacts=$pdo->query("SELECT id,name FROM contacts ORDER BY name")->fetchAll(); }catch(Throwable $e){}
-$rows=checks_notes_list($pdo, $typeFilter ?: null);
+$rows=checks_notes_list($pdo, $typeFilter ?: null, null, $dirFilter ?: null);
 $today=date('Y-m-d'); $soon=date('Y-m-d', strtotime('+7 days'));
 $countPortfoyde=0;
 foreach($rows as $r){ if($r['status']==='portfoyde') $countPortfoyde++; }
@@ -35,6 +37,8 @@ foreach($rows as $r){ if($r['status']==='portfoyde') $countPortfoyde++; }
 
 <details class="panel"><summary style="font-weight:900;cursor:pointer">➕ Yeni Çek / Senet Kaydı</summary>
 <form method="post" style="margin-top:10px" enctype="multipart/form-data">
+  <label>Yön <small class="muted">(bizim verdiğimiz mi, bize verilen mi)</small></label>
+  <select name="direction" id="cn-dir-new" onchange="updateCnStatusLabels(this)"><?php foreach($dirOpts as $dk=>$dl): ?><option value="<?=$dk?>"><?=htmlspecialchars($dl)?></option><?php endforeach; ?></select>
   <label>Tür</label>
   <select name="type"><?php foreach($typeOpts as $tk=>$tl): ?><option value="<?=$tk?>"><?=htmlspecialchars($tl)?></option><?php endforeach; ?></select>
   <label>Numara</label>
@@ -55,7 +59,7 @@ foreach($rows as $r){ if($r['status']==='portfoyde') $countPortfoyde++; }
   <label>Banka Adı <small class="muted">(çek ise)</small></label>
   <input name="bank_name">
   <label>Durum</label>
-  <select name="status"><?php foreach($statusOpts as $sk=>$sl): ?><option value="<?=$sk?>" <?=$sk==='portfoyde'?'selected':''?>><?=htmlspecialchars($sl)?></option><?php endforeach; ?></select>
+  <select name="status" id="cn-status-new"><?php foreach($statusOpts as $sk=>$sl): ?><option value="<?=$sk?>" <?=$sk==='portfoyde'?'selected':''?>><?=htmlspecialchars($sl)?></option><?php endforeach; ?></select>
   <label>Not</label>
   <textarea name="notes" rows="2"></textarea>
   <label>Fotoğraf / Dosya <small class="muted">(opsiyonel, jpg/png/webp/gif/pdf, en fazla 15 MB)</small></label>
@@ -65,9 +69,16 @@ foreach($rows as $r){ if($r['status']==='portfoyde') $countPortfoyde++; }
 </details>
 
 <div class="panel" style="display:flex;gap:8px;flex-wrap:wrap">
-  <a class="btn <?=$typeFilter===''?'dark':'secondary'?>" href="checks_notes.php" style="flex:1;text-align:center">Tümü</a>
+  <a class="btn <?=$dirFilter===''?'dark':'secondary'?>" href="checks_notes.php<?=$typeFilter?'?type='.$typeFilter:''?>" style="flex:1;text-align:center">Tüm Yönler</a>
+  <?php foreach($dirOpts as $dk=>$dl): ?>
+  <a class="btn <?=$dirFilter===$dk?'dark':'secondary'?>" href="checks_notes.php?direction=<?=$dk?><?=$typeFilter?'&type='.$typeFilter:''?>" style="flex:1;text-align:center"><?=htmlspecialchars($dl)?></a>
+  <?php endforeach; ?>
+</div>
+
+<div class="panel" style="display:flex;gap:8px;flex-wrap:wrap">
+  <a class="btn <?=$typeFilter===''?'dark':'secondary'?>" href="checks_notes.php<?=$dirFilter?'?direction='.$dirFilter:''?>" style="flex:1;text-align:center">Tümü</a>
   <?php foreach($typeOpts as $tk=>$tl): ?>
-  <a class="btn <?=$typeFilter===$tk?'dark':'secondary'?>" href="checks_notes.php?type=<?=$tk?>" style="flex:1;text-align:center"><?=htmlspecialchars($tl)?></a>
+  <a class="btn <?=$typeFilter===$tk?'dark':'secondary'?>" href="checks_notes.php?type=<?=$tk?><?=$dirFilter?'&direction='.$dirFilter:''?>" style="flex:1;text-align:center"><?=htmlspecialchars($tl)?></a>
   <?php endforeach; ?>
 </div>
 
@@ -80,8 +91,10 @@ foreach($rows as $r){
     $color = $overdue ? '#f87171' : ($upcoming ? '#f59e0b' : '#4ade80');
     $ic = $r['type']==='senet' ? '📝' : '🧾';
     $att = !empty($r['attachment']) ? ' 📎' : '';
+    $rDir = $r['direction'] ?? 'alinan';
+    $dirIc = $rDir==='verilen' ? '📤' : '📥';
     echo '<a class="item" href="check_note_view.php?id='.(int)$r['id'].'" style="display:flex;justify-content:space-between;align-items:center">'
-       .'<span>'.$ic.' <b>'.htmlspecialchars($typeOpts[$r['type']]??$r['type']).' '.htmlspecialchars($r['number']?:'').$att.'</b><br>'
+       .'<span>'.$dirIc.$ic.' <b>'.htmlspecialchars($typeOpts[$r['type']]??$r['type']).' '.htmlspecialchars($r['number']?:'').$att.'</b><br>'
        .'<small class="muted">'.htmlspecialchars(($r['contact_name']?:'-').' · '.($r['due_date']?:'Vadesiz').($overdue?' ⚠️':($upcoming?' ⏳':''))).'</small></span>'
        .'<b style="color:'.$color.'">'.mm($r['amount']).'</b></a>';
 }
@@ -89,6 +102,22 @@ foreach($rows as $r){
 </div>
 
 <script>
+var CN_STATUS_LABELS = {
+  portfoyde: {alinan:'Portföyde', verilen:'Verildi (Bekliyor)'},
+  tahsil_edildi: {alinan:'Tahsil Edildi', verilen:'Ödendi'},
+  ciro_edildi: {alinan:'Ciro Edildi', verilen:'Ciro Edildi'},
+  karsiliksiz: {alinan:'Karşılıksız', verilen:'Karşılıksız Döndü'},
+  iptal: {alinan:'İptal', verilen:'İptal'}
+};
+function updateCnStatusLabels(dirSel){
+    var form = dirSel.closest('form');
+    var statusSel = form ? form.querySelector('select[name="status"]') : null;
+    if(!statusSel) return;
+    Array.prototype.forEach.call(statusSel.options, function(opt){
+        var lbl = CN_STATUS_LABELS[opt.value];
+        if(lbl) opt.textContent = lbl[dirSel.value] || lbl.alinan;
+    });
+}
 function onCnContactChange(){
     var sel=document.getElementById('contactSel');
     var box=document.getElementById('newContactBox');
