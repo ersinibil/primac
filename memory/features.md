@@ -2,6 +2,54 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
+## Kişisel Not/Görev alanı — "Notlarım" (2026-07-03)
+Kullanıcı isteği: "görevlerim ekranında kendime de görev-not alanı olsun, bunu personel görmesin,
+takvime de işlensin, bana kendi numarama ve sistem içi mesaj ile bildirim olsun."
+- Migration 037: `personal_notes` tablosu (id, user_id, title, note, due_date, status, created_at).
+  Bilerek `tasks` tablosundan AYRI — tasks.php ("Tüm Görevler") personel tarafından görülebiliyor,
+  bu yeni tabloya HİÇBİR sorgu `user_id` filtresiz dokunmuyor, gizlilik ayrı tabloyla garanti altına
+  alınıyor (retrofit yetki kontrolü riski yok).
+- `notes_lib.php` (yeni, web+mobil ortak): `personal_note_create()` — kayıt oluşturunca otomatik
+  olarak (a) `notify_user()` ile sistem içi bildirim + Web Push, (b) `internal_messages`'a kendine
+  mesaj (Mesajlar ekranında da görünsün), (c) `wa_send()` ile GERÇEK otomatik WhatsApp (mevcut
+  `share_lib.php::wa_send()` — UltraMsg/custom gateway, `wa_settings.php`'de ayarlıysa; ayarlı
+  değilse sessizce atlanır, hata değildir) kendi numarasına (personel.phone → yoksa app_users.phone).
+- Web: `notes.php` (tam CRUD sayfası, contact_new.php ile aynı PRG deseni) + `dashboard.php`'de
+  kompakt önizleme paneli + sol menüde "📝 Notlarım" linki (Komuta Merkezi'nin hemen altında).
+- Mobil: `mobile/mytasks.php` ("Görevlerim") içine gömülü not ekleme/listeleme/tamamlama/silme —
+  kullanıcının literal isteğiyle birebir aynı ekranda.
+- Takvim entegrasyonu: `takvim.php` (web) + `mobile/calendar.php` — notlar sadece kendi `user_id`'ne
+  ait olduğu için (JOIN/filtre yok, ayrı sorgu + PHP tarafında birleştirme) başka hiçbir kullanıcının
+  takviminde görünmüyor.
+
+## 5-ajan güvenlik denetimi — CONFIRMED yetki-atlatma açıkları kapatıldı (2026-07-03)
+Selin (ots-security-auditor) + Elif (ots-parity-auditor) denetiminde bulunan 4 CONFIRMED açık:
+- **job_view.php + mobile/job_view.php [KRİTİK]**: GÖRÜNTÜLEME (GET) bilinçli olarak
+  `page_module_map()` dışında bırakılmıştı (personel bildirimden kendi işini açabilsin diye), ama
+  YAZMA işlemleri (stage_status, job_status, dosya yükle/sil, not ekle/sil, save_job, init_stages,
+  stage_set, produce_stock, link_produce, mobilde ayrıca assign/set_status) hiç yetki kontrolü
+  yapmıyordu — `jobs` yetkisi olmayan biri URL'den id tahmin edip başka birinin işini
+  değiştirebiliyordu. Çözüm: `job_stages_lib.php`'ye ortak `job_can_write($pdo,$jobId)` eklendi —
+  `user_can('jobs')` YA DA iş `responsible_personnel_id` alanında o kullanıcının personeline
+  atanmışsa true döner (GET tarafındaki "kendi işini aç" mantığıyla tutarlı). Hem web hem mobil
+  POST bloklarının başına bu kontrol eklendi; AJAX aşama butonları da aynı kontrolden geçsin diye
+  `stage_ajax_respond()` içine taşındı (tek merkezden, iki call-site de otomatik korunuyor).
+  Mobildeki `assign` (sorumlu değiştirme) action'ı için ekstra daraltma: own-job istisnası
+  YETERLİ SAYILMADI, sadece gerçek `jobs` yetkisi olanlar sorumlu değiştirebilir (UI zaten sadece
+  admine gösteriyordu, sunucu tarafı artık da eşleşiyor). `mobile/job_view.php`'deki admin-only
+  `delete_job` bloğuna dokunulmadı.
+- **requests.php (web) [KRİTİK]**: Hiç korumasızdı (sadece `require_login()`), `mobile/requests.php`
+  admin-only (`block_personel()`). Web'e `is_admin()` kontrolü eklendi — parite sağlandı.
+- **activity.php (web) [YÜKSEK]**: `user_can()` filtresi yoktu, Finans dahil TÜM modüllerin
+  aktivite logu herkese açıktı. `mobile/activity.php` admin-only. Web'e aynı `is_admin()` koruması
+  eklendi (en basit/tutarlı çözüm — modül bazlı filtre yerine).
+- **contact_documents.php [YÜKSEK]**: `id` GET parametresiyle herhangi bir carinin trade_documents
+  (tutar/ödenen) kayıtlarını IDOR ile gösteriyordu, hiç yetki kontrolü yoktu. `require_permission
+  ('contacts')` eklendi + `boot.php` `page_module_map()`'e `'contact_documents.php'=>'contacts'`
+  eklendi (savunma derinliği — otomatik merkezi korumaya da dahil).
+- Tüm değişen dosyalar `php -l` ile doğrulandı. PHP 7.2 uyumlu, prepared statement, web+mobil parite
+  korundu — hiçbir görüntüleme (GET) akışı kısıtlanmadı, sadece yazma/POST işlemlerine kilit eklendi.
+
 ## Satış/Satın Alma sepeti + KDV + personel yetki senkronu + WhatsApp medya (2026-07-03, 2. dalga)
 - **Satış/Satın Alma → sepet mantığı**: Tek ürün yerine tek işlemde birden fazla ürün satırı
   (kullanıcı: "bir kişiye bir firmaya birden fazla ürün satılabilir"). Her satırın kendi KDV oranı

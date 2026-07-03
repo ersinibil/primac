@@ -1,9 +1,11 @@
 <?php
 require_once __DIR__.'/layout_top.php';
 if(file_exists(__DIR__.'/activity_lib.php')) require_once __DIR__.'/activity_lib.php';
+require_once __DIR__.'/notes_lib.php';
 
 $today=date('Y-m-d');
 $pdo=db();
+$__myNotes=personal_notes_list($pdo,(int)($_SESSION['user']['id']??0),'open');
 
 // Mevcut ay
 $monthStart=date('Y-m-01');
@@ -384,6 +386,22 @@ cmd_card('Açık Görev', $tasks, 'Personel açık görevleri', 'tasks.php', 'te
 cmd_card('Bekleyen İş', $open, 'Tüm açık işler', 'jobs.php?filter=open', 'green');
 ?>
 </section>
+
+<?php if($__myNotes): ?>
+<section class="panel" style="background:#fffbeb">
+<div class="panel-head">
+    <h2><span class="section-icon">📝</span> Notlarım <small class="muted" style="font-weight:400">(sadece sana özel)</small></h2>
+    <a class="btn small secondary" href="notes.php">Tümünü Gör / Ekle</a>
+</div>
+<?php foreach(array_slice($__myNotes,0,4) as $__n): ?>
+<div style="padding:8px 0;border-bottom:1px solid #fde68a">
+    <b><?=h($__n['title'])?></b>
+    <?php if($__n['due_date']): ?><span class="muted" style="margin-left:6px">📅 <?=h($__n['due_date'])?></span><?php endif; ?>
+</div>
+<?php endforeach; ?>
+</section>
+<?php endif; ?>
+
 <section class="panel">
 <div class="panel-head">
     <h2><span class="section-icon">🕘</span> Son İşlemler</h2>

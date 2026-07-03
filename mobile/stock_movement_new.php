@@ -2,6 +2,7 @@
 require_once 'common.php';
 if(!user_can('stock')){ header('Location: index.php'); exit; }
 require_once __DIR__.'/../activity_lib.php';
+require_once __DIR__.'/../stock_lib.php';
 $pdo=db();
 $error='';
 $type=$_GET['type'] ?? 'in';
@@ -12,6 +13,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     try{
         $productId=(int)$_POST['stock_item_id'];
         $movementType=$_POST['movement_type'];
+        if(!in_array($movementType,['in','out','sale','use'],true)) $movementType='in';
         $qty=(float)$_POST['quantity'];
         $unitCost=(float)$_POST['unit_cost'];
         $unitSale=(float)$_POST['unit_sale'];
@@ -28,26 +30,62 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 
         $totalCost=$qty*$unitCost;
         $totalSale=($movementType==='out' || $movementType==='sale') ? $qty*$unitSale : 0;
+        $direction=$movementType==='in' ? 'in' : 'out';
 
-        $pdo->prepare("INSERT INTO stock_movements(stock_item_id,movement_type,quantity,unit_cost,unit_sale,total_cost,total_sale,contact_id,supplier_id,job_id,movement_date,description)
-            VALUES(?,?,?,?,?,?,?,?,?,?,?,?)")
-            ->execute([
-                $productId,$movementType,$qty,$unitCost,$unitSale,$totalCost,$totalSale,
-                (int)$_POST['contact_id'] ?: null,(int)$_POST['supplier_id'] ?: null,(int)$_POST['job_id'] ?: null,
-                $_POST['movement_date'] ?: date('Y-m-d'),trim($_POST['description'])
-            ]);
-        $moveId=$pdo->lastInsertId();
+        // Gerçek stock_movements şeması movement_type/unit_cost/unit_sale/total_cost/total_sale/
+        // contact_id/supplier_id/movement_date/description kolonlarını İÇERMİYOR (2026-07-03 schema
+        // drift düzeltmesi) — bu bilgiler reason/note metnine gömülür, stok kartı hâlâ doğru güncellenir.
+        $reasonMap=['in'=>'Alış / Stok Giriş','out'=>'Satış / Stok Çıkış','sale'=>'Satış','use'=>'İşte Kullanım'];
+        $reason=$reasonMap[$movementType] ?? $movementType;
+
+        $contactName=null;
+        if(!empty($_POST['contact_id'])){
+            $cs=$pdo->prepare("SELECT name FROM contacts WHERE id=?"); $cs->execute([(int)$_POST['contact_id']]);
+            $contactName=$cs->fetchColumn() ?: null;
+        }
+        $supplierName=null;
+        if(!empty($_POST['supplier_id'])){
+            $ss=$pdo->prepare("SELECT name FROM contacts WHERE id=?"); $ss->execute([(int)$_POST['supplier_id']]);
+            $supplierName=$ss->fetchColumn() ?: null;
+        }
+        $jobId=(int)$_POST['job_id'] ?: null;
+
+        $noteParts=[];
+        $desc=trim($_POST['description'] ?? '');
+        if($desc!=='') $noteParts[]=$desc;
+        $noteParts[]='Birim maliyet: '.mm($unitCost).' · Birim satış: '.mm($unitSale);
+        if($contactName) $noteParts[]='Cari: '.$contactName;
+        if($supplierName) $noteParts[]='Tedarikçi: '.$supplierName;
+        $moveDate=$_POST['movement_date'] ?: date('Y-m-d');
+        if($moveDate!==date('Y-m-d')) $noteParts[]='Tarih: '.$moveDate;
+        $note=implode(' · ',$noteParts);
+
+        // Stok miktarı güncellemesi ile hareket kaydı tek transaction içinde — biri başarısız
+        // olursa diğeri de kaydedilmez (mantıksal tutarlılık).
+        $pdo->beginTransaction();
+        try{
+            if($movementType==='in'){
+                $oldQty=(float)$p['quantity'];
+                $oldAvg=(float)($p['avg_cost'] ?: $p['purchase_price']);
+                $newQty=$oldQty+$qty;
+                $newAvg=$newQty>0 ? (($oldQty*$oldAvg)+($qty*$unitCost))/$newQty : $unitCost;
+                $pdo->prepare("UPDATE stock_items SET quantity=?, avg_cost=?, last_purchase_price=?, purchase_price=? WHERE id=?")
+                    ->execute([$newQty,$newAvg,$unitCost,$unitCost,$productId]);
+            }else{
+                $pdo->prepare("UPDATE stock_items SET quantity=quantity-? WHERE id=?")->execute([$qty,$productId]);
+            }
+
+            $moveId=stock_record_movement($pdo,$productId,$direction,$qty,$reason,$note,null,$jobId);
+
+            $pdo->commit();
+        }catch(Throwable $e){
+            $pdo->rollBack();
+            throw $e;
+        }
 
         if($movementType==='in'){
-            $oldQty=(float)$p['quantity'];
-            $oldAvg=(float)($p['avg_cost'] ?: $p['purchase_price']);
-            $newQty=$oldQty+$qty;
-            $newAvg=$newQty>0 ? (($oldQty*$oldAvg)+($qty*$unitCost))/$newQty : $unitCost;
-            $pdo->prepare("UPDATE stock_items SET quantity=?, avg_cost=?, last_purchase_price=?, purchase_price=? WHERE id=?")
-                ->execute([$newQty,$newAvg,$unitCost,$unitCost,$productId]);
             activity_log('Stok','Stok Giriş','Stok girişi yapıldı',$p['name'].' · +'.$qty.' '.$p['unit'].' · '.money($unitCost),'stock',$moveId,'product_view.php?id='.$productId,'📦');
         }else{
-            $pdo->prepare("UPDATE stock_items SET quantity=quantity-? WHERE id=?")->execute([$qty,$productId]);
             activity_log('Stok','Stok Çıkış','Stok çıkışı yapıldı',$p['name'].' · -'.$qty.' '.$p['unit'].' · Kâr: '.money($totalSale-$totalCost),'stock',$moveId,'product_view.php?id='.$productId,'📤');
         }
 

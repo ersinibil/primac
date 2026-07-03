@@ -3,8 +3,11 @@ require_once 'common.php';
 $pdo=db(); $me=(int)($_SESSION['user']['id']??0);
 $id=(int)($_GET['id']??0);
 
-/* Stok hareketi (giriş/çıkış) — çıktıdan önce */
+/* Stok hareketi (giriş/çıkış) — çıktıdan önce. 2026-07-03 güvenlik denetiminde bulundu: bu üç
+   POST işlemi (mv/toggle_active/save_product) hiç yetki kontrolü yapmıyordu — 'stock' yetkisi
+   olmayan biri bile fiyat/stok değiştirebiliyordu (web'de aynı düzeltme yapıldı, bkz. product_view.php). */
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['mv'])){
+    if(!user_can('stock')){ header('Location: product_view.php?id='.$id); exit; }
     try{
         $dir=$_POST['mv']==='in'?'in':'out';
         $qty=(float)($_POST['quantity']??0);
@@ -32,6 +35,7 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['delete_product'])){
 }
 /* Aktif/Pasif toggle */
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['toggle_active'])){
+    if(!user_can('stock')){ header('Location: product_view.php?id='.$id); exit; }
     try{
         $pdo->prepare("UPDATE stock_items SET active=1-COALESCE(active,1) WHERE id=?")->execute([$id]);
     }catch(Throwable $e){}
@@ -39,6 +43,7 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['toggle_active'])){
 }
 /* Ürün bilgisi düzenle */
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['save_product'])){
+    if(!user_can('stock')){ header('Location: product_view.php?id='.$id.'&ok=1'); exit; }
     try{
         $f=function($k){return (float)str_replace(',','.',$_POST[$k]??'0');};
         $pdo->prepare("UPDATE stock_items SET name=?,product_code=?,barcode=?,unit=?,sale_price=?,purchase_price=?,critical_level=?,shelf_code=?,warehouse=?,notes=?,active=? WHERE id=?")

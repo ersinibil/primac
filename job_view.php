@@ -81,7 +81,12 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             $mime=$_FILES['job_file']['type'] ?? '';
             $ext=strtolower(pathinfo($original, PATHINFO_EXTENSION));
 
-            $allowed=['jpg','jpeg','png','webp','gif','pdf','ai','cdr','eps','svg','stl','obj','3mf','zip','rar','mp4','mov','doc','docx','xls','xlsx'];
+            // 'svg' whitelist'ten çıkarıldı (2026-07-03 güvenlik denetimi): public_file.php
+            // (girişsiz, müşteri onay sayfası) 'image' işaretlenmemiş dosyaları doğrudan <a
+            // target="_blank"> ile aynı origin'de açıyor — SVG içine gömülü <script> bu şekilde
+            // (img tag'i DIŞINDA) doğrudan navigasyonla açıldığında çalışabiliyor (stored XSS).
+            // Vektör tasarım için ai/cdr/eps/pdf zaten whitelist'te, iş akışını bozmaz.
+            $allowed=['jpg','jpeg','png','webp','gif','pdf','ai','cdr','eps','stl','obj','3mf','zip','rar','mp4','mov','doc','docx','xls','xlsx'];
             if(!in_array($ext,$allowed)){
                 throw new Exception("Bu dosya türüne izin verilmiyor: ".$ext);
             }

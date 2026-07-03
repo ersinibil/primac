@@ -8,6 +8,7 @@ $error='';
 $ok='';
 
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['save_product'])){
+    if(!user_can('stock')){ http_response_code(403); exit('Yetkiniz yok.'); }
     try{
         $stmt=$pdo->prepare("UPDATE stock_items SET
             product_code=?, barcode=?, name=?, variant_name=?, brand=?, category_id=?, unit=?, critical_level=?,
@@ -39,6 +40,7 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['save_product'])){
 }
 
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['add_supplier'])){
+    if(!user_can('stock')){ http_response_code(403); exit('Yetkiniz yok.'); }
     try{
         $pdo->prepare("INSERT INTO product_suppliers(product_id,supplier_id,supplier_sku,last_purchase_price,currency,lead_time_days,is_default)
             VALUES(?,?,?,?,?,?,?)")
@@ -73,8 +75,15 @@ if(!$p){
 $categories=$pdo->query("SELECT * FROM product_categories WHERE active=1 ORDER BY name")->fetchAll();
 $suppliers=$pdo->query("SELECT * FROM contacts WHERE type IN ('Tedarikçi','Her İkisi') ORDER BY name")->fetchAll();
 
-$sales=safe_sum("SELECT COALESCE(SUM(total_sale),0) s FROM stock_movements WHERE stock_item_id=$id AND movement_type IN ('out','sale')");
-$cost=safe_sum("SELECT COALESCE(SUM(total_cost),0) s FROM stock_movements WHERE stock_item_id=$id AND movement_type IN ('out','sale')");
+// NOT: stock_movements tablosunda unit_cost/unit_sale/total_cost/total_sale kolonları YOK (gerçek
+// şema: id, stock_item_id, job_id, finance_movement_id, direction, quantity, reason, note,
+// created_at — bkz. database/migrations/004_stock_products.sql). Satış/kâr özetini ürünün GÜNCEL
+// satış/maliyet fiyatı üzerinden, çıkış (direction='out') miktarlarını toplayarak yaklaşık hesaplıyoruz.
+$outQty=safe_sum("SELECT COALESCE(SUM(quantity),0) s FROM stock_movements WHERE stock_item_id=$id AND direction='out'");
+$unitSaleNow=(float)($p['sale_price'] ?? 0);
+$unitCostNow=(float)($p['avg_cost'] ?: $p['purchase_price'] ?: 0);
+$sales=$outQty*$unitSaleNow;
+$cost=$outQty*$unitCostNow;
 $profit=$sales-$cost;
 ?>
 
@@ -238,25 +247,23 @@ if(!$rows) echo "<tr><td colspan='5' class='muted'>Tedarikçi tanımlı değil.<
 <section class="panel">
 <h2>Stok Hareketleri</h2>
 <table>
-<thead><tr><th>Tarih</th><th>Tip</th><th>Miktar</th><th>Birim Maliyet</th><th>Birim Satış</th><th>Kâr</th><th>Açıklama</th></tr></thead>
+<thead><tr><th>Tarih</th><th>Yön</th><th>Miktar</th><th>Sebep</th><th>Not</th></tr></thead>
 <tbody>
 <?php
 $mv=$pdo->prepare("SELECT * FROM stock_movements WHERE stock_item_id=? ORDER BY id DESC LIMIT 30");
 $mv->execute([$id]);
 $rows=$mv->fetchAll();
 foreach($rows as $r){
-    $rowProfit=(float)$r['total_sale']-(float)$r['total_cost'];
+    $dirLabel=$r['direction']==='in' ? badge('Giriş','green') : badge('Çıkış','red');
     echo "<tr>";
-    echo "<td>".h($r['movement_date'])."</td>";
-    echo "<td>".h($r['movement_type'])."</td>";
+    echo "<td>".h($r['created_at'])."</td>";
+    echo "<td>".$dirLabel."</td>";
     echo "<td>".h($r['quantity'])."</td>";
-    echo "<td>".money($r['unit_cost'])."</td>";
-    echo "<td>".money($r['unit_sale'])."</td>";
-    echo "<td>".money($rowProfit)."</td>";
-    echo "<td>".h($r['description'])."</td>";
+    echo "<td>".h($r['reason'])."</td>";
+    echo "<td>".h($r['note'])."</td>";
     echo "</tr>";
 }
-if(!$rows) echo "<tr><td colspan='7' class='muted'>Hareket yok.</td></tr>";
+if(!$rows) echo "<tr><td colspan='5' class='muted'>Hareket yok.</td></tr>";
 ?>
 </tbody>
 </table>
