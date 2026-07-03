@@ -39,9 +39,10 @@ function rpt($pdo,$modul,$from,$to,$ref=0,$detail=false){
     $ch2=$pdo->prepare("SELECT COALESCE(ac.name,'Kategorisiz') k, SUM(fm.amount) s FROM finance_movements fm LEFT JOIN accounting_categories ac ON ac.id=fm.category_id WHERE fm.direction='out' AND DATE(fm.movement_date) BETWEEN ? AND ? GROUP BY k ORDER BY s DESC LIMIT 12");
     $ch2->execute([$from,$to]); $cd2=[]; foreach($ch2->fetchAll() as $r)$cd2[$r['k']]=(float)$r['s'];
     $R['chart2']=['Ödeme / Gider — kategoriye göre',$cd2];
-    $m=$pdo->prepare("SELECT fm.movement_date,fm.direction,c.name cari,COALESCE(ac.name,'') kat,fm.amount,fm.description FROM finance_movements fm LEFT JOIN contacts c ON c.id=fm.contact_id LEFT JOIN accounting_categories ac ON ac.id=fm.category_id WHERE DATE(fm.movement_date) BETWEEN ? AND ? ORDER BY fm.movement_date,fm.id");
+    $m=$pdo->prepare("SELECT fm.movement_date,fm.direction,fm.contact_id,c.name cari,COALESCE(ac.name,'') kat,fm.amount,fm.description FROM finance_movements fm LEFT JOIN contacts c ON c.id=fm.contact_id LEFT JOIN accounting_categories ac ON ac.id=fm.category_id WHERE DATE(fm.movement_date) BETWEEN ? AND ? ORDER BY fm.movement_date,fm.id");
     $m->execute([$from,$to]); $R['table']['head']=['Tarih','Tür','Cari','Kategori','Tutar','Açıklama'];
-    foreach($m->fetchAll() as $r)$R['table']['rows'][]=[$r['movement_date'],$r['direction']==='in'?'Tahsilat':'Ödeme',$r['cari'],$r['kat'],tl($r['amount']),$r['description']];
+    foreach($m->fetchAll() as $r){ $R['table']['rows'][]=[$r['movement_date'],$r['direction']==='in'?'Tahsilat':'Ödeme',$r['cari'],$r['kat'],tl($r['amount']),$r['description']];
+      $R['table']['links'][]=$r['contact_id']?('contact_view.php?id='.(int)$r['contact_id']):null; }
     break;
 
   case 'muhasebe':
@@ -68,9 +69,10 @@ function rpt($pdo,$modul,$from,$to,$ref=0,$detail=false){
     $g=$pdo->prepare("SELECT COUNT(*) n FROM jobs WHERE status NOT IN ('Tamamlandı','İptal','Teslim Edildi') AND due_date IS NOT NULL AND due_date<CURDATE()"); $g->execute(); $geciken=(int)$g->fetch()['n'];
     $R['cards']=[['📋','Açılan',$acilan,'#3b82f6'],['✓','Tamamlanan',$tamam,'#22c55e'],['▶','Açık',$acilan-$tamam,'#eab308'],['⏰','Geciken',$geciken,'#f87171']];
     $R['chart']=['Duruma göre iş',$cd];
-    $j=$pdo->prepare("SELECT j.job_no,j.title,j.status,j.due_date,p.name FROM jobs j LEFT JOIN personnel p ON p.id=j.responsible_personnel_id WHERE DATE(j.created_at) BETWEEN ? AND ? ORDER BY j.id DESC");
+    $j=$pdo->prepare("SELECT j.id,j.job_no,j.title,j.status,j.due_date,p.name FROM jobs j LEFT JOIN personnel p ON p.id=j.responsible_personnel_id WHERE DATE(j.created_at) BETWEEN ? AND ? ORDER BY j.id DESC");
     $j->execute([$from,$to]); $R['table']['head']=['No','İş','Durum','Termin','Sorumlu'];
-    foreach($j->fetchAll() as $r)$R['table']['rows'][]=[$r['job_no'],$r['title'],$r['status'],$r['due_date'],$r['name']];
+    foreach($j->fetchAll() as $r){ $R['table']['rows'][]=[$r['job_no'],$r['title'],$r['status'],$r['due_date'],$r['name']];
+      $R['table']['links'][]='job_view.php?id='.(int)$r['id']; }
     break;
 
   case 'gorevler':
@@ -81,9 +83,10 @@ function rpt($pdo,$modul,$from,$to,$ref=0,$detail=false){
     $g=$pdo->prepare("SELECT COUNT(*) n FROM tasks WHERE status NOT IN ('Tamamlandı','İptal') AND due_date IS NOT NULL AND due_date<CURDATE()"); $g->execute(); $geciken=(int)$g->fetch()['n'];
     $R['cards']=[['📋','Oluşturulan',$acilan,'#3b82f6'],['✓','Tamamlanan',$tamam,'#22c55e'],['▶','Açık',$acilan-$tamam,'#eab308'],['⏰','Geciken',$geciken,'#f87171']];
     $R['chart']=['Duruma göre görev',$cd];
-    $pp=$pdo->prepare("SELECT COALESCE(p.name,'Atanmamış') pn, COUNT(*) c, SUM(CASE WHEN t.status='Tamamlandı' THEN 1 ELSE 0 END) tm FROM tasks t LEFT JOIN personnel p ON p.id=t.personnel_id WHERE DATE(t.created_at) BETWEEN ? AND ? GROUP BY t.personnel_id ORDER BY c DESC");
+    $pp=$pdo->prepare("SELECT t.personnel_id, COALESCE(p.name,'Atanmamış') pn, COUNT(*) c, SUM(CASE WHEN t.status='Tamamlandı' THEN 1 ELSE 0 END) tm FROM tasks t LEFT JOIN personnel p ON p.id=t.personnel_id WHERE DATE(t.created_at) BETWEEN ? AND ? GROUP BY t.personnel_id ORDER BY c DESC");
     $pp->execute([$from,$to]); $R['table']['head']=['Personel','Toplam','Tamamlanan'];
-    foreach($pp->fetchAll() as $r)$R['table']['rows'][]=[$r['pn'],$r['c'],$r['tm']];
+    foreach($pp->fetchAll() as $r){ $R['table']['rows'][]=[$r['pn'],$r['c'],$r['tm']];
+      $R['table']['links'][]=$r['personnel_id']?('tasks.php?f=all&p='.(int)$r['personnel_id']):null; }
     break;
 
   case 'personel':
@@ -100,12 +103,13 @@ function rpt($pdo,$modul,$from,$to,$ref=0,$detail=false){
     usort($ps,function($a,$b){ return $b['sc']<=>$a['sc']; });
     if($detail){
       // DETAYLI: her personelin açık işleri
-      $oj=$pdo->prepare("SELECT job_no,title,status,due_date FROM jobs WHERE responsible_personnel_id=? AND status NOT IN ('Tamamlandı','Teslim Edildi','İptal') ORDER BY (due_date IS NULL), due_date");
+      $oj=$pdo->prepare("SELECT id,job_no,title,status,due_date FROM jobs WHERE responsible_personnel_id=? AND status NOT IN ('Tamamlandı','Teslim Edildi','İptal') ORDER BY (due_date IS NULL), due_date");
       $R['table']['head']=['Personel (Puan)','İş No','Açık İş','Durum','Termin'];
       foreach($ps as $r){ $oj->execute([$r['id']]); $jobs=$oj->fetchAll(); $lbl=$r['name'].' ('.$r['sc'].')';
         if($jobs){ foreach($jobs as $i=>$j){ $gec=(!empty($j['due_date'])&&$j['due_date']<date('Y-m-d'))?' ⏰':'';
-          $R['table']['rows'][]=[$i===0?$lbl:'',$j['job_no'],$j['title'],$j['status'],($j['due_date']?:'-').$gec]; } }
-        else { $R['table']['rows'][]=[$lbl,'-','açık iş yok','','']; } }
+          $R['table']['rows'][]=[$i===0?$lbl:'',$j['job_no'],$j['title'],$j['status'],($j['due_date']?:'-').$gec];
+          $R['table']['links'][]='job_view.php?id='.(int)$j['id']; } }
+        else { $R['table']['rows'][]=[$lbl,'-','açık iş yok','','']; $R['table']['links'][]=null; } }
     } else {
       // ÖZET: KPI tablosu
       $R['table']['head']=['Personel','İş','Tamam','Görev','Puan'];
@@ -123,9 +127,10 @@ function rpt($pdo,$modul,$from,$to,$ref=0,$detail=false){
     $cc=$pdo->prepare("SELECT c.name k,SUM(fm.amount) s FROM finance_movements fm LEFT JOIN contacts c ON c.id=fm.contact_id WHERE fm.movement_type LIKE '%sale%' AND DATE(fm.movement_date) BETWEEN ? AND ? GROUP BY fm.contact_id ORDER BY s DESC LIMIT 8");
     $cc->execute([$from,$to]); $cd=[]; foreach($cc->fetchAll() as $r)$cd[$r['k']?:'—']=(float)$r['s'];
     $R['chart']=['Cariye göre satış',$cd];
-    $m=$pdo->prepare("SELECT fm.movement_date,c.name cari,fm.amount,fm.description FROM finance_movements fm LEFT JOIN contacts c ON c.id=fm.contact_id WHERE fm.movement_type LIKE '%sale%' AND DATE(fm.movement_date) BETWEEN ? AND ? ORDER BY fm.id DESC");
+    $m=$pdo->prepare("SELECT fm.movement_date,fm.contact_id,c.name cari,fm.amount,fm.description FROM finance_movements fm LEFT JOIN contacts c ON c.id=fm.contact_id WHERE fm.movement_type LIKE '%sale%' AND DATE(fm.movement_date) BETWEEN ? AND ? ORDER BY fm.id DESC");
     $m->execute([$from,$to]); $R['table']['head']=['Tarih','Cari','Tutar','Açıklama'];
-    foreach($m->fetchAll() as $r)$R['table']['rows'][]=[$r['movement_date'],$r['cari'],tl($r['amount']),$r['description']];
+    foreach($m->fetchAll() as $r){ $R['table']['rows'][]=[$r['movement_date'],$r['cari'],tl($r['amount']),$r['description']];
+      $R['table']['links'][]=$r['contact_id']?('contact_view.php?id='.(int)$r['contact_id']):null; }
     break;
 
   case 'satinalma':
@@ -141,9 +146,10 @@ function rpt($pdo,$modul,$from,$to,$ref=0,$detail=false){
     $pm=$pdo->prepare("SELECT COALESCE(fm.payment_channel,'Veresiye') k,SUM(fm.amount) s FROM finance_movements fm WHERE fm.movement_type='purchase' AND DATE(fm.movement_date) BETWEEN ? AND ? GROUP BY fm.payment_channel ORDER BY s DESC");
     $pm->execute([$from,$to]); $cd2=[]; foreach($pm->fetchAll() as $r)$cd2[$r['k']]=(float)$r['s'];
     $R['chart2']=['Ödeme yöntemine göre',$cd2];
-    $m=$pdo->prepare("SELECT fm.movement_date,c.name cari,fm.payment_channel,fm.amount,fm.description FROM finance_movements fm LEFT JOIN contacts c ON c.id=fm.contact_id WHERE fm.movement_type='purchase' AND DATE(fm.movement_date) BETWEEN ? AND ? ORDER BY fm.movement_date DESC");
+    $m=$pdo->prepare("SELECT fm.movement_date,fm.contact_id,c.name cari,fm.payment_channel,fm.amount,fm.description FROM finance_movements fm LEFT JOIN contacts c ON c.id=fm.contact_id WHERE fm.movement_type='purchase' AND DATE(fm.movement_date) BETWEEN ? AND ? ORDER BY fm.movement_date DESC");
     $m->execute([$from,$to]); $R['table']['head']=['Tarih','Tedarikçi','Ödeme Yöntemi','Tutar','Açıklama'];
-    foreach($m->fetchAll() as $r)$R['table']['rows'][]=[$r['movement_date'],$r['cari'],$r['payment_channel']??'—',tl($r['amount']),$r['description']];
+    foreach($m->fetchAll() as $r){ $R['table']['rows'][]=[$r['movement_date'],$r['cari'],$r['payment_channel']??'—',tl($r['amount']),$r['description']];
+      $R['table']['links'][]=$r['contact_id']?('contact_view.php?id='.(int)$r['contact_id']):null; }
     break;
 
   case 'teklif':
@@ -154,9 +160,10 @@ function rpt($pdo,$modul,$from,$to,$ref=0,$detail=false){
     $cc=$pdo->prepare("SELECT status k,COUNT(*) s FROM quotes WHERE DATE(quote_date) BETWEEN ? AND ? GROUP BY status");
     $cc->execute([$from,$to]); $cd=[]; foreach($cc->fetchAll() as $r)$cd[$r['k']?:'—']=(float)$r['s'];
     $R['chart']=['Duruma göre teklif',$cd];
-    $m=$pdo->prepare("SELECT quote_date,quote_no,customer_name,total,status FROM quotes WHERE DATE(quote_date) BETWEEN ? AND ? ORDER BY id DESC");
+    $m=$pdo->prepare("SELECT id,quote_date,quote_no,customer_name,total,status FROM quotes WHERE DATE(quote_date) BETWEEN ? AND ? ORDER BY id DESC");
     $m->execute([$from,$to]); $R['table']['head']=['Tarih','No','Müşteri','Tutar','Durum'];
-    foreach($m->fetchAll() as $r)$R['table']['rows'][]=[$r['quote_date'],$r['quote_no'],$r['customer_name'],tl($r['total']),$r['status']];
+    foreach($m->fetchAll() as $r){ $R['table']['rows'][]=[$r['quote_date'],$r['quote_no'],$r['customer_name'],tl($r['total']),$r['status']];
+      $R['table']['links'][]='teklif.php?id='.(int)$r['id']; }
     break;
 
   case 'cari':
@@ -170,19 +177,19 @@ function rpt($pdo,$modul,$from,$to,$ref=0,$detail=false){
     $R['cards']=[['👥','Cari',$tot,'#a78bfa'],['🟢','Alacak',tl($alacak),'#22c55e'],['🔴','Borç',tl($borc),'#f87171']];
     $R['chart']=['En yüksek bakiye',$cd];
     $R['table']['head']=['Cari','Bakiye'];
-    foreach($cl as $r)$R['table']['rows'][]=[$r['name'],tl($r['bal'])];
+    foreach($cl as $r){ $R['table']['rows'][]=[$r['name'],tl($r['bal'])]; $R['table']['links'][]='contact_view.php?id='.(int)$r['id']; }
     break;
 
   case 'stok':
     $R['title']='Stok';
     $tot=(int)$pdo->query("SELECT COUNT(*) c FROM stock_items")->fetch()['c'];
     $val=(float)$pdo->query("SELECT COALESCE(SUM(quantity*COALESCE(sale_price,0)),0) v FROM stock_items")->fetch()['v'];
-    $krit=$pdo->query("SELECT name,quantity,unit,critical_level FROM stock_items WHERE quantity<=critical_level ORDER BY quantity")->fetchAll();
+    $krit=$pdo->query("SELECT id,name,quantity,unit,critical_level FROM stock_items WHERE quantity<=critical_level ORDER BY quantity")->fetchAll();
     $R['cards']=[['📦','Ürün',$tot,'#3b82f6'],['💎','Stok Değeri',tl($val),'#22c55e'],['⚠️','Kritik',count($krit),'#f87171']];
     $cd=[]; foreach($krit as $r){ if(count($cd)<8)$cd[$r['name']]=(float)$r['quantity']; }
     $R['chart']=['Kritik ürün stok',$cd];
     $R['table']['head']=['Ürün','Stok','Kritik Seviye'];
-    foreach($krit as $r)$R['table']['rows'][]=[$r['name'],$r['quantity'].' '.$r['unit'],$r['critical_level']];
+    foreach($krit as $r){ $R['table']['rows'][]=[$r['name'],$r['quantity'].' '.$r['unit'],$r['critical_level']]; $R['table']['links'][]='product_view.php?id='.(int)$r['id']; }
     break;
 
   case 'cari_detay': // TEK CARİ EKSTRE
@@ -196,10 +203,10 @@ function rpt($pdo,$modul,$from,$to,$ref=0,$detail=false){
     $mv=$pdo->prepare("SELECT movement_date,direction,amount,description FROM finance_movements WHERE contact_id=? AND DATE(movement_date) BETWEEN ? AND ? ORDER BY movement_date,id");
     $mv->execute([$ref,$from,$to]); $cd=[];
     $R['table']['head']=['Tarih','Tür','Tutar','Açıklama'];
-    foreach($mv->fetchAll() as $r){ $R['table']['rows'][]=[$r['movement_date'],$r['direction']==='in'?'Tahsilat':'Ödeme',($r['direction']==='in'?'':'-').tl($r['amount']),$r['description']]; $cd[$r['direction']==='in'?'Tahsilat':'Ödeme']=($cd[$r['direction']==='in'?'Tahsilat':'Ödeme']??0)+(float)$r['amount']; }
+    foreach($mv->fetchAll() as $r){ $R['table']['rows'][]=[$r['movement_date'],$r['direction']==='in'?'Tahsilat':'Ödeme',($r['direction']==='in'?'':'-').tl($r['amount']),$r['description']]; $R['table']['links'][]=null; $cd[$r['direction']==='in'?'Tahsilat':'Ödeme']=($cd[$r['direction']==='in'?'Tahsilat':'Ödeme']??0)+(float)$r['amount']; }
     // işleri de ekle
-    $jl=$pdo->prepare("SELECT job_no,title,status,due_date FROM jobs WHERE customer_id=? ORDER BY id DESC LIMIT 30"); $jl->execute([$ref]);
-    foreach($jl->fetchAll() as $r){ $R['table']['rows'][]=['İŞ','📋 '.$r['status'],$r['job_no'],$r['title'].($r['due_date']?' (📅'.$r['due_date'].')':'')]; }
+    $jl=$pdo->prepare("SELECT id,job_no,title,status,due_date FROM jobs WHERE customer_id=? ORDER BY id DESC LIMIT 30"); $jl->execute([$ref]);
+    foreach($jl->fetchAll() as $r){ $R['table']['rows'][]=['İŞ','📋 '.$r['status'],$r['job_no'],$r['title'].($r['due_date']?' (📅'.$r['due_date'].')':'')]; $R['table']['links'][]='job_view.php?id='.(int)$r['id']; }
     $R['chart']=['Tahsilat / Ödeme',$cd];
     break;
 
@@ -308,9 +315,11 @@ table.rep-tbl tr:nth-child(even) td{background:rgba(255,255,255,.025)}
   <?php if($R['table']['rows']): ?>
   <?php $lim=$full?1000:15; $tot=count($R['table']['rows']); ?>
   <div class="rep-card" style="overflow:auto"><div class="ttl">📋 Detay (<?=$tot?> kayıt)<?=(!$full&&$tot>$lim)?' · <span style="color:#93a4bf;font-weight:400">özet — ilk '.$lim.'</span>':''?></div>
-    <table class="rep-tbl"><tr><?php foreach($R['table']['head'] as $h) echo '<th>'.htmlspecialchars($h).'</th>'; ?></tr>
-    <?php foreach(array_slice($R['table']['rows'],0,$lim) as $row): ?>
-      <tr><?php foreach($row as $cell){ $cc=$crit($cell)?' class="rep-neg"':''; echo '<td'.$cc.'>'.htmlspecialchars((string)$cell).'</td>'; } ?></tr>
+    <?php $hasLinks=!empty($R['table']['links']); ?>
+    <table class="rep-tbl"><tr><?php foreach($R['table']['head'] as $h) echo '<th>'.htmlspecialchars($h).'</th>'; if($hasLinks) echo '<th></th>'; ?></tr>
+    <?php foreach(array_slice($R['table']['rows'],0,$lim,true) as $i=>$row): ?>
+      <tr><?php foreach($row as $cell){ $cc=$crit($cell)?' class="rep-neg"':''; echo '<td'.$cc.'>'.htmlspecialchars((string)$cell).'</td>'; }
+      if($hasLinks){ $u=$R['table']['links'][$i] ?? null; echo '<td>'.($u?'<a href="'.htmlspecialchars($u).'" style="color:#60a5fa;font-weight:700;text-decoration:none;white-space:nowrap">Detay →</a>':'').'</td>'; } ?></tr>
     <?php endforeach; ?>
     </table>
     <?php if(!$full && $tot>$lim): ?><small style="color:#93a4bf">… ve <?=$tot-$lim?> kayıt daha — "Detaylı" ile görünür</small><?php endif; ?>
