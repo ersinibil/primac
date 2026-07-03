@@ -204,9 +204,9 @@ th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;p
         <details <?=(in_array($cur,$muhasebe_pages)?'open':'')?>><summary><span>💰</span> Muhasebe İşlemleri</summary>
             <div class="sub">
                 <?php if(user_can('contacts')): ?>
-                <a href="contacts.php" <?=($cur==='contacts.php'?'class="active"':'')?>><span>📋</span> Tüm Cariler</a>
-                <a href="contact_new.php?type=Müşteri" <?=($cur==='contact_new.php'?'class="active"':'')?>><span>➕</span> Müşteri</a>
-                <a href="contact_new.php?type=Tedarikçi"><span>➕</span> Tedarikçi</a>
+                <a href="contacts.php" <?=($cur==='contacts.php' && empty($_GET['type'])?'class="active"':'')?>><span>📋</span> Tüm Cariler</a>
+                <a href="contacts.php?type=Müşteri" <?=($cur==='contacts.php' && ($_GET['type']??'')==='Müşteri'?'class="active"':'')?>><span>👤</span> Müşteri</a>
+                <a href="contacts.php?type=Tedarikçi" <?=($cur==='contacts.php' && ($_GET['type']??'')==='Tedarikçi'?'class="active"':'')?>><span>🚚</span> Tedarikçi</a>
                 <a href="trade_documents.php" <?=($cur==='trade_documents.php'?'class="active"':'')?>><span>🧾</span> Alış / Satış Belgeleri</a>
                 <?php endif; ?>
                 <?php if(user_can('teklif')): ?>

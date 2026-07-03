@@ -5,7 +5,13 @@ require_once __DIR__.'/activity_lib.php';
 
 $pdo=db();
 $error='';
-$type=$_GET['type'] ?? 'Müşteri';
+// Tür URL'den GELDİYSE (Müşteri/Tedarikçi listesindeki "+ Yeni" düğmesinden) sabitlenir — formda
+// dropdown gösterilmez, kullanıcı "Müşteri" listesinden geldiği halde yanlışlıkla "Tedarikçi" seçip
+// kaydedemez (2026-07-03 kullanıcı bildirimi: "mantık hatası var, müşteri açılınca tedarikçi de
+// seçilebiliyor"). Tür hiç verilmemişse (örn. ileride eklenecek genel "Yeni Cari Kaydı" girişi) tam
+// dropdown gösterilir.
+$typeLocked = isset($_GET['type']) && in_array($_GET['type'], ['Müşteri','Tedarikçi'], true);
+$type = $typeLocked ? $_GET['type'] : ($_GET['type'] ?? 'Müşteri');
 if(!in_array($type,['Müşteri','Tedarikçi','Her İkisi'])) $type='Müşteri';
 
 // Eksik kolon güvencesi
@@ -64,11 +70,16 @@ require_once __DIR__.'/layout_top.php';
 <form method="post" class="form-grid">
 
 <label class="full">Cari Tipi
+<?php if($typeLocked): ?>
+<input type="text" value="<?=h($type)?>" disabled style="background:#f1f5f9;color:#475569;font-weight:700">
+<input type="hidden" name="type" value="<?=h($type)?>">
+<?php else: ?>
 <select name="type">
 <?php foreach(['Müşteri','Tedarikçi','Her İkisi'] as $t): ?>
 <option <?=$type===$t?'selected':''?>><?=$t?></option>
 <?php endforeach; ?>
 </select>
+<?php endif; ?>
 </label>
 
 <label>Firma / Cari Adı
