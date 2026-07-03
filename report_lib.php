@@ -204,9 +204,15 @@ function rpt($pdo,$modul,$from,$to,$ref=0,$detail=false){
     $mv->execute([$ref,$from,$to]); $cd=[];
     $R['table']['head']=['Tarih','Tür','Tutar','Açıklama'];
     foreach($mv->fetchAll() as $r){ $R['table']['rows'][]=[$r['movement_date'],$r['direction']==='in'?'Tahsilat':'Ödeme',($r['direction']==='in'?'':'-').tl($r['amount']),$r['description']]; $R['table']['links'][]=null; $cd[$r['direction']==='in'?'Tahsilat':'Ödeme']=($cd[$r['direction']==='in'?'Tahsilat':'Ödeme']??0)+(float)$r['amount']; }
-    // işleri de ekle
-    $jl=$pdo->prepare("SELECT id,job_no,title,status,due_date FROM jobs WHERE customer_id=? ORDER BY id DESC LIMIT 30"); $jl->execute([$ref]);
-    foreach($jl->fetchAll() as $r){ $R['table']['rows'][]=['İŞ','📋 '.$r['status'],$r['job_no'],$r['title'].($r['due_date']?' (📅'.$r['due_date'].')':'')]; $R['table']['links'][]='job_view.php?id='.(int)$r['id']; }
+    // işleri de ekle — 2026-07-03 düzeltmesi: eskiden job_no "Tutar" sütununa yazılıyordu
+    // (parasal olmayan bir metin parasal sütunda görünüyordu), sütunlar artık başlıkla eşleşiyor.
+    $jl=$pdo->prepare("SELECT id,job_no,title,status,due_date,sale_amount,created_at FROM jobs WHERE customer_id=? ORDER BY id DESC LIMIT 30"); $jl->execute([$ref]);
+    foreach($jl->fetchAll() as $r){
+        $tarih=$r['due_date'] ?: ($r['created_at'] ? substr($r['created_at'],0,10) : '');
+        $tutar=(float)$r['sale_amount']>0 ? tl($r['sale_amount']) : '—';
+        $R['table']['rows'][]=[$tarih,'📋 İş: '.$r['status'],$tutar,$r['job_no'].' — '.$r['title']];
+        $R['table']['links'][]='job_view.php?id='.(int)$r['id'];
+    }
     $R['chart']=['Tahsilat / Ödeme',$cd];
     break;
 
@@ -254,16 +260,16 @@ function report_render($R,$appName,$from,$to,$full=true){
 .rep-tile .ic{font-size:26px;opacity:.9}
 .rep-tile .vl{font-size:23px;font-weight:1000;margin-top:6px;line-height:1.1}
 .rep-tile .lb{font-size:12.5px;opacity:.92;margin-top:3px;font-weight:600}
-.rep-card{background:#0f1d33;border:1px solid #1e3350;border-radius:18px;padding:16px;margin:12px 0}
-.rep-card .ttl{font-weight:900;margin-bottom:10px;font-size:15px}
+.rep-card{background:#0f1d33;border:1px solid #1e3350;border-radius:18px;padding:16px;margin:12px 0;color:#e5edf7}
+.rep-card .ttl{font-weight:900;margin-bottom:10px;font-size:15px;color:#e5edf7}
 .rep-bar{display:flex;align-items:center;gap:10px;margin:7px 0;font-size:13px}
 .rep-bar .l{width:32%;color:#cbd5e1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rep-bar .t{flex:1;height:22px;background:rgba(255,255,255,.08);border-radius:8px;overflow:hidden}
 .rep-bar .f{height:100%;border-radius:8px;background:linear-gradient(90deg,#22c55e,#a3e635)}
 .rep-bar .v{width:24%;text-align:right;font-weight:800;color:#fff}
-table.rep-tbl{width:100%;border-collapse:collapse;font-size:13px}
+table.rep-tbl{width:100%;border-collapse:collapse;font-size:13px;color:#e5edf7}
 table.rep-tbl th{text-align:left;color:#93a4bf;border-bottom:2px solid #1e3350;padding:8px 6px;font-size:11px;text-transform:uppercase;letter-spacing:.04em}
-table.rep-tbl td{padding:8px 6px;border-bottom:1px solid rgba(255,255,255,.06)}
+table.rep-tbl td{padding:8px 6px;border-bottom:1px solid rgba(255,255,255,.06);color:#e5edf7}
 table.rep-tbl tr:nth-child(even) td{background:rgba(255,255,255,.025)}
 .rep-neg{color:#f87171;font-weight:800}
 .rep-foot{text-align:center;color:#64748b;font-size:12px;margin:14px 0 4px}

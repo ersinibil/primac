@@ -56,7 +56,7 @@ $totalPayable=safe_sum("SELECT COALESCE(SUM(CASE WHEN balance<0 THEN -balance EL
 ?>
 
 <section class="crm-tabs">
-    <a class="crm-card crm-blue" href="contacts.php">
+    <a class="crm-card crm-blue" href="contacts_report.php">
         <small>Toplam Bakiye</small>
         <strong><?=money($totalBalance)?></strong>
         <span>Tüm carilerin net bakiyesi</span>

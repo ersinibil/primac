@@ -292,6 +292,35 @@ $balance=(float)$c['opening_balance'] + $in - $out;
 </section>
 
 <section class="panel">
+<div class="panel-head"><h2>Bu Cariye Ait İşler</h2><a class="btn small secondary" href="report.php?modul=cari_detay&ref=<?=$id?>">📊 Ekstre / PDF</a></div>
+<table>
+<thead><tr><th>İş No</th><th>Başlık</th><th>Tarih</th><th>Durum</th><th style="text-align:right">Tutar</th></tr></thead>
+<tbody>
+<?php
+try{
+    $jrows=$pdo->prepare("SELECT id,job_no,title,status,due_date,sale_amount,created_at FROM jobs WHERE customer_id=? ORDER BY id DESC LIMIT 20");
+    $jrows->execute([$id]);
+    $jrows=$jrows->fetchAll();
+    foreach($jrows as $j){
+        $jt=$j['due_date'] ?: ($j['created_at'] ? substr($j['created_at'],0,10) : '—');
+        echo "<tr>";
+        echo "<td><a href='job_view.php?id=".h($j['id'])."'>".h($j['job_no'])."</a></td>";
+        echo "<td>".h($j['title'])."</td>";
+        echo "<td class='nowrap'>".h($jt)."</td>";
+        echo "<td>".badge($j['status'],status_tone($j['status']))."</td>";
+        echo "<td style='text-align:right;font-weight:800'>".((float)$j['sale_amount']>0?money($j['sale_amount']):'—')."</td>";
+        echo "</tr>";
+    }
+    if(!$jrows) echo "<tr><td colspan='5' class='muted'>Bu cariye ait iş yok.</td></tr>";
+}catch(Throwable $e){
+    echo "<tr><td colspan='5'><div class='alert'>".h($e->getMessage())."</div></td></tr>";
+}
+?>
+</tbody>
+</table>
+</section>
+
+<section class="panel">
 <div class="panel-head"><h2>Finans Hareketleri</h2><a class="btn small secondary" href="finance.php?contact_id=<?=$id?>">Tümü</a></div>
 <table>
 <thead><tr><th>Tarih</th><th>Tip</th><th>Hesap</th><th>Tutar</th><th>Durum</th><th>Açıklama</th></tr></thead>
