@@ -3,6 +3,11 @@
 ## Proje Amacı
 Saf PHP ERP. Web masaüstü paneli + mobil PWA (mobile/).
 
+**Çalışma önceliği (2026-07-03'ten itibaren) → `PROJECT_RULES.md`.** Proje aktif geliştirme
+aşamasını geçti; öncelik artık stabilite/bugfix/tutarlılık/performans/web-mobil uyumu — yeni
+özellik değil. Bu dosyadaki teknik kurallar hâlâ geçerli, `PROJECT_RULES.md` onların üzerine
+eklenen çalışma-şekli katmanı.
+
 ## Teknik Yığın
 - PHP **7.2** — `str_contains`, `match`, named args **YASAK**
 - MySQL, PDO prepared statements
@@ -12,15 +17,20 @@ Saf PHP ERP. Web masaüstü paneli + mobil PWA (mobile/).
 - `config.sample.php`'yi `config.php` olarak kopyala, kendi DB bilgilerini gir.
 - Kök dizinde: `php -S localhost:8080`
 
-## Sunucu / Deploy
-| Ortam | URL | DB |
-|---|---|---|
-| ACANS prod | acanstr.com/ots/ | u7883898_primacos |
-| PRIMAC prod | primac.tr | u7883898_primactr — AYRI DB (2026-07-02 teyit edildi, marka: firm_list/brand_settings.php) |
-| Lokal | localhost:8080 | lokal config.php |
+## Sunucu / Deploy — TEK GELİŞTİRME ORTAMI MODELİ (2026-07-03'ten itibaren)
+| Ortam | URL | DB | Rol |
+|---|---|---|---|
+| **Development (DEV)** | primac.tr | u7883898_primactr | TÜM geliştirme + test burada. |
+| **Production (LIVE)** | acanstr.com/ots/ | u7883898_primacos | Sadece canlı — geliştirme yapılmaz, dosya güncellenmez. |
+| Lokal | localhost:8080 | lokal config.php | |
 
-`acanstr.com/erp/` kaldırıldı — ACANS artık acanstr.com/ots/ üzerinden yürütülüyor.
-Detaylı adımlar (migration, temizle.php çalıştırma sırası, iki-domain notu) → `memory/deploy.md`.
+**acanstr.com/ots'a (PROD) SADECE ayrıca verilecek "DEPLOY MODE" komutuyla dokunulur** — bu komut
+gelmeden production dosyaları güncellenmez. Tüm ara geliştirme/test primac.tr (DEV) üzerinde yapılır.
+DB'ler ayrı olduğu için bu sadece KOD dağıtım hedefidir, veri taşınmaz. Tam kural seti →
+`PROJECT_RULES.md` "Ortam Yönetimi" bölümü.
+
+`acanstr.com/erp/` kaldırıldı — PROD artık acanstr.com/ots/ üzerinden yürütülüyor.
+Detaylı adımlar (migration, temizle.php çalıştırma sırası) → `memory/deploy.md`.
 
 ## Klasör Yapısı
 ```
@@ -68,8 +78,13 @@ Türkçe.
 - Tanı dosyalarını (kontrol.php, iz.php vb.) sunucuda bırakma.
 - Tek .php'ye çok işlev tıkma — lib dosyalarına böl.
 - Production'ı lokal test için kullanma.
+- **"DEPLOY MODE" komutu verilmeden acanstr.com/ots (PROD) dosyalarını güncelleme** (bkz.
+  `PROJECT_RULES.md` "Ortam Yönetimi").
 
 ## Detaylar
-Geliştirme geçmişi → `memory/features.md`. Açık işler → `memory/backlog.md`. Bilinen sorunlar →
-`memory/bugs.md`. Deploy detayları → `memory/deploy.md`. Yeni bir özellik/oturum tamamlandığında
-CLAUDE.md'ye DEĞİL, ilgili memory/*.md dosyasına tarihli bir madde ekle — bu dosya kısa ve güncel kalmalı.
+Geliştirme geçmişi → `memory/features.md` (özet → `CHANGELOG.md`). Açık işler → `memory/backlog.md`
+(kararı netleşmemişler → `ROADMAP.md`). Bilinen sorunlar → `memory/bugs.md` (hızlı bakış →
+`KNOWN_BUGS.md`). Deploy detayları → `memory/deploy.md`. Sürüm durumu → `VERSIONING.md`. Şema
+envanteri → `DATABASE.md`. Çalışma önceliği/kuralları → `PROJECT_RULES.md`. Yeni bir özellik/oturum
+tamamlandığında CLAUDE.md'ye DEĞİL, ilgili memory/*.md dosyasına tarihli bir madde ekle — bu dosya
+kısa ve güncel kalmalı.

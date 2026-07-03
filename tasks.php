@@ -37,7 +37,7 @@ if($fp){ $where.=($where?' AND ':' WHERE ').'t.personnel_id='.(int)$fp; }
     }catch(Throwable $e){}
     ?>
   </select>
-  <a class="btn" href="task_new.php" style="margin-left:auto">+ Yeni Görev</a>
+  <a class="btn" href="task_new.php" style="margin-left:auto">+ İş Ekle</a>
 </section>
 <section class="panel"><table><thead><tr><th>Görev</th><th>İş</th><th>Personel</th><th>Termin</th><th>Öncelik</th><th>Durum</th><th>İşlem</th></tr></thead><tbody>
 <?php

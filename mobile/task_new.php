@@ -20,11 +20,11 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             if(function_exists('notify_user')) notify_user($ruid,'📋 Yeni görev: '.$title,($pname?$pname.' · ':'').($_POST['description']??''),'mytasks.php');
             try{ $sid=$_SESSION['user']['id']??null; $pdo->prepare("INSERT INTO internal_messages(sender_user_id,receiver_user_id,message,is_read) VALUES(?,?,?,0)")->execute([$sid,$ruid,$msgText]); }catch(Throwable $e){}
         }
-        try{ if(function_exists('activity_log')) activity_log('Görev','Atama',$pname.' · '.$title,'','task',$tid,'jobs.php','📋'); }catch(Throwable $e){}
+        try{ if(function_exists('activity_log')) activity_log('Görev','Atama',$pname.' · '.$title,'','task',$tid,'tasks.php','📋'); }catch(Throwable $e){}
         $ok='Görev atandı, '.($pname?:'personele').' bildirim gönderildi.';
     }catch(Throwable $e){ $er=$e->getMessage(); }
 }
-topx('Görev Ata');
+topx('İş Ekle');
 $pers=$pdo->query("SELECT id,name,role FROM personnel WHERE COALESCE(active,1)=1 ORDER BY name")->fetchAll();
 $jobs=$pdo->query("SELECT id,job_no,title FROM jobs ORDER BY id DESC LIMIT 100")->fetchAll();
 ?>
@@ -43,7 +43,7 @@ $jobs=$pdo->query("SELECT id,job_no,title FROM jobs ORDER BY id DESC LIMIT 100")
   </div>
   <label>İlgili İş (ops.)</label>
   <select name="job_id"><option value="">— Yok —</option><?php foreach($jobs as $j): ?><option value="<?=$j['id']?>"><?=htmlspecialchars($j['job_no'].' · '.$j['title'])?></option><?php endforeach; ?></select>
-  <button class="btn dark" style="width:100%;padding:14px;margin-top:8px">🎯 Görevi Ata & Bildir</button>
+  <button class="btn dark" style="width:100%;padding:14px;margin-top:8px">🎯 İşi Ekle & Bildir</button>
 </form>
 </div>
 <?php botx(); ?>

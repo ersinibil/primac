@@ -45,9 +45,13 @@ function personal_note_create($pdo, $userId, $title, $note='', $dueDate=null){
         try{ notify_user($userId,'📝 Not: '.$title,$msg,'mytasks.php'); }catch(Throwable $e){}
     }
 
-    // 2) İç mesaj (kendine) — Mesajlar ekranında da görünsün
+    // 2) İç mesaj (kendine) — Mesajlar ekranında da görünsün. is_read=1 ile oluşturulur çünkü
+    // kişi listesi kendinizi hariç tutar (mesaj kişi listesinde "kendinle sohbet" diye bir giriş
+    // yok) — okundu işaretlemenin hiçbir UI yolu olmadığı için is_read=0 bırakılırsa bu mesaj
+    // SONSUZA KADAR okunmamış sayılır ve 💬 rozetini şişirir (2026-07-04 Sprint-001 DEV testinde
+    // bulundu).
     try{
-        $pdo->prepare("INSERT INTO internal_messages(sender_user_id,receiver_user_id,message,is_read) VALUES(?,?,?,0)")
+        $pdo->prepare("INSERT INTO internal_messages(sender_user_id,receiver_user_id,message,is_read) VALUES(?,?,?,1)")
             ->execute([$userId,$userId,'📝 Not: '.$title.($msg?"\n".$msg:'')]);
     }catch(Throwable $e){}
 

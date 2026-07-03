@@ -47,7 +47,7 @@ $myMsg=unread_msg(); $myNotif=unread_notif();
   <div class="grid">
     <?php
     card('İşler','İş ve görev takibi','📋','jobs.php','green');
-    card('Görevlerim','Sana atanan görevler','🎯','mytasks.php','orange');
+    card('İşlerim','Sana atanan işler','🎯','mytasks.php','orange');
     card('Cariler','Müşteri / tedarikçi','👥','contacts.php','purple');
     card('Satış','Mobil satış ekranı','🧾','sales.php','orange');
     card('Tahsilat','Cariye tahsilat gir','💰','collection.php','yellow');
@@ -66,8 +66,8 @@ $myMsg=unread_msg(); $myNotif=unread_notif();
     card('Satış Yap','Ürün sat + tahsilat','🧾','sales.php','orange');
     card('Tahsilat','Cariden tahsilat','💰','collection.php','yellow');
     card('Cariler','Müşteri / tedarikçi','👥','contacts.php','purple');
-    card('İşlerim','İş ve görev takibi','📋','jobs.php','green');
-    card('Görevlerim','Sana atanan görevler','🎯','mytasks.php','blue');
+    card('İşler','İş ve görev takibi','📋','jobs.php','green');
+    card('İşlerim','Sana atanan işler','🎯','mytasks.php','blue');
     card('Stok','Ürünleri gör','📦','stock.php','red');
     card('Mesajlar','Ekiple yazış','💬','messages.php','teal');
     ?>

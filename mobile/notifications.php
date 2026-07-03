@@ -1,12 +1,16 @@
 <?php
 require_once 'common.php';
+require_once __DIR__.'/../notifications_lib.php';
 $pdo=db();
-// Silme / temizleme işlemleri (çıktıdan önce)
-if(isset($_GET['del'])){ try{ $pdo->prepare("DELETE FROM internal_notifications WHERE id=?")->execute([(int)$_GET['del']]); }catch(Throwable $e){} header('Location: notifications.php'); exit; }
-if(isset($_GET['clear'])){ try{ $pdo->exec("DELETE FROM internal_notifications WHERE is_read=1"); }catch(Throwable $e){} header('Location: notifications.php'); exit; }
-if(isset($_GET['clearall'])){ try{ $pdo->exec("DELETE FROM internal_notifications"); }catch(Throwable $e){} header('Location: notifications.php'); exit; }
-// Görüntülenince okundu yap (sadece bana ait + genel)
-try{ $pdo->prepare("UPDATE internal_notifications SET is_read=1 WHERE is_read=0 AND (target_user_id IS NULL OR target_user_id=?)")->execute([$ME]); }catch(Throwable $e){}
+// Silme / temizleme işlemleri (çıktıdan önce) — SADECE oturum sahibinin kendi görünümünü etkiler:
+// kişisel bildirim fiziksel silinir (sahiplik kontrollü), genel (target_user_id=NULL) bildirim
+// hiçbir zaman fiziksel silinmez, sadece BU kullanıcı için gizlenir (bkz. notifications_lib.php,
+// Sprint-001 — eskiden 'clear'/'clearall' TÜM kullanıcıların bildirimlerini siliyordu).
+if(isset($_GET['del'])){ notif_dismiss($pdo,$ME,(int)$_GET['del']); header('Location: notifications.php'); exit; }
+if(isset($_GET['clear'])){ notif_dismiss_all_read($pdo,$ME); header('Location: notifications.php'); exit; }
+if(isset($_GET['clearall'])){ notif_dismiss_all($pdo,$ME); header('Location: notifications.php'); exit; }
+// Görüntülenince okundu yap (sadece bana ait + genel — genel olan artık SADECE benim için okundu sayılır)
+notif_mark_all_read($pdo,$ME);
 
 topx('Bildirimler');
 ?>
@@ -16,7 +20,7 @@ topx('Bildirimler');
 </div>
 <?php
 try{
-  $st=$pdo->prepare("SELECT * FROM internal_notifications WHERE (target_user_id IS NULL OR target_user_id=?) ORDER BY id DESC LIMIT 80"); $st->execute([$ME]); $rows=$st->fetchAll();
+  $rows=notif_list_for_user($pdo,$ME,80);
   if(!$rows){ echo '<div class="panel muted" style="text-align:center">Bildirim yok 🔕</div>'; }
   foreach($rows as $n){
     $go=!empty($n['action_url']) ? $n['action_url'] : 'index.php';

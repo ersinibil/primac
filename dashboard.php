@@ -425,9 +425,7 @@ try{
 <?php
 try{
 $__me=(int)(current_user()['id'] ?? 0);
-$notifs=$pdo->prepare("SELECT * FROM internal_notifications WHERE (target_user_id IS NULL OR target_user_id=?) ORDER BY is_read ASC, id DESC LIMIT 6");
-$notifs->execute([$__me]);
-$notifs=$notifs->fetchAll();
+$notifs=function_exists('notif_list_for_user') ? notif_list_for_user($pdo,$__me,6) : [];
 if($notifs):
 ?>
 <div class="notif-list">
@@ -435,12 +433,12 @@ if($notifs):
 $go=$n['action_url'] ?: 'dashboard.php';
 $readUrl='notifications.php?read='.$n['id'].'&go='.urlencode($go);
 ?>
-<div class="notif-item <?=$n['is_read']?'':'unread'?>">
+<div class="notif-item <?=$n['effective_is_read']?'':'unread'?>">
     <div class="notif-dot"></div>
     <div class="notif-body">
         <div class="notif-title">
             <?=h($n['title'])?>
-            <?=$n['is_read']?badge('Okundu','gray'):badge('Yeni','orange')?>
+            <?=$n['effective_is_read']?badge('Okundu','gray'):badge('Yeni','orange')?>
         </div>
         <div class="notif-msg"><?=nl2br(h($n['message']))?></div>
         <div class="notif-time"><?=h($n['created_at'])?></div>

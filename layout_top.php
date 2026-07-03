@@ -1,8 +1,9 @@
 <?php require_once __DIR__.'/boot.php'; require_login();
 if(file_exists(__DIR__.'/activity_lib.php')) require_once __DIR__.'/activity_lib.php';
+if(file_exists(__DIR__.'/notifications_lib.php')) require_once __DIR__.'/notifications_lib.php';
 $notifCount = 0;
 $__me=(int)(current_user()['id'] ?? 0);
-try { $notifCount = safe_count("SELECT COUNT(*) c FROM internal_notifications WHERE is_read=0 AND (target_user_id IS NULL OR target_user_id=$__me)"); } catch(Throwable $e) {}
+try { $notifCount = function_exists('notif_unread_count') ? notif_unread_count(db(),$__me) : 0; } catch(Throwable $e) {}
 $cur = basename($_SERVER['SCRIPT_NAME']);
 ?>
 <!doctype html>
@@ -169,7 +170,7 @@ input,select,textarea{font-size:16px}
     <nav class="nav">
         <a href="dashboard.php" <?=($cur==='dashboard.php'?'class="active"':'')?>><span>🏛</span> Komuta Merkezi</a>
         <a href="notes.php" <?=($cur==='notes.php'?'class="active"':'')?>><span>📝</span> Notlarım</a>
-        <a href="mytasks.php" <?=($cur==='mytasks.php'?'class="active"':'')?>><span>✅</span> Görevlerim</a>
+        <a href="mytasks.php" <?=($cur==='mytasks.php'?'class="active"':'')?>><span>✅</span> İşlerim</a>
 
         <?php
         /* Taksonomi — 4 grup (2026-07-03: kullanıcı isteğiyle 6 gruptan sadeleştirildi).

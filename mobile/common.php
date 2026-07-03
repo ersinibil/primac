@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__.'/../boot.php'; require_login();
 if(is_file(__DIR__.'/../activity_lib.php')) require_once __DIR__.'/../activity_lib.php'; // mobil olayları da loglansın
+if(is_file(__DIR__.'/../notifications_lib.php')) require_once __DIR__.'/../notifications_lib.php';
 $u=$_SESSION['user']??[]; $name=$u['name']??$u['username']??'Kullanıcı'; $role=$u['role']??''; $isAdmin=in_array($role,['admin','yonetici','yönetici'],true);
 $ME=(int)($u['id']??0);
 function mc($sql){try{return (int)(db()->query($sql)->fetch()['c']??0);}catch(Throwable $e){return 0;}}
@@ -21,7 +22,7 @@ function notify_user($uid,$title,$msg='',$url='index.php'){
     if($uid && file_exists(__DIR__.'/../push_lib.php')){ require_once __DIR__.'/../push_lib.php'; try{ push_to_user((int)$uid,$title,$msg,$url); }catch(Throwable $e){} }
 }
 function unread_msg(){ static $v=null; global $ME; if($v===null) $v=mc("SELECT COUNT(*) c FROM internal_messages WHERE receiver_user_id=$ME AND is_read=0 AND sender_user_id IS NOT NULL"); return $v; }
-function unread_notif(){ static $v=null; global $ME; if($v===null) $v=mc("SELECT COUNT(*) c FROM internal_notifications WHERE is_read=0 AND (target_user_id IS NULL OR target_user_id=$ME)"); return $v; }
+function unread_notif(){ static $v=null; global $ME; if($v===null) $v=function_exists('notif_unread_count')?notif_unread_count(db(),$ME):0; return $v; }
 // Personel finansal/cari ekranlarına giremez — topx'ten ÖNCE çağrılır
 // $module verilirse ve kullanıcıya o modül için yetki verilmişse (user_can()) admin olmasa da
 // içeri alınır — 2026-07-02 denetiminde bulunan çakışma: eskiden SADECE rol (admin/yönetici)

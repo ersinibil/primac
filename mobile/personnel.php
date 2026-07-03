@@ -4,7 +4,7 @@ block_personel('personnel');
 $pdo=db();
 topx('Personel');
 ?>
-<div class="panel" style="padding:10px;display:flex;gap:8px"><a class="btn dark" style="flex:1;text-align:center" href="personnel_new.php">+ Yeni Personel</a><a class="btn" style="flex:1;text-align:center;background:#334155;color:#fff" href="task_new.php">🎯 Görev Ata</a></div>
+<div class="panel" style="padding:10px;display:flex;gap:8px"><a class="btn dark" style="flex:1;text-align:center" href="personnel_new.php">+ Yeni Personel</a><a class="btn" style="flex:1;text-align:center;background:#334155;color:#fff" href="task_new.php">🎯 İş Ekle</a></div>
 <?php
 try{
   $rows=$pdo->query("SELECT p.*,

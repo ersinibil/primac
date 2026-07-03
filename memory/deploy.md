@@ -1,34 +1,41 @@
 # Deploy Prosedürü
 
-## Ortamlar (2026-07-02 itibarıyla güncel)
-| Ortam | URL | DB | Not |
+## Ortamlar — TEK GELİŞTİRME ORTAMI MODELİ (2026-07-03'te RESMİLEŞTİ, önceki "iki paralel prod" planının YERİNE geçer)
+| Ortam | URL | DB | Rol |
 |---|---|---|---|
-| **ACANS prod** | acanstr.com/ots/ | u7883898_primacos | Artık tek ACANS canlısı. |
-| **PRIMAC prod** | primac.tr | u7883898_primactr | Kendi ayrı DB'si (2026-07-02'de kullanıcı teyit etti), ikinci marka, ayrı domain, ayrı veri. |
+| **Development (DEV)** | primac.tr | u7883898_primactr | TÜM geliştirme + test burada yapılır. |
+| **Production (LIVE)** | acanstr.com/ots/ | u7883898_primacos | Sadece canlı — geliştirme yapılmaz, dosya güncellenmez. |
 | Lokal | localhost:8080 | lokal config.php | |
 
 DB'ler ayrı olduğu için `app_settings` (brand_settings.php logo/marka ayarları) iki domain arasında
-PAYLAŞILMIYOR — her domain kendi logosunu/ayarını bağımsız yönetir, çapraz etkileşim riski yok.
+PAYLAŞILMIYOR — her domain kendi logosunu/ayarını bağımsız yönetir, çapraz etkileşim riski yok. Bu
+ortam modeli sadece KOD dağıtım hedefidir — DEV'de test edilen VERİ PROD'a taşınmaz/senkron edilmez.
 
-**acanstr.com/erp/ KALDIRILDI** — eskiden ayrı bir prod yoluydu, artık gereksiz; ACANS canlısı
+**acanstr.com/erp/ KALDIRILDI** — eskiden ayrı bir prod yoluydu, artık gereksiz; PROD canlısı
 acanstr.com/OTS/ üzerinden yürütülüyor. Eğer sunucuda hâlâ `/erp/` klasörü duruyorsa bir sonraki
-deploy'da silinmesi gerekiyor (bkz. [[backlog]]).
+DEPLOY MODE turunda silinmesi gerekiyor (bkz. [[backlog]]).
 
-**Plan**: 2026-07-02'deki toplu düzeltmeden sonra HEM acanstr.com/ots HEM primac.tr'ye son bir ortak
-yükleme yapılacak. Bu yüklemeden sonra bir süre sadece acanstr.com/ots geliştirilecek, primac.tr
-güncellenmeyecek — yani gelecekteki değişiklikler iki domain'e eş zamanlı gitmeyebilir, deploy öncesi
-hangi domain(ler)in hedeflendiği teyit edilmeli.
+**Güncel iş akışı (2026-07-03'ten itibaren, `PROJECT_RULES.md` "Ortam Yönetimi" bölümüyle birebir)**:
+Tüm geliştirme/test/hata düzeltme SADECE primac.tr (DEV) üzerinde yapılır — `~/Desktop/PRIMAC-GUNCELLEME/`
+klasörü aktif olarak, her geliştirme turu sonunda tazelenip DEV'e yüklenir. `~/Desktop/ACANS-GUNCELLEME/`
+(PROD) klasörüne SADECE ayrıca verilecek "DEPLOY MODE" komutuyla dokunulur — bu komut gelmeden
+production sunucusuna dosya yazılmaz/güncellenmez. DEV ve PROD artık paralel geliştirilmiyor.
 
 ## Adımlar (gerçek mekanizma — 2026-07-02'de Masaüstü'ndeki GUNCELLEME klasörlerinden doğrulandı)
 Gerçek deploy aracı repo içinde DEĞİL — kullanıcının Masaüstü'nde, domain başına ayrı bir klasörde:
 `~/Desktop/ACANS-GUNCELLEME/` ve `~/Desktop/PRIMAC-GUNCELLEME/`. Her biri: `guncelleme.zip` (repo'nun
 güncel export'u), `guncelle.php` (tek-tık güncelleyici), `config.php` (o domain'in gerçek DB bilgisi).
 
-1. Yerelde repo güncellenince bu iki klasördeki `guncelleme.zip` YENİDEN üretilmeli (repo'nun taze bir
-   zip'i) — eski zip otomatik güncellenmiyor, elle/scriptle tazelenmesi gerekiyor.
-2. cPanel File Manager → ilgili site klasörüne (`acanstr.com/ots/` veya `primac.tr/`) `guncelleme.zip`
-   + `guncelle.php` yükle. `config.php`'yi SADECE ilk kurulumda veya DB/marka değişikliğinde yükle.
-3. Tarayıcıda `https://SITE/guncelle.php` aç. Kendi içinde: zip'i açar → `database/migrations/*.sql`
+1. Yerelde repo güncellenince `~/Desktop/PRIMAC-GUNCELLEME/` (DEV) klasöründeki `guncelleme.zip`
+   YENİDEN üretilmeli (repo'nun taze bir zip'i) — eski zip otomatik güncellenmiyor, elle/scriptle
+   tazelenmesi gerekiyor. **`~/Desktop/ACANS-GUNCELLEME/` (PROD) klasörü bu adımda DOKUNULMAZ** —
+   sadece "DEPLOY MODE" komutu geldiğinde, madde 2-3 PROD için de uygulanır.
+2. cPanel File Manager → **primac.tr/** (DEV, her geliştirme turunda) klasörüne `guncelleme.zip` +
+   `guncelle.php` yükle. `acanstr.com/ots/` (PROD) klasörüne SADECE "DEPLOY MODE" komutu verildiğinde
+   aynı adım uygulanır — komut gelmeden PROD'a dosya yüklenmez/güncellenmez. `config.php`'yi SADECE
+   ilk kurulumda veya DB/marka değişikliğinde yükle (bu da PROD için DEPLOY MODE kapsamındadır).
+3. Tarayıcıda `https://SITE/guncelle.php` aç (DEV için primac.tr, PROD için sadece DEPLOY MODE
+   anında acanstr.com/ots). Kendi içinde: zip'i açar → `database/migrations/*.sql`
    dosyalarını (kendi migration runner'ıyla, repo'nun `migrate.php`'sini ÇAĞIRMADAN) sırayla uygular →
    `guncelleme.zip`, `ac.php`, `bitir.php`, `kur.php`, `migrate.php`, `guncelle.php`'nin kendisi dahil
    yardımcı dosyaları siler.

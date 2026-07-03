@@ -48,7 +48,7 @@ $pers=$pdo->query("SELECT id,name,role FROM personnel WHERE COALESCE(active,1)=1
 $jobs=$pdo->query("SELECT id,job_no,title FROM jobs ORDER BY id DESC LIMIT 100")->fetchAll();
 ?>
 
-<h1>Yeni Görev Ata</h1>
+<h1>İş Ekle</h1>
 
 <?php if($error): ?><div class="alert"><?=h($error)?></div><?php endif; ?>
 <?php if($ok): ?><div class="ok"><?=h($ok)?></div><?php endif; ?>
@@ -92,7 +92,7 @@ $jobs=$pdo->query("SELECT id,job_no,title FROM jobs ORDER BY id DESC LIMIT 100")
       <?php endforeach; ?>
     </select>
 
-    <button class="btn dark" style="width:100%;padding:14px;margin-top:8px">🎯 Görevi Ata & Bildir</button>
+    <button class="btn dark" style="width:100%;padding:14px;margin-top:8px">🎯 İşi Ekle & Bildir</button>
   </form>
 </section>
 

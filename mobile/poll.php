@@ -2,6 +2,7 @@
 // Mobil canlı bildirim yoklama endpoint'i (JSON, hafif).
 // common.php'deki notifier her birkaç saniyede sorar; yeni mesaj/bildirim varsa ses + ekran bildirimi.
 require_once __DIR__.'/../boot.php';
+if(is_file(__DIR__.'/../notifications_lib.php')) require_once __DIR__.'/../notifications_lib.php';
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 
@@ -27,7 +28,7 @@ try{
     // Sayaçlar
     $s=$pdo->prepare("SELECT COUNT(*) c FROM internal_messages WHERE receiver_user_id=? AND is_read=0 AND sender_user_id IS NOT NULL");
     $s->execute([$me]); $out['msg_unread']=(int)$s->fetch()['c'];
-    try{ $out['notif_unread']=(int)$pdo->query("SELECT COUNT(*) c FROM internal_notifications WHERE is_read=0 AND (target_user_id IS NULL OR target_user_id=$me)")->fetch()['c']; }catch(Throwable $e){}
+    try{ $out['notif_unread']=function_exists('notif_unread_count')?notif_unread_count($pdo,$me):0; }catch(Throwable $e){}
 
     // En son id'ler (istemci takip eder) — bildirimde de kullanıcı filtresi
     $out['last_msg_id']=(int)($pdo->query("SELECT COALESCE(MAX(id),0) m FROM internal_messages WHERE receiver_user_id=$me")->fetch()['m'] ?? 0);

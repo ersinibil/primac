@@ -12,7 +12,7 @@ $groups = [
   'stockmov' => ['📦 Stok Hareketleri', ['stock_movements']],
   'products' => ['🏷️ Ürünler / Stok Kartları', ['stock_items']],
   'trade'    => ['🧾 Ticari Belgeler', ['trade_documents','trade_document_items']],
-  'messages' => ['💬 Mesaj & Bildirim', ['internal_messages','internal_notifications','chat_threads','chat_thread_members','chat_typing']],
+  'messages' => ['💬 Mesaj & Bildirim', ['internal_messages','internal_notifications','user_notification_status','chat_threads','chat_thread_members','chat_typing']],
   'activity' => ['🕘 Aktivite Kaydı', ['activity_logs']],
   'requests' => ['📨 Personel Talepleri', ['management_requests']],
 ];

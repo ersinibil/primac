@@ -105,7 +105,7 @@ try{
     <span style="background:rgba(34,197,94,.15);color:#86efac;border-radius:10px;padding:6px 10px;font-size:13px">✅ Açık görev: <b><?=$acikGorev?></b></span>
   </div>
   <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
-    <a class="btn" href="task_new.php" style="background:#334155;color:#fff;flex:1;text-align:center">🎯 Görev Ata</a>
+    <a class="btn" href="task_new.php" style="background:#334155;color:#fff;flex:1;text-align:center">🎯 İş Ekle</a>
     <a class="btn" href="kpi.php" style="background:#334155;color:#fff;flex:1;text-align:center">🏆 Performans</a>
     <?php if($usr): ?><a class="btn" href="messages.php?with=<?=(int)$usr['id']?>" style="background:#2563eb;color:#fff;flex:1;text-align:center">💬 Mesaj</a><?php endif; ?>
   </div>

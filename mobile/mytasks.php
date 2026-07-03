@@ -39,7 +39,7 @@ if($_SERVER['REQUEST_METHOD']==='POST' && (int)($_POST['note_id']??0)){
 }
 
 $f=$_GET['f']??'open';
-topx('Görevlerim');
+topx('İşlerim');
 ?>
 
 <div class="panel">
@@ -73,19 +73,21 @@ try{
 }catch(Throwable $e){}
 ?>
 
-<div style="font-weight:900;margin:16px 4px 8px">✅ Görevlerim</div>
-<div class="panel" style="display:flex;gap:8px;padding:10px">
+<div style="font-weight:900;margin:16px 4px 8px">✅ İşlerim</div>
+<div class="panel" style="display:flex;gap:8px;padding:10px;flex-wrap:wrap">
   <a class="btn <?=$f==='open'?'dark':''?>" style="flex:1;text-align:center;<?=$f==='open'?'':'background:#334155;color:#fff'?>" href="mytasks.php?f=open">Açık</a>
   <a class="btn <?=$f==='done'?'dark':''?>" style="flex:1;text-align:center;<?=$f==='done'?'':'background:#334155;color:#fff'?>" href="mytasks.php?f=done">Tamamlanan</a>
-  <?php if($isAdmin): ?><a class="btn" style="flex:1;text-align:center;background:#334155;color:#fff" href="task_new.php">+ Ata</a><?php endif; ?>
+  <a class="btn" style="flex:1;text-align:center;background:#334155;color:#fff" href="mytask_new.php">+ Kendime İş Ekle</a>
+  <?php if($isAdmin): ?><a class="btn" style="flex:1;text-align:center;background:#334155;color:#fff" href="task_new.php">+ İş Ekle</a><?php endif; ?>
 </div>
 <?php
 try{
   if(!$pid && !$isAdmin){ echo '<div class="panel muted" style="text-align:center">Sana bağlı personel kaydı yok.</div>'; }
   $w = $f==='done' ? "t.status='Tamamlandı'" : "t.status NOT IN ('Tamamlandı','İptal')";
-  // "Görevlerim" = sadece sana atanan görevler. Admin dahil herkesin görevleri için tasks.php ("Tüm Görevler") kullanılır.
-  $cond = "$w AND t.personnel_id=".(int)$pid;
-  $rows=$pdo->query("SELECT t.*, j.id job_real, j.job_no, p.name pname, p.phone pphone FROM tasks t LEFT JOIN jobs j ON j.id=t.job_id LEFT JOIN personnel p ON p.id=t.personnel_id WHERE $cond ORDER BY (t.due_date IS NULL), t.due_date, t.id DESC LIMIT 100")->fetchAll();
+  // "İşlerim" = sadece sana atanan işler. Admin dahil herkesin işleri için tasks.php ("Tüm Görevler") kullanılır.
+  $rows=$pdo->prepare("SELECT t.*, j.id job_real, j.job_no, p.name pname, p.phone pphone FROM tasks t LEFT JOIN jobs j ON j.id=t.job_id LEFT JOIN personnel p ON p.id=t.personnel_id WHERE $w AND t.personnel_id=? ORDER BY (t.due_date IS NULL), t.due_date, t.id DESC LIMIT 100");
+  $rows->execute([$pid]);
+  $rows=$rows->fetchAll();
   if(!$rows) echo '<div class="panel muted" style="text-align:center">'.($f==='done'?'Tamamlanan görev yok.':'Açık görev yok 🎉').'</div>';
   foreach($rows as $t){
     $geç = ($f!=='done' && !empty($t['due_date']) && $t['due_date']<date('Y-m-d'));

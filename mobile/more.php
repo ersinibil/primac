@@ -20,7 +20,8 @@
 <div style="font-weight:900;margin:16px 4px 8px">🧭 Personel İş Takip Yönetimi</div>
 <div class="grid">
   <?php
-  card('İşlerim','Bana atanan görevler','✅','mytasks.php','green');
+  card('İşlerim','Bana atanan işler','✅','mytasks.php','green');
+  card('Kendime İş Ekle','Kendine iş kaydı oluştur','➕','mytask_new.php','green');
   if(user_can('jobs')) {
     card('İşler','İş takibi','📋','jobs.php','green');
     card('Üretim','Aşama panosu','🏭','uretim.php','red');
@@ -32,7 +33,7 @@
     card('Tüm Görevler','Görev yönetimi (herkes)','✅','tasks.php','teal');
   }
   if($isAdmin || user_can('tasks')) {
-    card('Görev Ata','Personele görev','🎯','task_new.php','teal');
+    card('İş Ekle','Personele iş ata','🎯','task_new.php','teal');
   }
   if($isAdmin) {
     card('Talepler','Talep onay merkezi','📨','requests.php','orange'); // admin-only kalır
