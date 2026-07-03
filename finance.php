@@ -59,8 +59,8 @@ $pos=safe_sum("SELECT COALESCE(SUM(current_balance),0) s FROM finance_accounts W
 </section>
 
 <section class="command-grid">
-<a class="command-card green" href="finance.php?direction=in"><small>Tahsilat</small><strong><?=money(safe_sum("SELECT COALESCE(SUM(amount),0) s FROM finance_movements WHERE direction='in'"))?></strong><span>Tüm tahsilatlar</span></a>
-<a class="command-card red" href="finance.php?direction=out"><small>Ödeme</small><strong><?=money(safe_sum("SELECT COALESCE(SUM(amount),0) s FROM finance_movements WHERE direction='out'"))?></strong><span>Tüm ödemeler</span></a>
+<a class="command-card green" href="finance.php?direction=in"><small>Tahsilat</small><strong><?=money(safe_sum("SELECT COALESCE(SUM(amount),0) s FROM finance_movements WHERE direction='in' AND COALESCE(movement_type,'')<>'transfer'"))?></strong><span>Tüm tahsilatlar</span></a>
+<a class="command-card red" href="finance.php?direction=out"><small>Ödeme</small><strong><?=money(safe_sum("SELECT COALESCE(SUM(amount),0) s FROM finance_movements WHERE direction='out' AND COALESCE(movement_type,'')<>'transfer'"))?></strong><span>Tüm ödemeler</span></a>
 <a class="command-card blue" href="finance_accounts.php"><small>Hesaplar</small><strong><?=safe_count("SELECT COUNT(*) c FROM finance_accounts WHERE active=1")?></strong><span>Banka, kasa, kart</span></a>
 <a class="command-card purple" href="finance_transfer.php"><small>Transfer</small><strong>↔</strong><span>Hesaplar arası aktarım</span></a>
 </section>

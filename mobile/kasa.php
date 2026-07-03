@@ -23,7 +23,7 @@ if(!empty($_SESSION['kasa_err'])){ echo '<div class="err">'.htmlspecialchars($_S
 function acc_sum($pdo,$type){ try{ $s=$pdo->prepare("SELECT COALESCE(SUM(current_balance),0) s FROM finance_accounts WHERE active=1 AND account_type=?"); $s->execute([$type]); return (float)$s->fetch()['s']; }catch(Throwable $e){ return 0; } }
 $kasa=acc_sum($pdo,'Kasa'); $banka=acc_sum($pdo,'Banka'); $kart=acc_sum($pdo,'Kredi Kartı'); $pos=acc_sum($pdo,'POS');
 $inToday=safe_sum("SELECT COALESCE(SUM(amount),0) s FROM finance_movements WHERE direction='in' AND movement_date=CURDATE()");
-$outToday=safe_sum("SELECT COALESCE(SUM(amount),0) s FROM finance_movements WHERE direction='out' AND movement_date=CURDATE()");
+$outToday=safe_sum("SELECT COALESCE(SUM(amount),0) s FROM finance_movements WHERE direction='out' AND COALESCE(movement_type,'')<>'transfer' AND movement_date=CURDATE()");
 ?>
 <div class="grid">
   <div class="card green"><span>💵</span><b><?=mm($kasa)?></b><small>Kasa</small></div>

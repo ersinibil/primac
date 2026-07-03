@@ -12,7 +12,7 @@ $prevMonthStart=date('Y-m-01', strtotime($prevMonthEnd));
 function getKpiMetricsMobile($pdo, $from, $to) {
     $m = [];
     try { $r = $pdo->prepare("SELECT COALESCE(SUM(amount),0) t FROM finance_movements WHERE direction='in' AND DATE(movement_date) BETWEEN ? AND ?"); $r->execute([$from, $to]); $m['rev'] = (float)($r->fetch()['t'] ?? 0); } catch(Throwable $e) { $m['rev'] = 0; }
-    try { $r = $pdo->prepare("SELECT COALESCE(SUM(amount),0) t FROM finance_movements WHERE direction='out' AND DATE(movement_date) BETWEEN ? AND ?"); $r->execute([$from, $to]); $m['exp'] = (float)($r->fetch()['t'] ?? 0); } catch(Throwable $e) { $m['exp'] = 0; }
+    try { $r = $pdo->prepare("SELECT COALESCE(SUM(amount),0) t FROM finance_movements WHERE direction='out' AND COALESCE(movement_type,'')<>'transfer' AND DATE(movement_date) BETWEEN ? AND ?"); $r->execute([$from, $to]); $m['exp'] = (float)($r->fetch()['t'] ?? 0); } catch(Throwable $e) { $m['exp'] = 0; }
     return $m;
 }
 

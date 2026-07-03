@@ -101,13 +101,15 @@ function rpt($pdo,$modul,$from,$to,$ref=0,$detail=false){
 
   case 'tahsilat':
     $R['title']='Tahsilat / Finans';
-    $f=$pdo->prepare("SELECT COALESCE(SUM(CASE WHEN direction='in' THEN amount END),0) tin, COALESCE(SUM(CASE WHEN direction='out' THEN amount END),0) tout, COUNT(*) n FROM finance_movements WHERE DATE(movement_date) BETWEEN ? AND ?");
+    // Hesaplar arası transfer gerçek bir gider değildir, "Ödeme" toplamından hariç tutulur
+    // (2026-07-03 modül-zinciri denetiminde bulundu — bkz. finance.php/dashboard.php aynı düzeltme).
+    $f=$pdo->prepare("SELECT COALESCE(SUM(CASE WHEN direction='in' THEN amount END),0) tin, COALESCE(SUM(CASE WHEN direction='out' AND COALESCE(movement_type,'')<>'transfer' THEN amount END),0) tout, COUNT(*) n FROM finance_movements WHERE DATE(movement_date) BETWEEN ? AND ?");
     $f->execute([$from,$to]); $t=$f->fetch();
     $R['cards']=[['💰','Tahsilat',tl($t['tin']),'#22c55e'],['💸','Ödeme',tl($t['tout']),'#f87171'],['📈','Net',tl($t['tin']-$t['tout']),'#3b82f6'],['🔢','İşlem',$t['n'],'#a78bfa']];
     $ch=$pdo->prepare("SELECT COALESCE(NULLIF(payment_channel,''),'Diğer') k, SUM(amount) s FROM finance_movements WHERE direction='in' AND DATE(movement_date) BETWEEN ? AND ? GROUP BY k ORDER BY s DESC");
     $ch->execute([$from,$to]); $cd=[]; foreach($ch->fetchAll() as $r)$cd[$r['k']]=(float)$r['s'];
     $R['chart']=['Tahsilat — kanal',$cd];
-    $ch2=$pdo->prepare("SELECT COALESCE(ac.name,'Kategorisiz') k, SUM(fm.amount) s FROM finance_movements fm LEFT JOIN accounting_categories ac ON ac.id=fm.category_id WHERE fm.direction='out' AND DATE(fm.movement_date) BETWEEN ? AND ? GROUP BY k ORDER BY s DESC LIMIT 12");
+    $ch2=$pdo->prepare("SELECT COALESCE(ac.name,'Kategorisiz') k, SUM(fm.amount) s FROM finance_movements fm LEFT JOIN accounting_categories ac ON ac.id=fm.category_id WHERE fm.direction='out' AND COALESCE(fm.movement_type,'')<>'transfer' AND DATE(fm.movement_date) BETWEEN ? AND ? GROUP BY k ORDER BY s DESC LIMIT 12");
     $ch2->execute([$from,$to]); $cd2=[]; foreach($ch2->fetchAll() as $r)$cd2[$r['k']]=(float)$r['s'];
     $R['chart2']=['Ödeme / Gider — kategoriye göre',$cd2];
     $m=$pdo->prepare("SELECT fm.movement_date,fm.direction,fm.contact_id,c.name cari,COALESCE(ac.name,'') kat,fm.amount,fm.description FROM finance_movements fm LEFT JOIN contacts c ON c.id=fm.contact_id LEFT JOIN accounting_categories ac ON ac.id=fm.category_id WHERE DATE(fm.movement_date) BETWEEN ? AND ? ORDER BY fm.movement_date,fm.id");
@@ -292,7 +294,7 @@ function rpt($pdo,$modul,$from,$to,$ref=0,$detail=false){
 
   default: // genel / yekün
     $R['title']='Yekün Özet';
-    $f=$pdo->prepare("SELECT COALESCE(SUM(CASE WHEN direction='in' THEN amount END),0) tin,COALESCE(SUM(CASE WHEN direction='out' THEN amount END),0) tout FROM finance_movements WHERE DATE(movement_date) BETWEEN ? AND ?"); $f->execute([$from,$to]); $t=$f->fetch();
+    $f=$pdo->prepare("SELECT COALESCE(SUM(CASE WHEN direction='in' THEN amount END),0) tin,COALESCE(SUM(CASE WHEN direction='out' AND COALESCE(movement_type,'')<>'transfer' THEN amount END),0) tout FROM finance_movements WHERE DATE(movement_date) BETWEEN ? AND ?"); $f->execute([$from,$to]); $t=$f->fetch();
     $ss=$pdo->prepare("SELECT COALESCE(SUM(amount),0) s FROM finance_movements WHERE movement_type LIKE '%sale%' AND DATE(movement_date) BETWEEN ? AND ?"); $ss->execute([$from,$to]); $sale=(float)$ss->fetch()['s'];
     $jo=$pdo->prepare("SELECT COUNT(*) n FROM jobs WHERE DATE(created_at) BETWEEN ? AND ?"); $jo->execute([$from,$to]); $acilan=(int)$jo->fetch()['n'];
     $jd=$pdo->prepare("SELECT COUNT(*) n FROM jobs WHERE status IN ('Tamamlandı','Teslim Edildi') AND DATE(created_at) BETWEEN ? AND ?"); $jd->execute([$from,$to]); $tamam=(int)$jd->fetch()['n'];
