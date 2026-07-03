@@ -186,8 +186,8 @@ function emoji_picker_html($targetId, $dark=false){
     $bg = $dark ? '#0f1d33' : '#fff';
     $border = $dark ? '#1e3350' : '#e5e7eb';
     ob_start(); ?>
-<div style="position:relative;display:inline-block">
-  <button type="button" class="btn secondary small" onclick="var p=document.getElementById('<?=$panelId?>');p.style.display=p.style.display==='block'?'none':'block'">😀 Emoji</button>
+<div style="position:relative;display:inline-block;flex:0 0 auto">
+  <button type="button" class="btn secondary small" style="white-space:nowrap" onclick="var p=document.getElementById('<?=$panelId?>');p.style.display=p.style.display==='block'?'none':'block'">😀 Emoji</button>
   <div id="<?=$panelId?>" style="display:none;position:absolute;z-index:50;top:100%;left:0;margin-top:4px;background:<?=$bg?>;border:1px solid <?=$border?>;border-radius:12px;padding:8px;box-shadow:0 8px 20px rgba(0,0,0,.25);width:230px">
     <?php foreach($emojis as $e): ?><button type="button" style="font-size:19px;border:none;background:none;cursor:pointer;padding:4px" onclick="var t=document.getElementById('<?=$targetId?>');var s=t.selectionStart||t.value.length;t.value=t.value.slice(0,s)+'<?=$e?>'+t.value.slice(s);t.focus();var np=s+'<?=$e?>'.length;t.selectionStart=t.selectionEnd=np;document.getElementById('<?=$panelId?>').style.display='none'"><?=$e?></button><?php endforeach; ?>
   </div>

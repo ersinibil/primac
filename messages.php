@@ -319,9 +319,11 @@ try {
           (SELECT COUNT(*) FROM internal_messages m
              WHERE m.sender_user_id=u.id AND m.receiver_user_id=? AND m.is_read=0) AS unread
         FROM app_users u
-        WHERE u.id<>? AND u.active=1
+        WHERE u.id<>? AND (u.active=1 OR EXISTS(
+          SELECT 1 FROM internal_messages m2 WHERE (m2.sender_user_id=u.id AND m2.receiver_user_id=?) OR (m2.sender_user_id=? AND m2.receiver_user_id=u.id)
+        ))
         ORDER BY (last_at IS NULL), last_at DESC, u.full_name");
-    $st->execute([$me,$me,$me,$me,$me,$me]);
+    $st->execute([$me,$me,$me,$me,$me,$me,$me,$me]);
     $rows = $st->fetchAll();
 } catch(Throwable $e){ $rows = []; }
 

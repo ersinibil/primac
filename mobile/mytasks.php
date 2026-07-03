@@ -11,9 +11,9 @@ if(!$pid){ try{ $r=$pdo->prepare("SELECT personnel_id FROM app_users WHERE id=?"
 if($_SERVER['REQUEST_METHOD']==='POST' && (int)($_POST['tid']??0)){
     try{
         $st=$_POST['task_status']??'';
-        if(in_array($st,['Devam Ediyor','Tamamlandı'])){
-            $pdo->prepare("UPDATE tasks SET status=?, completed_at=IF(?='Tamamlandı',NOW(),completed_at), started_at=IF(?='Devam Ediyor' AND started_at IS NULL,NOW(),started_at) WHERE id=?")
-                ->execute([$st,$st,$st,(int)$_POST['tid']]);
+        if(in_array($st,['Devam Ediyor','Tamamlandı']) && $pid){
+            $pdo->prepare("UPDATE tasks SET status=?, completed_at=IF(?='Tamamlandı',NOW(),completed_at), started_at=IF(?='Devam Ediyor' AND started_at IS NULL,NOW(),started_at) WHERE id=? AND personnel_id=?")
+                ->execute([$st,$st,$st,(int)$_POST['tid'],$pid]);
             try{ if(function_exists('activity_log')) activity_log('Görev',$st,'#'.(int)$_POST['tid'],'','task',(int)$_POST['tid'],'mytasks.php',$st==='Tamamlandı'?'✅':'▶'); }catch(Throwable $e){}
         }
     }catch(Throwable $e){}

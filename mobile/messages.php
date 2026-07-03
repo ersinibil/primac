@@ -585,9 +585,11 @@ document.getElementById('msgform').addEventListener('submit',function(e){
           (SELECT message FROM internal_messages m WHERE (m.sender_user_id=u.id AND m.receiver_user_id=?) OR (m.sender_user_id=? AND m.receiver_user_id=u.id) ORDER BY m.id DESC LIMIT 1) last_msg,
           (SELECT created_at FROM internal_messages m WHERE (m.sender_user_id=u.id AND m.receiver_user_id=?) OR (m.sender_user_id=? AND m.receiver_user_id=u.id) ORDER BY m.id DESC LIMIT 1) last_at,
           (SELECT COUNT(*) FROM internal_messages m WHERE m.sender_user_id=u.id AND m.receiver_user_id=? AND m.is_read=0) unread
-        FROM app_users u WHERE u.id<>? AND u.active=1
+        FROM app_users u WHERE u.id<>? AND (u.active=1 OR EXISTS(
+          SELECT 1 FROM internal_messages m2 WHERE (m2.sender_user_id=u.id AND m2.receiver_user_id=?) OR (m2.sender_user_id=? AND m2.receiver_user_id=u.id)
+        ))
         ORDER BY (last_at IS NULL), last_at DESC, u.full_name");
-    $users->execute([$me,$me,$me,$me,$me,$me]);
+    $users->execute([$me,$me,$me,$me,$me,$me,$me,$me]);
     $rows=$users->fetchAll();
     // Üyesi olduğum gruplar/iş/cari sohbetleri (migration yoksa boş)
     $threads=[];

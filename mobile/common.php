@@ -20,7 +20,7 @@ function notify_user($uid,$title,$msg='',$url='index.php'){
     try{ db()->prepare("INSERT INTO internal_notifications(title,message,target_user_id,action_url,is_read) VALUES(?,?,?,?,0)")->execute([$title,$msg,$uid?:null,$url]); }catch(Throwable $e){}
     if($uid && file_exists(__DIR__.'/../push_lib.php')){ require_once __DIR__.'/../push_lib.php'; try{ push_to_user((int)$uid,$title,$msg,$url); }catch(Throwable $e){} }
 }
-function unread_msg(){ static $v=null; global $ME; if($v===null) $v=mc("SELECT COUNT(*) c FROM internal_messages WHERE receiver_user_id=$ME AND is_read=0"); return $v; }
+function unread_msg(){ static $v=null; global $ME; if($v===null) $v=mc("SELECT COUNT(*) c FROM internal_messages WHERE receiver_user_id=$ME AND is_read=0 AND sender_user_id IS NOT NULL"); return $v; }
 function unread_notif(){ static $v=null; global $ME; if($v===null) $v=mc("SELECT COUNT(*) c FROM internal_notifications WHERE is_read=0 AND (target_user_id IS NULL OR target_user_id=$ME)"); return $v; }
 // Personel finansal/cari ekranlarına giremez — topx'ten ÖNCE çağrılır
 // $module verilirse ve kullanıcıya o modül için yetki verilmişse (user_can()) admin olmasa da

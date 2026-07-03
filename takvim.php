@@ -42,14 +42,10 @@ for($d=1;$d<=$daysIn;$d++){
   if(!empty($byDay[$d])) foreach($byDay[$d] as $j){ $isNote=!empty($j['_note']); $isTask=!empty($j['_task']); $c=($isNote||$isTask)?'#eab308':(in_array($j['status'],['Tamamlandı','Teslim Edildi'])?'#16a34a':($j['status']==='İptal'?'#94a3b8':'#d97706'));
     $icon=$isNote?'📝 ':($isTask?'🎯 ':'');
     $itemStyle="display:block;font-size:11px;background:rgba(217,119,6,.15);border-left:3px solid $c;border-radius:4px;padding:2px 4px;margin-top:2px;color:#e7eefc;text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis";
-    // 'tasks.php' user_can('tasks') gerektiriyor — yetkisi olmayan personel için görev maddesi
-    // tıklanamaz (dead-link/403 yerine) düz metin olarak gösterilir, kaybolmaz.
-    if($isTask && !user_can('tasks')){
-        echo "<div style='$itemStyle'>".$icon.h($j['title'])."</div>";
-    }else{
-        $href=$isNote?'dashboard.php':($isTask?'tasks.php':'job_view.php?id='.(int)$j['id']);
-        echo "<a href='".h($href)."' style='$itemStyle'>".$icon.h($j['title'])."</a>";
-    }
+    // Görev maddesi artık mytasks.php'ye gidiyor — 'tasks' yetkisi istemeyen kişisel görev
+    // sayfası (bkz. mytasks.php), önceki "yetkisizse düz metin" geçici çözümüne gerek kalmadı.
+    $href=$isNote?'dashboard.php':($isTask?'mytasks.php':'job_view.php?id='.(int)$j['id']);
+    echo "<a href='".h($href)."' style='$itemStyle'>".$icon.h($j['title'])."</a>";
   }
   echo "</td>"; $cell++;
 }

@@ -25,7 +25,7 @@ if(($_GET['typing'] ?? '')==='1' && (int)($_GET['to'] ?? 0)){
 
 try{
     // Sayaçlar
-    $s=$pdo->prepare("SELECT COUNT(*) c FROM internal_messages WHERE receiver_user_id=? AND is_read=0");
+    $s=$pdo->prepare("SELECT COUNT(*) c FROM internal_messages WHERE receiver_user_id=? AND is_read=0 AND sender_user_id IS NOT NULL");
     $s->execute([$me]); $out['msg_unread']=(int)$s->fetch()['c'];
     try{ $out['notif_unread']=(int)$pdo->query("SELECT COUNT(*) c FROM internal_notifications WHERE is_read=0 AND (target_user_id IS NULL OR target_user_id=$me)")->fetch()['c']; }catch(Throwable $e){}
 
@@ -37,7 +37,7 @@ try{
     if($sinceMsg>0){
         $q=$pdo->prepare("SELECT m.id, m.message, m.sender_user_id, u.full_name, u.username
             FROM internal_messages m LEFT JOIN app_users u ON u.id=m.sender_user_id
-            WHERE m.id>? AND m.receiver_user_id=? AND m.is_read=0 ORDER BY m.id ASC LIMIT 15");
+            WHERE m.id>? AND m.receiver_user_id=? AND m.is_read=0 AND m.sender_user_id IS NOT NULL ORDER BY m.id ASC LIMIT 15");
         $q->execute([$sinceMsg,$me]);
         foreach($q->fetchAll() as $r){
             $out['new'][]=['type'=>'msg','id'=>(int)$r['id'],'from'=>($r['full_name'] ?: $r['username'] ?: 'Mesaj'),

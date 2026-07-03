@@ -169,6 +169,7 @@ input,select,textarea{font-size:16px}
     <nav class="nav">
         <a href="dashboard.php" <?=($cur==='dashboard.php'?'class="active"':'')?>><span>🏛</span> Komuta Merkezi</a>
         <a href="notes.php" <?=($cur==='notes.php'?'class="active"':'')?>><span>📝</span> Notlarım</a>
+        <a href="mytasks.php" <?=($cur==='mytasks.php'?'class="active"':'')?>><span>✅</span> Görevlerim</a>
 
         <?php
         /* Taksonomi — 4 grup (2026-07-03: kullanıcı isteğiyle 6 gruptan sadeleştirildi).
