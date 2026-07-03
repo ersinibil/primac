@@ -27,6 +27,9 @@
     card('Müşteri Onayı','Onay bekleyen dosyalar','⏳','approval_waiting.php','yellow');
     card('Dış İşler','Dış atölye/tedarik','🏭','external.php','blue');
   }
+  if(user_can('tasks')) {
+    card('Tüm Görevler','Görev yönetimi (herkes)','✅','../tasks.php?web=1','teal'); // web'de var, mobilde köprü yoktu
+  }
   if($isAdmin) {
     card('Görev Ata','Personele görev','🎯','task_new.php','teal'); // hâlâ admin-only
     card('Talepler','Talep onay merkezi','📨','requests.php','orange'); // hâlâ admin-only
@@ -47,6 +50,9 @@
     card('Yeni Ürün','Ürün ekle','➕','product_new.php','green');
     card('Satış','Satış yap','🧾','sales.php','orange');
     card('Satın Alma','Alış + stok kartı','🛒','purchase.php','green');
+    card('Stok Giriş/Çıkış','Manuel stok hareketi','↕️','../stock_movement_new.php?web=1','yellow'); // web'de var, mobilde köprü yoktu
+    card('Ürün Kategorileri','Kategori yönetimi','🏷️','../product_categories.php?web=1','gray'); // web'de var, mobilde köprü yoktu
+    card('Marka / Birim','Taksonomi yönetimi','🔖','../product_taxonomy.php?web=1','gray'); // web'de var, mobilde köprü yoktu
   }
   if(user_can('teklif')) {
     card('Teklif','Teklif hazırla/gönder','📄','teklif.php','blue');
@@ -69,6 +75,7 @@
   if(user_can('muhasebe')) {
     card('Muhasebe','Gider · Gelir · Personel','📒','accounting.php','purple');
     card('Yeni Kayıt','Hızlı gider/gelir gir','➕','accounting.php#yeni','orange');
+    if($isAdmin) card('Muhasebe Kategorileri','Kategori yönetimi','⚙️','../accounting_categories.php?web=1','gray'); // web'de var, mobilde köprü yoktu
   }
   ?>
 </div>
@@ -116,12 +123,16 @@
 <div class="grid">
   <?php
   if($isAdmin) card('Son İşlemler','Aktivite akışı','🕘','activity.php','gray'); // activity.php block_personel()
+  card('Bildirimler','Tüm bildirimler','🔔','notifications.php','yellow');
   card('Mesajlar','İç yazışma','💬','messages.php','teal');
   card('Web Sürümü','Masaüstü Sürüm','🖥','../dashboard.php?web=1','gray');
   card('Profil','Şifre & hesap','👤','profile.php','blue');
   if(user_can('users')) {
+    card('Denetim Günlüğü','Kim ne değiştirdi','🔍','../audit_log.php?web=1','gray'); // web'de var, mobilde köprü yoktu
     card('WhatsApp Gönder','Anlık mesaj gönder','📤','../wa_send_now.php?web=1','green');
+    card('WhatsApp Ayarları','Gateway kurulumu','📱','../wa_settings.php?web=1','gray'); // web'de var, mobilde köprü yoktu
     card('Logo / Marka','Marka ayarları','🎨','../brand_settings.php?web=1','gray');
+    card('Veri Temizleme','Canlıya hazırlık','🧹','../temizle_veri.php?web=1','red'); // web'de var, mobilde köprü yoktu
   }
   card('Çıkış Yap','Oturumu kapat','🚪','../logout.php','red');
   ?>
