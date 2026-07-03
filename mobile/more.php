@@ -10,16 +10,16 @@
 </div>
 
 <?php
-/* Yeni taksonomi — web sol menüyle (layout_top.php) hizalı 6 grup: İş Takip, Ticaret,
-   Finans & Muhasebe, Ekip, Rapor, Sistem (2026-07-03). Kart içerikleri/yetki kontrolleri
-   aynı, sadece başlıklar ve gruplama web'le tutarlı hale getirildi. */
+/* Taksonomi — web sol menüyle (layout_top.php) hizalı 4 grup: Personel İş Takip Yönetimi,
+   Muhasebe İşlemleri, Mesajlaşma ve Raporlama, Genel Sistem Yönetimi (2026-07-03: kullanıcı
+   isteğiyle 6 gruptan sadeleştirildi). Raporlar artık ayrı bölüm değil, ilgili alanın içine
+   gömülü. Kart içerikleri/yetki kontrolleri aynı, sadece gruplama değişti. */
 ?>
 
-<div style="font-weight:900;margin:16px 4px 8px">🧭 İş Takip</div>
+<div style="font-weight:900;margin:16px 4px 8px">🧭 Personel İş Takip Yönetimi</div>
 <div class="grid">
   <?php
   card('İşlerim','Bana atanan görevler','✅','mytasks.php','green');
-  card('Talep Aç','Yönetime talep gönder','📨','request_new.php','orange');
   if(user_can('jobs')) {
     card('İşler','İş takibi','📋','jobs.php','green');
     card('Üretim','Aşama panosu','🏭','uretim.php','red');
@@ -36,11 +36,20 @@
   if($isAdmin) {
     card('Talepler','Talep onay merkezi','📨','requests.php','orange'); // admin-only kalır
   }
+  if($isAdmin || user_can('personnel')) {
+    card('Personel','Ekip listesi','👷','personnel.php','purple');
+    card('Performans','Personel KPI','🏆','kpi.php','orange');
+  }
+  if($isAdmin || user_can('report')) {
+    card('Günlük Rapor','Bugünkü iş özeti','📅','gunluk_rapor.php','blue');
+    card('İş Takip Raporu','Açılan·tamamlanan·geciken','📋','report.php?modul=is','purple');
+    card('Personel Raporu','Performans/KPI','👷','report.php?modul=personel','orange');
+  }
   ?>
 </div>
 
-<?php if(user_can('contacts') || user_can('stock') || user_can('teklif')): ?>
-<div style="font-weight:900;margin:16px 4px 8px">🤝 Ticaret</div>
+<?php if(user_can('contacts') || user_can('stock') || user_can('teklif') || user_can('finance') || user_can('muhasebe')): ?>
+<div style="font-weight:900;margin:16px 4px 8px">💰 Muhasebe İşlemleri</div>
 <div class="grid">
   <?php
   if(user_can('contacts')) {
@@ -60,14 +69,6 @@
   if(user_can('teklif')) {
     card('Teklif','Teklif hazırla/gönder','📄','teklif.php','blue');
   }
-  ?>
-</div>
-<?php endif; ?>
-
-<?php if(user_can('finance') || user_can('muhasebe')): ?>
-<div style="font-weight:900;margin:16px 4px 8px">💰 Finans & Muhasebe</div>
-<div class="grid">
-  <?php
   if(user_can('finance')) {
     card('Kasa Durumu','Banka/kasa/kart','🏦','kasa.php','teal');
     card('Tahsilat','Tahsilat gir','💰','collection.php','yellow');
@@ -80,58 +81,41 @@
     card('Yeni Kayıt','Hızlı gider/gelir gir','➕','accounting.php#yeni','orange');
     if($isAdmin) card('Muhasebe Kategorileri','Kategori yönetimi','⚙️','accounting_categories.php','gray');
   }
+  if($isAdmin || user_can('report')) {
+    card('Muhasebe Raporu','Kategori gelir/gider','📒','report.php?modul=muhasebe','purple');
+    card('Satış Raporu','Satış dökümü','🧾','report.php?modul=satis','yellow');
+    card('Satın Alma Raporu','Alış dökümü','📥','report.php?modul=satinalma','green');
+    card('Teklif Raporu','Teklif dökümü','📄','report.php?modul=teklif','blue');
+    card('Stok Raporu','Kritik·stok değeri','📦','report.php?modul=stok','red');
+  }
   ?>
 </div>
 <?php endif; ?>
 
-<?php if($isAdmin || user_can('users') || user_can('personnel')): ?>
-<div style="font-weight:900;margin:16px 4px 8px">👥 Ekip</div>
+<div style="font-weight:900;margin:16px 4px 8px">💬 Mesajlaşma ve Raporlama</div>
 <div class="grid">
   <?php
-  // 2026-07-03: kullanıcı onayı verildi — "onay verirsem görsün, yetki açık/kapalı sağlıklı
-  // çalışsın" — personnel.php/kpi.php artık 'personnel' yetkisi olan admin-olmayanı da alıyor
-  // (block_personel('personnel'), bkz. mobile/personnel.php/kpi.php). Kartlar buna göre açıldı.
-  if($isAdmin || user_can('personnel')) {
-    card('Personel','Ekip listesi','👷','personnel.php','purple');
-    card('Performans','Personel KPI','🏆','kpi.php','orange');
+  card('Mesajlar','İç yazışma','💬','messages.php','teal');
+  card('Bildirimler','Tüm bildirimler','🔔','notifications.php','yellow');
+  if($isAdmin) card('Son İşlemler','Aktivite akışı','🕘','activity.php','gray'); // activity.php block_personel()
+  if($isAdmin || user_can('report')) {
+    card('Genel Özet Rapor','Hepsi tek sunum','🗂️','report.php?modul=genel','blue');
   }
+  if(user_can('users')) {
+    card('WhatsApp Gönder','Anlık mesaj gönder','📤','wa_send_now.php','green');
+  }
+  ?>
+</div>
+
+<div style="font-weight:900;margin:16px 4px 8px">🕘 Genel Sistem Yönetimi</div>
+<div class="grid">
+  <?php
+  card('Talep Aç','Yönetime talep gönder','📨','request_new.php','orange');
+  card('Profil','Şifre & hesap','👤','profile.php','blue');
+  card('Web Sürümü','Masaüstü Sürüm','🖥','../dashboard.php?web=1','gray');
   if(user_can('users')) {
     card('Kullanıcılar','Yetki yönetimi','👥','users.php','purple');
-  }
-  ?>
-</div>
-<?php endif; ?>
-
-<?php if($isAdmin || user_can('report')): // 2026-07-03: 'report' yetkisi olan da girebilir ?>
-<details class="panel" style="margin:16px 0">
-  <summary style="font-weight:900;cursor:pointer">📊 Rapor</summary>
-  <div class="grid" style="margin-top:10px">
-  <?php
-  card('Günlük Rapor','Bugünkü iş özeti','📅','gunluk_rapor.php','blue');
-  card('Tümü (Yekün)','Hepsi tek sunum','🗂️','report.php?modul=tumu','blue');
-  card('Finans/Tahsilat','Tahsilat·ödeme·net','💰','report.php?modul=tahsilat','green');
-  card('İş Takip','Açılan·tamamlanan·geciken','📋','report.php?modul=is','purple');
-  card('Personel','Performans/KPI','👷','report.php?modul=personel','orange');
-  card('Satış','Satış dökümü','🧾','report.php?modul=satis','yellow');
-  card('Teklif','Teklif dökümü','📄','report.php?modul=teklif','blue');
-  card('Cari','Bakiye·hareket','👥','report.php?modul=cari','teal');
-  card('Stok','Kritik·stok değeri','📦','report.php?modul=stok','red');
-  ?>
-  </div>
-</details>
-<?php endif; ?>
-
-<div style="font-weight:900;margin:16px 4px 8px">🕘 Sistem</div>
-<div class="grid">
-  <?php
-  if($isAdmin) card('Son İşlemler','Aktivite akışı','🕘','activity.php','gray'); // activity.php block_personel()
-  card('Bildirimler','Tüm bildirimler','🔔','notifications.php','yellow');
-  card('Mesajlar','İç yazışma','💬','messages.php','teal');
-  card('Web Sürümü','Masaüstü Sürüm','🖥','../dashboard.php?web=1','gray');
-  card('Profil','Şifre & hesap','👤','profile.php','blue');
-  if(user_can('users')) {
     card('Denetim Günlüğü','Kim ne değiştirdi','🔍','audit_log.php','gray');
-    card('WhatsApp Gönder','Anlık mesaj gönder','📤','wa_send_now.php','green');
     card('WhatsApp Ayarları','Gateway kurulumu','📱','wa_settings.php','gray');
     card('Logo / Marka','Marka ayarları','🎨','brand_settings.php','gray');
     card('Veri Temizleme','Canlıya hazırlık','🧹','temizle_veri.php','red');

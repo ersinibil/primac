@@ -156,17 +156,17 @@ th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;p
         <a href="messages.php" <?=($cur==='messages.php'?'class="active"':'')?>><span>💬</span> Mesajlar</a>
 
         <?php
-        /* Yeni taksonomi — 6 grup. Aktif sayfanın grubu details[open] kalacak. */
-        $isTakip_pages = ['jobs.php','job_new.php','takvim.php','tasks.php','approval_waiting.php','external.php','production.php','assembly.php','requests.php'];
-        $ticaret_pages = ['contacts.php','contact_new.php','teklif.php','sales.php','purchase.php','stock.php','product_new.php','stock_movement_new.php','product_categories.php','product_taxonomy.php'];
-        $finansMuhasebe_pages = ['finance.php','finance_accounts.php','finance_new.php','finance_transfer.php','checks_notes.php','check_note_view.php','accounting.php','accounting_categories.php'];
-        $ekip_pages = ['personnel.php','personnel_new.php','kpi.php','users.php'];
-        $rapor_pages = ['report.php','gunluk_rapor.php'];
-        $sistem_pages = ['activity.php','notifications.php','audit_log.php','wa_settings.php','wa_send_now.php','brand_settings.php','profile.php','request_new.php','temizle_veri.php','logout.php'];
+        /* Taksonomi — 4 grup (2026-07-03: kullanıcı isteğiyle 6 gruptan sadeleştirildi).
+           Raporlar artık ayrı bir grup değil, ilgili alanın içine gömülü (report.php?modul=
+           parametreleri DEĞİŞMEDİ, sadece hangi menüden erişildiği değişti). */
+        $personelIsTakip_pages = ['jobs.php','job_new.php','takvim.php','tasks.php','approval_waiting.php','external.php','production.php','assembly.php','requests.php','personnel.php','personnel_new.php','kpi.php','gunluk_rapor.php'];
+        $muhasebe_pages = ['contacts.php','contact_new.php','contacts_report.php','teklif.php','sales.php','purchase.php','stock.php','product_new.php','stock_movement_new.php','product_categories.php','product_taxonomy.php','finance.php','finance_accounts.php','finance_new.php','finance_transfer.php','checks_notes.php','check_note_view.php','accounting.php','accounting_categories.php'];
+        $mesajRapor_pages = ['notifications.php','activity.php','wa_send_now.php'];
+        $sistem_pages = ['users.php','audit_log.php','wa_settings.php','brand_settings.php','profile.php','request_new.php','temizle_veri.php','logout.php'];
         ?>
 
-        <?php if(user_can('jobs')||user_can('tasks')||user_can('personnel')||user_can('users')): ?>
-        <details <?=(in_array($cur,$isTakip_pages)?'open':'')?>><summary><span>🧭</span> İş Takip</summary>
+        <?php if(user_can('jobs')||user_can('tasks')||user_can('personnel')): ?>
+        <details <?=(in_array($cur,$personelIsTakip_pages)?'open':'')?>><summary><span>🧭</span> Personel İş Takip Yönetimi</summary>
             <div class="sub">
                 <?php if(user_can('jobs')): ?>
                 <a href="jobs.php" <?=($cur==='jobs.php'?'class="active"':'')?>><span>📁</span> İş Merkezi</a>
@@ -183,12 +183,23 @@ th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;p
                 <?php if(user_can('personnel')||user_can('users')): ?>
                 <a href="requests.php" <?=($cur==='requests.php'?'class="active"':'')?>><span>📨</span> Talepler / Onaylar</a>
                 <?php endif; ?>
+                <?php if(user_can('personnel')): ?>
+                <a href="personnel.php" <?=($cur==='personnel.php'?'class="active"':'')?>><span>👤</span> Personeller</a>
+                <a href="personnel_new.php" <?=($cur==='personnel_new.php'?'class="active"':'')?>><span>➕</span> Yeni Personel</a>
+                <a href="kpi.php" <?=($cur==='kpi.php'?'class="active"':'')?>><span>📈</span> KPI</a>
+                <?php endif; ?>
+                <?php if(user_can('report')): ?>
+                <a href="gunluk_rapor.php" <?=($cur==='gunluk_rapor.php'?'class="active"':'')?>><span>📅</span> Günlük İş Raporu</a>
+                <a href="report.php?modul=is"><span>📊</span> İş Takip Raporu</a>
+                <a href="report.php?modul=gorevler"><span>📊</span> Görevler Raporu</a>
+                <a href="report.php?modul=personel"><span>📊</span> Personel Performansı</a>
+                <?php endif; ?>
             </div>
         </details>
         <?php endif; ?>
 
-        <?php if(user_can('contacts')||user_can('teklif')||user_can('stock')): ?>
-        <details <?=(in_array($cur,$ticaret_pages)?'open':'')?>><summary><span>🤝</span> Ticaret</summary>
+        <?php if(user_can('contacts')||user_can('teklif')||user_can('stock')||user_can('finance')||user_can('muhasebe')): ?>
+        <details <?=(in_array($cur,$muhasebe_pages)?'open':'')?>><summary><span>💰</span> Muhasebe İşlemleri</summary>
             <div class="sub">
                 <?php if(user_can('contacts')): ?>
                 <a href="contacts.php" <?=($cur==='contacts.php'?'class="active"':'')?>><span>📋</span> Tüm Cariler</a>
@@ -209,13 +220,6 @@ th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;p
                 <a href="sales.php" <?=($cur==='sales.php'?'class="active"':'')?>><span>🧾</span> Satış</a>
                 <a href="purchase.php" <?=($cur==='purchase.php'?'class="active"':'')?>><span>🛒</span> Satın Alma İşleri</a>
                 <?php endif; ?>
-            </div>
-        </details>
-        <?php endif; ?>
-
-        <?php if(user_can('finance')||user_can('muhasebe')): ?>
-        <details <?=(in_array($cur,$finansMuhasebe_pages)?'open':'')?>><summary><span>💰</span> Finans & Muhasebe</summary>
-            <div class="sub">
                 <?php if(user_can('finance')): ?>
                 <a href="finance.php" <?=($cur==='finance.php'?'class="active"':'')?>><span>📊</span> Finans Paneli</a>
                 <a href="finance_accounts.php" <?=($cur==='finance_accounts.php'?'class="active"':'')?>><span>🏦</span> Banka / Kasa / Kart / POS</a>
@@ -231,43 +235,38 @@ th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;p
                 <a href="accounting.php?tab=ozet"><span>📊</span> Muhasebe Özeti</a>
                 <?php if(is_admin()): ?><a href="accounting_categories.php" <?=($cur==='accounting_categories.php'?'class="active"':'')?>><span>⚙</span> Muhasebe Kategorileri</a><?php endif; ?>
                 <?php endif; ?>
+                <?php if(user_can('report')): ?>
+                <a href="contacts_report.php" <?=($cur==='contacts_report.php'?'class="active"':'')?>><span>📊</span> Cari Raporu / Toplu Ekstre</a>
+                <a href="report.php?modul=muhasebe"><span>📊</span> Muhasebe Raporu</a>
+                <a href="report.php?modul=satis"><span>📊</span> Satış Raporu</a>
+                <a href="report.php?modul=satinalma"><span>📊</span> Satın Alma Raporu</a>
+                <a href="report.php?modul=teklif"><span>📊</span> Teklif Raporu</a>
+                <a href="report.php?modul=stok"><span>📊</span> Stok Raporu</a>
+                <?php endif; ?>
             </div>
         </details>
         <?php endif; ?>
 
-        <?php if(user_can('personnel')||user_can('users')): ?>
-        <details <?=(in_array($cur,$ekip_pages)?'open':'')?>><summary><span>👥</span> Ekip</summary>
+        <details <?=(in_array($cur,$mesajRapor_pages)?'open':'')?>><summary><span>💬</span> Mesajlaşma ve Raporlama</summary>
             <div class="sub">
-                <?php if(user_can('personnel')): ?>
-                <a href="personnel.php" <?=($cur==='personnel.php'?'class="active"':'')?>><span>👤</span> Personeller</a>
-                <a href="personnel_new.php" <?=($cur==='personnel_new.php'?'class="active"':'')?>><span>➕</span> Yeni Personel</a>
-                <a href="kpi.php" <?=($cur==='kpi.php'?'class="active"':'')?>><span>📈</span> KPI</a>
+                <a href="notifications.php" <?=($cur==='notifications.php'?'class="active"':'')?>><span>🔔</span> Bildirimler</a>
+                <a href="activity.php" <?=($cur==='activity.php'?'class="active"':'')?>><span>📜</span> Son İşlemler</a>
+                <?php if(user_can('report')): ?>
+                <a href="report.php" <?=($cur==='report.php'?'class="active"':'')?>><span>📊</span> Genel Özet Rapor</a>
                 <?php endif; ?>
                 <?php if(user_can('users')): ?>
-                <a href="users.php" <?=($cur==='users.php'?'class="active"':'')?>><span>👥</span> Kullanıcılar & Yetkiler</a>
+                <a href="wa_send_now.php" <?=($cur==='wa_send_now.php'?'class="active"':'')?>><span>📤</span> WhatsApp Mesaj Gönder</a>
                 <?php endif; ?>
             </div>
         </details>
-        <?php endif; ?>
 
-        <?php if(user_can('report')): ?>
-        <details <?=(in_array($cur,$rapor_pages)?'open':'')?>><summary><span>📊</span> Rapor</summary>
+        <details <?=(in_array($cur,$sistem_pages)?'open':'')?>><summary><span>🕘</span> Genel Sistem Yönetimi</summary>
             <div class="sub">
-                <a href="report.php" <?=($cur==='report.php'?'class="active"':'')?>><span>📊</span> Raporlar</a>
-                <a href="gunluk_rapor.php" <?=($cur==='gunluk_rapor.php'?'class="active"':'')?>><span>📅</span> Günlük İş Raporu</a>
-            </div>
-        </details>
-        <?php endif; ?>
-
-        <details <?=(in_array($cur,$sistem_pages)?'open':'')?>><summary><span>🕘</span> Sistem</summary>
-            <div class="sub">
-                <a href="activity.php" <?=($cur==='activity.php'?'class="active"':'')?>><span>📜</span> Son İşlemler</a>
-                <a href="notifications.php" <?=($cur==='notifications.php'?'class="active"':'')?>><span>🔔</span> Bildirimler</a>
                 <a href="profile.php" <?=($cur==='profile.php'?'class="active"':'')?>><span>👤</span> Profilim / Şifre</a>
                 <a href="request_new.php" <?=($cur==='request_new.php'?'class="active"':'')?>><span>📨</span> Talep Oluştur</a>
                 <?php if(user_can('users')): ?>
+                <a href="users.php" <?=($cur==='users.php'?'class="active"':'')?>><span>👥</span> Kullanıcılar & Yetkiler</a>
                 <a href="audit_log.php" <?=($cur==='audit_log.php'?'class="active"':'')?>><span>🔍</span> Denetim Günlüğü</a>
-                <a href="wa_send_now.php" <?=($cur==='wa_send_now.php'?'class="active"':'')?>><span>📤</span> WhatsApp Mesaj Gönder</a>
                 <a href="wa_settings.php" <?=($cur==='wa_settings.php'?'class="active"':'')?>><span>📱</span> WhatsApp Ayarları</a>
                 <a href="brand_settings.php" <?=($cur==='brand_settings.php'?'class="active"':'')?>><span>🎨</span> Logo / Marka</a>
                 <a href="temizle_veri.php" <?=($cur==='temizle_veri.php'?'class="active"':'')?> style="color:#fca5a5"><span>🧹</span> Veri Temizleme (canlıya hazırlık)</a>
