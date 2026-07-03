@@ -10,10 +10,11 @@
 </div>
 
 <?php
-/* Taksonomi — web sol menüyle (layout_top.php) hizalı 4 grup: Personel İş Takip Yönetimi,
-   Muhasebe İşlemleri, Mesajlaşma ve Raporlama, Genel Sistem Yönetimi (2026-07-03: kullanıcı
-   isteğiyle 6 gruptan sadeleştirildi). Raporlar artık ayrı bölüm değil, ilgili alanın içine
-   gömülü. Kart içerikleri/yetki kontrolleri aynı, sadece gruplama değişti. */
+/* Taksonomi — web sol menüyle (layout_top.php) hizalı: Personel İş Takip Yönetimi, Muhasebe
+   İşlemleri, Mesajlar, Raporlama, Genel Sistem Yönetimi (2026-07-03: önce 6 gruptan 4'e
+   sadeleştirildi; aynı gün 2. turda "Mesajlaşma ve Raporlama" tek grubu ikiye ayrıldı —
+   kullanıcı bildirimi: "mesajlaşmaları tek yere al, raporlama ayrı kalsın"). Kart
+   içerikleri/yetki kontrolleri aynı, sadece gruplama değişti. */
 ?>
 
 <div style="font-weight:900;margin:16px 4px 8px">🧭 Personel İş Takip Yönetimi</div>
@@ -94,18 +95,24 @@
 </div>
 <?php endif; ?>
 
-<div style="font-weight:900;margin:16px 4px 8px">💬 Mesajlaşma ve Raporlama</div>
+<div style="font-weight:900;margin:16px 4px 8px">💬 Mesajlar</div>
 <div class="grid">
   <?php
   card('Mesajlar','İç yazışma','💬','messages.php','teal');
   card('Bildirimler','Tüm bildirimler','🔔','notifications.php','yellow');
+  if(user_can('users')) {
+    card('WhatsApp Gönder','Anlık mesaj gönder','📤','wa_send_now.php','green');
+  }
+  ?>
+</div>
+
+<div style="font-weight:900;margin:16px 4px 8px">📊 Raporlama</div>
+<div class="grid">
+  <?php
   if($isAdmin) card('Son İşlemler','Aktivite akışı','🕘','activity.php','gray'); // activity.php block_personel()
   if($isAdmin || user_can('report')) {
     card('Genel Özet Rapor','Yekün özet','📊','report.php?modul=genel','blue');
     card('Tüm Modüller','Hepsi tek sunum','🗂️','report.php?modul=tumu','blue');
-  }
-  if(user_can('users')) {
-    card('WhatsApp Gönder','Anlık mesaj gönder','📤','wa_send_now.php','green');
   }
   ?>
 </div>

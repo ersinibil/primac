@@ -153,17 +153,32 @@ th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;p
 
     <nav class="nav">
         <a href="dashboard.php" <?=($cur==='dashboard.php'?'class="active"':'')?>><span>🏛</span> Komuta Merkezi</a>
-        <a href="messages.php" <?=($cur==='messages.php'?'class="active"':'')?>><span>💬</span> Mesajlar</a>
 
         <?php
         /* Taksonomi — 4 grup (2026-07-03: kullanıcı isteğiyle 6 gruptan sadeleştirildi).
            Raporlar artık ayrı bir grup değil, ilgili alanın içine gömülü (report.php?modul=
-           parametreleri DEĞİŞMEDİ, sadece hangi menüden erişildiği değişti). */
+           parametreleri DEĞİŞMEDİ, sadece hangi menüden erişildiği değişti).
+           2026-07-03 (2. tur): "Mesajlar" hem üstte tek link hem "Mesajlaşma ve Raporlama"
+           grubunun içinde (Bildirimler/WhatsApp ile) iki ayrı yerde duruyordu — kullanıcı
+           bildirimi: "mesajlaşmaları tek yere al, raporlama ayrı kalsın". Artık üstteki tek
+           link bir ağaca (İç Mesajlar + Bildirimler + WhatsApp Gönder) dönüştü, Raporlama
+           kendi başına ayrı bir grup. */
         $personelIsTakip_pages = ['jobs.php','job_new.php','takvim.php','tasks.php','approval_waiting.php','external.php','production.php','assembly.php','design.php','work_center.php','requests.php','personnel.php','personnel_new.php','kpi.php','gunluk_rapor.php'];
         $muhasebe_pages = ['contacts.php','contact_new.php','contacts_report.php','teklif.php','sales.php','purchase.php','stock.php','product_new.php','stock_movement_new.php','product_categories.php','product_taxonomy.php','finance.php','finance_accounts.php','finance_new.php','finance_transfer.php','checks_notes.php','check_note_view.php','accounting.php','accounting_categories.php','trade_documents.php','trade_document_new.php','trade_document_view.php'];
-        $mesajRapor_pages = ['notifications.php','activity.php','wa_send_now.php'];
+        $mesajlar_pages = ['messages.php','notifications.php','wa_send_now.php'];
+        $rapor_pages = ['activity.php','report.php'];
         $sistem_pages = ['users.php','audit_log.php','wa_settings.php','brand_settings.php','profile.php','request_new.php','temizle_veri.php','logout.php'];
         ?>
+
+        <details <?=(in_array($cur,$mesajlar_pages)?'open':'')?>><summary><span>💬</span> Mesajlar</summary>
+            <div class="sub">
+                <a href="messages.php" <?=($cur==='messages.php'?'class="active"':'')?>><span>💬</span> İç Mesajlar</a>
+                <a href="notifications.php" <?=($cur==='notifications.php'?'class="active"':'')?>><span>🔔</span> Bildirimler</a>
+                <?php if(user_can('users')): ?>
+                <a href="wa_send_now.php" <?=($cur==='wa_send_now.php'?'class="active"':'')?>><span>📤</span> WhatsApp Mesaj Gönder</a>
+                <?php endif; ?>
+            </div>
+        </details>
 
         <?php if(user_can('jobs')||user_can('tasks')||user_can('personnel')||user_can('users')): ?>
         <details <?=(in_array($cur,$personelIsTakip_pages)?'open':'')?>><summary><span>🧭</span> Personel İş Takip Yönetimi</summary>
@@ -252,16 +267,12 @@ th{font-size:13px;color:#667085}.badge{display:inline-flex;border-radius:999px;p
         </details>
         <?php endif; ?>
 
-        <details <?=(in_array($cur,$mesajRapor_pages)?'open':'')?>><summary><span>💬</span> Mesajlaşma ve Raporlama</summary>
+        <details <?=(in_array($cur,$rapor_pages)?'open':'')?>><summary><span>📊</span> Raporlama</summary>
             <div class="sub">
-                <a href="notifications.php" <?=($cur==='notifications.php'?'class="active"':'')?>><span>🔔</span> Bildirimler</a>
                 <a href="activity.php" <?=($cur==='activity.php'?'class="active"':'')?>><span>📜</span> Son İşlemler</a>
                 <?php if(user_can('report')): ?>
                 <a href="report.php" <?=($cur==='report.php'?'class="active"':'')?>><span>📊</span> Genel Özet Rapor</a>
                 <a href="report.php?modul=tumu"><span>🗂️</span> Tüm Modüller (Detaylı)</a>
-                <?php endif; ?>
-                <?php if(user_can('users')): ?>
-                <a href="wa_send_now.php" <?=($cur==='wa_send_now.php'?'class="active"':'')?>><span>📤</span> WhatsApp Mesaj Gönder</a>
                 <?php endif; ?>
             </div>
         </details>
