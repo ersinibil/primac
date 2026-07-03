@@ -19,6 +19,17 @@ try{
   foreach($q->fetchAll() as $r){ $byDay[(int)$r['d']][]=$r; $list[]=$r; }
 }catch(Throwable $e){}
 
+// Bana atanan görevler (Görevler modülü) — admin tüm görevleri, personel sadece kendine atananları görür.
+try{
+  $taskWhere = $isAdmin ? "" : " AND personnel_id IN (SELECT id FROM personnel WHERE user_id=$me)";
+  $tq=$pdo->query("SELECT id,title,status,due_date,DAY(due_date) d FROM tasks WHERE due_date IS NOT NULL AND DATE_FORMAT(due_date,'%Y-%m')='$ym'$taskWhere ORDER BY due_date");
+  foreach($tq->fetchAll() as $r){
+    $row=['id'=>$r['id'],'job_no'=>null,'title'=>$r['title'],'status'=>$r['status'],'due_date'=>$r['due_date'],'_task'=>true];
+    $d=(int)date('j',strtotime($r['due_date']));
+    $byDay[$d][]=$row; $list[]=$row;
+  }
+}catch(Throwable $e){}
+
 // Kişisel notlar (sadece kendi user_id'n, kimse başkasınınkini göremez) — kullanıcı isteği:
 // "takvime de işlensin".
 foreach(personal_notes_for_month($pdo,$me,$ym) as $n){
@@ -60,9 +71,9 @@ $baslik = $g>0 ? ($g.' '.$mn[$first->format('m')].' işleri/notları') : 'Bu ay 
 ?>
 <div style="font-weight:900;margin:6px 4px"><?=htmlspecialchars($baslik)?></div>
 <?php if(!$show): ?><div class="panel muted" style="text-align:center"><?=$g>0?'Bu günde iş/not yok.':'Bu ay termini olan iş/not yok.'?></div><?php endif; ?>
-<?php foreach($show as $j): $isNote=!empty($j['_note']); $st=$j['status']; $sc=$isNote?'#eab308':(in_array($st,['Tamamlandı','Teslim Edildi'])?'#22c55e':($st==='İptal'?'#f87171':'#eab308')); ?>
-  <a class="item" href="<?=$isNote?'mytasks.php':'job_view.php?id='.(int)$j['id']?>">
-    <b><?=($isNote?'📝 ':'').htmlspecialchars($j['title'])?></b> <span style="color:<?=$sc?>;font-weight:900;font-size:12px"><?=htmlspecialchars($st)?></span><br>
+<?php foreach($show as $j): $isNote=!empty($j['_note']); $isTask=!empty($j['_task']); $st=$j['status']; $sc=($isNote||$isTask)?'#eab308':(in_array($st,['Tamamlandı','Teslim Edildi'])?'#22c55e':($st==='İptal'?'#f87171':'#eab308')); $icon=$isNote?'📝 ':($isTask?'🎯 ':''); ?>
+  <a class="item" href="<?=($isNote||($isTask && !user_can('tasks')))?'mytasks.php':($isTask?'tasks.php':'job_view.php?id='.(int)$j['id'])?>">
+    <b><?=$icon.htmlspecialchars($j['title'])?></b> <span style="color:<?=$sc?>;font-weight:900;font-size:12px"><?=htmlspecialchars($st)?></span><br>
     <small class="muted">📅 <?=htmlspecialchars(date('d.m.Y',strtotime($j['due_date'])))?><?=$j['job_no']?' · '.htmlspecialchars($j['job_no']):''?></small>
   </a>
 <?php endforeach; ?>

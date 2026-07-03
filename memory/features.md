@@ -2,6 +2,24 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
+## Takvim'e atanan görevler (tasks) eklendi (2026-07-03, 3. tur)
+Kullanıcı şikayeti: "görev atadım kendime, takvime işlemedi." İnceleme: `takvim.php` (web) ve
+`mobile/calendar.php` sadece `jobs` (termin tarihi) ve `personal_notes` (Notlarım) kaynaklarını
+gösteriyordu — `tasks` tablosu (Görevler modülü, `task_new.php` ile atanan) hiç dahil değildi.
+- Her iki dosyaya da `tasks` sorgusu eklendi: admin tüm görevleri, personel sadece
+  `personnel_id IN (SELECT id FROM personnel WHERE user_id=...)` ile kendine atananları görür
+  (jobs sorgusuyla aynı desen). Takvimde 🎯 ikonuyla ayrı gösteriliyor.
+- **Parite/yetki tuzağı**: `tasks.php` (web) `page_module_map()`'te `'tasks'` modülüne bağlı —
+  bu yetkisi olmayan personel oraya tıklarsa 403 görür. Web'de "kendi görevlerim" için ayrı bir
+  sayfa yok (mobilde `mytasks.php` var, web'de karşılığı yok — bu ayrı bir backlog maddesi,
+  bkz. [[backlog]]). Geçici çözüm: web takviminde `user_can('tasks')` yoksa görev maddesi
+  tıklanamaz düz metin olarak gösteriliyor (kaybolmuyor ama 403'e de düşürmüyor). Mobilde ise
+  zaten `mytasks.php` olduğu için `user_can('tasks')` yoksa oraya yönlendiriliyor — sorunsuz.
+- Not: "telefonun kendi (native) takvimi" (iOS/Android Takvim uygulaması) ile senkronizasyon HİÇ
+  yok ve bu değişiklikle de eklenmedi — sadece uygulamanın KENDİ takvim sayfası güncellendi. Native
+  cihaz takvimine senkron (ICS/webcal export) ayrı, daha büyük bir özellik kararı — kimlik
+  doğrulamalı bir abonelik linki gerektirir, kullanıcıya danışılmadan yapılmadı.
+
 ## Kişisel Not/Görev alanı — "Notlarım" (2026-07-03)
 Kullanıcı isteği: "görevlerim ekranında kendime de görev-not alanı olsun, bunu personel görmesin,
 takvime de işlensin, bana kendi numarama ve sistem içi mesaj ile bildirim olsun."
