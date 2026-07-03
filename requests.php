@@ -1,6 +1,8 @@
 <?php
 require_once __DIR__.'/boot.php';
 require_login();
+// Güvenlik: mobile/requests.php ile parite — talep merkezi sadece yönetici (2026-07-03 denetimi).
+if(!is_admin()){ http_response_code(403); exit('Bu sayfa için yetkiniz yok.'); }
 
 $pdo=db();
 

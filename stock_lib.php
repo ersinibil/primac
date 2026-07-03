@@ -3,6 +3,33 @@
 // web (purchase.php, sales.php) ve mobil (mobile/purchase.php, mobile/sales.php) tarafından kullanılır
 
 /**
+ * stock_movements tablosuna MERKEZİ, doğru şemayla hareket kaydeden fonksiyon.
+ * (2026-07-03 Deniz/ots-schema-drift-guard denetiminde bulundu: trade_core.php,
+ * stock_movement_new.php ve mobile/stock_movement_new.php üçü de var olmayan kolonlarla
+ * (movement_type, unit_cost, unit_sale, total_cost, total_sale, contact_id, supplier_id,
+ * movement_date, description) INSERT yapıyordu — gerçek şema sadece: id, stock_item_id,
+ * job_id, finance_movement_id, direction, quantity, reason, note, created_at içeriyor
+ * (bkz. database/migrations/004_stock_products.sql + 030_stock_movement_finance_ref.sql).
+ * Bu fonksiyon hatayı YUTMAZ — çağıran taraf try/catch ile karar versin.)
+ *
+ * @param PDO $pdo
+ * @param int $stockItemId
+ * @param string $direction 'in' veya 'out' (başka değer verilirse 'out' kabul edilir)
+ * @param float $qty
+ * @param string $reason kısa sebep etiketi (örn. 'Alış', 'Satış', 'İşte Kullanım')
+ * @param string $note serbest metin not (opsiyonel)
+ * @param int|null $financeMovementId finance_movements.id — varsa kesin referans
+ * @param int|null $jobId ilişkili iş
+ * @return int yeni stock_movements.id
+ */
+function stock_record_movement($pdo, $stockItemId, $direction, $qty, $reason, $note='', $financeMovementId=null, $jobId=null){
+    $direction = ($direction === 'in') ? 'in' : 'out';
+    $pdo->prepare("INSERT INTO stock_movements(stock_item_id,job_id,finance_movement_id,direction,quantity,reason,note,created_at) VALUES(?,?,?,?,?,?,?,NOW())")
+        ->execute([(int)$stockItemId, $jobId ?: null, $financeMovementId ?: null, $direction, $qty, $reason, $note]);
+    return (int)$pdo->lastInsertId();
+}
+
+/**
  * Satın alma girişi: stok kartı oluştur/güncelle + hareketi kaydet
  * @param PDO $pdo
  * @param int $supplier contact_id
@@ -48,8 +75,7 @@ function stock_add_purchase($pdo, $supplier, $pname, $qty, $price, $paymentMetho
 
         // Stok hareketi (giriş)
         try{
-            $pdo->prepare("INSERT INTO stock_movements(stock_item_id,direction,quantity,reason,note,created_at) VALUES(?,?,?,?,?,NOW())")
-                ->execute([$pid, 'in', $qty, 'Alış', 'Satın alma ('.$paymentMethod.')']);
+            stock_record_movement($pdo, $pid, 'in', $qty, 'Alış', 'Satın alma ('.$paymentMethod.')');
         }catch(Throwable $e){}
 
         return [

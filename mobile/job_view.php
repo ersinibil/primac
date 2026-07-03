@@ -34,7 +34,20 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['delete_job'])){
 
 // Sorumlu atama / durum güncelleme (çıktıdan önce)
 if($_SERVER['REQUEST_METHOD']==='POST'){
+    // Güvenlik: görüntüleme (GET) bilinçli olarak herkese açık (bildirimden açma), ama yazma
+    // işlemleri 'jobs' yetkisi VEYA işin kendisine atanmış olması gerektiriyor (2026-07-03 denetimi).
+    if(!job_can_write($pdo,$id)){
+        $_SESSION['job_err']='Bu işlem için yetkiniz yok.';
+        header('Location: job_view.php?id='.$id); exit;
+    }
     try{
+        // Sorumlu ATAMA/DEĞİŞTİRME sadece 'jobs' yetkisi olanlarda (UI zaten $isAdmin'e gizli) —
+        // işin "sahibi" olmak, işi başkasına devretme hakkı vermemeli (job_can_write'ın own-job
+        // istisnasını burada bilerek daraltıyoruz).
+        if(isset($_POST['assign']) && !(function_exists('user_can') && user_can('jobs'))){
+            $_SESSION['job_err']='Bu işlem için yetkiniz yok.';
+            header('Location: job_view.php?id='.$id); exit;
+        }
         if(isset($_POST['assign'])){
             $resp=(int)$_POST['responsible_personnel_id'] ?: null;
             $pdo->prepare("UPDATE jobs SET responsible_personnel_id=? WHERE id=?")->execute([$resp,$id]);

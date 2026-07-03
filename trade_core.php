@@ -2,6 +2,7 @@
 // ACANS OS v19 Trade Helper
 
 if(file_exists(__DIR__.'/activity_lib.php')) require_once __DIR__.'/activity_lib.php';
+require_once __DIR__.'/stock_lib.php';
 
 function trade_next_no($type){
     $prefix=$type==='purchase'?'ALI':'SAT';
@@ -77,9 +78,8 @@ function trade_apply_document($documentId){
                 ->execute([$newQty,$newAvg,$unitPrice,$unitPrice,$sid]);
 
             try{
-                $pdo->prepare("INSERT INTO stock_movements(stock_item_id,movement_type,quantity,unit_cost,unit_sale,total_cost,total_sale,contact_id,supplier_id,movement_date,description)
-                    VALUES(?,?,?,?,?,?,?,?,?,?,?)")
-                    ->execute([$sid,'in',$qty,$unitPrice,0,$qty*$unitPrice,0,$doc['contact_id'],$doc['contact_id'],$doc['document_date'],'Alış belgesi: '.$doc['document_no']]);
+                $note='Birim fiyat: '.trade_money($unitPrice).' · Tutar: '.trade_money($qty*$unitPrice).' · Cari: '.($doc['contact_name'] ?: '-');
+                stock_record_movement($pdo,$sid,'in',$qty,'Alış belgesi: '.$doc['document_no'],$note,null,null);
             }catch(Throwable $e){}
         }
 
@@ -90,28 +90,41 @@ function trade_apply_document($documentId){
                 ->execute([$qty,$sid]);
 
             try{
-                $pdo->prepare("INSERT INTO stock_movements(stock_item_id,movement_type,quantity,unit_cost,unit_sale,total_cost,total_sale,contact_id,movement_date,description)
-                    VALUES(?,?,?,?,?,?,?,?,?,?)")
-                    ->execute([$sid,'sale',$qty,$cost,$unitPrice,$qty*$cost,$qty*$unitPrice,$doc['contact_id'],$doc['document_date'],'Satış belgesi: '.$doc['document_no']]);
+                $note='Birim maliyet: '.trade_money($cost).' · Birim satış: '.trade_money($unitPrice).' · Cari: '.($doc['contact_name'] ?: '-');
+                stock_record_movement($pdo,$sid,'out',$qty,'Satış belgesi: '.$doc['document_no'],$note,null,null);
             }catch(Throwable $e){}
         }
     }
 
-    // Cari/finans hareketi
+    // Cari/finans hareketi — 2026-07-03 düzeltmesi (Deniz/schema-drift denetimi): önceden SADECE
+    // $paid>0 && account_id varsa finance_movements kaydı oluşuyordu, veresiye/kısmi ödemeli belgeler
+    // cari bakiye ekranlarına (contacts.php, contact_view.php, contacts_report.php — hepsi
+    // finance_movements'tan toplar) HİÇ yansımıyordu. Artık finance_movements kaydı belgenin TAM
+    // tutarıyla (grand_total) HER ZAMAN oluşturulur (purchase.php'deki stock_add_purchase_finance()
+    // ile aynı felsefe: veresiye de olsa tam tutar finans kaydına yazılır). Hesap bakiyesi
+    // (finance_accounts.current_balance) ise SADECE fiilen ödenen kısım ($paid) kadar güncellenir —
+    // aksi halde kasa/banka bakiyesi olmayan parayla şişer.
     $direction=$doc['document_type']==='purchase'?'out':'in';
-    $status=$direction==='in'?'Tahsil Edildi':'Ödendi';
     $channel=$doc['account_id']?'Hesap':'Cari Belge';
 
     $paid=(float)$doc['paid_amount'];
-    if($paid>0 && $doc['account_id']){
+    $grandTotal=(float)$doc['grand_total'];
+
+    if($grandTotal>0){
+        $fullyPaid = ($grandTotal>0 && $paid>=$grandTotal);
+        $status = $fullyPaid ? ($direction==='in'?'Tahsil Edildi':'Ödendi') : 'Bekliyor';
+
         $pdo->prepare("INSERT INTO finance_movements(contact_id,job_id,direction,amount,payment_channel,account_id,status,movement_date,description,movement_type,document_id)
             VALUES(?,NULL,?,?,?,?,?,?,?,'document',?)")
-            ->execute([$doc['contact_id'],$direction,$paid,$channel,$doc['account_id'],$status,$doc['document_date'],$doc['document_no'].' ödeme/tahsilat',$documentId]);
+            ->execute([$doc['contact_id'],$direction,$grandTotal,$channel,$doc['account_id'],$status,$doc['document_date'],$doc['document_no'].' ödeme/tahsilat',$documentId]);
 
-        if($direction==='in'){
-            $pdo->prepare("UPDATE finance_accounts SET current_balance=current_balance+? WHERE id=?")->execute([$paid,$doc['account_id']]);
-        }else{
-            $pdo->prepare("UPDATE finance_accounts SET current_balance=current_balance-? WHERE id=?")->execute([$paid,$doc['account_id']]);
+        // Hesap bakiyesi SADECE fiilen ödenen/tahsil edilen kısım kadar güncellenir (grand_total değil)
+        if($paid>0 && $doc['account_id']){
+            if($direction==='in'){
+                $pdo->prepare("UPDATE finance_accounts SET current_balance=current_balance+? WHERE id=?")->execute([$paid,$doc['account_id']]);
+            }else{
+                $pdo->prepare("UPDATE finance_accounts SET current_balance=current_balance-? WHERE id=?")->execute([$paid,$doc['account_id']]);
+            }
         }
     }
 

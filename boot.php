@@ -156,6 +156,7 @@ function page_module_map(){
         'approval_waiting.php'=>'jobs','work_center.php'=>'jobs','design.php'=>'jobs',
         'tasks.php'=>'tasks',
         'contacts.php'=>'contacts','contact_new.php'=>'contacts','contact_view.php'=>'contacts','contacts_report.php'=>'contacts',
+        'contact_documents.php'=>'contacts',
         'trade_documents.php'=>'contacts','trade_document_new.php'=>'contacts','trade_document_view.php'=>'contacts',
         'teklif.php'=>'teklif',
         'finance.php'=>'finance','finance_new.php'=>'finance','finance_accounts.php'=>'finance','finance_transfer.php'=>'finance','finance_account_view.php'=>'finance',

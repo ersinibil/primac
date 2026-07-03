@@ -2,12 +2,19 @@
 // ACANS OS — Web Push (uygulama kapalıyken bildirim). PHP 7.2 + web-push v6.
 require_once __DIR__.'/boot.php';
 
-// VAPID anahtarları (bu sunucuya özel üretildi)
+// VAPID anahtarları — config.php'den okunur (2026-07-03 güvenlik denetiminde bulundu: private key
+// daha önce burada düz metin gömülüydü, repo artık GitHub'a bağlı olduğu için taşındı). Aşağıdaki
+// sabit değerler SADECE geri uyumluluk için (config.php'de henüz vapid_public/vapid_private
+// tanımlanmamış kurulumlarda mevcut abonelikler bozulmasın diye) — config.php'ye eklendikten sonra
+// buradaki sabitler kaldırılabilir. YENİ bir kurulumda bu sabitlere GÜVENME, config.php'ye kendi
+// anahtarlarını gir (VAPID anahtar çifti üretmek için: web-push kütüphanesinin `vendor/bin/generate-vapid-keys`
+// aracı kullanılabilir).
 function push_vapid(){
+    $c = function_exists('app_config') ? app_config() : [];
     return [
-        'subject' => 'mailto:admin@acanstr.com',
-        'publicKey' => 'BKEqJl3sOt2lxHVBXjtCu_nFTCgH42b7NVTjE4BsGq5xC81cdwF1llwIiAmXMbDieoC74QLHZOhZ1dSkgQjLP3c',
-        'privateKey' => 'lEr2og5nZs8UfiLd3EJeWAsT0NeSoj9aseWYJtxlusw',
+        'subject' => $c['vapid_subject'] ?? 'mailto:admin@acanstr.com',
+        'publicKey' => $c['vapid_public'] ?? 'BKEqJl3sOt2lxHVBXjtCu_nFTCgH42b7NVTjE4BsGq5xC81cdwF1llwIiAmXMbDieoC74QLHZOhZ1dSkgQjLP3c',
+        'privateKey' => $c['vapid_private'] ?? 'lEr2og5nZs8UfiLd3EJeWAsT0NeSoj9aseWYJtxlusw',
     ];
 }
 

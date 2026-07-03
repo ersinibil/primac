@@ -1,6 +1,25 @@
 <?php
 // ACANS OTS — Üretim Aşamaları (mobil + web ortak)
 
+// Bir işi YAZMA (durum/dosya/not/aşama değiştirme) yetkisi var mı? job_view.php/mobile/job_view.php
+// GÖRÜNTÜLEME (GET) bilinçli olarak page_module_map()'in dışında — personel kendine atanan işi
+// bildirimden açabilsin diye. Ama yazma işlemleri (POST) korumasızdı — 'jobs' yetkisi olmayan biri
+// bile URL'den id tahmin edip başka birinin işini değiştirebiliyordu (2026-07-03 güvenlik denetimi,
+// CONFIRMED). Kural: 'jobs' modül yetkisi olan HERKES yazabilir, YA DA iş doğrudan o personele
+// atanmışsa (responsible_personnel_id) kendi işini güncelleyebilir — GET tarafındaki "kendine
+// atanan işi aç" mantığıyla tutarlı bir çözüm.
+function job_can_write($pdo,$jobId){
+  if(function_exists('user_can') && user_can('jobs')) return true;
+  $mePid=(int)($_SESSION['user']['personnel_id'] ?? 0);
+  if(!$mePid) return false;
+  try{
+    $q=$pdo->prepare("SELECT responsible_personnel_id FROM jobs WHERE id=?");
+    $q->execute([(int)$jobId]);
+    $r=$q->fetch();
+    return $r && (int)$r['responsible_personnel_id']===$mePid;
+  }catch(Throwable $e){ return false; }
+}
+
 // İş tipine göre varsayılan aşama şablonu
 function stage_template($type){
   $t=[
@@ -67,6 +86,12 @@ function stages_script(){
 // AJAX yanıtı — job_view'lerin EN BAŞINDA çağrılır; stage_ajax POST'unu yakalar ve sadece şeridi döner
 function stage_ajax_respond($pdo,$jobId){
   if(empty($_POST['stage_ajax'])) return;
+  if(!job_can_write($pdo,$jobId)){
+    header('Content-Type: application/json; charset=utf-8');
+    http_response_code(403);
+    echo json_encode(['error'=>'Bu işlem için yetkiniz yok.']);
+    exit;
+  }
   $type=''; try{ $q=$pdo->prepare("SELECT job_type FROM jobs WHERE id=?"); $q->execute([$jobId]); $type=$q->fetch()['job_type']??''; }catch(Throwable $e){}
   handle_stage_post($pdo,$jobId,$type);
   $flash=''; if(!empty($_SESSION['flash'])){ $flash=$_SESSION['flash']; unset($_SESSION['flash']); }

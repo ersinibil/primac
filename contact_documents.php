@@ -1,4 +1,8 @@
 <?php
+require_once __DIR__.'/boot.php';
+// Güvenlik: id GET parametresiyle herhangi bir carinin belgelerini gösteriyordu (IDOR), hiç yetki
+// kontrolü yoktu — diğer contacts-modülü sayfalarıyla aynı desen (2026-07-03 denetimi).
+require_permission('contacts');
 require_once __DIR__.'/layout_top.php';
 
 $id=(int)($_GET['id'] ?? 0);

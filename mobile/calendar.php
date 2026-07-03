@@ -1,5 +1,6 @@
 <?php
 require_once 'common.php';
+require_once __DIR__.'/../notes_lib.php';
 $pdo=db(); $me=(int)($_SESSION['user']['id']??0);
 // Ay seçimi (YYYY-MM)
 $ym=preg_match('/^\d{4}-\d{2}$/',$_GET['ay']??'')?$_GET['ay']:date('Y-m');
@@ -17,6 +18,15 @@ try{
     WHERE due_date IS NOT NULL AND DATE_FORMAT(due_date,'%Y-%m')='$ym'$where ORDER BY due_date");
   foreach($q->fetchAll() as $r){ $byDay[(int)$r['d']][]=$r; $list[]=$r; }
 }catch(Throwable $e){}
+
+// Kişisel notlar (sadece kendi user_id'n, kimse başkasınınkini göremez) — kullanıcı isteği:
+// "takvime de işlensin".
+foreach(personal_notes_for_month($pdo,$me,$ym) as $n){
+    $row=['id'=>$n['id'],'job_no'=>null,'title'=>$n['title'],'status'=>'Not','due_date'=>$n['due_date'],'_note'=>true];
+    $d=(int)date('j',strtotime($n['due_date']));
+    $byDay[$d][]=$row; $list[]=$row;
+}
+usort($list, function($a,$b){ return strcmp($a['due_date'],$b['due_date']); });
 
 topx('Takvim');
 $today=(int)date('j'); $isThisMonth=($ym===date('Y-m'));
@@ -46,13 +56,13 @@ $mn=['01'=>'Ocak','02'=>'Şubat','03'=>'Mart','04'=>'Nisan','05'=>'Mayıs','06'=
 <?php
 $g=(int)($_GET['g']??0);
 $show = $g>0 ? ($byDay[$g]??[]) : $list;
-$baslik = $g>0 ? ($g.' '.$mn[$first->format('m')].' işleri') : 'Bu ay tüm işler ('.count($list).')';
+$baslik = $g>0 ? ($g.' '.$mn[$first->format('m')].' işleri/notları') : 'Bu ay tüm işler/notlar ('.count($list).')';
 ?>
 <div style="font-weight:900;margin:6px 4px"><?=htmlspecialchars($baslik)?></div>
-<?php if(!$show): ?><div class="panel muted" style="text-align:center"><?=$g>0?'Bu günde iş yok.':'Bu ay termini olan iş yok.'?></div><?php endif; ?>
-<?php foreach($show as $j): $st=$j['status']; $sc=in_array($st,['Tamamlandı','Teslim Edildi'])?'#22c55e':($st==='İptal'?'#f87171':'#eab308'); ?>
-  <a class="item" href="job_view.php?id=<?=(int)$j['id']?>">
-    <b><?=htmlspecialchars($j['title'])?></b> <span style="color:<?=$sc?>;font-weight:900;font-size:12px"><?=htmlspecialchars($st)?></span><br>
+<?php if(!$show): ?><div class="panel muted" style="text-align:center"><?=$g>0?'Bu günde iş/not yok.':'Bu ay termini olan iş/not yok.'?></div><?php endif; ?>
+<?php foreach($show as $j): $isNote=!empty($j['_note']); $st=$j['status']; $sc=$isNote?'#eab308':(in_array($st,['Tamamlandı','Teslim Edildi'])?'#22c55e':($st==='İptal'?'#f87171':'#eab308')); ?>
+  <a class="item" href="<?=$isNote?'mytasks.php':'job_view.php?id='.(int)$j['id']?>">
+    <b><?=($isNote?'📝 ':'').htmlspecialchars($j['title'])?></b> <span style="color:<?=$sc?>;font-weight:900;font-size:12px"><?=htmlspecialchars($st)?></span><br>
     <small class="muted">📅 <?=htmlspecialchars(date('d.m.Y',strtotime($j['due_date'])))?><?=$j['job_no']?' · '.htmlspecialchars($j['job_no']):''?></small>
   </a>
 <?php endforeach; ?>

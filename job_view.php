@@ -18,6 +18,12 @@ function add_log($jobId, $message, $type='Sistem'){
 }
 
 if($_SERVER['REQUEST_METHOD']==='POST'){
+    // Güvenlik: görüntüleme (GET) bilinçli olarak herkese açık (bildirimden açma), ama yazma
+    // işlemleri 'jobs' yetkisi VEYA işin kendisine atanmış olması gerektiriyor (2026-07-03 denetimi).
+    if(!job_can_write($pdo,$id)){
+        http_response_code(403);
+        exit('Bu işlem için yetkiniz yok.');
+    }
     try{
         if(isset($_POST['stage_id'])){
             $pdo->prepare("UPDATE job_stages SET status=?, completed_at=IF(?='Tamamlandı',NOW(),completed_at) WHERE id=? AND job_id=?")
