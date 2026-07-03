@@ -181,7 +181,7 @@ if($id && !$editMode){
     <button onclick="shareReportPDF(this)" class="btn" style="display:block;width:100%;background:#16a34a;color:#fff;padding:14px;margin-top:10px">📄 PDF İndir / Paylaş (WhatsApp/Mail)</button>
     <?php
       $approvalUrl=base_url().'quote_approve.php?token='.$q['approval_token'];
-      $txt="📄 Teklif ".$q['quote_no']."\nMüşteri: ".$q['customer_name']."\nTutar: ".mm($q['total']).($q['valid_until']?"\nGeçerlilik: ".$q['valid_until']:'')."\n\n✅ Onaylamak için: ".$approvalUrl;
+      $txt="📄 Teklif ".$q['quote_no']."\nMüşteri: ".$q['customer_name']."\nTutar: ".mm($q['total']).($q['valid_until']?"\nGeçerlilik: ".$q['valid_until']:'')."\n\n👉 Teklifi görüntülemek, PDF indirmek ve onaylamak için:\n".$approvalUrl;
       echo share_buttons($txt,$cphone,'Teklif '.$q['quote_no']);
     ?>
   </div>

@@ -45,9 +45,20 @@ if($quote && $_SERVER['REQUEST_METHOD']==='POST'){
         }
     }
 }
-?><!doctype html><html lang="tr"><head>
+$appName=app_config()['app_name'] ?? 'OTS';
+$ogTitle = $quote ? ('📄 Teklif '.$quote['quote_no'].' · '.money((float)$quote['total'])) : 'Teklif Onayı';
+$ogDesc  = $quote ? ($quote['customer_name'].' için hazırlanan teklifi görüntüleyin ve onaylayın.') : 'Teklif bulunamadı.';
+$ogImage = $quote ? base_url().brand_logo() : '';
+?>
+<!doctype html><html lang="tr"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Teklif Onayı · <?=htmlspecialchars(app_config()["app_name"] ?? "OTS")?></title>
+<title><?=htmlspecialchars($ogTitle)?> · <?=htmlspecialchars($appName)?></title>
+<!-- WhatsApp/sosyal önizleme kartı için (kullanıcı isteği 2026-07-03: "onay linki daha görsel
+     göze hitap eden olmalı" — WhatsApp bu meta etiketlerinden otomatik önizleme kartı üretir) -->
+<meta property="og:title" content="<?=htmlspecialchars($ogTitle)?>">
+<meta property="og:description" content="<?=htmlspecialchars($ogDesc)?>">
+<?php if($ogImage): ?><meta property="og:image" content="<?=htmlspecialchars($ogImage)?>"><?php endif; ?>
+<meta property="og:type" content="website">
 <style>
 body{margin:0;background:#0f172a;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;min-height:100vh}
 .wrap{max-width:560px;margin:auto;padding:18px}
@@ -66,6 +77,7 @@ h1{font-size:20px}.muted{color:#94a3b8;font-size:14px}
 <?php if(!$quote): ?>
   <div class="card"><h1>Teklif bulunamadı</h1><p class="muted">Bağlantı geçersiz veya süresi dolmuş olabilir.</p></div>
 <?php else: ?>
+  <div id="repArea">
   <div class="card">
     <h1>📄 Teklif Onayı</h1>
     <p class="muted"><?=htmlspecialchars($quote['quote_no'])?></p>
@@ -114,6 +126,8 @@ h1{font-size:20px}.muted{color:#94a3b8;font-size:14px}
       </div>
     <?php endif; ?>
   </div>
+  </div>
+  <button type="button" class="btn noprint" style="background:#16a34a" onclick="shareReportPDF(this)">📄 PDF İndir</button>
 
   <!-- Durum -->
   <div class="card">
@@ -133,4 +147,11 @@ h1{font-size:20px}.muted{color:#94a3b8;font-size:14px}
   </div>
 <?php endif; ?>
 <p class="muted" style="text-align:center"><?=htmlspecialchars(app_config()["app_name"] ?? "OTS")?> · Online Takip Sistemi</p>
-</div></body></html>
+</div>
+<?php if($quote): ?>
+<script>window.ACANS_REPORT_NAME='teklif_<?=htmlspecialchars($quote['quote_no'])?>';</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="report_share.js"></script>
+<?php endif; ?>
+</body></html>

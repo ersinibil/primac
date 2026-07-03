@@ -45,10 +45,12 @@ if($conditions) $where="WHERE ".implode(' AND ',$conditions);
 </div>
 
 <?php
-$totalOpening=safe_sum("SELECT COALESCE(SUM(opening_balance),0) s FROM contacts");
-$totalIn=safe_sum("SELECT COALESCE(SUM(amount),0) s FROM finance_movements WHERE direction='in'");
-$totalOut=safe_sum("SELECT COALESCE(SUM(amount),0) s FROM finance_movements WHERE direction='out'");
-$totalBalance=$totalOpening+$totalIn-$totalOut;
+// NOT (2026-07-03 düzeltmesi): Toplam Bakiye eskiden TÜM finance_movements'ı (cari_id'si olsun
+// olmasın) topluyordu — cari'ye bağlı olmayan genel muhasebe gider/gelir kayıtları da bu toplama
+// karışıp cari listesindeki hiçbir satırla eşleşmeyen bir rakam üretiyordu (kullanıcı bildirdi:
+// üstte -4.020 ₺ görünüyor ama tüm cari satırları 0,00 gösteriyordu). Artık alttaki tabloyla
+// birebir aynı mantıkla (sadece f.contact_id=c.id ile eşleşen hareketler) hesaplanıyor.
+$totalBalance=safe_sum("SELECT COALESCE(SUM(balance),0) s FROM (SELECT c.id, COALESCE(c.opening_balance,0)+COALESCE(SUM(CASE WHEN f.direction='in' THEN f.amount ELSE 0 END),0)-COALESCE(SUM(CASE WHEN f.direction='out' THEN f.amount ELSE 0 END),0) balance FROM contacts c LEFT JOIN finance_movements f ON f.contact_id=c.id GROUP BY c.id) x");
 $totalReceivable=safe_sum("SELECT COALESCE(SUM(CASE WHEN balance>0 THEN balance ELSE 0 END),0) s FROM (SELECT c.id, COALESCE(c.opening_balance,0)+COALESCE(SUM(CASE WHEN f.direction='in' THEN f.amount ELSE 0 END),0)-COALESCE(SUM(CASE WHEN f.direction='out' THEN f.amount ELSE 0 END),0) balance FROM contacts c LEFT JOIN finance_movements f ON f.contact_id=c.id GROUP BY c.id) x");
 $totalPayable=safe_sum("SELECT COALESCE(SUM(CASE WHEN balance<0 THEN -balance ELSE 0 END),0) s FROM (SELECT c.id, COALESCE(c.opening_balance,0)+COALESCE(SUM(CASE WHEN f.direction='in' THEN f.amount ELSE 0 END),0)-COALESCE(SUM(CASE WHEN f.direction='out' THEN f.amount ELSE 0 END),0) balance FROM contacts c LEFT JOIN finance_movements f ON f.contact_id=c.id GROUP BY c.id) x");
 ?>
