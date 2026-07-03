@@ -2,6 +2,20 @@
 
 <!-- Açık geliştirme görevleri. Kapanan madde buradan silinip memory/features.md'ye taşınır. -->
 
+## VAPID push anahtarı sunucu config.php'lerine elle eklenmeli (2026-07-03)
+- `push_lib.php` artık `app_config()` (config.php) üzerinden `vapid_public`/`vapid_private`/
+  `vapid_subject` okuyor, tanımlı değilse koddaki ESKİ sabit değerlere düşüyor (geri uyumlu, acil
+  değil, hiçbir şey bozulmaz). Ama kalıcı çözüm için ACANS ve PRIMAC sunucularındaki gerçek
+  `config.php` dosyalarına (cPanel File Manager, repo dışı, buradan erişim yok) şu 3 satır elle
+  eklenmeli:
+  ```php
+  'vapid_public'=>'BKEqJl3sOt2lxHVBXjtCu_nFTCgH42b7NVTjE4BsGq5xC81cdwF1llwIiAmXMbDieoC74QLHZOhZ1dSkgQjLP3c',
+  'vapid_private'=>'lEr2og5nZs8UfiLd3EJeWAsT0NeSoj9aseWYJtxlusw',
+  'vapid_subject'=>'mailto:admin@acanstr.com',
+  ```
+  Bunlar mevcut anahtarlar (taşıma, rotasyon değil) — repo artık GitHub'a bağlı olduğu için kodda
+  sabit durması sızıntı riski (bkz. [[deploy]]). Kullanıcı seyahatte, dönünce elle eklenecek.
+
 ## Mobil parite eksiği — work_center.php, trade_documents.php, design.php sadece web'de
 - 2026-07-03 (commit `1ff6f1e`): bu üç sayfa web sol menüsüne ve `boot.php` yetki eşlemesine
   eklendi (bkz. features.md). Ama mobilde hiç karşılığı yok (`mobile/work_center.php`,
