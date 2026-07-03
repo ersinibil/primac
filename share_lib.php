@@ -100,6 +100,102 @@ function wa_send($phone,$text){
         return $r!==false;
     }catch(Throwable $e){ return false; }
 }
+// Medya (görsel/video/ses/belge) gönderimi — sadece UltraMsg'in ayrı medya uç noktalarını (image/
+// video/audio/document) destekler; genel/custom gateway'lerde medya şeması bilinmediği için mesaj
+// metnine linki ekleyip düz metin olarak gönderir (2026-07-03, kullanıcı isteği: WhatsApp'tan
+// dosya/video/ses atabilme). $mediaUrl DIŞARIDAN ERİŞİLEBİLİR (public) bir URL olmalı.
+function wa_send_media($phone,$mediaUrl,$type,$caption=''){
+    if(!function_exists('curl_init')) return false;
+    $enabled  = get_setting('wa_enabled','0');
+    $provider = get_setting('wa_provider','');
+    $instance = get_setting('wa_instance','');
+    $token    = get_setting('wa_token','');
+
+    $has_db_config = ($provider && $instance);
+    if(!$has_db_config){
+        if(!defined('WA_GATEWAY_URL') || !WA_GATEWAY_URL) return false;
+        $enabled='1';
+    }
+    if($enabled!=='1') return false;
+
+    $p=_wa_normalize_phone($phone);
+    if(!$p) return false;
+
+    if($provider!=='ultramsg' || !$instance){
+        // Medya uç noktası bilinmeyen bir gateway — linki metin olarak gönder (elden gitmesin)
+        return wa_send($phone, ($caption!==''?$caption."\n":'').$mediaUrl);
+    }
+
+    $epMap=['image'=>'image','video'=>'video','audio'=>'audio','document'=>'document'];
+    $ep = $epMap[$type] ?? 'document';
+    $url='https://api.ultramsg.com/'.rawurlencode($instance).'/messages/'.$ep;
+    $d=['token'=>$token,'to'=>$p,$ep=>$mediaUrl];
+    if($caption!=='' && $ep!=='audio') $d['caption']=$caption;
+    if($ep==='document') $d['filename']=basename(parse_url($mediaUrl,PHP_URL_PATH) ?: 'dosya');
+
+    try{
+        $ch=curl_init($url);
+        curl_setopt_array($ch,[
+            CURLOPT_POST=>true,
+            CURLOPT_POSTFIELDS=>http_build_query($d),
+            CURLOPT_RETURNTRANSFER=>true,
+            CURLOPT_TIMEOUT=>15,
+            CURLOPT_SSL_VERIFYPEER=>false,
+            CURLOPT_HTTPHEADER=>['Content-Type: application/x-www-form-urlencoded'],
+        ]);
+        $r=curl_exec($ch);
+        curl_close($ch);
+        return $r!==false;
+    }catch(Throwable $e){ return false; }
+}
+
+// Yüklenen dosyayı uploads/wa_send/ altına taşır, DIŞARIDAN erişilebilir tam URL döner (veya hata
+// mesajı). İç mesajlaşmadaki (messages.php) attach mantığıyla aynı tür/uzantı ayrımını kullanır.
+function wa_upload_media($field,&$err){
+    if(empty($_FILES[$field]['tmp_name']) || $_FILES[$field]['error']!==UPLOAD_ERR_OK) return null;
+    $f=$_FILES[$field];
+    $ext=strtolower(pathinfo($f['name'],PATHINFO_EXTENSION));
+    $imgExt=['jpg','jpeg','png','gif','webp'];
+    $vidExt=['mp4','mov','webm','m4v'];
+    $audExt=['m4a','mp3','wav','ogg','oga','aac','opus'];
+    $docExt=['pdf','doc','docx','xls','xlsx'];
+    // Beyaz liste — uploads/.htaccess script çalıştırmayı zaten engelliyor ama uzantı denetimi
+    // ek güvenlik katmanı (2026-07-03 güvenlik denetimi: eskiden HERHANGİ bir uzantı kabul ediliyordu).
+    if(!in_array($ext, array_merge($imgExt,$vidExt,$audExt,$docExt), true)){
+        $err='Desteklenmeyen dosya türü (.'.h($ext).'). İzin verilenler: resim, video, ses, PDF/Word/Excel.';
+        return null;
+    }
+    $type='document';
+    if(in_array($ext,$imgExt,true)) $type='image';
+    elseif(in_array($ext,$vidExt,true)) $type='video';
+    elseif(in_array($ext,$audExt,true)) $type='audio';
+    $dir=__DIR__.'/uploads/wa_send';
+    if(!is_dir($dir)) @mkdir($dir,0755,true);
+    $stored=bin2hex(random_bytes(8)).'.'.$ext;
+    $dest=$dir.'/'.$stored;
+    if(!@move_uploaded_file($f['tmp_name'],$dest)){ $err='Dosya kaydedilemedi.'; return null; }
+    return ['url'=>base_url().'uploads/wa_send/'.$stored,'type'=>$type,'name'=>$f['name']];
+}
+
+// Basit emoji seçici — WhatsApp gönderme ve iç mesajlaşma kutularında ortak kullanılır
+// (2026-07-03, kullanıcı isteği). Harici kütüphane/CDN yok, sabit kısa liste + textarea/input'a
+// imleç konumuna ekleme. $dark=true mobil koyu temaya uysun diye.
+function emoji_picker_html($targetId, $dark=false){
+    $emojis = ['😀','😂','😊','🙂','😍','👍','👎','🙏','🎉','✅','❌','⚠️','📌','📅','💰','🧾','📦','🚚','⏰','❤️','🔥','👏','🤝','📞'];
+    $panelId = $targetId.'_emojiPanel';
+    $bg = $dark ? '#0f1d33' : '#fff';
+    $border = $dark ? '#1e3350' : '#e5e7eb';
+    ob_start(); ?>
+<div style="position:relative;display:inline-block">
+  <button type="button" class="btn secondary small" onclick="var p=document.getElementById('<?=$panelId?>');p.style.display=p.style.display==='block'?'none':'block'">😀 Emoji</button>
+  <div id="<?=$panelId?>" style="display:none;position:absolute;z-index:50;top:100%;left:0;margin-top:4px;background:<?=$bg?>;border:1px solid <?=$border?>;border-radius:12px;padding:8px;box-shadow:0 8px 20px rgba(0,0,0,.25);width:230px">
+    <?php foreach($emojis as $e): ?><button type="button" style="font-size:19px;border:none;background:none;cursor:pointer;padding:4px" onclick="var t=document.getElementById('<?=$targetId?>');var s=t.selectionStart||t.value.length;t.value=t.value.slice(0,s)+'<?=$e?>'+t.value.slice(s);t.focus();var np=s+'<?=$e?>'.length;t.selectionStart=t.selectionEnd=np;document.getElementById('<?=$panelId?>').style.display='none'"><?=$e?></button><?php endforeach; ?>
+  </div>
+</div>
+<?php
+    return ob_get_clean();
+}
+
 function mail_link($subject,$body){
     return 'mailto:?subject='.rawurlencode($subject).'&body='.rawurlencode($body);
 }

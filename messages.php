@@ -6,6 +6,7 @@
  * POST işlemi layout_top'tan ÖNCE yapılır (PRG deseni → redirect).
  * ========================================================================= */
 require_once __DIR__.'/boot.php';
+require_once __DIR__.'/share_lib.php';
 require_login();
 $me  = (int)(current_user()['id'] ?? 0);
 $pdo = db();
@@ -524,7 +525,8 @@ function msg_av_color($id){
                     <label title="Dosya ekle" style="cursor:pointer;font-size:22px;align-self:center;opacity:.7">
                         📎<input type="file" name="attach" accept="image/*,audio/*,video/*,application/pdf,.doc,.docx,.xls,.xlsx" style="display:none">
                     </label>
-                    <textarea name="message" placeholder="Gruba yazın…"
+                    <?=emoji_picker_html('msgComposerT')?>
+                    <textarea id="msgComposerT" name="message" placeholder="Gruba yazın…"
                         onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();this.form.submit();}"></textarea>
                     <button class="btn" type="submit">➤ Gönder</button>
                 </form>
@@ -632,7 +634,8 @@ function delMsgT(id){
                 <label title="Dosya ekle" style="cursor:pointer;font-size:22px;align-self:center;opacity:.7" title="Dosya ekle">
                     📎<input type="file" name="attach" accept="image/*,audio/*,video/*,application/pdf,.doc,.docx,.xls,.xlsx" style="display:none">
                 </label>
-                <textarea name="message" placeholder="Mesaj yazın…"
+                <?=emoji_picker_html('msgComposer')?>
+                <textarea id="msgComposer" name="message" placeholder="Mesaj yazın…"
                     onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();this.form.submit();}"></textarea>
                 <button class="btn" type="submit">➤ Gönder</button>
             </form>

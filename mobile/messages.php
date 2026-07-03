@@ -1,5 +1,6 @@
 <?php
 require_once 'common.php';
+require_once __DIR__.'/../share_lib.php';
 $me = (int)($_SESSION['user']['id'] ?? 0);
 $pdo = db();
 
@@ -231,7 +232,8 @@ if ($thread):
         <input type="file" name="attach" id="attach" accept="image/*,application/pdf,video/*,audio/*" multiple style="display:none">
         <label for="attach" style="flex:0 0 auto;width:44px;height:46px;background:rgba(255,255,255,.12);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer">📎</label>
         <button type="button" class="vbtn" onclick="vrec(this)" style="flex:0 0 auto;width:44px;height:46px;background:rgba(255,255,255,.12);border:0;border-radius:14px;font-size:19px;color:#fff">🎤</button>
-        <textarea name="message" rows="1" placeholder="Gruba yaz…" oninput="this.style.height='';this.style.height=this.scrollHeight+'px'"></textarea>
+        <?=emoji_picker_html('msgTextT', true)?>
+        <textarea id="msgTextT" name="message" rows="1" placeholder="Gruba yaz…" oninput="this.style.height='';this.style.height=this.scrollHeight+'px'"></textarea>
         <button class="btn dark" type="submit" id="sendbtn" style="flex:0 0 auto">➤</button>
     </div>
     <div id="attlbl" style="max-width:520px;margin:4px auto 0;color:#94a3b8;font-size:12px"></div>
@@ -447,7 +449,8 @@ window.ACANS_ON_CONV=function(list){
         <input type="file" name="attach" id="attach" accept="image/*,application/pdf,video/*,audio/*" multiple style="display:none">
         <label for="attach" style="flex:0 0 auto;width:44px;height:46px;background:rgba(255,255,255,.12);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer">📎</label>
         <button type="button" class="vbtn" onclick="vrec(this)" style="flex:0 0 auto;width:44px;height:46px;background:rgba(255,255,255,.12);border:0;border-radius:14px;font-size:19px;color:#fff">🎤</button>
-        <textarea name="message" rows="1" placeholder="Mesaj yaz…" oninput="this.style.height='';this.style.height=this.scrollHeight+'px'"></textarea>
+        <?=emoji_picker_html('msgText', true)?>
+        <textarea id="msgText" name="message" rows="1" placeholder="Mesaj yaz…" oninput="this.style.height='';this.style.height=this.scrollHeight+'px'"></textarea>
         <button class="btn dark" type="submit" id="sendbtn" style="flex:0 0 auto">➤</button>
     </div>
     <div id="attlbl" style="max-width:520px;margin:4px auto 0;color:#94a3b8;font-size:12px"></div>
