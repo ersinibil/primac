@@ -2,6 +2,32 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
+## Satış/Satın Alma sepeti + KDV + personel yetki senkronu + WhatsApp medya (2026-07-03, 2. dalga)
+- **Satış/Satın Alma → sepet mantığı**: Tek ürün yerine tek işlemde birden fazla ürün satırı
+  (kullanıcı: "bir kişiye bir firmaya birden fazla ürün satılabilir"). Her satırın kendi KDV oranı
+  var (stok kartındaki `vat_rate` otomatik doluyor). `finance_movements`'a `vat_rate`/`vat_amount`
+  eklendi (migration 032). `stock_reverse_sale()` artık bir finans hareketine bağlı birden fazla
+  stok hareketini geri alabiliyor. Sepet işlemleri artık **transaction** içinde (agent code review
+  bulgusu: çoklu ürüne geçince yarım-işlem riski doğmuştu, kapatıldı).
+- **Personel yetki senkronu (mobil)**: `block_personel()` artık `$module` parametresi alıyor,
+  `user_can($module)` true ise admin olmayan da girebiliyor — kullanıcı onayıyla personnel.php/
+  personnel_view.php/personnel_new.php/kpi.php → 'personnel', task_new.php → 'tasks', report.php
+  → 'report' açıldı. `mobile/more.php` menü kartları da senkron edildi (yoksa "erişilebilir ama
+  görünmez" hatası oluşurdu — bkz. [[backlog]] eski not, artık geçersiz).
+- **Güvenlik**: `personnel_edit.php` (maaş/IBAN) hiç yetki kontrolüne sahip değildi — kapatıldı.
+  `wa_upload_media()` ilk halinde her uzantıyı kabul ediyordu — beyaz liste eklendi.
+- **Cari ekstre**: contact_view.php'ye "Bu Cariye Ait İşler" tablosu (web), `report_lib.php`
+  cari_detay'daki iş satırı sütun karışıklığı düzeltildi, koyu rapor kartlarında okunmayan yazı
+  rengi düzeltildi. contacts.php'nin kendine link veren "Toplam Bakiye" kartı contacts_report.php'ye
+  yönlendirildi.
+- **Teklif ekranı**: Kalemler artık başlıklı tablo (web+mobil), form-grid düzeni.
+- **Arama**: "teklif" yazınca 0 sonuç dönme sorunu (çek/senet ile aynı desen uygulandı), mobil
+  arama kutusunun flex taşması düzeltildi.
+- **WhatsApp + iç mesajlaşma**: `emoji_picker_html()` ortak emoji seçici (web+mobil, wa_send_now.php
+  + messages.php). `wa_send_media()`/`wa_upload_media()` ile WhatsApp'tan dosya/video/ses gönderimi
+  (UltraMsg medya uç noktaları; bilinmeyen gateway'de linke düşer).
+- Kullanım kılavuzu PDF'leri (ACANS/PRIMAC, `~/Desktop/REFERANS/`) v2.1'e güncellendi.
+
 ## Büyük dalga sonrası kritik düzeltmeler (2026-07-03)
 Bu oturumda paralel çalışan çok sayıda ajanın ürettiği özellikler (Görevler, Satın alma raporu,
 Satış+hızlı ekleme, İş/Personel mobil silme, Muhasebe+kasa gizleme, Audit log+oturum, Mobil
