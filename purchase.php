@@ -5,24 +5,57 @@ require_once __DIR__.'/stock_lib.php';
 
 $pdo=db();
 $ok=''; $er='';
+$products=$pdo->query("SELECT id,name,unit,purchase_price,vat_rate FROM stock_items WHERE COALESCE(active,1)=1 ORDER BY name")->fetchAll();
 
-// POST: Satın alma giriş
+// POST: Satın alma giriş — bir tedarikçiden TEK seferde BİRDEN FAZLA ürün satırı (sepet)
+// eklenebilir (2026-07-03: sales.php ile aynı mantık, tutarlılık için). Her satırın kendi
+// KDV oranı vardır; stok maliyeti NET (KDV hariç) tutar üzerinden hesaplanır, sadece nakit
+// çıkışı (finance_movements) KDV dahil gerçek tutarı yansıtır.
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['action']) && $_POST['action']==='add_purchase'){
     try{
         $supplier=(int)$_POST['contact_id'];
-        $pname=trim($_POST['product_name'] ?? '');
-        $qty=(float)$_POST['quantity'];
-        $price=(float)$_POST['unit_price'];
         $pm=$_POST['payment_method'] ?? 'Veresiye';
-        $unit=trim($_POST['unit'] ?? 'adet');
-        $salePrice=(float)($_POST['sale_price'] ?? 0);
+        $pnames=$_POST['product_name'] ?? [];
+        $qtys=$_POST['quantity'] ?? [];
+        $units=$_POST['unit'] ?? [];
+        $prices=$_POST['unit_price'] ?? [];
+        $vatRates=$_POST['vat_rate'] ?? [];
 
-        // Stok kartı ekle/güncelle + hareketi kaydet
-        $stockResult=stock_add_purchase($pdo, $supplier, $pname, $qty, $price, $pm, $unit, $salePrice>0?$salePrice:null);
-        if(!$stockResult['ok']) throw new Exception($stockResult['message']);
+        if(!$supplier) throw new Exception('Tedarikçi seçin.');
+        if(!is_array($pnames) || !count($pnames)) throw new Exception('En az bir ürün satırı ekleyin.');
 
-        // Finansal kaydı yap
-        $finResult=stock_add_purchase_finance($pdo, $supplier, $stockResult['total'], $pm, $stockResult['item_id'], $pname);
+        // Sepetteki BÜTÜN satırlar + finansal kayıt tek transaction içinde (2026-07-03: sales.php
+        // ile aynı gerekçe — bir satır başarısız olursa önceki satırların stoku kalıcı sapmasın).
+        $totalNet=0; $totalVat=0; $descParts=[]; $firstItemId=null;
+        $pdo->beginTransaction();
+        try{
+            foreach($pnames as $i=>$pname){
+                $pname=trim($pname);
+                $qty=(float)($qtys[$i] ?? 0);
+                $unit=trim($units[$i] ?? '') ?: 'adet';
+                $price=(float)($prices[$i] ?? 0);
+                $vatRate=(float)($vatRates[$i] ?? 0);
+                if($pname==='' || $qty<=0) continue;
+
+                $stockResult=stock_add_purchase($pdo, $supplier, $pname, $qty, $price, $pm, $unit, null);
+                if(!$stockResult['ok']) throw new Exception($stockResult['message']);
+                if($firstItemId===null) $firstItemId=$stockResult['item_id'];
+
+                $totalNet += $stockResult['total'];
+                $totalVat += $vatRate>0 ? round($stockResult['total']*$vatRate/100,2) : 0;
+                $descParts[] = $pname.' x'.rtrim(rtrim(number_format($qty,2,'.',''),'0'),'.');
+            }
+            if($firstItemId===null) throw new Exception('En az bir geçerli ürün satırı ekleyin.');
+
+            // Finansal kaydı yap — TÜM sepetin toplamı (KDV dahil gerçek ödeme) tek harekette
+            $avgVatRate = $totalNet>0 ? round($totalVat/$totalNet*100,2) : 0;
+            $finResult=stock_add_purchase_finance($pdo, $supplier, $totalNet, $pm, $firstItemId, implode(', ',$descParts), $avgVatRate);
+
+            $pdo->commit();
+        }catch(Throwable $e){
+            $pdo->rollBack();
+            throw $e;
+        }
 
         // Aktivite loğu
         try{
@@ -30,26 +63,24 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['action']) && $_POST['act
                 $sn=$pdo->prepare("SELECT name FROM contacts WHERE id=?");
                 $sn->execute([$supplier]);
                 $sname=$sn->fetch()['name']??'';
-                activity_log('Satın Alma','Alış',$sname.' · '.$pname.' '.mm($stockResult['total']),$pm,'purchase',$stockResult['item_id'],'purchase.php','🛒');
+                activity_log('Satın Alma','Alış',$sname.' · '.implode(', ',$descParts).' '.mm($finResult['total']),$pm,'purchase',$firstItemId,'purchase.php','🛒');
             }
         }catch(Throwable $e){}
 
-        $ok=$stockResult['message'];
+        $ok=implode(', ',$descParts).' alındı: '.mm($finResult['total']).($finResult['vat_amount']>0?' (KDV: '.mm($finResult['vat_amount']).')':'').' ('.$pm.')';
     }catch(Throwable $e){
         $er=$e->getMessage();
     }
 
-    // Sonra sayfayı yenile (PRG deseni)
-    $redirectUrl='purchase.php';
-    if($ok) $redirectUrl.='?ok=1';
-    header('Location: '.$redirectUrl);
+    // Sonra sayfayı yenile (PRG deseni) — mesaj session'a yazılır (2026-07-03 düzeltmesi: eskiden
+    // $er/$ok redirect'te hiç taşınmıyordu, hata olduğunda kullanıcı sebebini asla göremiyordu).
+    if($ok) $_SESSION['purchase_ok']=$ok; else if($er) $_SESSION['purchase_er']=$er;
+    header('Location: purchase.php');
     exit;
 }
 
-// GET parametresinden başarı mesajı göster
-if(isset($_GET['ok'])){
-    $ok='Satın alma işlemi başarıyla kaydedildi.';
-}
+if(!empty($_SESSION['purchase_ok'])){ $ok=$_SESSION['purchase_ok']; unset($_SESSION['purchase_ok']); }
+if(!empty($_SESSION['purchase_er'])){ $er=$_SESSION['purchase_er']; unset($_SESSION['purchase_er']); }
 
 require_once __DIR__.'/layout_top.php';
 ?>
@@ -67,63 +98,72 @@ require_once __DIR__.'/layout_top.php';
 <!-- Hızlı Satın Alma Formu -->
 <section class="panel">
 <h2 style="margin-top:0">Hızlı Satın Alma</h2>
-<form method="post">
+<form method="post" id="purchForm">
   <input type="hidden" name="action" value="add_purchase">
 
-  <label>Tedarikçi</label>
-  <select name="contact_id" id="contactSel" required onchange="onSupplierChange()"><option value="">— Seç —</option>
-  <?php
-  try{
-    $cs=$pdo->query("SELECT id,name FROM contacts WHERE type IN ('Tedarikçi','Her İkisi') OR type IS NULL ORDER BY name")->fetchAll();
-    if(!$cs) $cs=$pdo->query("SELECT id,name FROM contacts ORDER BY name")->fetchAll();
-    foreach($cs as $c): ?><option value="<?=$c['id']?>"><?=htmlspecialchars($c['name'])?></option><?php endforeach;
-  }catch(Throwable $e){}
-  ?>
-  <option value="__new__">➕ Listede yok — Yeni Tedarikçi Ekle…</option>
-  </select>
-  <div id="newContactBox" style="display:none;background:#eef4ff;border:1px solid #bfdbfe;border-radius:12px;padding:12px;margin:8px 0">
-    <input type="text" id="contactNamePurch" placeholder="Tedarikçi adı" style="width:100%;border:1px solid #d0d5dd;border-radius:10px;padding:10px;margin-bottom:8px">
-    <button type="button" class="btn" style="width:100%" onclick="quickAddContactPurch(document.getElementById('contactNamePurch').value, 'Tedarikçi')">✓ Ekle ve Seç</button>
-  </div>
+  <div class="form-grid">
+    <div class="full">
+      <label>Tedarikçi</label>
+      <select name="contact_id" id="contactSel" class="full" required onchange="onSupplierChange()">
+        <option value="">— Seç —</option>
+        <?php
+        try{
+          $cs=$pdo->query("SELECT id,name FROM contacts WHERE type IN ('Tedarikçi','Her İkisi') OR type IS NULL ORDER BY name")->fetchAll();
+          if(!$cs) $cs=$pdo->query("SELECT id,name FROM contacts ORDER BY name")->fetchAll();
+          foreach($cs as $c): ?><option value="<?=$c['id']?>"><?=htmlspecialchars($c['name'])?></option><?php endforeach;
+        }catch(Throwable $e){}
+        ?>
+        <option value="__new__">➕ Listede yok — Yeni Tedarikçi Ekle…</option>
+      </select>
+      <div id="newContactBox" class="full" style="display:none;background:#eef4ff;border:1px solid #bfdbfe;border-radius:12px;padding:12px;margin-top:8px">
+        <input type="text" id="contactNamePurch" placeholder="Tedarikçi adı" style="width:100%;border:1px solid #d0d5dd;border-radius:10px;padding:10px;margin-bottom:8px">
+        <button type="button" class="btn" style="width:100%" onclick="quickAddContactPurch(document.getElementById('contactNamePurch').value, 'Tedarikçi')">✓ Ekle ve Seç</button>
+      </div>
+    </div>
 
-  <label>Ürün (yazınca yoksa otomatik yeni ürün olarak eklenir)</label>
-  <input type="text" name="product_name" list="prods" required placeholder="Ürün adı">
+    <div class="full">
+      <label>Ödeme</label>
+      <select name="payment_method">
+        <option>Veresiye</option><option>Peşin</option><option>Banka</option><option>Kredi Kartı</option><option>Çek</option><option>Senet</option>
+      </select>
+    </div>
+  </div><!-- /form-grid -->
+
   <datalist id="prods">
-  <?php
-  try{
-    $ps=$pdo->query("SELECT DISTINCT name FROM stock_items WHERE COALESCE(active,1)=1 ORDER BY name")->fetchAll();
-    foreach($ps as $p): ?><option value="<?=htmlspecialchars($p['name'])?>"></option><?php endforeach;
-  }catch(Throwable $e){}
-  ?>
+  <?php foreach($products as $p): ?><option value="<?=htmlspecialchars($p['name'])?>"></option><?php endforeach; ?>
   </datalist>
 
-  <div style="display:flex;gap:15px;margin-bottom:12px">
-    <div style="flex:1">
-      <label>Miktar</label>
-      <input type="number" step="0.01" name="quantity" class="qty-inp" required value="1">
+  <div class="full" style="margin-top:14px">
+    <label style="font-weight:800">Ürünler <small class="muted" style="font-weight:400">(yazınca listede yoksa otomatik yeni ürün olarak eklenir)</small></label>
+    <div style="overflow:auto">
+    <table class="purch-items-tbl" style="width:100%;border-collapse:collapse">
+      <thead>
+        <tr style="text-align:left;font-size:12px;color:#667085">
+          <th style="padding:4px 6px">Ürün</th>
+          <th style="padding:4px 6px;width:90px">Miktar</th>
+          <th style="padding:4px 6px;width:90px">Birim</th>
+          <th style="padding:4px 6px;width:120px">Birim Alış Fiyatı</th>
+          <th style="padding:4px 6px;width:80px">KDV %</th>
+          <th style="padding:4px 6px;width:110px;text-align:right">Ara Toplam</th>
+          <th style="width:36px"></th>
+        </tr>
+      </thead>
+      <tbody id="itemsBody"></tbody>
+    </table>
     </div>
-    <div style="flex:1">
-      <label>Birim</label>
-      <input type="text" name="unit" placeholder="adet" value="adet">
-    </div>
-    <div style="flex:1">
-      <label>Birim Alış Fiyatı</label>
-      <input type="number" step="0.01" name="unit_price" class="price-inp" required>
+    <button type="button" class="btn secondary small" style="margin-top:8px" onclick="addItemRow()">➕ Satır Ekle</button>
+  </div>
+
+  <div class="panel" style="background:rgba(37,99,235,.18);margin:16px 0;padding:16px 18px">
+    <div style="display:flex;justify-content:space-between;padding:3px 0"><span class="muted">Ara Toplam (KDV Hariç)</span><b id="purchSubtotal">0,00 ₺</b></div>
+    <div style="display:flex;justify-content:space-between;padding:3px 0"><span class="muted">KDV</span><b id="purchVat">0,00 ₺</b></div>
+    <div style="display:flex;justify-content:space-between;padding:8px 0 0;border-top:1px solid rgba(37,99,235,.3);margin-top:6px">
+      <span style="font-size:15px;font-weight:800">Genel Toplam</span>
+      <span id="purchTotal" style="font-size:26px;font-weight:900">0,00 ₺</span>
     </div>
   </div>
 
-  <label>Satış Fiyatı (yeni üründe)</label>
-  <input type="number" step="0.01" name="sale_price" placeholder="opsiyonel">
-
-  <label>Ödeme</label>
-  <select name="payment_method"><option>Veresiye</option><option>Peşin</option><option>Banka</option><option>Kredi Kartı</option><option>Çek</option><option>Senet</option></select>
-
-  <div style="background:rgba(37,99,235,.18);text-align:center;margin:12px 0;padding:12px;border-radius:6px">
-    <small class="muted">Toplam</small>
-    <div id="total-display" style="font-size:22px;font-weight:bold">0,00 ₺</div>
-  </div>
-
-  <button type="submit" class="btn dark" style="width:100%">🛒 Satın Almayı Kaydet</button>
+  <button type="submit" class="btn dark" style="width:100%;padding:14px;font-size:16px">🛒 Satın Almayı Kaydet</button>
 </form>
 </section>
 
@@ -156,17 +196,73 @@ echo "<tr><td colspan='4'><div class='alert'>".h($e->getMessage())."</div></td><
 </section>
 
 <script>
-// Hızlı hesaplama: toplam = miktar × fiyat
-function updateTotal(){
-  var qty=parseFloat(document.querySelector('.qty-inp').value)||0;
-  var price=parseFloat(document.querySelector('.price-inp').value)||0;
-  var total=qty*price;
-  document.getElementById('total-display').textContent=total.toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2})+' ₺';
+var PRODUCTS = <?= json_encode(array_map(function($p){
+    return ['name'=>$p['name'],'unit'=>$p['unit'],'price'=>$p['purchase_price'],'vat'=>$p['vat_rate']!==null?$p['vat_rate']:20];
+}, $products), JSON_UNESCAPED_UNICODE) ?>;
+var rowIndex = 0;
+
+function addItemRow(){
+    var idx = rowIndex++;
+    var tr = document.createElement('tr');
+    tr.dataset.idx = idx;
+    tr.innerHTML =
+        '<td style="padding:4px 6px"><input type="text" name="product_name[]" list="prods" class="row-name" required placeholder="Ürün adı" oninput="onRowNameInput(this)" style="width:100%"></td>'
+        + '<td style="padding:4px 6px"><input type="number" step="0.01" min="0.01" name="quantity[]" class="row-qty" value="1" required oninput="calcAll()" style="width:80px"></td>'
+        + '<td style="padding:4px 6px"><input type="text" name="unit[]" class="row-unit" value="adet" style="width:80px"></td>'
+        + '<td style="padding:4px 6px"><input type="number" step="0.01" min="0" name="unit_price[]" class="row-price" required oninput="calcAll()" style="width:110px"></td>'
+        + '<td style="padding:4px 6px"><input type="number" step="0.01" min="0" name="vat_rate[]" class="row-vat" value="20" oninput="calcAll()" style="width:70px"></td>'
+        + '<td class="row-sub" style="padding:4px 6px;text-align:right;font-weight:800">0,00 ₺</td>'
+        + '<td style="padding:4px 6px"><button type="button" class="btn danger small" onclick="removeRow(this)">🗑</button></td>';
+    document.getElementById('itemsBody').appendChild(tr);
+    calcAll();
 }
-document.querySelectorAll('.qty-inp,.price-inp').forEach(function(el){
-  el.addEventListener('input',updateTotal);
-});
-updateTotal();
+
+function removeRow(btn){
+    var tr = btn.closest('tr');
+    var rows = document.querySelectorAll('#itemsBody tr');
+    if(rows.length <= 1){
+        tr.querySelector('.row-name').value = '';
+        tr.querySelector('.row-qty').value = 1;
+        tr.querySelector('.row-unit').value = 'adet';
+        tr.querySelector('.row-price').value = '';
+        tr.querySelector('.row-vat').value = 20;
+    } else {
+        tr.remove();
+    }
+    calcAll();
+}
+
+// Ürün adı yazılırken mevcut bir stok kartıyla eşleşirse fiyat/birim/KDV otomatik doldurulur
+// (datalist seçimi native "change" olayında dataset taşımadığı için isimden eşleştiriyoruz).
+function onRowNameInput(input){
+    var tr = input.closest('tr');
+    var match = PRODUCTS.find(function(p){ return p.name === input.value; });
+    if(match){
+        tr.querySelector('.row-unit').value = match.unit || 'adet';
+        if(!tr.querySelector('.row-price').value) tr.querySelector('.row-price').value = match.price || '';
+        tr.querySelector('.row-vat').value = match.vat || 20;
+    }
+    calcAll();
+}
+
+function calcAll(){
+    var subtotalAll = 0, vatAll = 0;
+    document.querySelectorAll('#itemsBody tr').forEach(function(tr){
+        var q = parseFloat(tr.querySelector('.row-qty').value) || 0;
+        var p = parseFloat(tr.querySelector('.row-price').value) || 0;
+        var v = parseFloat(tr.querySelector('.row-vat').value) || 0;
+        var sub = q * p;
+        var vatAmt = sub * v / 100;
+        tr.querySelector('.row-sub').textContent = (sub + vatAmt).toLocaleString('tr-TR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ₺';
+        subtotalAll += sub;
+        vatAll += vatAmt;
+    });
+    document.getElementById('purchSubtotal').textContent = subtotalAll.toLocaleString('tr-TR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ₺';
+    document.getElementById('purchVat').textContent = vatAll.toLocaleString('tr-TR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ₺';
+    document.getElementById('purchTotal').textContent = (subtotalAll + vatAll).toLocaleString('tr-TR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ₺';
+}
+
+addItemRow();
 
 // Dropdown'da "Listede yok — Yeni Ekle" seçilince kutuyu aç (2026-07-03 kullanıcı isteği)
 function onSupplierChange(){

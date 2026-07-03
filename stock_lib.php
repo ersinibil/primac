@@ -74,14 +74,19 @@ function stock_add_purchase($pdo, $supplier, $pname, $qty, $price, $paymentMetho
  * Satın alma için finansal kaydı yap (finance_movements + account_balance)
  * @param PDO $pdo
  * @param int $supplier contact_id
- * @param float $total tutar
+ * @param float $netTotal KDV hariç (net) tutar — stok maliyeti bu tutar üzerinden hesaplanmıştı
  * @param string $paymentMethod ödeme yöntemi
  * @param int|null $itemId stok kartı ID'si (not için)
  * @param string $itemName ürün adı (not için)
- * @return array ['ok'=>bool, 'message'=>string]
+ * @param float $vatRate KDV oranı (%) — 0 ise KDV hesaplanmaz
+ * @return array ['ok'=>bool, 'message'=>string, 'total'=>float gerçek (KDV dahil) ödenen tutar]
  */
-function stock_add_purchase_finance($pdo, $supplier, $total, $paymentMethod='Veresiye', $itemId=null, $itemName=''){
+function stock_add_purchase_finance($pdo, $supplier, $netTotal, $paymentMethod='Veresiye', $itemId=null, $itemName='', $vatRate=0){
     try{
+        $vatRate = (float)$vatRate;
+        $vatAmount = $vatRate>0 ? round($netTotal*$vatRate/100, 2) : 0;
+        $total = round($netTotal+$vatAmount, 2);
+
         // Ödeme metodundan hesap bul
         $accId = null;
         if($paymentMethod!=='Veresiye'){
@@ -95,27 +100,30 @@ function stock_add_purchase_finance($pdo, $supplier, $total, $paymentMethod='Ver
             }catch(Throwable $e){}
         }
 
-        // Finance hareketi (gider)
-        $pdo->prepare("INSERT INTO finance_movements(contact_id,direction,amount,payment_channel,account_id,status,movement_date,description,movement_type)
-            VALUES(?,?,?,?,?,?,?,?,'purchase')")
-            ->execute([$supplier, 'out', $total, $paymentMethod, $accId, $paymentMethod==='Veresiye'?'Bekliyor':'Ödendi', date('Y-m-d'),
+        // Finance hareketi (gider) — amount her zaman gerçek (KDV dahil) ödenen/borçlanılan tutar
+        $pdo->prepare("INSERT INTO finance_movements(contact_id,direction,amount,vat_rate,vat_amount,payment_channel,account_id,status,movement_date,description,movement_type)
+            VALUES(?,?,?,?,?,?,?,?,?,?,'purchase')")
+            ->execute([$supplier, 'out', $total, $vatRate>0?$vatRate:null, $vatAmount, $paymentMethod, $accId, $paymentMethod==='Veresiye'?'Bekliyor':'Ödendi', date('Y-m-d'),
                 $itemName.' '.($itemId?'(kartID:'.$itemId.')':'').' satın alma']);
 
-        // Hesap bakiyesi güncelle (peşin ödeme ise)
+        // Hesap bakiyesi güncelle (peşin ödeme ise) — KDV dahil gerçek tutar düşülür
         if($accId){
             try{
                 $pdo->prepare("UPDATE finance_accounts SET current_balance=current_balance-? WHERE id=?")->execute([$total, $accId]);
             }catch(Throwable $e){}
         }
 
-        return ['ok'=>true, 'message'=>'Finansal kayıt oluşturuldu'];
+        return ['ok'=>true, 'message'=>'Finansal kayıt oluşturuldu', 'total'=>$total, 'vat_amount'=>$vatAmount];
     }catch(Throwable $e){
-        return ['ok'=>false, 'message'=>'Finansal kayıt başarısız: '.$e->getMessage()];
+        return ['ok'=>false, 'message'=>'Finansal kayıt başarısız: '.$e->getMessage(), 'total'=>$netTotal, 'vat_amount'=>0];
     }
 }
 
 /**
  * Satış silme: stoku geri koy, stok hareketi sil, finans hareketi sil/geri al
+ * Bir satışta BİRDEN FAZLA ürün satırı olabilir (sepet) — aynı finance_movement_id'ye
+ * bağlı TÜM stock_movements satırları tek tek geri alınır (2026-07-03: tekli üründen
+ * çoklu ürün sepetine geçişle birlikte, eski LIMIT 1 varsayımı kaldırıldı).
  * @param PDO $pdo
  * @param int $saleId finance_movements kaydının ID'si (movement_type='sale' veya 'mobile_sale')
  * @return array ['ok'=>bool, 'message'=>string]
@@ -133,14 +141,13 @@ function stock_reverse_sale($pdo, $saleId){
         $sale = $s->fetch();
         if(!$sale) return ['ok'=>false, 'message'=>'Satış kaydı bulunamadı.'];
 
-        // İlişkili stok hareketini KESİN referansla (finance_movement_id) bul — 2026-07-03 denetiminde
-        // eski "aynı gün + en son eklenen" tahmini kaldırıldı, aynı gün birden fazla satışta yanlış
-        // kaydı buluyordu (migration 030: stock_movements.finance_movement_id).
-        $stk = $pdo->prepare("SELECT * FROM stock_movements WHERE finance_movement_id=? LIMIT 1");
+        // İlişkili TÜM stok hareketlerini KESİN referansla (finance_movement_id) bul — sepette
+        // birden fazla ürün satırı varsa hepsi aynı finance_movement_id'yi taşır.
+        $stk = $pdo->prepare("SELECT * FROM stock_movements WHERE finance_movement_id=?");
         $stk->execute([$saleId]);
-        $movement = $stk->fetch();
+        $movements = $stk->fetchAll();
 
-        if($movement){
+        foreach($movements as $movement){
             $itemId = $movement['stock_item_id'];
             $qty = $movement['quantity'];
 
