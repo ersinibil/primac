@@ -324,6 +324,8 @@ input,select,textarea{font-size:16px}
             autocomplete="off" value="<?=htmlspecialchars($_GET['q'] ?? '')?>">
     </form>
     <div class="top-actions">
+        <a class="pill" href="takvim.php">📅 Takvim</a>
+        <a class="pill" href="notes.php">📝 Notlarım</a>
         <a class="pill <?=$notifCount?'alert-pill':''?>" href="notifications.php">🔔 <?=$notifCount?></a>
         <a class="pill" href="request_new.php">📨 Talep</a>
         <a class="pill" href="job_new.php">+ İş</a>
