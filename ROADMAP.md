@@ -1,5 +1,13 @@
 # ROADMAP.md — Açık Maddeler ve Bekleyen Kararlar
 
+## Web Push bildirimi — canlıda VAPID doğrulaması gerekiyor (2026-07-04, SPRINT CLOSE)
+Web push bildirimi (`sw.js`, `layout_bottom.php`) yerel ortamda gerçek Chromium ile uçtan uca
+doğrulandı (abonelik + teslimat başarılı) — ancak bu test `push_lib.php`'nin fallback (kod içi
+sabit) VAPID anahtarlarıyla çalıştı. primac.tr'nin GERÇEK sunucu `config.php`'sinde
+`vapid_public`/`vapid_private` tanımlı mı, `gmp`/`bcmath` PHP eklentisi var mı — bunlar sadece canlı
+sunucudan doğrulanabilir (bkz. `memory/deploy.md` "EYLEM GEREKİYOR" kaydı, 2026-07-03'ten beri açık).
+Kullanıcının primac.tr'de gerçek bir cihazdan bildirim izni verip test etmesi gerekiyor.
+
 ## Finans Gider Türü sihirbazı — kategori raporu açık noktası (2026-07-04)
 "Ne kaydediyorsun?" sihirbazının context-aware Gider Türü'ü `category_id` yerine `payment_type`
 kolonuna yazıyor (migration yok, mevcut kolon genişletildi). Sonuç: bundan sonra sihirbazla girilen

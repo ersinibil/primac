@@ -29,21 +29,23 @@ kritik şifre sıfırlama açığı (System Audit bulgusu) kapatıldı — `rese
 `$_POST['uid']`'e hiç güvenmiyor, hedef hesabı DB'den görüntülenen personele (`$id`) bağlı gerçek
 hesaptan çekiyor. Kullanıcı kararıyla kapsam genişledi: bu işlemler artık admin VEYA yeni
 `personnel_accounts` yetkili "alt yönetici" ile sınırlı (`boot.php::module_list()`, yeni migration
-gerekmedi). **Yerel MariaDB test ortamında (primac.tr benzeri, prod'a dokunulmadan) uçtan uca
-doğrulandı** (8 senaryo PASS — admin/alt-yönetici/düz-personnel farklı yetki seviyeleri, tampered
-`uid` reddi, admin şifresi korunması, hata logu temiz). **primac.tr'nin KENDİSİNDE henüz smoke test
-yapılmadı** — bir sonraki oturumun ilk işi.
-+ **UI/UX İyileştirmeleri + SPRINT-003** (2026-07-04, 7 ajanla tamamlandı, HENÜZ commit edilmedi):
-Üst Menü (Takvim linki), Notlarım Düzenle, Satın Alma inline ürün, Global Arama (5 yeni modül),
-İşlerim (Düzenle/Detay/Sil, soft-delete, migration 040), Personel kart+sekme (SADECE web,
-"Personel İş Takip Yönetimi" adının aslında personel yönetmediği bulundu, üretim/iş sistemi
-TAŞINMADI, sadece etiket düzeltildi), Finans bağlam-duyarlı Gider Türü. Yan ürün olarak 2 açık/bug
-daha kapatıldı: `mobile/task_view.php` IDOR, `accounting.php` sihirbaz JS scope hatası. Detay →
-`CHANGELOG.md`. **LOCAL QA MODE'da 7/7 modül yerel MariaDB'de uçtan uca test edildi, bulunan 4 sorun
-(web Satın Alma'nın `mm()` hatasıyla tamamen kırık olması, görev arama route'u, personel soft-delete
-sayaç filtresi, boş-tarih SQL hatası) düzeltilip yeniden doğrulandı.** `php -l` temiz. **primac.tr'de
-HENÜZ test edilmedi, HENÜZ commit edilmedi** — SECURITY SPRINT-001'den ayrı, kendi onay/test turunu
-bekliyor.
+gerekmedi). Yerel MariaDB test ortamında uçtan uca doğrulandı (8 senaryo PASS). **primac.tr'de
+smoke test edilip PASS alındı.**
++ **UI/UX İyileştirmeleri + SPRINT-003** (2026-07-04, 7 ajanla tamamlandı, `5fb2c43`+`697f985` ile
+commit edildi): Üst Menü (Takvim linki), Notlarım Düzenle, Satın Alma inline ürün, Global Arama
+(5 yeni modül), İşlerim (Düzenle/Detay/Sil, soft-delete, migration 040), Personel kart+sekme
+(SADECE web, "Personel İş Takip Yönetimi" adının aslında personel yönetmediği bulundu, üretim/iş
+sistemi TAŞINMADI, sadece etiket düzeltildi), Finans bağlam-duyarlı Gider Türü. Yan ürün olarak 2
+açık/bug daha kapatıldı: `mobile/task_view.php` IDOR, `accounting.php` sihirbaz JS scope hatası.
+LOCAL QA MODE'da 7/7 modül yerel MariaDB'de uçtan uca test edildi, bulunan 4 sorun (web Satın
+Alma'nın `mm()` hatasıyla tamamen kırık olması, görev arama route'u, personel soft-delete sayaç
+filtresi, boş-tarih SQL hatası) düzeltilip yeniden doğrulandı (`697f985`).
++ **SPRINT CLOSE ek düzeltmeleri** (2026-07-04, `b5c8410`..`d7c593a` ile commit edildi): Komuta
+Merkezi'ne Takvim modül kutusu (topbar pill denemesi kullanıcı adını bozduğu için geri alındı),
+web mesaj rozeti + sıfırdan web Push bildirimi (`sw.js`, gerçek Chromium ile uçtan uca doğrulandı),
+Takvim'de görev/not linklerinin düzeltilmesi + silinmiş görevin artık görünmemesi, web takvimde
+gün numarasının tıklanabilir hale getirilip günlük filtreli detay paneli eklenmesi. Detay →
+`CHANGELOG.md` "SPRINT CLOSE". **primac.tr'de smoke test edilip PASS alındı.**
 İçerik (bb8a710'dan SONRA yapılan değişiklikler): "İşlerim"/"Görevlerim" terim standardizasyonu,
 "Kendime İş Ekle" özelliği, emoji paneli konumlandırma düzeltmesi, tek-ortam (DEV/PROD) yönetim
 modelinin resmileşmesi, `VERSIONING.md`/`ROADMAP.md`/`KNOWN_BUGS.md`/`DATABASE.md` dokümantasyon
@@ -97,7 +99,14 @@ doğrulanmalı — geçmişte elle phpMyAdmin migration çalıştırma / zip'in 
 (acanstr.com/ots) bu numarayla çıkacak.
 
 ## Release Durumu
-🟢 **primac.tr = UX SPRINT-001'in güncel referans sürümü (2026-07-04)** — `d9c938b` commit'i
+🟢 **primac.tr = d7c593a'nın güncel referans sürümü (2026-07-04)** — `guncelleme.zip`
+(`git archive HEAD` + `vendor/`) ile primac.tr'ye yüklendi (`guncelle.php` ile Doğrula→Migration→
+Smoke Test akışı izlendi, migration 040 dahil uygulandı). SECURITY SPRINT-001 + UI/UX
+İyileştirmeleri + SPRINT-003 + SPRINT CLOSE ek düzeltmelerinin TAMAMI primac.tr'de smoke test
+edilip kullanıcı tarafından **PASS** onayı verildi. Production'a henüz gönderilmedi ("DEPLOY MODE"
+için ayrı bir komut gerekir) — push GitHub'a bu SPRINT CLOSE turunda yapıldı (aşağıya bakın).
+
+🟡 (Önceki tur) UX SPRINT-001'in referans sürümü — `d9c938b` commit'i
 `guncelleme.zip` (`git archive HEAD` + `vendor/`) ile "DEV DEPLOY MODE" kapsamında primac.tr'ye
 yüklendi. Canlı cihazdan alınan ekran görüntüsüyle doğrulandı: bildirim kart/detay tasarımı
 (tip rozetleri, 3 satır özet, "Devamını gör →", "Aç" butonunun kaldırılması) ve "Çalışma Alanı"
@@ -144,6 +153,7 @@ içindi) — push de yapılmadı.
 ## Dağıtım Geçmişi (Deployment History)
 | Tarih | Hedef | Commit/Not | Kaynak |
 |---|---|---|---|
+| 2026-07-04 | DEV (primac.tr) | `d7c593a` — SECURITY SPRINT-001 + UI/UX SPRINT-003 + SPRINT CLOSE ek düzeltmeleri, migration 040 | Bu oturum — Doğrula→Migration→Smoke Test PASS, kullanıcı onayı |
 | 2026-07-03 | DEV+PROD (ortak, ayrım öncesi) | `bb8a710` — mytasks.php web, mesajlaşma/bildirim düzeltmesi, migration 038 | `memory/deploy.md` — zip MD5 ile doğrulandı |
 | 2026-07-02 | ACANS + PRIMAC (elle phpMyAdmin) | `26bffcb` — gider kategorisi + marka adı + yetki canlı yenileme, migration 022/023 | `memory/deploy.md` "schema_migrations tuzağı" kaydı |
 | 2026-07-03 | — (deploy değil) | GitHub remote bağlandı (`ersinibil/primac`), 109 commit geçmişi push edildi | `memory/deploy.md` |

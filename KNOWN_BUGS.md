@@ -31,33 +31,44 @@ Tam denetim raporu (mimari/performans/UX/veri modeli dahil) → System Audit Art
 
 ## Son Çözülenler (detay → `memory/bugs.md`)
 
-- **`tasks` tablosunda kayıt kaynağı ayrımı yoktu (SPRINT-003, 2026-07-04, henüz commit
-  edilmedi)** — İşlerim ekranı Düzenle/Detay/Sil işi sırasında migration 040 ile `tasks.created_by`/
-  `updated_by` kolonları eklendi, `task_new.php`/`mobile/task_new.php`/`mytask_new.php`/
-  `mobile/mytask_new.php` artık `created_by` dolduruyor — admin'in atadığı iş ile kullanıcının kendine
-  eklediği iş artık ayırt edilebilir.
-- **YÜKSEK — Web'den Satın Alma tamamen kırıktı (LOCAL QA MODE'da bulundu, 2026-07-04, henüz commit
-  edilmedi)** — `stock_lib.php:84` ve `purchase.php:73,77`'de kullanılan `mm()` fonksiyonu SADECE
+- **Web takvimde gün tıklama hiçbir şey yapmıyordu (SPRINT CLOSE, 2026-07-04, `d7c593a`)** —
+  `takvim.php`'de gün numarasının hiç linki yoktu, ay ızgarası zaten tüm günleri iç içe gösterdiği
+  için tıklamanın hiçbir etkisi olamazdı. Mobildeki `?g=` gün-filtreleme deseni web'e de eklendi.
+- **Takvimde silinmiş görev hâlâ görünüyordu (SPRINT CLOSE, 2026-07-04, `013e96a`)** — hem
+  `takvim.php` hem `mobile/calendar.php`'nin `tasks` sorgusunda `deleted_at IS NULL` eksikti.
+- **Takvimde görev/not linkleri yanlış sayfaya gidiyordu (SPRINT CLOSE, 2026-07-04, `9b5eb33`)** —
+  web'de notlar alakasız `dashboard.php`'ye, görevler her zaman genel `mytasks.php`'ye gidiyordu.
+  Artık `notes.php` / spesifik `task_view.php?id=`'e gidiyor.
+- **Web'de mesaj bildirimi hiç yoktu (SPRINT CLOSE, 2026-07-04, `03a0df3`)** — web'de mobildeki
+  `unread_msg()` rozetinin eşdeğeri yoktu (kapatıldı) VE web push bildirimi için hiçbir service
+  worker/kayıt kodu yoktu (sıfırdan inşa edildi, gerçek Chromium ile uçtan uca doğrulandı).
+- **`tasks` tablosunda kayıt kaynağı ayrımı yoktu (SPRINT-003, 2026-07-04, `5fb2c43`)** — İşlerim
+  ekranı Düzenle/Detay/Sil işi sırasında migration 040 ile `tasks.created_by`/`updated_by`
+  kolonları eklendi, `task_new.php`/`mobile/task_new.php`/`mytask_new.php`/`mobile/mytask_new.php`
+  artık `created_by` dolduruyor — admin'in atadığı iş ile kullanıcının kendine eklediği iş artık
+  ayırt edilebilir.
+- **YÜKSEK — Web'den Satın Alma tamamen kırıktı (LOCAL QA MODE'da bulundu, 2026-07-04,
+  `697f985`)** — `stock_lib.php:84` ve `purchase.php:73,77`'de kullanılan `mm()` fonksiyonu SADECE
   `mobile/common.php`'de tanımlıydı; web'den (`purchase.php`) her satın alma denemesi "Call to
   undefined function mm()" ile çöküp transaction rollback oluyordu — hiçbir stok/finans kaydı
   yazılmıyordu, kullanıcıya da hata mesajı dışında bir ipucu verilmiyordu. Bugünkü sprintten ÖNCE de
   vardı (mobil akış her zaman sorunsuzdu, mm() orada tanımlıydı). `money()` (boot.php, her iki
   platformda evrensel) ile değiştirilerek kapatıldı.
-- **DÜŞÜK — Muhasebe'de boş tarih SQL hatası (LOCAL QA MODE'da bulundu, 2026-07-04, henüz commit
-  edilmedi)** — `accounting.php`/`accounting_lib.php`/`mobile/accounting.php`'de
+- **DÜŞÜK — Muhasebe'de boş tarih SQL hatası (LOCAL QA MODE'da bulundu, 2026-07-04,
+  `697f985`)** — `accounting.php`/`accounting_lib.php`/`mobile/accounting.php`'de
   `$_POST['entry_date'] ?? date('Y-m-d')` deseni boş string'i (NULL değil) yakalamıyordu, tarih alanı
   boş gönderilirse "Incorrect date value" SQL hatası veriyordu. `??` yerine `?:` ile düzeltildi.
-- **YÜKSEK — `mobile/task_view.php` IDOR (SPRINT-003, 2026-07-04, henüz commit edilmedi)** —
+- **YÜKSEK — `mobile/task_view.php` IDOR (SPRINT-003, 2026-07-04, `5fb2c43`)** —
   `task_status` güncellemesi `WHERE id=?` kullanıyordu, sahiplik kontrolü (`AND personnel_id=?`)
   yoktu; herhangi bir giriş yapmış kullanıcı `?id=` değiştirerek başkasının görev durumunu
   değiştirebiliyordu. İşlerim ekranı Düzenle/Detay/Sil işi sırasında bulunup `tasks_lib.php::
   task_can_edit()` ile kapatıldı (bonus düzeltme, asıl görev bu değildi).
 - **KRİTİK — `mobile/personnel_view.php` keyfi şifre sıfırlama (SECURITY SPRINT-001,
-  2026-07-04)** — `reset_pw` POST işlemi hedef hesabı `$_POST['uid']`'den değil, DB'den
+  2026-07-04, `d511fad`)** — `reset_pw` POST işlemi hedef hesabı `$_POST['uid']`'den değil, DB'den
   görüntülenen personele (`$id`, `app_users.personnel_id`/`personnel.user_id` bağı) göre
   çekecek şekilde değiştirildi; artık POST'a hangi `uid` yazılırsa yazılsın sadece o personelin
-  gerçek hesabı etkileniyor. Kullanılmayan gizli `uid` form alanı da kaldırıldı. Henüz DEV'de
-  (primac.tr) smoke test edilmedi.
+  gerçek hesabı etkileniyor. Kullanılmayan gizli `uid` form alanı da kaldırıldı. primac.tr'de
+  smoke test edilip PASS alındı.
 - **Mesaj rozeti kalıcı şişiyordu (Sprint-001 DEV testinde bulundu, 2026-07-04, `0ba36da` ile
   commit edildi)** — `notes_lib.php`'nin "Kendime Not Ekle" kendine-mesaj kaydı `is_read=0` ile
   oluşuyordu; mesaj kişi listesi kullanıcının kendisini hariç tuttuğu için bu mesaj hiçbir zaman

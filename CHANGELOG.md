@@ -3,8 +3,43 @@
 Bu dosya `memory/features.md`'nin (tam gerekçe/kod detayıyla) kök dizindeki kısa özetidir — hızlı
 taramak için. Detaylı "neden böyle yapıldı" analizleri için `memory/features.md`'ye bakın.
 
+## SPRINT CLOSE — DEV'de test edildi, PASS (2026-07-04)
+Aşağıdaki "LOCAL QA MODE + düzeltmeler" ve "UI/UX İyileştirmeleri + SPRINT-003" paketleri primac.tr
+(DEV) üzerinde fiilen yüklenip smoke test edildi, kullanıcı PASS onayı verdi. Bu turda ayrıca DEV
+smoke test sırasında/sonrasında bulunan ek maddeler kapatıldı:
+- **Komuta Merkezi'ne Takvim kutusu** — kullanıcı üst çubuğa (topbar) eklenen Takvim/Notlarım
+  pill'lerinin kullanıcı adı alanını bozduğunu bildirdi; bu ikisi topbar'dan kaldırıldı, Takvim
+  bunun yerine `dashboard.php`'nin modül kart ızgarasına ("İşler/Cariler/Finans..." ile aynı stilde)
+  eklendi. Işgara 8→9 kutu için 4 sütundan 3 sütuna çevrildi (tam 3x3 oran).
+- **Web mesaj rozeti + Web Push bildirimi eklendi** — kullanıcı bildirimi: "uygulama içi mesaj
+  bildirimi gelmiyor, web+mobil". Kök neden ikiye ayrıldı: (1) web'de mobildeki `unread_msg()`
+  rozetinin bir eşdeğeri hiç yoktu — `layout_top.php`'ye eklendi. (2) Web Push (tarayıcı bildirimi)
+  için hiçbir service worker/kayıt kodu yoktu — yeni kök-seviye `sw.js` + `layout_bottom.php`'ye
+  kayıt/abonelik scripti eklendi (mobildeki `mobile/sw.js`/`mobile/common.php` deseninin web'e
+  uyarlanmış hali, offline cache YOK — sadece push). Gerçek Chromium (Playwright) ile uçtan uca
+  doğrulandı: Service Worker aktive oldu, gerçek bir FCM aboneliği oluştu, `push_subs`'a kaydedildi,
+  `push_to_user()` ile gönderilen test bildirimi başarıyla teslim edildi. Yol boyunca bulunan bir
+  zamanlama hatası da düzeltildi: `register()`'dan dönen kayıt her zaman aktif olmuyordu,
+  `navigator.serviceWorker.ready` ile garantiye alındı.
+- **Takvim — görev/not linkleri düzeltildi** (web `takvim.php` + mobil `mobile/calendar.php`):
+  notlar önceden alakasız `dashboard.php`'ye gidiyordu (web), görevler her zaman genel
+  `mytasks.php`/`tasks.php`'ye gidiyordu (spesifik detay değil). İkisi de artık `notes.php` /
+  bugünkü İşlerim sprintinde eklenen `task_view.php?id=`'e gidiyor.
+- **Takvim — silinmiş görev hâlâ görünüyordu** — her iki takvim dosyasının `tasks` sorgusuna
+  `deleted_at IS NULL` eksikti (aynı sınıf hata, personel modülündeki QA bulgusuyla aynı kök
+  neden — soft-delete migration 040 sonrası eklenmemiş sorgular).
+- **Web takvimde gün tıklama çalışmıyordu** — kullanıcı bildirimi: "bir güne tıklayınca hepsini
+  açıyor, sadece ilgili günü göstermeli." Kök neden: web'de gün numarasının hiç linki yoktu (ay
+  ızgarası zaten tüm günleri iç içe gösteriyordu, tıklamanın hiçbir etkisi olamazdı) — mobildeki
+  `?g=` gün-filtreleme deseni web'e de eklendi: gün numarası artık `takvim.php?ay=...&g=GÜN`
+  linki, tıklanan gün ızgarada vurgulanıyor, altında SADECE o güne ait işler/görevler/notların
+  listelendiği bir panel açılıyor ("✕ Kapat" ile geri dönülüyor).
+
+Tüm değişen dosyalarda `php -l` temiz, her madde yerel MariaDB ortamında (bir kısmı gerçek Chromium
+ile) test edilip doğrulandı, ardından primac.tr'de smoke test edilerek PASS alındı.
+
 ## LOCAL QA MODE + düzeltmeler (2026-07-04, DEV — yerel MariaDB'de 7 modülün tamamı uçtan uca test
-edildi, 4 bulgu bulunup düzeltildi ve yeniden doğrulandı; primac.tr'de HENÜZ test edilmedi)
+edildi, 4 bulgu bulunup düzeltildi ve yeniden doğrulandı; primac.tr'de test edilip PASS alındı)
 Aşağıdaki "UI/UX İyileştirmeleri + SPRINT-003" paketinin 7 maddesi yerel (primac.tr'ye dokunmadan)
 MariaDB test ortamında gerçek HTTP istekleriyle test edildi. 6/7 madde ilk turda PASS, 2 madde
 (#3 Satın Alma, #4 Global Arama) bulgu içeriyordu; ayrıca #6 Personel Kart+Sekme'de bir sayaç
@@ -32,8 +67,8 @@ tutarsızlığı bulundu. Bulunan 4 sorun düzeltildi ve tekrar test edilerek do
 (hata logları temiz). Detaylı test raporu (7 madde, senaryo/beklenen/PASS-FAIL/risk) bu oturumun
 sohbet geçmişinde mevcuttur.
 
-## UI/UX İyileştirmeleri + SPRINT-003 (2026-07-04, DEV — 7 ajanla tamamlandı, primac.tr'de HENÜZ
-test edilmedi — yerel MariaDB'de tam test edildi, yukarıdaki bölüme bakın)
+## UI/UX İyileştirmeleri + SPRINT-003 (2026-07-04, DEV — 7 ajanla tamamlandı, yerel MariaDB'de tam
+test edildi, primac.tr'de smoke test edilip PASS alındı — yukarıdaki "SPRINT CLOSE" bölümüne bakın)
 Kullanıcının verdiği iki ayrı talimat (4 maddelik UI/UX isteği + "SPRINT-003" mimari revizyon isteği)
 7 bağımsız işe bölünüp paralel `ots-feature-dev` ajanlarıyla uygulandı:
 1. **Üst Menü** — `layout_top.php`'de "Takvim" linki artık Komuta Merkezi/Notlarım ile aynı seviyede
