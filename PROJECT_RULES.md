@@ -73,6 +73,31 @@ tanımının (ACANS + PRIMAC ayrı ayrı canlı) YERİNE geçer.
   bu klasör primac.tr ortamının çalışma dizini DEĞİL. Şimdilik dokunulmuyor.
 - `/Users/acans/ots` — boş/yardımcı klasör (sadece `.claude` ayarları var). Şimdilik dokunulmuyor.
 
+## Deploy Standardı (2026-07-04'ten itibaren — RESMİ STANDART, DEV+PROD'da otomatik uygulanır)
+Bundan sonraki TÜM Development (primac.tr) ve Production ("DEPLOY MODE" ile acanstr.com/ots) deploy
+işlemlerinde aşağıdaki 7 adım sırayla tamamlanmadan deploy "başarılı" sayılmaz:
+
+**Hazırla → Yükle → Doğrula → Migration → Smoke Test → Temizlik → Son Doğrulama**
+
+1. **Otomatik temizlik**: Deploy tamamlandıktan sonra `guncelleme.zip`, test paketleri (`*_test.zip`,
+   `*_test.php`), geçici installer dosyaları (`kur.php`, `ac.php`, `bitir.php`,
+   `temizle-kurulum.php`, `install_*.php`), migration yardımcı dosyaları ve deploy sırasında
+   oluşan tüm geçici dosyalar **otomatik tespit edilip silinir** — kullanıcıdan manuel dosya
+   silmesi İSTENMEZ (cPanel File Manager'da elle silme yok).
+2. Temizlik işlemi deploy aracının kendisi (`guncelle.php`) tarafından **doğrulanır** (silme
+   başarılı mı kontrol edilir, `unlink()` dönüş değeri kontrolsüz bırakılmaz — bkz. bu projede daha
+   önce yaşanan "sahte başarı" hatası, `extractTo()`'nun kontrol edilmemesi).
+3. Temizlik sonunda üç liste raporlanır: **silinen dosyalar**, **silinemeyen dosyalar**, henüz
+   silme kapsamına GİRMEYEN (kalıcı kod/config) dosyalara dokunulmadığı notu.
+4. Güvenlik/izin nedeniyle otomatik silinemeyen bir dosya varsa: **tam yol + dosya adı + silinme
+   nedeni** açıkça raporlanır (kullanıcı elle müdahale etmek isterse net bilgiyle karar verebilsin).
+5. **Smoke Test, Temizlik'ten ÖNCE gelir** — deploy aracı zip'i açıp migration'ı uyguladıktan sonra
+   HEMEN kendini silmez; kullanıcı smoke test'i tamamlayıp onay verene kadar (ör. `?cleanup=1`
+   linkine tıklayana kadar) zip/araç dosyaları sunucuda kalır — böylece bir sorun çıkarsa tekrar
+   extract etmeye gerek kalmadan durum incelenebilir.
+6. Bu standart `~/Desktop/PRIMAC-GUNCELLEME/guncelle.php` (DEV) ve "DEPLOY MODE" sırasında
+   `~/Desktop/ACANS-GUNCELLEME/guncelle.php` (PROD) için AYNI şablondan uygulanır.
+
 ## Kavram Standardı (2026-07-03'te netleşti)
 - **"İşlerim"** = bana atanmış işler/görevler listesi (`mytasks.php` / `mobile/mytasks.php`).
   **"Görevlerim" ifadesi artık kullanılmaz.**

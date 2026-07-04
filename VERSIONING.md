@@ -64,10 +64,17 @@ doğrulanmalı — geçmişte elle phpMyAdmin migration çalıştırma / zip'in 
 (acanstr.com/ots) bu numarayla çıkacak.
 
 ## Release Durumu
-🟡 **DEV'de fiilen test edildi (2026-07-04)** — primac.tr'ye `primactr_dev_sprint001_test.zip` ile
-yüklendi, manuel test sırasında 2 ek hata bulunup düzeltildi (aşağıya bakın). Production'a henüz
-gönderilmedi ("DEPLOY MODE" komutu verilmedi). DEV test sonucu kullanıcı tarafından "ok" olarak
-onaylandı, ama resmi commit/release henüz yapılmadı.
+🟢 **primac.tr = UX SPRINT-001'in güncel referans sürümü (2026-07-04)** — `d9c938b` commit'i
+`guncelleme.zip` (`git archive HEAD` + `vendor/`) ile "DEV DEPLOY MODE" kapsamında primac.tr'ye
+yüklendi. Canlı cihazdan alınan ekran görüntüsüyle doğrulandı: bildirim kart/detay tasarımı
+(tip rozetleri, 3 satır özet, "Devamını gör →", "Aç" butonunun kaldırılması) ve "Çalışma Alanı"
+UI değişikliği birebir çalışıyor. Migration tarafında yeni migration yoktu (39/39 zaten güncel).
+Production'a henüz gönderilmedi ("DEPLOY MODE" için ayrı bir komut gerekir, bu sadece primac.tr/DEV
+içindi) — push de yapılmadı.
+
+🟡 (Önceki tur, Sprint-001) DEV'de fiilen test edildi (2026-07-04) — primac.tr'ye
+`primactr_dev_sprint001_test.zip` ile yüklendi, manuel test sırasında 2 ek hata bulunup düzeltildi
+(aşağıya bakın), `0ba36da` ile commit edildi.
 
 ## Release Tarihi
 - v1.0.0 (production, tahmini/başlangıç): 2026-07-03
