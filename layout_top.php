@@ -4,6 +4,14 @@ if(file_exists(__DIR__.'/notifications_lib.php')) require_once __DIR__.'/notific
 $notifCount = 0;
 $__me=(int)(current_user()['id'] ?? 0);
 try { $notifCount = function_exists('notif_unread_count') ? notif_unread_count(db(),$__me) : 0; } catch(Throwable $e) {}
+// Okunmamış iç mesaj rozeti — mobil zaten mobile/common.php::unread_msg() ile gösteriyordu,
+// web'de karşılığı hiç yoktu (kullanıcı bildirimi: "web'de mesaj bildirimi gelmiyor").
+$unreadMsgCount = 0;
+try {
+    $s = db()->prepare("SELECT COUNT(*) c FROM internal_messages WHERE receiver_user_id=? AND is_read=0 AND sender_user_id IS NOT NULL");
+    $s->execute([$__me]);
+    $unreadMsgCount = (int)($s->fetch()['c'] ?? 0);
+} catch(Throwable $e) {}
 $cur = basename($_SERVER['SCRIPT_NAME']);
 ?>
 <!doctype html>
@@ -324,6 +332,7 @@ input,select,textarea{font-size:16px}
             autocomplete="off" value="<?=htmlspecialchars($_GET['q'] ?? '')?>">
     </form>
     <div class="top-actions">
+        <a class="pill <?=$unreadMsgCount?'alert-pill':''?>" href="messages.php">💬 <?=$unreadMsgCount?:''?></a>
         <a class="pill <?=$notifCount?'alert-pill':''?>" href="notifications.php">🔔 <?=$notifCount?></a>
         <a class="pill" href="request_new.php">📨 Talep</a>
         <a class="pill" href="job_new.php">+ İş</a>
