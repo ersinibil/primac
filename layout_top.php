@@ -133,13 +133,13 @@ input,select,textarea{font-size:16px}
 .activity-body small{color:#667085;font-size:12px}
 
 /* Büyük renkli navigasyon kartları (mobildeki gibi) — dashboard hızlı erişim */
-.navtiles{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:6px 0 22px}
+.navtiles{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:6px 0 22px}
 .ntile{min-height:118px;border-radius:22px;padding:18px;color:#0f172a;text-decoration:none;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 8px 24px rgba(16,24,40,.06);transition:transform .12s ease,box-shadow .12s ease}
 .ntile:hover{transform:translateY(-3px);box-shadow:0 16px 38px rgba(16,24,40,.14)}
 .ntile .ic{font-size:30px;line-height:1}
 .ntile b{font-size:17px;font-weight:800;margin-top:6px}
 .ntile small{color:#475467;font-size:12.5px}
-.ntile.blue{background:#dbeafe}.ntile.green{background:#dcfce7}.ntile.orange{background:#ffedd5}.ntile.purple{background:#ede9fe}.ntile.red{background:#fee2e2}.ntile.yellow{background:#fef3c7}.ntile.teal{background:#ccfbf1}.ntile.gray{background:#eef2f6}
+.ntile.blue{background:#dbeafe}.ntile.green{background:#dcfce7}.ntile.orange{background:#ffedd5}.ntile.purple{background:#ede9fe}.ntile.red{background:#fee2e2}.ntile.yellow{background:#fef3c7}.ntile.teal{background:#ccfbf1}.ntile.gray{background:#eef2f6}.ntile.indigo{background:#e0e7ff}
 @media(max-width:960px){.navtiles{grid-template-columns:1fr 1fr;gap:11px}.ntile{min-height:104px;border-radius:18px;padding:15px}}
 </style>
 </head>
@@ -324,8 +324,6 @@ input,select,textarea{font-size:16px}
             autocomplete="off" value="<?=htmlspecialchars($_GET['q'] ?? '')?>">
     </form>
     <div class="top-actions">
-        <a class="pill" href="takvim.php">📅 Takvim</a>
-        <a class="pill" href="notes.php">📝 Notlarım</a>
         <a class="pill <?=$notifCount?'alert-pill':''?>" href="notifications.php">🔔 <?=$notifCount?></a>
         <a class="pill" href="request_new.php">📨 Talep</a>
         <a class="pill" href="job_new.php">+ İş</a>

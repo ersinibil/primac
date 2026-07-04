@@ -216,6 +216,7 @@ function cmd_card($title,$value,$desc,$url,$tone='blue'){
 <?php if(user_can('report')): ?><a class="ntile yellow" href="report.php"><span class="ic">📊</span><b>Raporlar</b><small>Yekün &amp; modül</small></a><?php endif; ?>
 <?php if(user_can('personnel')): ?><a class="ntile red" href="personnel.php"><span class="ic">👷</span><b>Personel</b><small>Ekip &amp; görev</small></a><?php endif; ?>
 <a class="ntile gray" href="messages.php"><span class="ic">💬</span><b>Mesajlar</b><small>İç yazışma</small></a>
+<a class="ntile indigo" href="takvim.php"><span class="ic">📅</span><b>Takvim</b><small>Planlama &amp; hatırlatma</small></a>
 </div>
 
 <!-- ── Karşılaştırmalı KPI Kartları ── -->
