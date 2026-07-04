@@ -3,7 +3,51 @@
 Bu dosya `memory/features.md`'nin (tam gerekçe/kod detayıyla) kök dizindeki kısa özetidir — hızlı
 taramak için. Detaylı "neden böyle yapıldı" analizleri için `memory/features.md`'ye bakın.
 
-## SECURITY SPRINT-001 (2026-07-04, DEV — henüz commit edilmedi, primac.tr'de test bekliyor)
+## UI/UX İyileştirmeleri + SPRINT-003 (2026-07-04, DEV — 7 ajanla tamamlandı, henüz commit edilmedi,
+primac.tr'de HENÜZ test edilmedi — sadece php -l + yerel MariaDB test ortamında kısmi doğrulama yapıldı)
+Kullanıcının verdiği iki ayrı talimat (4 maddelik UI/UX isteği + "SPRINT-003" mimari revizyon isteği)
+7 bağımsız işe bölünüp paralel `ots-feature-dev` ajanlarıyla uygulandı:
+1. **Üst Menü** — `layout_top.php`'de "Takvim" linki artık Komuta Merkezi/Notlarım ile aynı seviyede
+   sürekli görünür (önceden alt menüde gizliydi).
+2. **Notlarım Düzenle** — `notes_lib.php::personal_note_update()` + web/mobil modal/inline form,
+   `WHERE id=? AND user_id=?` ile IDOR'a kapalı. "Öncelik"/"Hatırlatma" alanları şemada olmadığı için
+   eklenmedi (bkz. `ROADMAP.md`).
+3. **Satın Alma inline ürün oluşturma** — `purchase.php`/`mobile/purchase.php`, `sales.php`'deki
+   mevcut "➕ Yeni Ürün Ekle…" deseni (`ajax_quick_add.php`) yeniden kullanıldı, yeni dosya/migration yok.
+4. **Global Arama** — `search_lib.php`'ye 5 eksik modül eklendi (Görevler/Dosyalar/Kullanıcılar/
+   Notlarım/Mesajlar), hepsi `user_can()` + prepared statement + IDOR kontrollü (Notlar/Mesajlar
+   sahiplik filtresiyle). "Personel aranmıyor" şikâyetinin kök nedeni kod hatası değil, kullanıcının
+   modül adının kendisini araması (kayıt eşleşmiyordu) — diğer modüllerdeki "modül adı yazılırsa son
+   kayıtlar listelensin" deseni personele de eklendi.
+5. **İşlerim ekranı (Düzenle/Detay/Sil)** — yeni `tasks_lib.php` (ortak yetki/iş mantığı) + web
+   `task_view.php` (yeni, mobildeki karşılığı zaten vardı) + migration `040_task_edit_detail_soft_delete.sql`
+   (`tasks.created_by/updated_by/deleted_at` + yeni `task_comments`/`task_files` tabloları, idempotent).
+   Silme SOFT DELETE (`deleted_at`), hiçbir kayıt fiziksel silinmiyor. **Bonus düzeltme**: bu iş
+   sırasında `mobile/task_view.php`'deki bilinen IDOR açığı (bkz. `KNOWN_BUGS.md` "Son Çözülenler")
+   da kapatıldı — asıl görev bu değildi, yan ürün olarak bulundu.
+6. **Personel modülü kart+sekme (SADECE WEB)** — kod incelemesinde "Personel İş Takip Yönetimi" adlı
+   menü grubunun aslında personel YÖNETMEDİĞİ, sadece jobs/tasks/production/design gibi şirket-geneli
+   üretim sayfalarını içeren yanıltıcı bir etiket olduğu bulundu (ikinci bir personel yönetim ekranı
+   YOK). Bu nedenle üretim/iş takip sistemi TAŞINMADI — sadece etiket "İş / Üretim Yönetimi" olarak
+   düzeltildi, `personnel.php` kart görünümüne çevrildi, `personnel_edit.php` (bu projede web'de ayrı
+   bir `personnel_view.php` yok) sekmeli hale getirildi (Genel/Görevler/Takvim/Mesajlar/Notlar/
+   Dosyalar/Performans/Maaş-Avans-Prim/Giriş Hesabı/Hareket Geçmişi) — hepsi var olan sorguların
+   personele FİLTRELENMİŞ görünümleri, yeni iş mantığı icat edilmedi. Mobil parite (kart/sekme +
+   `mobile/more.php` etiketi) bilinçli olarak bu turun dışında bırakıldı (bkz. `ROADMAP.md`).
+7. **Finans bağlam-duyarlı Gider Türü** — "Ne kaydediyorsun?" adımına göre "Gider Türü" listesi artık
+   JS ile yeniden kuruluyor (7 adımın literal kataloğu, `finance_lib.php::finance_expense_type_options()`),
+   cari/personel alanları sadece ilgili adımda görünüyor. Değer var olan `payment_type` kolonuna
+   yazılıyor (migration YOK). Yan ürün olarak 2 bug bulunup düzeltildi: `accounting.php`'de sihirbazı
+   tamamen kıran bir JS scope hatası, ve düzenlemede `category_id`'nin sessizce silinme riski.
+   **Bilinen sonuç**: bundan sonra sihirbazla girilen yeni giderler `category_id` taşımayacağı için
+   `accounting.php`'nin "Grup Özeti" sekmesi/kategori bazlı raporlar yeni kayıtları kapsamayacak
+   (eski kayıtlar etkilenmez) — ayrı bir karar/sprint gerektirir, bkz. `ROADMAP.md`.
+
+Tüm 7 iş için `php -l` temiz, dosya çakışması yok. SECURITY SPRINT-001'den TAMAMEN AYRI commit
+edilecek (farklı konu, farklı onay/test döngüsü).
+
+## SECURITY SPRINT-001 (2026-07-04, DEV — primac.tr benzeri yerel MariaDB test ortamında uçtan uca
+doğrulandı, `d511fad` ile commit edildi — primac.tr'nin KENDİSİNDE henüz smoke test yapılmadı)
 `mobile/personnel_view.php`'deki kritik şifre sıfırlama açığı kapatıldı (System Audit'te bulunmuştu,
 bkz. `KNOWN_BUGS.md`). Kök neden: `reset_pw` POST işlemi hedef hesabı doğrudan `$_POST['uid']`'den
 alıyordu, bu alanın gerçekten görüntülenen personelin (`$id`) bağlı hesabı olduğu hiç

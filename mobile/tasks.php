@@ -1,21 +1,19 @@
 <?php
 require_once 'common.php';
+require_once __DIR__.'/../tasks_lib.php';
 if(!user_can('tasks')){ header('Location: index.php'); exit; }
 $pdo=db();
+$me=(int)($_SESSION['user']['id']??0);
 if($_SERVER['REQUEST_METHOD']==='POST'){
   try{
     if(isset($_POST['task_status']) && (int)($_POST['tid']??0)){
-      $st=$_POST['task_status'];
-      $pdo->prepare("UPDATE tasks SET status=?, completed_at=IF(?='Tamamlandı',NOW(),completed_at), started_at=IF(?='Devam Ediyor' AND started_at IS NULL,NOW(),started_at) WHERE id=?")
-          ->execute([$st,$st,$st,(int)$_POST['tid']]);
+      task_set_status($pdo,(int)$_POST['tid'],$_POST['task_status'],$me);
     }
     if(isset($_POST['edit_task']) && can_edit_delete()){
-      $tid=(int)$_POST['tid'];
-      $pdo->prepare("UPDATE tasks SET title=?, description=?, due_date=?, priority=?, personnel_id=? WHERE id=?")
-          ->execute([trim($_POST['title']), trim($_POST['description']??''), $_POST['due_date']?:null, $_POST['priority']??'Normal', (int)($_POST['personnel_id']??0)?:null, $tid]);
+      task_apply_edit($pdo,(int)$_POST['tid'],$_POST,$me,true);
     }
     if(isset($_POST['delete_task']) && can_edit_delete()){
-      $pdo->prepare("DELETE FROM tasks WHERE id=?")->execute([(int)$_POST['tid']]);
+      task_soft_delete($pdo,(int)$_POST['tid'],$me);
     }
   }catch(Throwable $e){}
   header('Location: tasks.php'.(!empty($_GET['f'])?'?f='.urlencode($_GET['f']):'')); exit;
@@ -23,8 +21,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 
 $f=$_GET['f']??'open';
 $fp=$_GET['p']??'';
-$where=''; if($f==='open') $where="WHERE t.status NOT IN ('Tamamlandı','İptal')"; elseif($f==='done') $where="WHERE t.status='Tamamlandı'";
-if($fp){ $where.=($where?' AND ':' WHERE ').'t.personnel_id='.(int)$fp; }
+$where='WHERE t.deleted_at IS NULL'; if($f==='open') $where.=" AND t.status NOT IN ('Tamamlandı','İptal')"; elseif($f==='done') $where.=" AND t.status='Tamamlandı'";
+if($fp){ $where.=' AND t.personnel_id='.(int)$fp; }
 
 topx('Tüm Görevler');
 ?>
@@ -41,7 +39,7 @@ topx('Tüm Görevler');
     <option value="">— Personel Filtresi —</option>
     <?php
     try{
-      $pl=$pdo->query("SELECT DISTINCT t.personnel_id, p.name FROM tasks t LEFT JOIN personnel p ON p.id=t.personnel_id WHERE t.personnel_id IS NOT NULL ORDER BY p.name")->fetchAll();
+      $pl=$pdo->query("SELECT DISTINCT t.personnel_id, p.name FROM tasks t LEFT JOIN personnel p ON p.id=t.personnel_id WHERE t.personnel_id IS NOT NULL AND t.deleted_at IS NULL ORDER BY p.name")->fetchAll();
       foreach($pl as $p) echo '<option value="'.(int)$p['personnel_id'].'"'.($fp==(int)$p['personnel_id']?' selected':'').'>'.htmlspecialchars($p['name']).'</option>';
     }catch(Throwable $e){}
     ?>
@@ -69,6 +67,7 @@ if(!$rows): ?>
   </small>
 
   <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+    <a class="btn" href="task_view.php?id=<?=(int)$r['id']?>" style="background:rgba(255,255,255,.12);color:#fff;padding:8px 12px;font-size:12px">👁 Detay</a>
     <?php if($r['status']!=='Devam Ediyor' && $r['status']!=='Tamamlandı'): ?>
     <form method="post"><input type="hidden" name="tid" value="<?=(int)$r['id']?>"><button class="btn" style="background:rgba(255,255,255,.12);color:#fff;padding:8px 12px;font-size:12px" name="task_status" value="Devam Ediyor">▶ Başla</button></form>
     <?php endif; ?>

@@ -24,10 +24,23 @@ gerçekten çalışır durumda olduğu ayrıca doğrulanmamıştır (bkz. `memor
 
 ## Current Development Version
 **v1.1.0-dev** (primac.tr) — ortam ayrımından SONRAKİ ilk geliştirme turu
-+ **SECURITY SPRINT-001** (2026-07-04, henüz commit edilmedi): `mobile/personnel_view.php` kritik
-şifre sıfırlama açığı (System Audit bulgusu) kapatıldı — `reset_pw` hedef hesabı artık `$_POST['uid']`
-yerine DB'den görüntülenen personele (`$id`) bağlı gerçek hesaptan çekiyor. Detay → `CHANGELOG.md`.
-**Henüz primac.tr'de test edilmedi.**
++ **SECURITY SPRINT-001** (2026-07-04, `d511fad` ile commit edildi): `mobile/personnel_view.php`
+kritik şifre sıfırlama açığı (System Audit bulgusu) kapatıldı — `reset_pw`/`make_login` artık
+`$_POST['uid']`'e hiç güvenmiyor, hedef hesabı DB'den görüntülenen personele (`$id`) bağlı gerçek
+hesaptan çekiyor. Kullanıcı kararıyla kapsam genişledi: bu işlemler artık admin VEYA yeni
+`personnel_accounts` yetkili "alt yönetici" ile sınırlı (`boot.php::module_list()`, yeni migration
+gerekmedi). **Yerel MariaDB test ortamında (primac.tr benzeri, prod'a dokunulmadan) uçtan uca
+doğrulandı** (8 senaryo PASS — admin/alt-yönetici/düz-personnel farklı yetki seviyeleri, tampered
+`uid` reddi, admin şifresi korunması, hata logu temiz). **primac.tr'nin KENDİSİNDE henüz smoke test
+yapılmadı** — bir sonraki oturumun ilk işi.
++ **UI/UX İyileştirmeleri + SPRINT-003** (2026-07-04, 7 ajanla tamamlandı, HENÜZ commit edilmedi):
+Üst Menü (Takvim linki), Notlarım Düzenle, Satın Alma inline ürün, Global Arama (5 yeni modül),
+İşlerim (Düzenle/Detay/Sil, soft-delete, migration 040), Personel kart+sekme (SADECE web,
+"Personel İş Takip Yönetimi" adının aslında personel yönetmediği bulundu, üretim/iş sistemi
+TAŞINMADI, sadece etiket düzeltildi), Finans bağlam-duyarlı Gider Türü. Yan ürün olarak 2 açık/bug
+daha kapatıldı: `mobile/task_view.php` IDOR, `accounting.php` sihirbaz JS scope hatası. Detay →
+`CHANGELOG.md`. **php -l temiz, yerel ortamda kısmen doğrulandı (İşlerim), primac.tr'de HENÜZ test
+edilmedi, HENÜZ commit edilmedi** — SECURITY SPRINT-001'den ayrı, kendi onay/test turunu bekliyor.
 İçerik (bb8a710'dan SONRA yapılan değişiklikler): "İşlerim"/"Görevlerim" terim standardizasyonu,
 "Kendime İş Ekle" özelliği, emoji paneli konumlandırma düzeltmesi, tek-ortam (DEV/PROD) yönetim
 modelinin resmileşmesi, `VERSIONING.md`/`ROADMAP.md`/`KNOWN_BUGS.md`/`DATABASE.md` dokümantasyon

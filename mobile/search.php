@@ -7,20 +7,21 @@ $q = trim($_GET['q'] ?? '');
 topx('Arama');
 ?>
 <form method="get" style="display:flex;gap:8px;margin-bottom:6px">
-    <input name="q" value="<?=htmlspecialchars($q)?>" placeholder="İş, cari, banka/kart, işlem, çek/senet, teklif, belge, stok, personel…" autofocus autocomplete="off" style="margin:0;flex:1;min-width:0;width:auto">
+    <input name="q" value="<?=htmlspecialchars($q)?>" placeholder="İş, cari, banka/kart, işlem, çek/senet, teklif, belge, stok, personel, görev, kullanıcı, not, mesaj…" autofocus autocomplete="off" style="margin:0;flex:1;min-width:0;width:auto">
     <button class="btn dark" type="submit" style="flex:0 0 auto">Ara</button>
 </form>
 
 <?php if ($q === ''): ?>
 <div class="panel" style="text-align:center;color:#94a3b8">
     <div style="font-size:40px;margin-bottom:8px">🔍</div>
-    <p>İş no, müşteri adı, banka/kart, işlem, çek/senet, teklif, belge, ürün veya personel ismi girin.</p>
+    <p>İş no, müşteri adı, banka/kart, işlem, çek/senet, teklif, belge, ürün, personel, görev, kullanıcı, not veya mesaj metni girin.</p>
 </div>
 <?php else:
     $r = search_run($pdo, $q);
     $jobs = $r['jobs']; $contacts = $r['contacts']; $stock = $r['stock']; $personnel = $r['personnel'];
     $accounts = $r['accounts']; $movements = $r['movements']; $checks = $r['checks']; $quotes = $r['quotes'];
     $documents = $r['documents']; $pages = $r['pages'];
+    $files = $r['files']; $tasks = $r['tasks']; $users = $r['users']; $notes = $r['notes']; $messages = $r['messages'];
     $found = search_total_count($r);
     // Web'den farklı: mobil dosya adları kendi rotasına göre kurulur (takvim -> calendar.php).
     $pageTargets = ['contacts_report'=>'contacts_report.php', 'report'=>'report.php', 'accounting'=>'accounting.php', 'takvim'=>'calendar.php'];
@@ -162,6 +163,68 @@ topx('Arama');
         <span><b><?=search_hl($p['name'],$q)?></b><br>
         <small class="muted"><?php if($p['role']): ?><?=search_hl($p['role'],$q)?><?php endif; ?><?php if($p['work_type']): ?> · <?=search_hl($p['work_type'],$q)?><?php endif; ?></small></span>
         <small class="muted"><?php if($p['phone']): ?><?=search_hl($p['phone'],$q)?><?php endif; ?></small>
+    </a>
+<?php endforeach; ?>
+</div>
+<?php endif; ?>
+
+<?php if ($tasks): ?>
+<div class="panel"><b>✅ Görevler (<?=count($tasks)?>)</b>
+<?php foreach($tasks as $t): ?>
+    <a class="item" href="task_view.php?id=<?=(int)$t['id']?>">
+        <b><?=search_hl($t['title'],$q)?></b><br>
+        <small class="muted">
+            <?php if($t['job_no']): ?><?=htmlspecialchars($t['job_no'])?> · <?php endif; ?>
+            <?php if($t['personnel_name']): ?>👤 <?=search_hl($t['personnel_name'],$q)?> · <?php endif; ?>
+            <?=htmlspecialchars($t['status'])?>
+        </small>
+    </a>
+<?php endforeach; ?>
+</div>
+<?php endif; ?>
+
+<?php if ($files): ?>
+<div class="panel"><b>📁 Dosyalar (<?=count($files)?>)</b>
+<?php foreach($files as $f): ?>
+    <a class="item" href="job_view.php?id=<?=(int)$f['job_id']?>">
+        <b><?=search_hl($f['original_name'],$q)?></b><br>
+        <small class="muted"><?php if($f['job_no']): ?><?=search_hl($f['job_no'],$q)?><?php endif; ?><?php if($f['job_title']): ?> · <?=search_hl($f['job_title'],$q)?><?php endif; ?></small>
+    </a>
+<?php endforeach; ?>
+</div>
+<?php endif; ?>
+
+<?php if ($users): ?>
+<div class="panel"><b>🧑‍💻 Kullanıcılar (<?=count($users)?>)</b>
+<?php foreach($users as $u): ?>
+    <a class="item" href="users.php" style="display:flex;justify-content:space-between;align-items:center">
+        <span><b><?=search_hl($u['full_name'] ?: $u['username'],$q)?></b><br>
+        <small class="muted"><?=search_hl($u['username'],$q)?><?php if($u['phone']): ?> · <?=search_hl($u['phone'],$q)?><?php endif; ?></small></span>
+        <small class="muted"><?=htmlspecialchars($u['role'])?></small>
+    </a>
+<?php endforeach; ?>
+</div>
+<?php endif; ?>
+
+<?php if ($notes): ?>
+<div class="panel"><b>📝 Notlarım (<?=count($notes)?>)</b>
+<?php foreach($notes as $n): ?>
+    <a class="item" href="mytasks.php" style="display:flex;justify-content:space-between;align-items:center">
+        <span><b><?=search_hl($n['title'],$q)?></b><?php if($n['note']): ?><br><small class="muted"><?=search_hl(mb_substr($n['note'],0,60),$q)?></small><?php endif; ?></span>
+        <small class="muted"><?=htmlspecialchars($n['status'])?></small>
+    </a>
+<?php endforeach; ?>
+</div>
+<?php endif; ?>
+
+<?php if ($messages): ?>
+<div class="panel"><b>💬 Mesajlar (<?=count($messages)?>)</b>
+<?php foreach($messages as $m):
+    $msgHref = $m['thread_id'] ? 'messages.php?thread='.(int)$m['thread_id'] : 'messages.php?with='.(int)$m['with_user_id'];
+?>
+    <a class="item" href="<?=htmlspecialchars($msgHref)?>">
+        <b><?=search_hl(mb_substr($m['message'],0,60),$q)?></b><br>
+        <small class="muted">💬 <?=htmlspecialchars($m['with_label'] ?: '-')?></small>
     </a>
 <?php endforeach; ?>
 </div>

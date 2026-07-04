@@ -69,16 +69,15 @@ try{
   <summary style="font-weight:900;cursor:pointer">✏️ Hareketi Düzenle</summary>
   <form method="post" style="margin-top:10px">
     <?php
-    $cs=[]; $accounts=[]; $giderCats=[]; $gelirCats=[]; $personnel=[];
+    $cs=[]; $accounts=[]; $gelirCats=[]; $personnel=[];
     try{ $cs=$pdo->query("SELECT id,name FROM contacts ORDER BY name")->fetchAll(); }catch(Throwable $e){}
     try{ $accounts=$pdo->query("SELECT * FROM finance_accounts WHERE COALESCE(active,1)=1 ORDER BY account_type,name")->fetchAll(); }catch(Throwable $e){}
     try{ $personnel=$pdo->query("SELECT id,name FROM personnel WHERE COALESCE(active,1)=1 ORDER BY name")->fetchAll(); }catch(Throwable $e){}
-    $giderCats = acc_categories($pdo, 'gider');
     $gelirCats = acc_categories($pdo, 'gelir');
     $stepOpts = finance_record_type_options();
     ?>
     <label>İşlem Tipi</label>
-    <select name="direction" id="mvDirection" onchange="mvFilterCats();mvToggleWizard()">
+    <select name="direction" id="mvDirection" onchange="mvToggleWizard()">
       <option value="in" <?=$in?'selected':''?>>Tahsilat</option>
       <option value="out" <?=!$in?'selected':''?>>Ödeme</option>
     </select>
@@ -102,11 +101,20 @@ try{
     <?php foreach($personnel as $p): ?><option value="<?=(int)$p['id']?>" <?=(int)($mv['personnel_id']??0)===(int)$p['id']?'selected':''?>><?=htmlspecialchars($p['name'])?></option><?php endforeach; ?></select>
     </div>
 
-    <label><?=$in?'Kategori':'Gider Türü'?> <small class="muted">(opsiyonel)</small></label>
+    <!-- GİDER TÜRÜ CONTEXT-AWARE (2026-07-04): payment_type-bağlı "Gider Türü" — seçenekleri
+         mvApplyStep() ile adıma özel yeniden oluşturulur. Kategori (gelir) SADECE Tahsilat'ta görünür. -->
+    <div id="mvField_category_id" style="<?=$in?'':'display:none'?>">
+    <label>Kategori <small class="muted">(opsiyonel)</small></label>
     <select name="category_id" id="mvCatSel"><option value="">— Seçilmedi —</option>
-    <?php foreach($giderCats as $c): ?><option value="<?=(int)$c['id']?>" data-type="out" style="<?=$in?'display:none':''?>" <?=(int)$mv['category_id']===(int)$c['id']?'selected':''?>>[<?=htmlspecialchars($c['group_name'])?>] <?=htmlspecialchars($c['name'])?></option><?php endforeach; ?>
-    <?php foreach($gelirCats as $c): ?><option value="<?=(int)$c['id']?>" data-type="in" style="<?=$in?'':'display:none'?>" <?=(int)$mv['category_id']===(int)$c['id']?'selected':''?>>[<?=htmlspecialchars($c['group_name'])?>] <?=htmlspecialchars($c['name'])?></option><?php endforeach; ?>
+    <?php foreach($gelirCats as $c): ?><option value="<?=(int)$c['id']?>" <?=(int)$mv['category_id']===(int)$c['id']?'selected':''?>>[<?=htmlspecialchars($c['group_name'])?>] <?=htmlspecialchars($c['name'])?></option><?php endforeach; ?>
     </select>
+    </div>
+
+    <div id="mvField_payment_type" style="<?=$in?'display:none':''?>">
+    <label>Gider Türü</label>
+    <select name="payment_type" id="mvTurSel" data-current="<?=htmlspecialchars($mv['payment_type'] ?? '')?>"><option value="">— Seç —</option></select>
+    </div>
+
     <label>Hesap / Kasa / Kart</label>
     <select name="account_id" required><option value="">Seçiniz</option>
     <?php foreach($accounts as $a): ?><option value="<?=$a['id']?>" <?=(int)$mv['account_id']===(int)$a['id']?'selected':''?>><?=htmlspecialchars($a['account_type'].' - '.$a['name'])?></option><?php endforeach; ?></select>
@@ -121,39 +129,52 @@ try{
   </form>
 </details>
 <script>
-function mvFilterCats(){
-  var t=document.getElementById('mvDirection').value;
-  var opts=document.getElementById('mvCatSel').options;
+// GİDER TÜRÜ CONTEXT-AWARE (2026-07-04): finance_lib.php'deki finance_expense_type_options() ile
+// BİREBİR aynı katalog (web+mobil tek kaynak).
+var MV_TUR_CATALOG = <?=json_encode(finance_expense_type_options())?>;
+var MV_TUR_REQUIRED = <?=json_encode(finance_expense_type_required_steps())?>;
+function mvBuildTurOptions(step){
+  var sel=document.getElementById('mvTurSel');
+  var cur=sel.value || sel.dataset.current || '';
+  var opts=MV_TUR_CATALOG[step] || [];
+  sel.innerHTML='<option value="">— Seç —</option>';
   for(var i=0;i<opts.length;i++){
-    var o=opts[i];
-    if(!o.dataset.type){o.style.display='';continue;}
-    o.style.display=(o.dataset.type===t)?'':'none';
-    if(o.dataset.type!==t&&o.selected) o.selected=false;
+    var el=document.createElement('option');
+    el.value=opts[i].v; el.textContent=opts[i].t;
+    if(opts[i].v===cur) el.selected=true;
+    sel.appendChild(el);
   }
+  sel.dataset.current='';
 }
 // FINANCE UX REFACTOR (2026-07-04): sihirbaz SADECE Ödeme (out) tarafında aktif — Tahsilat/Gelir
 // akışı bu ekranda da hiç değişmiyor, sihirbaz seçilince gizlenir, alanlar zorunlu olmaz.
 function mvToggleWizard(){
   var out=document.getElementById('mvDirection').value==='out';
   document.getElementById('mvWizard').style.display = out?'':'none';
+  document.getElementById('mvField_category_id').style.display = out?'none':'';
+  document.getElementById('mvField_payment_type').style.display = out?'':'none';
   if(!out){
     document.getElementById('mvField_personnel_id').style.display='none';
     document.getElementById('mvField_personnel_id').querySelector('select').required=false;
     document.getElementById('mvField_contact_id').style.display='';
+    document.getElementById('mvField_contact_id').querySelector('select').required=false;
     document.getElementById('mvDesc').required=false;
+    document.getElementById('mvTurSel').required=false;
   } else { mvApplyStep(); }
 }
+// Her adım sadece kendi ilgili alanını gösterir (yanlış kayıt ihtimalini azaltma amacı) — Cari
+// alanı SADECE "Cari Ödemesi" adımında, Personel SADECE "Personel Ödemesi" adımında görünür.
 function mvApplyStep(){
   if(document.getElementById('mvDirection').value!=='out') return;
   var step=document.getElementById('mvStep').value;
-  var need={cari:'contact_id',isletme:'category_id',personel:'personnel_id',vergi:'category_id',arac:'category_id',kart:null,diger:null}[step];
   var contactBox=document.getElementById('mvField_contact_id');
-  contactBox.style.display = (step==='personel') ? 'none' : '';
-  contactBox.querySelector('select').required = (need==='contact_id');
-  document.getElementById('mvCatSel').required = (need==='category_id');
+  contactBox.style.display = (step==='cari') ? '' : 'none';
+  contactBox.querySelector('select').required = (step==='cari');
   var persBox=document.getElementById('mvField_personnel_id');
   persBox.style.display = (step==='personel') ? '' : 'none';
-  persBox.querySelector('select').required = (need==='personnel_id');
+  persBox.querySelector('select').required = (step==='personel');
+  mvBuildTurOptions(step);
+  document.getElementById('mvTurSel').required = (MV_TUR_REQUIRED.indexOf(step)!==-1);
   document.getElementById('mvDesc').required = (step==='diger');
 }
 mvToggleWizard();

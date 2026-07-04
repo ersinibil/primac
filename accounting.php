@@ -17,11 +17,13 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['edit_entry'])){
         if(($_POST['type'] ?? 'gider')==='gider'){
             $step=$_POST['record_step'] ?? 'diger';
             if($step==='cari' && !(int)($_POST['contact_id']??0)) throw new Exception('Cari Ödemesi için cari seçilmelidir.');
-            if($step==='isletme' && !(int)($_POST['category_id']??0)) throw new Exception('İşletme Gideri için Gider Türü seçilmelidir.');
             if($step==='personel' && !(int)($_POST['personnel_id']??0)) throw new Exception('Personel Ödemesi için personel seçilmelidir.');
-            if($step==='vergi' && !(int)($_POST['category_id']??0)) throw new Exception('Vergi / SGK için Gider Türü seçilmelidir.');
-            if($step==='arac' && !(int)($_POST['category_id']??0)) throw new Exception('Araç Gideri için Gider Türü seçilmelidir.');
             if($step==='diger' && trim($_POST['description']??'')==='') throw new Exception('Diğer seçildiğinde açıklama zorunludur.');
+            // GİDER TÜRÜ CONTEXT-AWARE (2026-07-04): Gider Türü artık payment_type kolonunda.
+            if(in_array($step,finance_expense_type_required_steps(),true) && trim($_POST['payment_type']??'')===''){
+                $stepLabels=['isletme'=>'İşletme Gideri','vergi'=>'Vergi / SGK','arac'=>'Araç Gideri'];
+                throw new Exception(($stepLabels[$step]??'Bu adım').' için Gider Türü seçilmelidir.');
+            }
         }
         accounting_entry_update($pdo, (int)$_POST['id'], $_POST);
         $msg='Kayıt güncellendi.';
@@ -61,11 +63,13 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['save_entry'])){
         if($type==='gider'){
             $step=$_POST['record_step'] ?? 'diger';
             if($step==='cari' && !$contactId) throw new Exception('Cari Ödemesi için cari seçilmelidir.');
-            if($step==='isletme' && !$catId) throw new Exception('İşletme Gideri için Gider Türü seçilmelidir.');
             if($step==='personel' && !$pid) throw new Exception('Personel Ödemesi için personel seçilmelidir.');
-            if($step==='vergi' && !$catId) throw new Exception('Vergi / SGK için Gider Türü seçilmelidir.');
-            if($step==='arac' && !$catId) throw new Exception('Araç Gideri için Gider Türü seçilmelidir.');
             if($step==='diger' && $desc==='') throw new Exception('Diğer seçildiğinde açıklama zorunludur.');
+            // GİDER TÜRÜ CONTEXT-AWARE (2026-07-04): Gider Türü artık payment_type kolonunda.
+            if(in_array($step,finance_expense_type_required_steps(),true) && $pt===''){
+                $stepLabels=['isletme'=>'İşletme Gideri','vergi'=>'Vergi / SGK','arac'=>'Araç Gideri'];
+                throw new Exception(($stepLabels[$step]??'Bu adım').' için Gider Türü seçilmelidir.');
+            }
         }
         // 2026-07-03: Muhasebe kayıtları artık finance_movements'a yazılır (movement_type='muhasebe')
         // — böylece cari (varsa) ekstresinde ve genel finans raporlarında otomatik görünür.
@@ -84,7 +88,8 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['save_entry'])){
 $sum=acc_summary($pdo,$month,$year);
 $net=$sum['gelir']-$sum['gider'];
 $cats=acc_categories($pdo);
-$giderCats=array_filter($cats,function($c){ return $c['type']==='gider'; });
+// GİDER TÜRÜ CONTEXT-AWARE (2026-07-04): "Gider Türü" artık category_id yerine payment_type
+// katalogundan geliyor (finance_expense_type_options()) — category_id sadece Gelir tarafında kalır.
 $gelirCats=array_filter($cats,function($c){ return $c['type']==='gelir'; });
 try{ $accounts=$pdo->query("SELECT id,name,account_type FROM finance_accounts WHERE active=1 ORDER BY name")->fetchAll(); }catch(Throwable $e){ $accounts=[]; }
 try{ $personnel=$pdo->query("SELECT id,name FROM personnel WHERE COALESCE(active,1)=1 ORDER BY name")->fetchAll(); }catch(Throwable $e){ $personnel=[]; }
@@ -153,6 +158,28 @@ $groups=acc_group_summary($pdo,$month,$year);
   <?php if(is_admin()): ?><a href="accounting_categories.php">⚙ Kategoriler</a><?php endif; ?>
 </div>
 
+<script>
+// GİDER TÜRÜ CONTEXT-AWARE (2026-07-04): adıma özel "Gider Türü" katalogu — finance_lib.php'deki
+// finance_expense_type_options() ile BİREBİR aynı (web+mobil tek kaynak, PHP'den JSON'a dökülüyor).
+// Bu blok, tab'den BAĞIMSIZ olarak sayfanın en başında render edilir — hem "Yeni Kayıt" (tab=yeni)
+// formu hem de "Kayıtlar" (tab=kayitlar) satır-içi düzenleme formları kullanır, ikisinden de ÖNCE
+// tanımlı olması gerekir (aksi halde "is not defined" hatası ile sihirbaz hiç çalışmaz).
+var ACC_TUR_CATALOG = <?=json_encode(finance_expense_type_options())?>;
+var ACC_TUR_REQUIRED = <?=json_encode(finance_expense_type_required_steps())?>;
+function accBuildTurOptions(selectEl,step){
+  var cur=selectEl.value || selectEl.dataset.current || '';
+  var opts=ACC_TUR_CATALOG[step] || [];
+  selectEl.innerHTML='<option value="">— Seç —</option>';
+  for(var i=0;i<opts.length;i++){
+    var el=document.createElement('option');
+    el.value=opts[i].v; el.textContent=opts[i].t;
+    if(opts[i].v===cur) el.selected=true;
+    selectEl.appendChild(el);
+  }
+  selectEl.dataset.current='';
+}
+</script>
+
 <?php if($tab==='yeni'): ?>
 <section class="panel">
 <h2>Yeni Muhasebe Kaydı</h2>
@@ -176,14 +203,11 @@ $groups=acc_group_summary($pdo,$month,$year);
 <input type="date" name="entry_date" value="<?=date('Y-m-d')?>">
 </label>
 
-<label id="accCatLabel">Gider Türü
+<label id="accCatLabel">Kategori
 <select name="category_id" id="catSel">
   <option value="">— Seç —</option>
-  <?php foreach($giderCats as $c): ?>
-  <option value="<?=(int)$c['id']?>" data-type="gider">[<?=h($c['group_name'])?>] <?=h($c['name'])?></option>
-  <?php endforeach; ?>
   <?php foreach($gelirCats as $c): ?>
-  <option value="<?=(int)$c['id']?>" data-type="gelir" style="display:none">[<?=h($c['group_name'])?>] <?=h($c['name'])?></option>
+  <option value="<?=(int)$c['id']?>" data-type="gelir">[<?=h($c['group_name'])?>] <?=h($c['name'])?></option>
   <?php endforeach; ?>
 </select>
 </label>
@@ -226,7 +250,7 @@ $groups=acc_group_summary($pdo,$month,$year);
 </select>
 </label>
 
-<label id="accContactLabel">Cari <small style="font-weight:400;color:#667085">(opsiyonel — bir tedarikçi/müşteriye bağlıysa, o carinin ekstresinde de görünür)</small>
+<label id="accContactLabel" style="display:none">Cari
 <select name="contact_id">
   <option value="">— Cari seçilmedi —</option>
   <?php foreach($contacts as $c): ?>
@@ -244,15 +268,11 @@ $groups=acc_group_summary($pdo,$month,$year);
 </select>
 </label>
 
-<label id="ptLabel">Ödeme Türü (Personel ise)
-<select name="payment_type">
-  <option value="">—</option>
-  <option value="maas">Maaş</option>
-  <option value="avans">Avans</option>
-  <option value="prim">Prim / İkramiye</option>
-  <option value="sgk">SGK Primi</option>
-  <option value="vergi">Vergi</option>
-  <option value="diger">Diğer</option>
+<!-- GİDER TÜRÜ CONTEXT-AWARE (2026-07-04): önceden sadece "Personel ise" sabit bir liste sunan bu
+     alan artık TÜM adımlara özel (finance_expense_type_options()), accApplyStep() ile yeniden kurulur. -->
+<label id="ptLabel">Gider Türü
+<select name="payment_type" id="turSel">
+  <option value="">— Seç —</option>
 </select>
 </label>
 
@@ -272,42 +292,35 @@ function filterCats(){
     if(o.dataset.type!==t&&o.selected) o.selected=false;
   }
 }
-function filterCatsEdit(id){
-  var t=document.getElementById('editType'+id).value;
-  var opts=document.getElementById('editCatSel'+id).options;
-  for(var i=0;i<opts.length;i++){
-    var o=opts[i];
-    if(!o.dataset.type){o.style.display='';continue;}
-    o.style.display=(o.dataset.type===t)?'':'none';
-    if(o.dataset.type!==t&&o.selected) o.selected=false;
-  }
-}
 // FINANCE UX REFACTOR (2026-07-04): "Ne kaydediyorsun?" sihirbazı sadece Gider tarafında aktif —
 // Gelir kayıtları hiç etkilenmiyor, sihirbaz gizlenir, alanlar zorunlu olmaz.
 function accToggleWizard(){
   var gider=document.getElementById('entryType').value==='gider';
   document.getElementById('accWizardLabel').style.display=gider?'':'none';
-  var catLabelText=document.getElementById('accCatLabel').childNodes[0];
-  if(catLabelText) catLabelText.textContent = gider ? 'Gider Türü' : 'Kategori';
+  document.getElementById('accCatLabel').style.display=gider?'none':'';
+  document.getElementById('catSel').required=false;
+  document.getElementById('ptLabel').style.display=gider?'':'none';
   if(!gider){
     document.getElementById('persLabel').style.display='none';
     document.getElementById('persLabel').querySelector('select').required=false;
     document.getElementById('accContactLabel').style.display='';
     document.getElementById('accDesc').required=false;
-    document.getElementById('catSel').required=false;
+    document.getElementById('turSel').required=false;
   } else { accApplyStep(); }
 }
+// Her adım sadece kendi ilgili alanını gösterir (yanlış kayıt ihtimalini azaltma amacı) — Cari
+// alanı SADECE "Cari Ödemesi" adımında, Personel SADECE "Personel Ödemesi" adımında görünür.
 function accApplyStep(){
   if(document.getElementById('entryType').value!=='gider') return;
   var step=document.getElementById('accStep').value;
-  var need={cari:'contact_id',isletme:'category_id',personel:'personnel_id',vergi:'category_id',arac:'category_id',kart:null,diger:null}[step];
   var contactBox=document.getElementById('accContactLabel');
-  contactBox.style.display=(step==='personel')?'none':'';
-  contactBox.querySelector('select').required=(need==='contact_id');
-  document.getElementById('catSel').required=(need==='category_id');
+  contactBox.style.display=(step==='cari')?'':'none';
+  contactBox.querySelector('select').required=(step==='cari');
   var persBox=document.getElementById('persLabel');
   persBox.style.display=(step==='personel')?'':'none';
-  persBox.querySelector('select').required=(need==='personnel_id');
+  persBox.querySelector('select').required=(step==='personel');
+  accBuildTurOptions(document.getElementById('turSel'),step);
+  document.getElementById('turSel').required=(ACC_TUR_REQUIRED.indexOf(step)!==-1);
   document.getElementById('accDesc').required=(step==='diger');
 }
 accToggleWizard();
@@ -440,14 +453,11 @@ foreach($entries as $e):
     <label>Tarih
       <input type="date" name="entry_date" value="<?=h($e['entry_date'])?>">
     </label>
-    <label id="editCatLabel<?=(int)$e['id']?>"><?=$isGider?'Gider Türü':'Kategori'?>
+    <label id="editCatLabel<?=(int)$e['id']?>" style="<?=$isGider?'display:none':''?>">Kategori
       <select name="category_id" id="editCatSel<?=(int)$e['id']?>">
         <option value="">— Seç —</option>
-        <?php foreach($giderCats as $c): ?>
-        <option value="<?=(int)$c['id']?>" data-type="gider" <?=$e['category_id']==$c['id']?'selected':''?>>[<?=h($c['group_name'])?>] <?=h($c['name'])?></option>
-        <?php endforeach; ?>
         <?php foreach($gelirCats as $c): ?>
-        <option value="<?=(int)$c['id']?>" data-type="gelir" <?=$e['category_id']==$c['id']?'selected':''?> style="display:<?=$e['type']==='gelir'?'':' none'?>;">[<?=h($c['group_name'])?>] <?=h($c['name'])?></option>
+        <option value="<?=(int)$c['id']?>" data-type="gelir" <?=$e['category_id']==$c['id']?'selected':''?>>[<?=h($c['group_name'])?>] <?=h($c['name'])?></option>
         <?php endforeach; ?>
       </select>
     </label>
@@ -482,7 +492,7 @@ foreach($entries as $e):
         <?php endforeach; ?>
       </select>
     </label>
-    <label id="editContactLabel<?=(int)$e['id']?>">Cari <small style="font-weight:400;color:#667085">(opsiyonel)</small>
+    <label id="editContactLabel<?=(int)$e['id']?>" style="<?=($isGider && $eStep!=='cari')?'display:none':''?>">Cari
       <select name="contact_id">
         <option value="">— Cari seçilmedi —</option>
         <?php foreach($contacts as $c): ?>
@@ -490,7 +500,7 @@ foreach($entries as $e):
         <?php endforeach; ?>
       </select>
     </label>
-    <label id="editPersLabel<?=(int)$e['id']?>">Personel
+    <label id="editPersLabel<?=(int)$e['id']?>" style="<?=($isGider && $eStep!=='personel')?'display:none':''?>">Personel
       <select name="personnel_id">
         <option value="">— Yok —</option>
         <?php foreach($personnel as $p): ?>
@@ -498,15 +508,11 @@ foreach($entries as $e):
         <?php endforeach; ?>
       </select>
     </label>
-    <label>Ödeme Türü (Personel ise)
-      <select name="payment_type">
-        <option value="" <?=!$e['payment_type']?'selected':''?>>—</option>
-        <option value="maas" <?=$e['payment_type']==='maas'?'selected':''?>>Maaş</option>
-        <option value="avans" <?=$e['payment_type']==='avans'?'selected':''?>>Avans</option>
-        <option value="prim" <?=$e['payment_type']==='prim'?'selected':''?>>Prim / İkramiye</option>
-        <option value="sgk" <?=$e['payment_type']==='sgk'?'selected':''?>>SGK Primi</option>
-        <option value="vergi" <?=$e['payment_type']==='vergi'?'selected':''?>>Vergi</option>
-        <option value="diger" <?=$e['payment_type']==='diger'?'selected':''?>>Diğer</option>
+    <!-- GİDER TÜRÜ CONTEXT-AWARE (2026-07-04): payment_type-bağlı yeni "Gider Türü" — seçenekleri
+         accApplyStepEdit() ile adıma özel yeniden oluşturulur. -->
+    <label id="editTurLabel<?=(int)$e['id']?>" style="<?=$isGider?'':'display:none'?>">Gider Türü
+      <select name="payment_type" id="editTurSel<?=(int)$e['id']?>" data-current="<?=h($e['payment_type'] ?? '')?>">
+        <option value="">— Seç —</option>
       </select>
     </label>
     <div style="display:flex;gap:8px">
@@ -515,40 +521,63 @@ foreach($entries as $e):
     </div>
   </form>
 </div>
-<script>accToggleWizardEdit(<?=(int)$e['id']?>);</script>
+<script>
+// NOT (2026-07-04 düzeltmesi): accToggleWizardEdit()'in tanımı sayfanın en altındaki ortak script
+// bloğunda — bu satır (kayıt döngüsü içinde, tanım bloğundan ÖNCE) doğrudan çağrılırsa "is not
+// defined" hatası veriyordu. DOMContentLoaded'a ertelenerek tüm script bloklarının yüklenmesi
+// bekleniyor (Gider Türü kutusunun ilk açılışta doğru adım/zorunluluk ile gelmesi için gerekli).
+document.addEventListener('DOMContentLoaded',function(){accToggleWizardEdit(<?=(int)$e['id']?>);});
+</script>
 <?php endif; ?>
 <?php endforeach; ?>
 </section>
 <?php endif; ?>
 
 <script>
+// NOT (2026-07-04 düzeltmesi): filterCatsEdit önceden yalnızca tab=yeni'nin script bloğunda
+// tanımlıydı — satır-içi Düzenle formları (tab=kayitlar) bu fonksiyonu çağırdığı için tab=kayitlar'da
+// "filterCatsEdit is not defined" hatası veriyor, onchange zinciri (accToggleWizardEdit dahil) hiç
+// çalışmıyordu. Buraya (her tab'de render edilen ortak bloğa) taşındı.
+function filterCatsEdit(id){
+  var t=document.getElementById('editType'+id).value;
+  var opts=document.getElementById('editCatSel'+id).options;
+  for(var i=0;i<opts.length;i++){
+    var o=opts[i];
+    if(!o.dataset.type){o.style.display='';continue;}
+    o.style.display=(o.dataset.type===t)?'':'none';
+    if(o.dataset.type!==t&&o.selected) o.selected=false;
+  }
+}
 // FINANCE UX REFACTOR (2026-07-04): satır-içi düzenleme formlarının sihirbaz mantığı (add-form'daki
 // accToggleWizard/accApplyStep ile aynı desen, sadece id son eki ile satıra özel).
 function accToggleWizardEdit(id){
   var wl=document.getElementById('editWizardLabel'+id); if(!wl) return;
   var gider=document.getElementById('editType'+id).value==='gider';
   wl.style.display=gider?'':'none';
-  var catLabel=document.getElementById('editCatLabel'+id).childNodes[0];
-  if(catLabel) catLabel.textContent = gider ? 'Gider Türü' : 'Kategori';
+  document.getElementById('editCatLabel'+id).style.display=gider?'none':'';
+  document.getElementById('editCatSel'+id).required=false;
+  document.getElementById('editTurLabel'+id).style.display=gider?'':'none';
   if(!gider){
     document.getElementById('editPersLabel'+id).style.display='none';
     document.getElementById('editPersLabel'+id).querySelector('select').required=false;
     document.getElementById('editContactLabel'+id).style.display='';
     document.getElementById('editDesc'+id).required=false;
-    document.getElementById('editCatSel'+id).required=false;
+    document.getElementById('editTurSel'+id).required=false;
   } else { accApplyStepEdit(id); }
 }
+// Her adım sadece kendi ilgili alanını gösterir — Cari SADECE "Cari Ödemesi"nde, Personel SADECE
+// "Personel Ödemesi"nde görünür (yanlış kayıt ihtimalini azaltma amacı).
 function accApplyStepEdit(id){
   if(document.getElementById('editType'+id).value!=='gider') return;
   var step=document.getElementById('editStep'+id).value;
-  var need={cari:'contact_id',isletme:'category_id',personel:'personnel_id',vergi:'category_id',arac:'category_id',kart:null,diger:null}[step];
   var contactBox=document.getElementById('editContactLabel'+id);
-  contactBox.style.display=(step==='personel')?'none':'';
-  contactBox.querySelector('select').required=(need==='contact_id');
-  document.getElementById('editCatSel'+id).required=(need==='category_id');
+  contactBox.style.display=(step==='cari')?'':'none';
+  contactBox.querySelector('select').required=(step==='cari');
   var persBox=document.getElementById('editPersLabel'+id);
   persBox.style.display=(step==='personel')?'':'none';
-  persBox.querySelector('select').required=(need==='personnel_id');
+  persBox.querySelector('select').required=(step==='personel');
+  accBuildTurOptions(document.getElementById('editTurSel'+id),step);
+  document.getElementById('editTurSel'+id).required=(ACC_TUR_REQUIRED.indexOf(step)!==-1);
   document.getElementById('editDesc'+id).required=(step==='diger');
 }
 </script>

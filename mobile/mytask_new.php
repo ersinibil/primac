@@ -13,8 +13,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         if(!$pid) throw new Exception('Bu hesap henüz bir personel kaydıyla ilişkilendirilmemiştir. Genel Sistem Yönetimi > Kullanıcılar bölümünden personel eşleştirmesi yapabilirsiniz.');
         $title=trim($_POST['title'] ?? '');
         if($title==='') throw new Exception('İş başlığı girin.');
-        $pdo->prepare("INSERT INTO tasks(personnel_id,title,description,due_date,status,priority) VALUES(?,?,?,?,'Atandı',?)")
-            ->execute([$pid,$title,trim($_POST['description']??''),$_POST['due_date']?:null,$_POST['priority']??'Normal']);
+        $pdo->prepare("INSERT INTO tasks(personnel_id,title,description,due_date,status,priority,created_by) VALUES(?,?,?,?,'Atandı',?,?)")
+            ->execute([$pid,$title,trim($_POST['description']??''),$_POST['due_date']?:null,$_POST['priority']??'Normal',$me?:null]);
         try{ if(function_exists('activity_log')) activity_log('Görev','Kendime Ekle',$title,'','task',(int)$pdo->lastInsertId(),'mytasks.php','📋'); }catch(Throwable $e){}
         header('Location: mytasks.php'); exit;
     }catch(Throwable $e){ $er=$e->getMessage(); }

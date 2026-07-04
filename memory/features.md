@@ -2,6 +2,107 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
+## "İşlerim" — Düzenle/Detay/Sil (soft delete) + yorum/dosya/geçmiş (2026-07-04)
+Kullanıcı isteği: task kartlarına Düzenle/Detay/Sil eklenmesi (web+mobil). Yeni ortak
+`tasks_lib.php` (web+mobil paylaşımlı iş mantığı, CLAUDE.md kural 5):
+- **Migration 040**: `tasks` tablosuna `created_by`/`updated_by`/`deleted_at` eklendi + yeni
+  `task_comments`/`task_files` tabloları (job_files ile aynı upload deseni, `uploads/task_files/`,
+  mevcut `uploads/.htaccess` script-engelleme kuralı otomatik kapsıyor).
+- **Soft delete**: `task_soft_delete()` — hiçbir görev fiziksel silinmiyor, `deleted_at IS NULL`
+  filtresi `mytasks.php`/`mobile/mytasks.php`/`tasks.php`/`mobile/tasks.php`'nin tüm SELECT'lerine
+  eklendi. `sil.php`'nin `'task'` dalı da (Tüm Görevler ekranından silme) artık soft-delete'e
+  yönlendiriliyor (fiziksel `DELETE FROM tasks` kaldırıldı — daha önce hem `sil.php` hem
+  `mobile/tasks.php`'nin kendi inline'ı hard-delete yapıyordu, artık ikisi de aynı ortak fonksiyona
+  bağlı). **Bilinen istisna**: bir `jobs` kaydı `sil.php` ile silinirse, o işe bağlı `tasks`
+  satırları hâlâ (job silme akışının children temizliği üzerinden) fiziksel siliniyor — bu, iş
+  silme akışının kendi kapsamı olduğu için bu turda DEĞİŞTİRİLMEDİ (bkz. backlog).
+- **Yetki**: `task_can_edit()`/`task_can_delete()` — admin, `edit_delete` yetkili, görevi oluşturan
+  YA DA göreve atanan personelin kendisi. `task_can_reassign()` daha dar — "Atanan Personel" alanını
+  sadece admin/edit_delete/oluşturan değiştirebilir (IDOR'a karşı, sıradan atanan kişi başkasına
+  devredemez). `mobile/task_view.php`'de daha önce durum güncellemesi (task_status) hiç sahiplik
+  kontrolü yapmıyordu (herhangi bir girişli kullanıcı `?id=` tahmin edip başka birinin görevini
+  değiştirebilirdi) — düzeltildi, artık `task_can_edit()` şart.
+- **Detay ekranı**: `task_view.php` (web, YENİ) + `mobile/task_view.php` (var olan dosya
+  genişletildi) — geçmiş/hareket kaydı (`activity_recent(50,'task',$id)`, var olan
+  `activity_lib.php` — yeni log sistemi kurulmadı), yorumlar (`task_comments`), dosyalar
+  (`task_files`, job_files ile aynı beyaz liste/boyut limiti), oluşturan/son güncelleyen kullanıcı
+  adı. GET erişimi bilinçli olarak `job_view.php` ile aynı desende KORUMASIZ bırakıldı (boot.php'de
+  zaten belgelenen "personel bildirimden kendi görevini açabilsin" kararı) — sadece YAZMA işlemleri
+  (durum/düzenle/sil/yorum/dosya) sahiplik kontrollü.
+- **Mobil UX Standardı** (PROJECT_RULES.md) uygulandı: `mobile/mytasks.php` kart listesinde
+  Düzenle/Sil YOK, sadece "👁 Detay" → `task_view.php` (tekil aksiyonlar orada). Web'de bu kısıt
+  yok (mevcut `tasks.php` zaten liste içi inline düzenleme kullanıyordu), `mytasks.php` (web)
+  kartlarına Düzenle (inline toggle panel) + Sil + Detay eklendi.
+- `task_new.php`/`mobile/task_new.php`/`mytask_new.php`/`mobile/mytask_new.php` artık `created_by`
+  dolduruyor (yeni kolonun anlamlı veri taşıması için gerekliydi).
+- Kapsam dışı bırakılanlar (bilinçli, scope disiplini): `jobs.php`/`personnel_view.php`'deki görev
+  sayaçları ve `dashboard.php`/`kpi.php`/`report_lib.php`/`gunluk_rapor.php`/`daily_reminder_lib.php`/
+  `takvim.php`/`mobile/calendar.php`/`personnel.php`/`mobile/personnel.php`/`mobile/profile.php`
+  gibi diğer `tasks` sayaç/rapor sorguları `deleted_at IS NULL` filtresi almadı — bu dosyalara
+  DOKUNULMADI (paralel ajan çakışması riski + talimatta açıkça "dokunma" denen ikisiyle aynı
+  muamele). Soft-silinen bir görev bu ekranlarda sayıya dahil olmaya devam edebilir — takip için
+  bkz. `memory/backlog.md`.
+
+## Personel kartları + sekmeli detay (web) (2026-07-04)
+Kullanıcı yanlış izlenimi ("personel iki modülde yönetiliyor") netleştirildi: `layout_top.php`'deki
+"🧭 Personel İş Takip Yönetimi" grubu personel YÖNETMİYOR, şirketin tüm iş/üretim takip sayfalarını
+(jobs/tasks/production/assembly/design/work_center vb.) barındırıyor — gerçek personel yönetimi tek
+yer (`personnel.php`/`personnel_new.php`/`personnel_edit.php`). Bu menü grubunun adı yanıltıcı
+olduğu için "🧭 İş / Üretim Yönetimi" olarak değiştirildi, altındaki linkler DEĞİŞMEDİ.
+- **`personnel.php`**: Tablo görünümü modern kart görünümüne çevrildi. Her kartta baş harf
+  rozeti (fotoğraf/photo kolonu şemada yok), ad/rol, aktif/pasif rozeti, telefon/e-posta, Bugünkü
+  Görev (`tasks.due_date=CURDATE()`) ve Açık Görev (`tasks.status!='Tamamlandı'`) sayaçları, ve
+  Detay/Görevler/Mesaj Gönder (bağlı kullanıcı hesabı varsa)/Performans (kpi.php) butonları var.
+- **`personnel_edit.php`** (bu projede ayrı bir web `personnel_view.php` yok — view+edit tek
+  dosyada birleşik): mini-ERP mantığında sekmeli hale getirildi — Genel Bilgiler (mevcut form,
+  değişmedi), Görevler (mevcut sorgu, salt-okunur), Takvim (jobs.responsible_personnel_id +
+  tasks.due_date, filtrelenmiş, YENİ ama sadece mevcut desenlerin birleşimi), Mesajlar
+  (messages.php?u= linki, personelin bağlı app_users hesabı varsa), Notlar (personal_notes
+  WHERE user_id=bağlı hesap — hesap yoksa "yok" mesajı), Dosyalar (CV görüntüle/kaldır — CV
+  yükleme/değiştirme hâlâ Genel Bilgiler formunda, tek form olduğu için ayrılmadı), Performans
+  (kpi.php'ye link, kpi.php'ye dokunulmadı), Maaş/Avans/Prim (finance_movements WHERE
+  personnel_id=X, salt-okunur), Giriş Hesabı (mevcut "🔐 Yetkiler" panelinin taşınmış hali,
+  sadece `user_can('users')`), Hareket Geçmişi (mevcut `activity_user_html()`, değişmedi). Sekme
+  URL'de `?tab=` whitelist ile seçiliyor, JS gerekmedi.
+- **Bilinçli kapsam dışı** (bkz. `ROADMAP.md` 2026-07-04): İzinler sekmesi (şema yok), Departman
+  alanı (kolon yok), gerçek fotoğraf yükleme (cv_path CV/belge alanı, fotoğraf değil) ve **mobil
+  parite** (bu tur açıkça web'e sınırlandırıldı, `mobile/personnel_view.php` paralel bir güvenlik
+  sprintinde aktif değiştiği için dokunulmadı — CLAUDE.md kural 7 bu madde için henüz karşılanmadı,
+  ayrı bir onaylı tur gerekiyor).
+- Test: `php -l` tüm değişen dosyalarda temiz. Tüm yeni sorgular `personnel_id`/`user_id` ile
+  prepared statement filtreli (başka personelin verisi karışmıyor). Mevcut POST akışları (profil
+  kaydet, CV yükle/kaldır, yetki kaydet, telegram — dokunulmadı) davranışsal olarak değişmedi.
+
+## Global arama: "personel aranmıyor" kök neden + kapsam genişletme (2026-07-04)
+Kullanıcı şikayeti: "personel aranmıyor". İnceleme: kolonlar (`role`/`work_type`), `user_can('personnel')`
+kontrolü ve web+mobil render kodu ZATEN doğruydu (2026-07-02'de düzeltilmişti) — kök neden farklıydı:
+kullanıcı muhtemelen "personel" kelimesinin KENDİSİNİ yazıyordu (bir isim değil, modül adı), ve bu
+kelime hiçbir personel kaydının `name/role/work_type/phone/email` alanında geçmediği için 0 sonuç
+dönüyordu. "çek"/"teklif"/"belge"/"rapor" için zaten var olan "modül adı yazılırsa son kayıtlar
+listelensin" deseni personelde yoktu — `search_lib.php`'de aynı desen personele de eklendi
+(`personelModuleMatch`).
+- Kapsam ayrıca genişletildi (kullanıcı isteği): **Görevler** (`tasks` tablosu, `user_can('tasks')`),
+  **Dosyalar** (`job_files`, `user_can('jobs')` — mevcut `documents` anahtarından ayrı tutuldu, çünkü o
+  sadece `trade_documents`/ticari belgeleri kapsıyor), **Kullanıcılar** (`app_users`,
+  `user_can('users')`), **Notlarım** (`personal_notes`, modül izni yok — `notes.php` gibi sadece
+  `user_id=?` sahiplik filtresiyle korunuyor, IDOR'a kapalı), **Mesajlar** (`internal_messages`,
+  modül izni yok — 1-1 mesajlarda gönderen/alıcı, grup mesajlarında `chat_thread_members` üyeliği
+  kontrolü, IDOR'a kapalı).
+- "Satın Alma"/"Tahsilat"/"Ödeme" için AYRI bölüm eklenmedi — kod incelemesinde bunların zaten
+  `finance_movements` (mevcut `movements` anahtarı) üzerinden dolaylı arandığı doğrulandı
+  (`stock_lib.php: stock_add_purchase_finance()`, `collection.php` hep bu tabloya yazıyor).
+- Değişen dosyalar: `search_lib.php` (tüm yeni sorgular + kök neden düzeltmesi), `search.php` (web
+  render + yeni bölümler), `mobile/search.php` (mobil render + yeni bölümler). `boot.php`,
+  `mobile/personnel_view.php`, `notes.php`, `notes_lib.php`, `mytasks.php`, `mobile/mytasks.php`,
+  `tasks.php`, `messages.php` gibi paralel sprint kapsamındaki dosyalara dokunulmadı (sadece referans
+  için okundu).
+- **Bilinen tutarsızlık (düzeltilmedi, kapsam dışı)**: `mobile/users.php` giriş kontrolü
+  `$isAdmin`'e bağlı (admin/yönetici rolü), web tarafı ise `page_module_map()` üzerinden
+  `user_can('users')` ile çalışıyor — admin olmayan ama `users` yetkisi verilmiş bir kullanıcı arama
+  sonucunda "Kullanıcılar" bölümünü görebilir ama mobilde `mobile/users.php`'ye tıklayınca
+  `index.php`'ye yönlendirilir. Bu, arama özelliğinin bir yan etkisi değil, önceden var olan bir
+  parite/yetki çakışması (Elif/`ots-parity-auditor` kapsamı) — bilinçli olarak dokunulmadı.
+
 ## Takvim'e atanan görevler (tasks) eklendi (2026-07-03, 3. tur)
 Kullanıcı şikayeti: "görev atadım kendime, takvime işlemedi." İnceleme: `takvim.php` (web) ve
 `mobile/calendar.php` sadece `jobs` (termin tarihi) ve `personal_notes` (Notlarım) kaynaklarını
@@ -706,6 +807,19 @@ Bulunan KRİTİK sorunlar (hepsi bu commit'te düzeltildi):
   yokmuş — önceki denetimdeki endişe yanlış çıktı, düzeltme gerekmedi.
 - Mobil parite notu: work_center/trade_documents/design.php'nin mobil karşılığı yok, bilinçli
   olarak bu turun kapsamı dışında bırakıldı → [[backlog]]'a yeni madde olarak taşındı.
+
+## "Notlarım" düzenleme (2026-07-04)
+notes.php'deki her açık not kartına WhatsApp/Tamamla/Sil'in yanına "✏️ Düzenle" eklendi.
+Web'de aynı sayfada açılan bir overlay/modal (JS ile data-edit-* attribute'larından doldurulur,
+sayfa değişmez); mobilde (mobile/mytasks.php) modal yerine kart içinde açılıp kapanan inline
+form (platform deseni, `<button onclick>` ile toggle). Backend: notes_lib.php'ye
+`personal_note_update($pdo,$id,$userId,$title,$note,$dueDate)` eklendi — UPDATE'te WHERE
+`id=? AND user_id=?` ile IDOR'a kapalı (personal_note_delete/set_status ile aynı desen).
+personal_notes şemasında (migration 037) sadece title/note/due_date/status var — "Öncelik" ve
+"Hatırlatma bilgisi" alanları şemada/ekleme formunda hiç yoktu, bu tur kapsamında YENİ kolon
+eklenmedi (DB şeması genişletilmedi); istenirse ayrı bir migration+kapsam onayı gerekir →
+backlog'a not düşülebilir. Tamamlanan notlarda (filtre "done") Düzenle gösterilmiyor (bilinçli,
+kullanıcı isteğiyle uyumlu).
 
 ## Personel CV/Özgeçmiş yükleme (2026-07-03, commit f606cf9)
 Personel kartına opsiyonel CV dosyası (pdf/doc/docx/jpg/jpeg/png, 15 MB) eklendi — `uploads/

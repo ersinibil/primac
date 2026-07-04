@@ -69,6 +69,18 @@ if($t==='sale'){
     redirect('sales.php?deleted=1');
 }
 
+// Görev silme: SOFT DELETE (tasks_lib.php) — hiçbir görev fiziksel silinmez, deleted_at ile
+// listelerden gizlenir (kullanıcı isteği, 2026-07-04). tasks.php'nin JOIN'lediği job_id foreign
+// key'i etkilenmez, alt kayıt (children) temizliği burada gerekmiyor.
+if($t==='task'){
+    require_once __DIR__.'/tasks_lib.php';
+    try{
+        $me=(int)($_SESSION['user']['id']??0);
+        task_soft_delete($pdo,$id,$me);
+    }catch(Throwable $e){ exit('Silinemedi: '.htmlspecialchars($e->getMessage())); }
+    redirect($back.'?deleted=1');
+}
+
 // Muhasebe kaydı silme: accounting_lib.php üzerinden kontrollü sil (hesap bakiyesi geri alınır).
 if($t==='accounting'){
     require_once __DIR__.'/accounting_lib.php';

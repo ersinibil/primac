@@ -18,11 +18,13 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             if(($_POST['type'] ?? 'gider')==='gider'){
                 $step=$_POST['record_step'] ?? 'diger';
                 if($step==='cari' && !(int)($_POST['contact_id']??0)) throw new Exception('Cari Ödemesi için cari seçilmelidir.');
-                if($step==='isletme' && !(int)($_POST['category_id']??0)) throw new Exception('İşletme Gideri için Gider Türü seçilmelidir.');
                 if($step==='personel' && !(int)($_POST['personnel_id']??0)) throw new Exception('Personel Ödemesi için personel seçilmelidir.');
-                if($step==='vergi' && !(int)($_POST['category_id']??0)) throw new Exception('Vergi / SGK için Gider Türü seçilmelidir.');
-                if($step==='arac' && !(int)($_POST['category_id']??0)) throw new Exception('Araç Gideri için Gider Türü seçilmelidir.');
                 if($step==='diger' && trim($_POST['description']??'')==='') throw new Exception('Diğer seçildiğinde açıklama zorunludur.');
+                // GİDER TÜRÜ CONTEXT-AWARE (2026-07-04): Gider Türü artık payment_type kolonunda.
+                if(in_array($step,finance_expense_type_required_steps(),true) && trim($_POST['payment_type']??'')===''){
+                    $stepLabels=['isletme'=>'İşletme Gideri','vergi'=>'Vergi / SGK','arac'=>'Araç Gideri'];
+                    throw new Exception(($stepLabels[$step]??'Bu adım').' için Gider Türü seçilmelidir.');
+                }
             }
             accounting_entry_update($pdo, (int)$_POST['id'], $_POST);
             $ok='Kayıt güncellendi.';
@@ -60,11 +62,13 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             if($type==='gider'){
                 $step=$_POST['record_step'] ?? 'diger';
                 if($step==='cari' && !$contactId) throw new Exception('Cari Ödemesi için cari seçilmelidir.');
-                if($step==='isletme' && !$catId) throw new Exception('İşletme Gideri için Gider Türü seçilmelidir.');
                 if($step==='personel' && !$pid) throw new Exception('Personel Ödemesi için personel seçilmelidir.');
-                if($step==='vergi' && !$catId) throw new Exception('Vergi / SGK için Gider Türü seçilmelidir.');
-                if($step==='arac' && !$catId) throw new Exception('Araç Gideri için Gider Türü seçilmelidir.');
                 if($step==='diger' && $desc==='') throw new Exception('Diğer seçildiğinde açıklama zorunludur.');
+                // GİDER TÜRÜ CONTEXT-AWARE (2026-07-04): Gider Türü artık payment_type kolonunda.
+                if(in_array($step,finance_expense_type_required_steps(),true) && $pt===''){
+                    $stepLabels=['isletme'=>'İşletme Gideri','vergi'=>'Vergi / SGK','arac'=>'Araç Gideri'];
+                    throw new Exception(($stepLabels[$step]??'Bu adım').' için Gider Türü seçilmelidir.');
+                }
             }
             // 2026-07-03: Muhasebe kayıtları artık finance_movements'a yazılır (movement_type='muhasebe')
             $pdo->prepare("INSERT INTO finance_movements(contact_id,category_id,direction,amount,vat_mode,vat_rate,vat_amount,account_id,personnel_id,payment_type,status,movement_date,description,movement_type) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,'muhasebe')")
@@ -82,6 +86,9 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 $sum=acc_summary($pdo,$month,$year);
 $net=$sum['gelir']-$sum['gider'];
 $cats=acc_categories($pdo);
+// GİDER TÜRÜ CONTEXT-AWARE (2026-07-04): "Gider Türü" artık category_id yerine payment_type
+// katalogundan geliyor (finance_expense_type_options()) — category_id sadece Gelir tarafında kalır.
+$gelirCats=array_filter($cats,function($c){ return $c['type']==='gelir'; });
 try{ $accounts=$pdo->query("SELECT id,name FROM finance_accounts WHERE active=1 ORDER BY name")->fetchAll(); }catch(Throwable $e){ $accounts=[]; }
 try{ $personnel=$pdo->query("SELECT id,name FROM personnel WHERE COALESCE(active,1)=1 ORDER BY name")->fetchAll(); }catch(Throwable $e){ $personnel=[]; }
 try{ $contacts=$pdo->query("SELECT id,name FROM contacts ORDER BY name")->fetchAll(); }catch(Throwable $e){ $contacts=[]; }
@@ -124,7 +131,7 @@ topx('Muhasebe');
   <summary style="font-weight:900;cursor:pointer">➕ Yeni Kayıt</summary>
   <form method="post" style="margin-top:10px">
     <label style="color:#94a3b8;font-size:12px">Tür</label>
-    <select name="type" id="mtype" onchange="mFilterCats();mToggleWizard()">
+    <select name="type" id="mtype" onchange="mToggleWizard()">
       <option value="gider">📉 Gider</option>
       <option value="gelir">📈 Gelir</option>
     </select>
@@ -136,13 +143,15 @@ topx('Muhasebe');
     </div>
     <label style="color:#94a3b8;font-size:12px">Tarih</label>
     <input type="date" name="entry_date" value="<?=date('Y-m-d')?>">
-    <label style="color:#94a3b8;font-size:12px" id="mCatLabel">Gider Türü</label>
+    <div id="mCatBox">
+    <label style="color:#94a3b8;font-size:12px">Kategori</label>
     <select name="category_id" id="mcats">
       <option value="">— Seç —</option>
-      <?php foreach($cats as $c): ?>
-      <option value="<?=(int)$c['id']?>" data-type="<?=htmlspecialchars($c['type'])?>" <?=$c['type']==='gelir'?'style="display:none"':''?>>[<?=htmlspecialchars($c['group_name'])?>] <?=htmlspecialchars($c['name'])?></option>
+      <?php foreach($gelirCats as $c): ?>
+      <option value="<?=(int)$c['id']?>"><?=htmlspecialchars($c['group_name'])?> — <?=htmlspecialchars($c['name'])?></option>
       <?php endforeach; ?>
     </select>
+    </div>
     <label style="color:#94a3b8;font-size:12px">Tutar (₺)</label>
     <input type="number" step="0.01" min="0.01" name="amount" id="mAmt" required placeholder="0,00" oninput="mCalcVat()">
     <label style="color:#94a3b8;font-size:12px">KDV Durumu</label>
@@ -167,8 +176,8 @@ topx('Muhasebe');
       <option value="">— Seçme —</option>
       <?php foreach($accounts as $a): ?><option value="<?=(int)$a['id']?>"><?=htmlspecialchars($a['name'])?></option><?php endforeach; ?>
     </select>
-    <div id="mContactBox">
-    <label style="color:#94a3b8;font-size:12px">Cari <small class="muted">(opsiyonel)</small></label>
+    <div id="mContactBox" style="display:none">
+    <label style="color:#94a3b8;font-size:12px">Cari</label>
     <select name="contact_id">
       <option value="">— Cari seçilmedi —</option>
       <?php foreach($contacts as $c): ?><option value="<?=(int)$c['id']?>"><?=htmlspecialchars($c['name'])?></option><?php endforeach; ?>
@@ -181,16 +190,14 @@ topx('Muhasebe');
       <?php foreach($personnel as $p): ?><option value="<?=(int)$p['id']?>"><?=htmlspecialchars($p['name'])?></option><?php endforeach; ?>
     </select>
     </div>
-    <label style="color:#94a3b8;font-size:12px">Ödeme Türü</label>
-    <select name="payment_type">
-      <option value="">—</option>
-      <option value="maas">Maaş</option>
-      <option value="avans">Avans</option>
-      <option value="prim">Prim / İkramiye</option>
-      <option value="sgk">SGK</option>
-      <option value="vergi">Vergi</option>
-      <option value="diger">Diğer</option>
+    <!-- GİDER TÜRÜ CONTEXT-AWARE (2026-07-04): önceden sadece sabit bir liste sunan bu alan artık
+         TÜM adımlara özel (finance_expense_type_options()), mApplyStep() ile yeniden kurulur. -->
+    <div id="mTurBox" style="display:none">
+    <label style="color:#94a3b8;font-size:12px">Gider Türü</label>
+    <select name="payment_type" id="mTurSel">
+      <option value="">— Seç —</option>
     </select>
+    </div>
     <button class="btn dark" name="save_entry" value="1" style="width:100%;padding:13px;margin-top:8px">💾 Kaydet</button>
   </form>
 </details>
@@ -216,77 +223,81 @@ function mToggleVatEdit(id){
   var m=document.getElementById('meditVatMode'+id).value;
   document.getElementById('meditVatRateWrap'+id).style.display=(m==='yok')?'none':'block';
 }
-function mFilterCats(){
-  var t=document.getElementById('mtype').value;
-  var opts=document.getElementById('mcats').options;
+// GİDER TÜRÜ CONTEXT-AWARE (2026-07-04): finance_lib.php'deki finance_expense_type_options() ile
+// BİREBİR aynı katalog (web+mobil tek kaynak).
+var M_TUR_CATALOG = <?=json_encode(finance_expense_type_options())?>;
+var M_TUR_REQUIRED = <?=json_encode(finance_expense_type_required_steps())?>;
+function mBuildTurOptions(selectEl,step){
+  var cur=selectEl.value || selectEl.dataset.current || '';
+  var opts=M_TUR_CATALOG[step] || [];
+  selectEl.innerHTML='<option value="">— Seç —</option>';
   for(var i=0;i<opts.length;i++){
-    var o=opts[i];
-    if(!o.dataset.type){o.style.display='';continue;}
-    o.style.display=(o.dataset.type===t)?'':'none';
-    if(o.dataset.type!==t&&o.selected) o.selected=false;
+    var el=document.createElement('option');
+    el.value=opts[i].v; el.textContent=opts[i].t;
+    if(opts[i].v===cur) el.selected=true;
+    selectEl.appendChild(el);
   }
+  selectEl.dataset.current='';
 }
 // FINANCE UX REFACTOR (2026-07-04): "Ne kaydediyorsun?" sihirbazı sadece Gider tarafında aktif.
 function mToggleWizard(){
   var gider=document.getElementById('mtype').value==='gider';
   document.getElementById('mWizardBox').style.display=gider?'':'none';
-  document.getElementById('mCatLabel').textContent = gider ? 'Gider Türü' : 'Kategori';
+  document.getElementById('mCatBox').style.display=gider?'none':'';
+  document.getElementById('mcats').required=false;
+  document.getElementById('mTurBox').style.display=gider?'':'none';
   if(!gider){
     document.getElementById('mPersBox').style.display='none';
     document.getElementById('mPersBox').querySelector('select').required=false;
     document.getElementById('mContactBox').style.display='';
     document.getElementById('mDesc').required=false;
-    document.getElementById('mcats').required=false;
+    document.getElementById('mTurSel').required=false;
   } else { mApplyStep(); }
 }
+// Her adım sadece kendi ilgili alanını gösterir (yanlış kayıt ihtimalini azaltma amacı) — Cari
+// alanı SADECE "Cari Ödemesi" adımında, Personel SADECE "Personel Ödemesi" adımında görünür.
 function mApplyStep(){
   if(document.getElementById('mtype').value!=='gider') return;
   var step=document.getElementById('mStep').value;
-  var need={cari:'contact_id',isletme:'category_id',personel:'personnel_id',vergi:'category_id',arac:'category_id',kart:null,diger:null}[step];
   var contactBox=document.getElementById('mContactBox');
-  contactBox.style.display=(step==='personel')?'none':'';
-  contactBox.querySelector('select').required=(need==='contact_id');
-  document.getElementById('mcats').required=(need==='category_id');
+  contactBox.style.display=(step==='cari')?'':'none';
+  contactBox.querySelector('select').required=(step==='cari');
   var persBox=document.getElementById('mPersBox');
   persBox.style.display=(step==='personel')?'':'none';
-  persBox.querySelector('select').required=(need==='personnel_id');
+  persBox.querySelector('select').required=(step==='personel');
+  mBuildTurOptions(document.getElementById('mTurSel'),step);
+  document.getElementById('mTurSel').required=(M_TUR_REQUIRED.indexOf(step)!==-1);
   document.getElementById('mDesc').required=(step==='diger');
 }
 mToggleWizard();
-function mFilterCatsEdit(id){
-  var t=document.getElementById('medit'+id).value;
-  var opts=document.getElementById('meditcats'+id).options;
-  for(var i=0;i<opts.length;i++){
-    var o=opts[i];
-    if(!o.dataset.type){o.style.display='';continue;}
-    o.style.display=(o.dataset.type===t)?'':'none';
-    if(o.dataset.type!==t&&o.selected) o.selected=false;
-  }
-}
 function mToggleWizardEdit(id){
   var box=document.getElementById('meditWizardBox'+id); if(!box) return;
   var gider=document.getElementById('medit'+id).value==='gider';
   box.style.display=gider?'':'none';
-  document.getElementById('meditCatLabel'+id).textContent = gider ? 'Gider Türü' : 'Kategori';
+  document.getElementById('meditCatBox'+id).style.display=gider?'none':'';
+  document.getElementById('meditcats'+id).required=false;
+  document.getElementById('meditTurBox'+id).style.display=gider?'':'none';
   if(!gider){
     document.getElementById('meditPersBox'+id).style.display='none';
     document.getElementById('meditPersBox'+id).querySelector('select').required=false;
     document.getElementById('meditContactBox'+id).style.display='';
     document.getElementById('meditDesc'+id).required=false;
-    document.getElementById('meditcats'+id).required=false;
+    document.getElementById('meditTurSel'+id).required=false;
   } else { mApplyStepEdit(id); }
 }
+// Her adım sadece kendi ilgili alanını gösterir — Cari SADECE "Cari Ödemesi"nde, Personel SADECE
+// "Personel Ödemesi"nde görünür (yanlış kayıt ihtimalini azaltma amacı).
 function mApplyStepEdit(id){
   if(document.getElementById('medit'+id).value!=='gider') return;
   var step=document.getElementById('meditStep'+id).value;
-  var need={cari:'contact_id',isletme:'category_id',personel:'personnel_id',vergi:'category_id',arac:'category_id',kart:null,diger:null}[step];
   var contactBox=document.getElementById('meditContactBox'+id);
-  contactBox.style.display=(step==='personel')?'none':'';
-  contactBox.querySelector('select').required=(need==='contact_id');
-  document.getElementById('meditcats'+id).required=(need==='category_id');
+  contactBox.style.display=(step==='cari')?'':'none';
+  contactBox.querySelector('select').required=(step==='cari');
   var persBox=document.getElementById('meditPersBox'+id);
   persBox.style.display=(step==='personel')?'':'none';
-  persBox.querySelector('select').required=(need==='personnel_id');
+  persBox.querySelector('select').required=(step==='personel');
+  mBuildTurOptions(document.getElementById('meditTurSel'+id),step);
+  document.getElementById('meditTurSel'+id).required=(M_TUR_REQUIRED.indexOf(step)!==-1);
   document.getElementById('meditDesc'+id).required=(step==='diger');
 }
 </script>
@@ -321,7 +332,7 @@ function mApplyStepEdit(id){
       <form method="post" style="margin-top:10px">
         <input type="hidden" name="id" value="<?=(int)$e['id']?>">
         <label style="color:#94a3b8;font-size:12px">Tür</label>
-        <select name="type" id="medit<?=(int)$e['id']?>" onchange="mFilterCatsEdit(<?=(int)$e['id']?>);mToggleWizardEdit(<?=(int)$e['id']?>)">
+        <select name="type" id="medit<?=(int)$e['id']?>" onchange="mToggleWizardEdit(<?=(int)$e['id']?>)">
           <option value="gider" <?=$e['type']==='gider'?'selected':''?>>📉 Gider</option>
           <option value="gelir" <?=$e['type']==='gelir'?'selected':''?>>📈 Gelir</option>
         </select>
@@ -334,13 +345,15 @@ function mApplyStepEdit(id){
         </div>
         <label style="color:#94a3b8;font-size:12px">Tarih</label>
         <input type="date" name="entry_date" value="<?=htmlspecialchars($e['entry_date'])?>">
-        <label style="color:#94a3b8;font-size:12px" id="meditCatLabel<?=(int)$e['id']?>"><?=$ig?'Gider Türü':'Kategori'?></label>
+        <div id="meditCatBox<?=(int)$e['id']?>" style="<?=$ig?'display:none':''?>">
+        <label style="color:#94a3b8;font-size:12px">Kategori</label>
         <select name="category_id" id="meditcats<?=(int)$e['id']?>">
           <option value="">— Seç —</option>
-          <?php foreach($cats as $c): ?>
-          <option value="<?=(int)$c['id']?>" data-type="<?=htmlspecialchars($c['type'])?>" <?=$e['category_id']==$c['id']?'selected':''?> style="display:<?=($e['type']==='gider' && $c['type']==='gider') || ($e['type']==='gelir' && $c['type']==='gelir')?'':' none'?>;">[<?=htmlspecialchars($c['group_name'])?>] <?=htmlspecialchars($c['name'])?></option>
+          <?php foreach($gelirCats as $c): ?>
+          <option value="<?=(int)$c['id']?>" <?=$e['category_id']==$c['id']?'selected':''?>><?=htmlspecialchars($c['group_name'])?> — <?=htmlspecialchars($c['name'])?></option>
           <?php endforeach; ?>
         </select>
+        </div>
         <label style="color:#94a3b8;font-size:12px">Tutar (₺)</label>
         <input type="number" step="0.01" min="0.01" name="amount" required value="<?=htmlspecialchars(str_replace('.',',',$e['amount']))?>">
         <label style="color:#94a3b8;font-size:12px">KDV Durumu</label>
@@ -364,30 +377,28 @@ function mApplyStepEdit(id){
           <option value="">— Seçme —</option>
           <?php foreach($accounts as $a): ?><option value="<?=(int)$a['id']?>" <?=$e['account_id']==$a['id']?'selected':''?>><?=htmlspecialchars($a['name'])?></option><?php endforeach; ?>
         </select>
-        <div id="meditContactBox<?=(int)$e['id']?>">
-        <label style="color:#94a3b8;font-size:12px">Cari <small class="muted">(opsiyonel)</small></label>
+        <div id="meditContactBox<?=(int)$e['id']?>" style="<?=($ig && $eStep!=='cari')?'display:none':''?>">
+        <label style="color:#94a3b8;font-size:12px">Cari</label>
         <select name="contact_id">
           <option value="">— Cari seçilmedi —</option>
           <?php foreach($contacts as $c): ?><option value="<?=(int)$c['id']?>" <?=$e['contact_id']==$c['id']?'selected':''?>><?=htmlspecialchars($c['name'])?></option><?php endforeach; ?>
         </select>
         </div>
-        <div id="meditPersBox<?=(int)$e['id']?>">
+        <div id="meditPersBox<?=(int)$e['id']?>" style="<?=($ig && $eStep!=='personel')?'display:none':''?>">
         <label style="color:#94a3b8;font-size:12px">Personel</label>
         <select name="personnel_id">
           <option value="">— Yok —</option>
           <?php foreach($personnel as $p): ?><option value="<?=(int)$p['id']?>" <?=$e['personnel_id']==$p['id']?'selected':''?>><?=htmlspecialchars($p['name'])?></option><?php endforeach; ?>
         </select>
         </div>
-        <label style="color:#94a3b8;font-size:12px">Ödeme Türü</label>
-        <select name="payment_type">
-          <option value="" <?=!$e['payment_type']?'selected':''?>>—</option>
-          <option value="maas" <?=$e['payment_type']==='maas'?'selected':''?>>Maaş</option>
-          <option value="avans" <?=$e['payment_type']==='avans'?'selected':''?>>Avans</option>
-          <option value="prim" <?=$e['payment_type']==='prim'?'selected':''?>>Prim / İkramiye</option>
-          <option value="sgk" <?=$e['payment_type']==='sgk'?'selected':''?>>SGK</option>
-          <option value="vergi" <?=$e['payment_type']==='vergi'?'selected':''?>>Vergi</option>
-          <option value="diger" <?=$e['payment_type']==='diger'?'selected':''?>>Diğer</option>
+        <!-- GİDER TÜRÜ CONTEXT-AWARE (2026-07-04): payment_type-bağlı "Gider Türü" — seçenekleri
+             mApplyStepEdit() ile adıma özel yeniden oluşturulur. -->
+        <div id="meditTurBox<?=(int)$e['id']?>" style="<?=$ig?'':'display:none'?>">
+        <label style="color:#94a3b8;font-size:12px">Gider Türü</label>
+        <select name="payment_type" id="meditTurSel<?=(int)$e['id']?>" data-current="<?=htmlspecialchars($e['payment_type'] ?? '')?>">
+          <option value="">— Seç —</option>
         </select>
+        </div>
         <button class="btn dark" name="edit_entry" value="1" style="width:100%;padding:13px;margin-top:8px">💾 Kaydet</button>
       </form>
     </details>

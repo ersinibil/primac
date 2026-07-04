@@ -91,6 +91,16 @@ function personal_note_set_status($pdo, $id, $userId, $status){
     return $s->execute([$status,(int)$id,$userId]);
 }
 
+// Not düzenleme (Başlık/Detay/Termin) — sadece kendi notunu düzenleyebilir (user_id WHERE'de,
+// IDOR'a kapalı — personal_note_delete/personal_note_set_status ile aynı desen).
+function personal_note_update($pdo, $id, $userId, $title, $note='', $dueDate=null){
+    $title=trim($title);
+    if($title==='') throw new Exception('Başlık girin.');
+    if(!personal_notes_has_table($pdo)) throw new Exception('Not tablosu henüz kurulmadı (migration 037 çalıştırılmalı).');
+    $s=$pdo->prepare("UPDATE personal_notes SET title=?, note=?, due_date=? WHERE id=? AND user_id=?");
+    return $s->execute([$title,trim($note),$dueDate?:null,(int)$id,$userId]);
+}
+
 function personal_note_delete($pdo, $id, $userId){
     $s=$pdo->prepare("DELETE FROM personal_notes WHERE id=? AND user_id=?");
     return $s->execute([(int)$id,$userId]);

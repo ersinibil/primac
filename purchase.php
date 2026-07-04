@@ -15,27 +15,34 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['action']) && $_POST['act
     try{
         $supplier=(int)$_POST['contact_id'];
         $pm=$_POST['payment_method'] ?? 'Veresiye';
-        $pnames=$_POST['product_name'] ?? [];
+        $itemIds=$_POST['stock_item_id'] ?? [];
         $qtys=$_POST['quantity'] ?? [];
         $units=$_POST['unit'] ?? [];
         $prices=$_POST['unit_price'] ?? [];
         $vatRates=$_POST['vat_rate'] ?? [];
 
         if(!$supplier) throw new Exception('Tedarikçi seçin.');
-        if(!is_array($pnames) || !count($pnames)) throw new Exception('En az bir ürün satırı ekleyin.');
+        if(!is_array($itemIds) || !count($itemIds)) throw new Exception('En az bir ürün satırı ekleyin.');
 
         // Sepetteki BÜTÜN satırlar + finansal kayıt tek transaction içinde (2026-07-03: sales.php
         // ile aynı gerekçe — bir satır başarısız olursa önceki satırların stoku kalıcı sapmasın).
+        // 2026-07-04: satır artık serbest metin değil, seçili stok kartı id'si (bkz. "Yeni Ürün
+        // Ekle" AJAX akışı) — isim id üzerinden çözülüp mevcut stock_add_purchase() aynen kullanılır.
         $totalNet=0; $totalVat=0; $descParts=[]; $firstItemId=null;
         $pdo->beginTransaction();
         try{
-            foreach($pnames as $i=>$pname){
-                $pname=trim($pname);
+            $nameStmt=$pdo->prepare("SELECT name FROM stock_items WHERE id=?");
+            foreach($itemIds as $i=>$pid){
+                $pid=(int)$pid;
                 $qty=(float)($qtys[$i] ?? 0);
                 $unit=trim($units[$i] ?? '') ?: 'adet';
                 $price=(float)($prices[$i] ?? 0);
                 $vatRate=(float)($vatRates[$i] ?? 0);
-                if($pname==='' || $qty<=0) continue;
+                if(!$pid || $qty<=0) continue;
+
+                $nameStmt->execute([$pid]);
+                $pname=$nameStmt->fetchColumn();
+                if($pname===false) continue; // seçilen ürün bulunamadı, satır atlanır
 
                 $stockResult=stock_add_purchase($pdo, $supplier, $pname, $qty, $price, $pm, $unit, null);
                 if(!$stockResult['ok']) throw new Exception($stockResult['message']);
@@ -132,9 +139,6 @@ require_once __DIR__.'/layout_top.php';
     </div>
   </div><!-- /form-grid -->
 
-  <datalist id="prods">
-  <?php foreach($products as $p): ?><option value="<?=htmlspecialchars($p['name'])?>"></option><?php endforeach; ?>
-  </datalist>
   <datalist id="vatPresets">
     <option value="0"></option>
     <option value="1"></option>
@@ -144,7 +148,7 @@ require_once __DIR__.'/layout_top.php';
   </datalist>
 
   <div class="full" style="margin-top:14px">
-    <label style="font-weight:800">Ürünler <small class="muted" style="font-weight:400">(yazınca listede yoksa otomatik yeni ürün olarak eklenir)</small></label>
+    <label style="font-weight:800">Ürünler <small class="muted" style="font-weight:400">(listede yoksa "➕ Yeni Ürün Ekle…" seçeneğini kullanın)</small></label>
     <div style="overflow:auto">
     <table class="purch-items-tbl" style="width:100%;border-collapse:collapse">
       <thead>
@@ -207,16 +211,35 @@ echo "<tr><td colspan='4'><div class='alert'>".h($e->getMessage())."</div></td><
 
 <script>
 var PRODUCTS = <?= json_encode(array_map(function($p){
-    return ['name'=>$p['name'],'unit'=>$p['unit'],'price'=>$p['purchase_price'],'vat'=>$p['vat_rate']!==null?$p['vat_rate']:20];
+    return ['id'=>(int)$p['id'],'name'=>$p['name'],'unit'=>$p['unit'],'price'=>$p['purchase_price'],'vat'=>$p['vat_rate']!==null?$p['vat_rate']:20];
 }, $products), JSON_UNESCAPED_UNICODE) ?>;
 var rowIndex = 0;
+
+function escPurch(s){ return String(s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+
+// Ürün seçim listesi (2026-07-04: serbest metin+datalist yerine sales.php ile aynı
+// select+"Yeni Ürün Ekle" deseni — bkz. ../sales.php productOptionsHtml/quickAddProductRow).
+function productOptionsHtmlPurch(){
+    var html = '<option value="">— Seç —</option>';
+    PRODUCTS.forEach(function(p){
+        html += '<option value="'+p.id+'" data-price="'+(p.price||0)+'" data-vat="'+(p.vat||0)+'" data-unit="'+escPurch(p.unit||'adet')+'">'
+            + escPurch(p.name)+'</option>';
+    });
+    html += '<option value="__new__">➕ Listede yok — Yeni Ürün Ekle…</option>';
+    return html;
+}
 
 function addItemRow(){
     var idx = rowIndex++;
     var tr = document.createElement('tr');
     tr.dataset.idx = idx;
     tr.innerHTML =
-        '<td style="padding:4px 6px"><input type="text" name="product_name[]" list="prods" class="row-name" required placeholder="Ürün adı" oninput="onRowNameInput(this)" style="width:100%"></td>'
+        '<td style="padding:4px 6px">'
+        + '<select name="stock_item_id[]" class="row-prod" required onchange="onRowProductChange(this)">'+productOptionsHtmlPurch()+'</select>'
+        + '<div class="new-prod-box" style="display:none;background:#eef4ff;border:1px solid #bfdbfe;border-radius:10px;padding:8px;margin-top:6px">'
+        + '<input type="text" class="np-name" placeholder="Ürün adı" style="width:100%;border:1px solid #d0d5dd;border-radius:8px;padding:6px;margin-bottom:6px">'
+        + '<button type="button" class="btn small" style="width:100%" onclick="quickAddProductRow(this)">✓ Ekle ve Seç</button>'
+        + '</div></td>'
         + '<td style="padding:4px 6px"><input type="number" step="0.01" min="0.01" name="quantity[]" class="row-qty" value="1" required oninput="calcAll()" style="width:80px"></td>'
         + '<td style="padding:4px 6px"><input type="text" name="unit[]" class="row-unit" value="adet" style="width:80px"></td>'
         + '<td style="padding:4px 6px"><input type="number" step="0.01" min="0" name="unit_price[]" class="row-price" required oninput="calcAll()" style="width:110px"></td>'
@@ -231,28 +254,70 @@ function removeRow(btn){
     var tr = btn.closest('tr');
     var rows = document.querySelectorAll('#itemsBody tr');
     if(rows.length <= 1){
-        tr.querySelector('.row-name').value = '';
+        tr.querySelector('.row-prod').value = '';
         tr.querySelector('.row-qty').value = 1;
         tr.querySelector('.row-unit').value = 'adet';
         tr.querySelector('.row-price').value = '';
         tr.querySelector('.row-vat').value = 20;
+        tr.querySelector('.new-prod-box').style.display = 'none';
     } else {
         tr.remove();
     }
     calcAll();
 }
 
-// Ürün adı yazılırken mevcut bir stok kartıyla eşleşirse fiyat/birim/KDV otomatik doldurulur
-// (datalist seçimi native "change" olayında dataset taşımadığı için isimden eşleştiriyoruz).
-function onRowNameInput(input){
-    var tr = input.closest('tr');
-    var match = PRODUCTS.find(function(p){ return p.name === input.value; });
-    if(match){
-        tr.querySelector('.row-unit').value = match.unit || 'adet';
-        if(!tr.querySelector('.row-price').value) tr.querySelector('.row-price').value = match.price || '';
-        tr.querySelector('.row-vat').value = match.vat || 20;
+// Var olan bir ürün seçilince birim/fiyat/KDV otomatik dolar; "__new__" seçilince
+// satır-içi kutu açılır (sayfa yenilenmeden AJAX ile ekleme — bkz. quickAddProductRow).
+function onRowProductChange(sel){
+    var tr = sel.closest('tr');
+    var box = tr.querySelector('.new-prod-box');
+    if(sel.value === '__new__'){
+        box.style.display = 'block';
+        sel.value = '';
+        tr.querySelector('.np-name').focus();
+        return;
+    }
+    box.style.display = 'none';
+    var opt = sel.selectedOptions[0];
+    if(opt && opt.dataset.price !== undefined){
+        tr.querySelector('.row-unit').value = opt.dataset.unit || 'adet';
+        if(!tr.querySelector('.row-price').value) tr.querySelector('.row-price').value = opt.dataset.price;
+        tr.querySelector('.row-vat').value = opt.dataset.vat || 20;
     }
     calcAll();
+}
+
+// "➕ Yeni Ürün Ekle…" kutusundaki "Ekle ve Seç" — SADECE ürün adı ile stock_items'a hemen
+// kaydeder (detaylar sonra ürün kartından tamamlanır) ve satırda otomatik seçili hale getirir,
+// sayfa yenilenmez (2026-07-04 kullanıcı isteği).
+function quickAddProductRow(btn){
+    var tr = btn.closest('tr');
+    var name = tr.querySelector('.np-name').value.trim();
+    if(!name){ alert('Ürün adı girin'); return; }
+    var fd = new FormData();
+    fd.append('t', 'product');
+    fd.append('name', name);
+    fetch('ajax_quick_add.php', {method: 'POST', body: fd})
+        .then(r => r.json())
+        .then(data => {
+            if(data.ok){
+                PRODUCTS.push({id: data.id, name: data.name, unit: 'adet', price: 0, vat: 20});
+                document.querySelectorAll('.row-prod').forEach(function(sel){
+                    var o = document.createElement('option');
+                    o.value = data.id; o.dataset.price = 0; o.dataset.vat = 20; o.dataset.unit = 'adet';
+                    o.textContent = data.name;
+                    sel.insertBefore(o, sel.querySelector('option[value="__new__"]'));
+                });
+                var sel = tr.querySelector('.row-prod');
+                sel.value = data.id;
+                onRowProductChange(sel);
+                tr.querySelector('.np-name').value = '';
+                tr.querySelector('.new-prod-box').style.display = 'none';
+            } else {
+                alert('Hata: ' + data.message);
+            }
+        })
+        .catch(e => alert('Bağlantı hatası: ' + e));
 }
 
 function calcAll(){

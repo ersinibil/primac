@@ -86,7 +86,11 @@ function accounting_entry_update($pdo, $id, array $data){
     $vc=acc_calc_vat($rawAmount,$vatMode,$vatRate);
     $amount=$vc['amount'];
     $date=$data['entry_date'] ?? $old['movement_date'];
-    $catId=(int)($data['category_id']??$old['category_id']) ?: null;
+    // GİDER TÜRÜ CONTEXT-AWARE (2026-07-04): category_id artık Gider tarafında sihirbazda
+    // gösterilmiyor (Gider Türü artık payment_type) — sadece Gelir (Kategori) formu bu alanı
+    // yönetiyor. Gider düzenlemesinde formda bu alan hiç yok/gizli olduğu için eski kaydın
+    // category_id'sini SIFIRLAMAMAK için (varsa) korunuyor, sadece Gelir düzenlemesinde güncelleniyor.
+    $catId = $type==='gelir' ? ((int)($data['category_id']??$old['category_id']) ?: null) : $old['category_id'];
     $desc=trim($data['description'] ?? $old['description'] ?? '');
     $refNo=trim($data['reference_no'] ?? $old['reference_no'] ?? '');
     $accId=(int)($data['account_id']??$old['account_id']) ?: null;

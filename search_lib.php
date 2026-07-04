@@ -24,13 +24,16 @@ if (!function_exists('search_run')) {
     /**
      * Tüm modüllerde arama yapar, ham satırları döner (HTML/link üretmez — bunu çağıran sayfa yapar,
      * çünkü web ve mobil detay sayfalarının URL'leri farklı).
-     * @return array{jobs:array,contacts:array,stock:array,personnel:array,accounts:array,movements:array,checks:array,quotes:array}
+     * @return array{jobs:array,contacts:array,stock:array,personnel:array,accounts:array,movements:array,checks:array,quotes:array,documents:array,files:array,tasks:array,users:array,notes:array,messages:array,pages:array}
      */
     function search_run(PDO $pdo, $q) {
         $q = trim((string)$q);
-        $out = ['jobs'=>[], 'contacts'=>[], 'stock'=>[], 'personnel'=>[], 'accounts'=>[], 'movements'=>[], 'checks'=>[], 'quotes'=>[], 'documents'=>[], 'pages'=>[]];
+        $out = ['jobs'=>[], 'contacts'=>[], 'stock'=>[], 'personnel'=>[], 'accounts'=>[], 'movements'=>[], 'checks'=>[], 'quotes'=>[], 'documents'=>[], 'files'=>[], 'tasks'=>[], 'users'=>[], 'notes'=>[], 'messages'=>[], 'pages'=>[]];
         if ($q === '') return $out;
         $like = '%'.$q.'%';
+        // Modül-adı kısayolu tespiti (çek/teklif/belge/personel gibi) — aşağıda tekrar kullanılıyor,
+        // en üstte tek yerden hesaplanıyor.
+        $qNorm = mb_strtolower($q, 'UTF-8');
 
         // Her bölüm kendi modül yetkisiyle korunuyor — 2026-07-02 güvenlik denetiminde bulundu:
         // yetkisi olmayan personel arama üzerinden finans bakiyesi/IBAN, personel iletişim bilgisi
@@ -65,12 +68,22 @@ if (!function_exists('search_run')) {
             $out['stock'] = $s->fetchAll();
         } catch (Throwable $e) {} }
 
-        // Personel — DÜZELTİLDİ: title/department yerine gerçek kolonlar role/work_type
+        // Personel — DÜZELTİLDİ: title/department yerine gerçek kolonlar role/work_type.
+        // 2026-07-04 KÖK NEDEN BULUNDU: kolonlar/yetki kontrolü/render zaten doğruydu (hepsi
+        // kontrol edildi) — asıl sorun "personel" kelimesinin kendisinin arandığında (bir isim
+        // değil, MODÜL ADININ kendisi) hiçbir personel kaydının name/role/work_type/phone/email
+        // alanında bu kelime geçmediği için 0 sonuç dönmesiydi. "çek"/"teklif"/"belge"/"rapor" için
+        // zaten var olan "modül adı yazılırsa son kayıtlar listelensin" deseni personelde YOKTU —
+        // aynı desen burada da uygulandı.
+        $personnelModuleMatch = in_array($qNorm, ['personel','personeller','personelim','çalışan','çalışanlar'], true);
         if (function_exists('user_can') && user_can('personnel')) { try {
-            $s = $pdo->prepare("SELECT id,name,role,phone,work_type,email FROM personnel
-                WHERE name LIKE ? OR role LIKE ? OR work_type LIKE ? OR phone LIKE ? OR email LIKE ?
-                ORDER BY id DESC LIMIT 20");
-            $s->execute([$like,$like,$like,$like,$like]);
+            $sql = $personnelModuleMatch
+                ? "SELECT id,name,role,phone,work_type,email FROM personnel ORDER BY id DESC LIMIT 20"
+                : "SELECT id,name,role,phone,work_type,email FROM personnel
+                    WHERE name LIKE ? OR role LIKE ? OR work_type LIKE ? OR phone LIKE ? OR email LIKE ?
+                    ORDER BY id DESC LIMIT 20";
+            $s = $pdo->prepare($sql);
+            $s->execute($personnelModuleMatch ? [] : [$like,$like,$like,$like,$like]);
             $out['personnel'] = $s->fetchAll();
         } catch (Throwable $e) {} }
 
@@ -97,7 +110,7 @@ if (!function_exists('search_run')) {
         // Çek / Senet — Finans modülünün bir parçası. "Çek"/"Senet" TÜR adının kendisi yazılırsa
         // (numara/banka/cari alanında geçmese bile) o türdeki tüm kayıtlar listelensin — 2026-07-02
         // kullanıcı bildirimi: "aramada çek'i göremedim" (sadece alan içeriği aranıyordu, tür adı değil).
-        $qNorm = mb_strtolower($q, 'UTF-8');
+        // NOT: $qNorm artık en üstte hesaplanıyor (personel modül-adı kısayoluyla paylaşılıyor).
         $typeMatch = null;
         if (in_array($qNorm, ['çek','cek'], true)) $typeMatch = 'cek';
         elseif (in_array($qNorm, ['senet','senedi','senetler'], true)) $typeMatch = 'senet';
@@ -138,6 +151,107 @@ if (!function_exists('search_run')) {
             $s = $pdo->prepare($sql);
             $s->execute($docModuleMatch ? [] : [$like,$like]);
             $out['documents'] = $s->fetchAll();
+        } catch (Throwable $e) {} }
+
+        // İş Dosyaları (job_files) — 2026-07-04 kapsam genişletme: 'documents' anahtarı sadece
+        // trade_documents'i (ticari belge) kapsıyordu, işlere yüklenen gerçek dosyalar (çizim, teslim
+        // fişi vb.) arama dışındaydı. Ayrı anahtar (`files`) — trade_documents ile şeması/render'ı
+        // tamamen farklı (dosya adı/tipi vs. tutar/durum), aynı diziye karıştırılmadı. 'jobs' yetkisiyle
+        // korunuyor (iş listesiyle aynı görünürlük sınırı).
+        if (function_exists('user_can') && user_can('jobs')) { try {
+            $s = $pdo->prepare("SELECT jf.id, jf.job_id, jf.original_name, jf.file_type, jf.approval_status, jf.created_at,
+                    j.job_no, j.title job_title
+                FROM job_files jf LEFT JOIN jobs j ON j.id=jf.job_id
+                WHERE jf.original_name LIKE ? OR j.job_no LIKE ? OR j.title LIKE ?
+                ORDER BY jf.id DESC LIMIT 20");
+            $s->execute([$like,$like,$like]);
+            $out['files'] = $s->fetchAll();
+        } catch (Throwable $e) {} }
+
+        // Görevler (tasks) — 'jobs' tablosundan AYRI (bkz. PROJECT_RULES.md kavram standardı: "İşler"
+        // ≠ "İşlerim"/görevler). "Görev" modül adının kendisi yazılırsa son görevler listelensin (aynı
+        // desen). 'tasks' yetkisiyle korunuyor.
+        $taskModuleMatch = in_array($qNorm, ['görev','görevler','görevlerim'], true);
+        if (function_exists('user_can') && user_can('tasks')) { try {
+            $sql = "SELECT t.id, t.title, t.description, t.status, t.priority, t.due_date, t.job_id,
+                    j.job_no, p.name personnel_name
+                FROM tasks t LEFT JOIN jobs j ON j.id=t.job_id LEFT JOIN personnel p ON p.id=t.personnel_id
+                WHERE ".($taskModuleMatch ? "1=1" : "t.title LIKE ? OR t.description LIKE ? OR p.name LIKE ?")."
+                ORDER BY t.id DESC LIMIT 20";
+            $s = $pdo->prepare($sql);
+            $s->execute($taskModuleMatch ? [] : [$like,$like,$like]);
+            $out['tasks'] = $s->fetchAll();
+        } catch (Throwable $e) {} }
+
+        // Kullanıcılar (app_users / users.php) — sadece 'users' (Kullanıcı/Yetki) yetkisi olanlar
+        // başka kullanıcıların telefon/e-posta bilgisini arama sonucunda görebilir (users.php'nin
+        // kendisiyle aynı görünürlük sınırı — page_module_map() 'users.php'=>'users').
+        if (function_exists('user_can') && user_can('users')) { try {
+            $s = $pdo->prepare("SELECT id,username,full_name,phone,email,role FROM app_users
+                WHERE username LIKE ? OR full_name LIKE ? OR phone LIKE ? OR email LIKE ?
+                ORDER BY id DESC LIMIT 20");
+            $s->execute([$like,$like,$like,$like]);
+            $out['users'] = $s->fetchAll();
+        } catch (Throwable $e) {} }
+
+        // Notlarım (personal_notes) — KİŞİSEL alan, `tasks` tablosuyla karışmaz (bkz. 037_personal_notes
+        // migration notu: "personel görmesin"). Modül seviyesinde bir user_can() izni YOK (notes.php da
+        // sadece require_login() istiyor, herkes kendi notunu görebiliyor) — güvenlik sınırı burada
+        // `user_id=?` filtresi: oturum sahibi SADECE KENDİ notunu arayabilir, başkasının notu asla
+        // görünmez (IDOR'a kapalı).
+        if (function_exists('current_user')) { try {
+            $meU = current_user();
+            $meId = (int)($meU['id'] ?? 0);
+            if ($meId > 0) {
+                $s = $pdo->prepare("SELECT id,title,note,status,due_date FROM personal_notes
+                    WHERE user_id=? AND (title LIKE ? OR note LIKE ?)
+                    ORDER BY id DESC LIMIT 20");
+                $s->execute([$meId,$like,$like]);
+                $out['notes'] = $s->fetchAll();
+            }
+        } catch (Throwable $e) {} }
+
+        // Mesajlar (internal_messages) — modül seviyesinde izin yok (messages.php da herkese açık,
+        // sadece require_login()); güvenlik sınırı burada da SAHİPLİK/ÜYELİK: 1-1 mesajlarda oturum
+        // sahibi gönderen ya da alıcı olmalı, grup mesajlarında ise chat_thread_members'ta üye olmalı
+        // — başka bir kullanıcının dahil olmadığı hiçbir mesaj arama sonucunda görünmez (IDOR'a kapalı).
+        if (function_exists('current_user')) { try {
+            $meU = current_user();
+            $meId = (int)($meU['id'] ?? 0);
+            if ($meId > 0) {
+                $s = $pdo->prepare("SELECT m.id, m.message, m.created_at, m.thread_id, m.sender_user_id, m.receiver_user_id,
+                        su.full_name sender_name, su.username sender_username,
+                        ru.full_name receiver_name, ru.username receiver_username,
+                        th.title thread_title
+                    FROM internal_messages m
+                    LEFT JOIN app_users su ON su.id=m.sender_user_id
+                    LEFT JOIN app_users ru ON ru.id=m.receiver_user_id
+                    LEFT JOIN chat_threads th ON th.id=m.thread_id
+                    WHERE m.message LIKE ?
+                        AND (
+                            (m.thread_id IS NULL AND (m.sender_user_id=? OR m.receiver_user_id=?))
+                            OR (m.thread_id IS NOT NULL AND EXISTS(
+                                SELECT 1 FROM chat_thread_members cm WHERE cm.thread_id=m.thread_id AND cm.user_id=?
+                            ))
+                        )
+                    ORDER BY m.id DESC LIMIT 20");
+                $s->execute([$like,$meId,$meId,$meId]);
+                $rows = $s->fetchAll();
+                foreach ($rows as &$mrow) {
+                    if ($mrow['thread_id']) {
+                        $mrow['with_label'] = $mrow['thread_title'] ?: 'Grup';
+                        $mrow['with_user_id'] = null;
+                    } else {
+                        $otherIsSender = ((int)$mrow['sender_user_id'] !== $meId);
+                        $mrow['with_label'] = $otherIsSender
+                            ? ($mrow['sender_name'] ?: $mrow['sender_username'])
+                            : ($mrow['receiver_name'] ?: $mrow['receiver_username']);
+                        $mrow['with_user_id'] = $otherIsSender ? (int)$mrow['sender_user_id'] : (int)$mrow['receiver_user_id'];
+                    }
+                }
+                unset($mrow);
+                $out['messages'] = $rows;
+            }
         } catch (Throwable $e) {} }
 
         // Sayfa kısayolları — veri satırı değil, doğrudan bir ekrana yönlendirme. Kullanıcı "ekstre"/

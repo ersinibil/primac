@@ -17,29 +17,32 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     $err='';
     try{
         $contact=(int)($_POST['contact_id']??0); // opsiyonel
-        $catId=(int)($_POST['category_id']??0) ?: null; // opsiyonel — cari yerine/yanında
         // FINANCE UX REFACTOR (2026-07-04): "Ne kaydediyorsun?" sihirbazının "Personel Ödemesi"
         // adımı için — kolon zaten var (migration 035), bu ekrana ilk kez ekleniyor.
         $personnelId=(int)($_POST['personnel_id']??0) ?: null;
+        // GİDER TÜRÜ CONTEXT-AWARE (2026-07-04): "Gider Türü" artık adıma özel bir katalogdan
+        // (finance_expense_type_options()) geliyor, mevcut payment_type kolonuna yazılıyor.
+        $paymentType=trim($_POST['payment_type']??'') ?: null;
         $amount=(float)str_replace(',','.',$_POST['amount']??'0');
         $pm=$_POST['payment_channel'] ?? 'Nakit';
         if($amount<=0) throw new Exception('Tutar geçersiz.');
         $step=$_POST['record_step'] ?? 'diger';
         $stepOpts=finance_record_type_options();
         if($step==='cari' && !$contact) throw new Exception('Cari Ödemesi için cari seçilmelidir.');
-        if($step==='isletme' && !$catId) throw new Exception('İşletme Gideri için Gider Türü seçilmelidir.');
         if($step==='personel' && !$personnelId) throw new Exception('Personel Ödemesi için personel seçilmelidir.');
-        if($step==='vergi' && !$catId) throw new Exception('Vergi / SGK için Gider Türü seçilmelidir.');
-        if($step==='arac' && !$catId) throw new Exception('Araç Gideri için Gider Türü seçilmelidir.');
         if($step==='diger' && trim($_POST['description'] ?? '')==='') throw new Exception('Diğer seçildiğinde açıklama zorunludur.');
+        if(in_array($step,finance_expense_type_required_steps(),true) && !$paymentType){
+            $stepLabels=['isletme'=>'İşletme Gideri','vergi'=>'Vergi / SGK','arac'=>'Araç Gideri'];
+            throw new Exception(($stepLabels[$step]??'Bu adım').' için Gider Türü seçilmelidir.');
+        }
 
         // Hesap seçimi: form'dan gelirse onu kullan, yoksa yönteme göre bul
         $accId=(int)($_POST['account_id']??0);
         if(!$accId) $accId=pay_acc_for_pm($pdo,$pm);
 
-        $pdo->prepare("INSERT INTO finance_movements(contact_id,category_id,personnel_id,direction,amount,payment_channel,account_id,status,movement_date,description,movement_type)
+        $pdo->prepare("INSERT INTO finance_movements(contact_id,personnel_id,direction,amount,payment_channel,payment_type,account_id,status,movement_date,description,movement_type)
             VALUES(?,?,?,?,?,?,?,?,?,?,'mobile')")
-            ->execute([$contact?:null,$catId,$personnelId,'out',$amount,$pm,$accId,'Ödendi',date('Y-m-d'),trim($_POST['description'] ?? '')]);
+            ->execute([$contact?:null,$personnelId,'out',$amount,$pm,$paymentType,$accId,'Ödendi',date('Y-m-d'),trim($_POST['description'] ?? '')]);
 
         if($accId){ try{ $pdo->prepare("UPDATE finance_accounts SET current_balance=current_balance-? WHERE id=?")->execute([$amount,$accId]); }catch(Throwable $e){} }
 
@@ -55,11 +58,10 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 topx('Ödeme / Gider');
 if(!empty($_SESSION['payment_err'])){ echo '<div class="err">'.htmlspecialchars($_SESSION['payment_err']).'</div>'; unset($_SESSION['payment_err']); }
 
-$cs=[]; $accounts=[]; $gcats=[]; $personnel=[];
+$cs=[]; $accounts=[]; $personnel=[];
 try{ $cs=$pdo->query("SELECT id,name FROM contacts ORDER BY name")->fetchAll(); }catch(Throwable $e){}
 try{ $accounts=$pdo->query("SELECT * FROM finance_accounts WHERE COALESCE(active,1)=1 ORDER BY account_type,name")->fetchAll(); }catch(Throwable $e){}
 try{ $personnel=$pdo->query("SELECT id,name FROM personnel WHERE COALESCE(active,1)=1 ORDER BY name")->fetchAll(); }catch(Throwable $e){}
-$gcats=acc_categories($pdo,'gider');
 $stepOpts=finance_record_type_options();
 ?>
 <div class="panel" style="display:flex;gap:8px"><a class="btn dark" href="kasa.php" style="flex:1;text-align:center">🏦 Kasa Durumu</a></div>
@@ -82,10 +84,11 @@ $stepOpts=finance_record_type_options();
   <?php foreach($personnel as $p): ?><option value="<?=(int)$p['id']?>"><?=htmlspecialchars($p['name'])?></option><?php endforeach; ?></select>
   </div>
 
-  <div id="pmField_category_id">
-  <label>Gider Türü <small class="muted">(personel yol gideri, yakıt, vergi, telefon vb.)</small></label>
-  <select name="category_id"><option value="">— Gider Türü seçilmedi —</option>
-  <?php foreach($gcats as $c): ?><option value="<?=(int)$c['id']?>">[<?=htmlspecialchars($c['group_name'])?>] <?=htmlspecialchars($c['name'])?></option><?php endforeach; ?></select>
+  <!-- GİDER TÜRÜ CONTEXT-AWARE (2026-07-04): payment_type-bağlı "Gider Türü" — seçenekleri
+       pmApplyStep() ile adıma özel yeniden oluşturulur (bkz. finance_expense_type_options()). -->
+  <div id="pmField_payment_type">
+  <label>Gider Türü</label>
+  <select name="payment_type" id="pmTurSel"><option value="">— Seç —</option></select>
   </div>
 
   <label>Hesap / Kasa / Kart</label>
@@ -100,20 +103,32 @@ $stepOpts=finance_record_type_options();
 </form>
 </div>
 <script>
+// GİDER TÜRÜ CONTEXT-AWARE (2026-07-04): finance_lib.php'deki finance_expense_type_options() ile
+// BİREBİR aynı katalog (web+mobil tek kaynak).
+var PM_TUR_CATALOG = <?=json_encode(finance_expense_type_options())?>;
+var PM_TUR_REQUIRED = <?=json_encode(finance_expense_type_required_steps())?>;
+function pmBuildTurOptions(step){
+  var sel=document.getElementById('pmTurSel');
+  var opts=PM_TUR_CATALOG[step] || [];
+  sel.innerHTML='<option value="">— Seç —</option>';
+  for(var i=0;i<opts.length;i++){
+    var el=document.createElement('option');
+    el.value=opts[i].v; el.textContent=opts[i].t;
+    sel.appendChild(el);
+  }
+}
+// Her adım sadece kendi ilgili alanını gösterir (yanlış kayıt ihtimalini azaltma amacı) — Cari
+// alanı SADECE "Cari Ödemesi" adımında, Personel SADECE "Personel Ödemesi" adımında görünür.
 function pmApplyStep(){
   var step=document.getElementById('pmStep').value;
-  var need={cari:'contact_id',isletme:'category_id',personel:'personnel_id',vergi:'category_id',arac:'category_id',kart:null,diger:null}[step];
-  // Cari: "Personel Ödemesi" seçilince gizlenir (plan kuralı), diğer tüm adımlarda görünür/opsiyonel.
   var contactBox=document.getElementById('pmField_contact_id');
-  contactBox.style.display = (step==='personel') ? 'none' : '';
-  contactBox.querySelector('select').required = (need==='contact_id');
-  // Gider Türü: her adımda görünür kalır (opsiyonel), sadece bazı adımlarda zorunlu olur.
-  var catBox=document.getElementById('pmField_category_id');
-  catBox.querySelector('select').required = (need==='category_id');
-  // Personel: sadece "Personel Ödemesi" adımında görünür.
+  contactBox.style.display = (step==='cari') ? '' : 'none';
+  contactBox.querySelector('select').required = (step==='cari');
   var persBox=document.getElementById('pmField_personnel_id');
   persBox.style.display = (step==='personel') ? '' : 'none';
-  persBox.querySelector('select').required = (need==='personnel_id');
+  persBox.querySelector('select').required = (step==='personel');
+  pmBuildTurOptions(step);
+  document.getElementById('pmTurSel').required = (PM_TUR_REQUIRED.indexOf(step)!==-1);
   document.getElementById('pmDesc').required = (step==='diger');
 }
 pmApplyStep();

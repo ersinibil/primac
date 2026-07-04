@@ -1,5 +1,37 @@
 # ROADMAP.md — Açık Maddeler ve Bekleyen Kararlar
 
+## Finans Gider Türü sihirbazı — kategori raporu açık noktası (2026-07-04)
+"Ne kaydediyorsun?" sihirbazının context-aware Gider Türü'ü `category_id` yerine `payment_type`
+kolonuna yazıyor (migration yok, mevcut kolon genişletildi). Sonuç: bundan sonra sihirbazla girilen
+YENİ gider kayıtları `category_id` taşımayacak — `accounting.php`'nin "Grup Özeti" sekmesi ve
+`report_lib.php`'deki kategori-bazlı grafikler (INNER JOIN ile) bu yeni kayıtları hiç göstermeyecek
+(eski kayıtlar etkilenmez). İstenirse ayrı bir turda `payment_type` bazlı bir özet/rapor eklenebilir
+— kullanıcı onayı bekliyor, bu turda dokunulmadı.
+
+## Personel kartları/sekmeli detay (web) — bilinçli kapsam dışı bırakılanlar (2026-07-04)
+Web `personnel.php` (kart görünümü) ve `personnel_edit.php` (sekmeli detay — bu projede ayrı bir
+`personnel_view.php` yok, view+edit tek dosyada birleşik) düzenlemesi sırasında:
+- **"İzinler" (leave/izin) sekmesi eklenmedi** — şemada (`database/migrations/`) izin/leave ile
+  ilgili hiçbir tablo yok (`personnel`, `personnel_devices` dışında personel-özel başka tablo yok).
+  Eklemek yeni bir migration + yeni bir iş akışı (izin talebi/onay/bakiye) gerektirir — kullanıcı
+  onayı olmadan uygulanmadı, ayrı bir karar/sprint konusu.
+- **"Departman" alanı eklenmedi** — `personnel` tablosunda departman kolonu yok, sadece `role`
+  (serbest metin) var. Kart görünümünde departman göstermek yerine sadece `role` kullanıldı,
+  hayali bir kolon icat edilmedi.
+- **Fotoğraf/photo kolonu yok** — kartlarda placeholder olarak isim baş harflerinden oluşan bir
+  rozet kullanıldı (gerçek fotoğraf yüklemesi ayrı bir özellik kararı — `cv_path` bir belge/CV alanı,
+  fotoğraf değil, bu ikisi karıştırılmadı).
+- **Mobil parite eksik BİLEREK bırakıldı** — bu tur açıkça "SADECE web (personnel.php +
+  personnel_edit.php)" kapsamıyla sınırlandırıldı (mobil `personnel_view.php` paralel bir güvenlik
+  sprintinde aktif değiştiği için dokunulmadı). CLAUDE.md kural 7 ("yeni özellik hem web hem
+  mobilde olmalı") bu madde için henüz KARŞILANMADI — mobilde kart görünümü/sekmeli detay ayrı bir
+  turda ele alınmalı, kullanıcı onayı bekliyor.
+- **`mobile/more.php`'de aynı yanıltıcı menü etiketi** ("🧭 Personel İş Takip Yönetimi") hâlâ duruyor
+  — web'de `layout_top.php`'deki karşılığı bu turda "🧭 İş / Üretim Yönetimi" olarak düzeltildi ama
+  görev kapsamı mobile dokunmayı içermediği için `mobile/more.php` değiştirilmedi. Parite için ayrı
+  bir onay/tur gerekli.
+
+
 Bu dosya "yapılacaklar listesi" değil, **karar bekleyen veya kapsamı netleşmemiş** maddelerin
 kaydıdır. `PROJECT_RULES.md` gereği proje artık aktif geliştirme aşamasında değil — buradaki
 hiçbir madde kullanıcı açıkça istemeden uygulanmaz. Amaç: bir sonraki oturumda "neredeydik"

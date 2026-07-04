@@ -148,6 +148,65 @@ $staffUserId=0; $staffPerms=[]; $staffRole='';
 try{ $uu=$pdo->prepare("SELECT id,permissions,role FROM app_users WHERE personnel_id=? ORDER BY id LIMIT 1"); $uu->execute([$id]);
     if($su=$uu->fetch()){ $staffUserId=(int)$su['id']; $staffRole=$su['role']??''; $dp=json_decode($su['permissions']??'[]',true); $staffPerms=is_array($dp)?$dp:[]; }
 }catch(Throwable $e){}
+
+// --- Sekmeli görünüm için ek, salt-okunur veriler (mevcut sorgu desenleriyle birebir aynı,
+// yeni bir iş mantığı icat edilmedi — sadece bu personele filtrelenmiş görünümler). ---
+
+// Takvim: bu personele termin tarihli iş (jobs.responsible_personnel_id) + görev (tasks.due_date).
+$calendarItems=[];
+try{
+    $js=$pdo->prepare("SELECT job_no, title, due_date, status FROM jobs WHERE responsible_personnel_id=? AND due_date IS NOT NULL ORDER BY due_date ASC LIMIT 20");
+    $js->execute([$id]);
+    foreach($js->fetchAll() as $j){
+        $calendarItems[]=['tip'=>'İş','baslik'=>($j['job_no'] ? $j['job_no'].' - ' : '').$j['title'],'tarih'=>$j['due_date'],'durum'=>$j['status']];
+    }
+}catch(Throwable $e){}
+try{
+    $tsd=$pdo->prepare("SELECT title, due_date, status FROM tasks WHERE personnel_id=? AND due_date IS NOT NULL ORDER BY due_date ASC LIMIT 20");
+    $tsd->execute([$id]);
+    foreach($tsd->fetchAll() as $t){
+        $calendarItems[]=['tip'=>'Görev','baslik'=>$t['title'],'tarih'=>$t['due_date'],'durum'=>$t['status']];
+    }
+}catch(Throwable $e){}
+usort($calendarItems, function($a,$b){ return strcmp((string)$a['tarih'],(string)$b['tarih']); });
+
+// Notlar: personal_notes KULLANICIYA bağlı (user_id), personele değil — bağlı hesabı olmayan
+// personel için gösterecek bir şey yok (bkz. görev talimatı, tabloya dokunulmadı).
+$personalNotes=[];
+if($staffUserId){
+    try{
+        $pn=$pdo->prepare("SELECT * FROM personal_notes WHERE user_id=? ORDER BY created_at DESC LIMIT 20");
+        $pn->execute([$staffUserId]);
+        $personalNotes=$pn->fetchAll();
+    }catch(Throwable $e){}
+}
+
+// Maaş/Avans/Prim: finance_movements.personnel_id (accounting.php'nin "Personel Ödemesi" akışıyla
+// dolduruluyor, bkz. migration 020/035) — sadece bu personele ait kayıtlar, muhasebe.php'ye
+// dokunulmadan salt-okunur filtrelenmiş liste.
+$financeRows=[];
+try{
+    $fm=$pdo->prepare("SELECT fm.*, ac.name AS category_name FROM finance_movements fm LEFT JOIN accounting_categories ac ON ac.id=fm.category_id WHERE fm.personnel_id=? ORDER BY fm.movement_date DESC, fm.id DESC LIMIT 30");
+    $fm->execute([$id]);
+    $financeRows=$fm->fetchAll();
+}catch(Throwable $e){}
+
+// Sekme listesi + geçerli sekme (whitelist — GET parametresinden keyfi değer geçilemez).
+$tabLabels=[
+    'genel'=>'👤 Genel Bilgiler',
+    'gorevler'=>'✅ Görevler',
+    'takvim'=>'📅 Takvim',
+    'mesajlar'=>'💬 Mesajlar',
+    'notlar'=>'📝 Notlar',
+];
+if($hasCvCol) $tabLabels['dosyalar']='📎 Dosyalar';
+$tabLabels['performans']='📈 Performans';
+$tabLabels['maas']='💰 Maaş/Avans/Prim';
+$tabLabels['hareket']='🧾 Hareket Geçmişi';
+if(user_can('users')) $tabLabels['giris']='🔑 Giriş Hesabı';
+
+$tab = isset($_GET['tab']) ? (string)$_GET['tab'] : 'genel';
+if(!array_key_exists($tab,$tabLabels)) $tab='genel';
 ?>
 
 <div class="panel-head">
@@ -168,7 +227,13 @@ try{ $uu=$pdo->prepare("SELECT id,permissions,role FROM app_users WHERE personne
 <div class="card"><small>Açık Görev</small><strong><?=safe_count("SELECT COUNT(*) c FROM tasks WHERE personnel_id=".(int)$id." AND status!='Tamamlandı'")?></strong></div>
 </div>
 
+<div class="ptabs">
+<?php foreach($tabLabels as $tkey=>$tlabel): ?>
+<a class="ptab<?=$tab===$tkey?' active':''?>" href="personnel_edit.php?id=<?=$id?>&tab=<?=h($tkey)?>"><?=$tlabel?></a>
+<?php endforeach; ?>
+</div>
 
+<?php if($tab==='genel'): ?>
 <section class="panel">
 <h2>Profil Bilgileri</h2>
 <form method="post" class="form-grid" enctype="multipart/form-data">
@@ -222,10 +287,7 @@ try{ $uu=$pdo->prepare("SELECT id,permissions,role FROM app_users WHERE personne
 </label>
 
 <?php if($hasCvCol): ?>
-<label class="full">CV / Özgeçmiş <small style="font-weight:400;color:#667085">(opsiyonel — pdf/doc/docx/jpg/jpeg/png, en fazla 15 MB. Yeni dosya seçilirse eskisinin yerine geçer, boş bırakılırsa mevcut korunur)</small>
-<?php if(!empty($p['cv_path'])): ?>
-<div style="margin:4px 0 8px"><a href="<?=h(base_url().$p['cv_path'])?>" target="_blank">📎 Mevcut CV'yi görüntüle</a></div>
-<?php endif; ?>
+<label class="full">CV / Özgeçmiş <small style="font-weight:400;color:#667085">(opsiyonel — pdf/doc/docx/jpg/jpeg/png, en fazla 15 MB. Yeni dosya seçilirse eskisinin yerine geçer, boş bırakılırsa mevcut korunur. Mevcut CV'yi görüntülemek/kaldırmak için "📎 Dosyalar" sekmesine bakın)</small>
 <input type="file" name="cv" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
 </label>
 <?php endif; ?>
@@ -237,15 +299,13 @@ try{ $uu=$pdo->prepare("SELECT id,permissions,role FROM app_users WHERE personne
 <button class="btn">Profili Kaydet</button>
 
 </form>
-<?php if($hasCvCol && !empty($p['cv_path'])): ?>
-<form method="post" style="margin-top:10px" onsubmit="return confirm('CV dosyasını kaldırmak istediğinize emin misiniz?')">
-<button class="btn secondary" name="clear_cv" value="1">🗑 CV'yi Kaldır</button>
-</form>
-<?php endif; ?>
 </section>
+<?php endif; ?>
 
+<?php if($tab==='gorevler'): ?>
 <section class="panel">
-<h2>Son Görevler</h2>
+<h2>Görevler</h2>
+<p class="muted" style="margin:0 0 8px">Bu personele atanmış son 20 görev (salt-okunur — durum değişikliği için <a href="tasks.php">Görevler</a> ekranı kullanılır).</p>
 <table>
 <thead><tr><th>Görev</th><th>İş</th><th>Termin</th><th>Durum</th></tr></thead>
 <tbody>
@@ -261,10 +321,114 @@ try{ $uu=$pdo->prepare("SELECT id,permissions,role FROM app_users WHERE personne
 </tbody>
 </table>
 </section>
+<?php endif; ?>
 
-<?php if(user_can('users')): ?>
+<?php if($tab==='takvim'): ?>
 <section class="panel">
-<h2>🔐 Yetkiler (Modül Erişimi)</h2>
+<h2>Takvim</h2>
+<p class="muted" style="margin:0 0 8px">Bu personelin termin tarihli iş ve görevleri (tam takvim için <a href="takvim.php">Takvim</a> ekranı).</p>
+<table>
+<thead><tr><th>Tür</th><th>Başlık</th><th>Tarih</th><th>Durum</th></tr></thead>
+<tbody>
+<?php foreach($calendarItems as $ci): ?>
+<tr>
+<td><?=h($ci['tip'])?></td>
+<td><?=h($ci['baslik'])?></td>
+<td><?=h($ci['tarih'])?></td>
+<td><?=badge($ci['durum'], status_tone($ci['durum']))?></td>
+</tr>
+<?php endforeach; ?>
+<?php if(!$calendarItems): ?><tr><td colspan="4" class="muted">Termin tarihli iş/görev yok.</td></tr><?php endif; ?>
+</tbody>
+</table>
+</section>
+<?php endif; ?>
+
+<?php if($tab==='mesajlar'): ?>
+<section class="panel">
+<h2>Mesajlar</h2>
+<?php if($staffUserId): ?>
+<p class="muted" style="margin:0 0 10px">Bu personelin bağlı kullanıcı hesabıyla birebir mesajlaşabilirsiniz.</p>
+<a class="btn" href="messages.php?u=<?=$staffUserId?>">💬 Mesaj Gönder</a>
+<?php else: ?>
+<p class="muted" style="margin:0">Bu personelin bağlı bir kullanıcı hesabı yok, mesaj gönderilemez.</p>
+<?php endif; ?>
+</section>
+<?php endif; ?>
+
+<?php if($tab==='notlar'): ?>
+<section class="panel">
+<h2>Notlar</h2>
+<?php if(!$staffUserId): ?>
+<p class="muted" style="margin:0">Bu personelin bağlı bir kullanıcı hesabı yok, kişisel not kaydı görüntülenemez.</p>
+<?php elseif(!$personalNotes): ?>
+<p class="muted" style="margin:0">Bu kullanıcının kayıtlı kişisel notu yok.</p>
+<?php else: ?>
+<table>
+<thead><tr><th>Başlık</th><th>Termin</th><th>Durum</th></tr></thead>
+<tbody>
+<?php foreach($personalNotes as $n): ?>
+<tr>
+<td><?=h($n['title'])?></td>
+<td><?=h($n['due_date'] ?: '-')?></td>
+<td><?=badge($n['status'], status_tone($n['status']))?></td>
+</tr>
+<?php endforeach; ?>
+</tbody>
+</table>
+<?php endif; ?>
+</section>
+<?php endif; ?>
+
+<?php if($hasCvCol && $tab==='dosyalar'): ?>
+<section class="panel">
+<h2>Dosyalar</h2>
+<?php if(!empty($p['cv_path'])): ?>
+<p style="margin:0 0 10px"><a href="<?=h(base_url().$p['cv_path'])?>" target="_blank">📎 Mevcut CV'yi görüntüle</a></p>
+<form method="post" onsubmit="return confirm('CV dosyasını kaldırmak istediğinize emin misiniz?')">
+<button class="btn secondary" name="clear_cv" value="1">🗑 CV'yi Kaldır</button>
+</form>
+<?php else: ?>
+<p class="muted" style="margin:0">Henüz yüklenmiş bir CV yok.</p>
+<?php endif; ?>
+<p class="muted" style="margin:10px 0 0">CV yüklemek veya değiştirmek için "👤 Genel Bilgiler" sekmesindeki profil formunu kullanın.</p>
+</section>
+<?php endif; ?>
+
+<?php if($tab==='performans'): ?>
+<section class="panel">
+<h2>Performans (KPI)</h2>
+<p class="muted" style="margin:0 0 10px">Tüm personel sıralaması ve puan hesaplama yöntemi için KPI ekranına gidin.</p>
+<a class="btn" href="kpi.php">📈 KPI Sayfasına Git</a>
+</section>
+<?php endif; ?>
+
+<?php if($tab==='maas'): ?>
+<section class="panel">
+<h2>Maaş / Avans / Prim</h2>
+<p class="muted" style="margin:0 0 8px">Bu personele ait muhasebe kayıtları (tam yönetim için <a href="accounting.php">Muhasebe</a> ekranı).</p>
+<table>
+<thead><tr><th>Tarih</th><th>Tür</th><th>Kategori</th><th>Tutar</th><th>Durum</th><th>Açıklama</th></tr></thead>
+<tbody>
+<?php foreach($financeRows as $fr): ?>
+<tr>
+<td><?=h($fr['movement_date'])?></td>
+<td><?=h($fr['payment_type'] ?: '-')?></td>
+<td><?=h($fr['category_name'] ?? '-')?></td>
+<td><?=money($fr['amount'])?></td>
+<td><?=badge($fr['status'], status_tone($fr['status']))?></td>
+<td><?=h($fr['description'] ?? '')?></td>
+</tr>
+<?php endforeach; ?>
+<?php if(!$financeRows): ?><tr><td colspan="6" class="muted">Bu personele ait maaş/avans/prim kaydı yok.</td></tr><?php endif; ?>
+</tbody>
+</table>
+</section>
+<?php endif; ?>
+
+<?php if(user_can('users') && $tab==='giris'): ?>
+<section class="panel">
+<h2>🔑 Giriş Hesabı — 🔐 Yetkiler (Modül Erişimi)</h2>
 <?php if($staffRole==='admin' || $staffRole==='yonetici'): ?>
   <p class="muted" style="margin:0">Bu personelin giriş rolü <b><?=h($staffRole)?></b> — tüm modüllere yetkili. Kısıtlamak için <a href="users.php">Kullanıcılar</a> ekranından rolünü "Personel" yapın.</p>
 <?php elseif($staffUserId): ?>
@@ -287,10 +451,18 @@ try{ $uu=$pdo->prepare("SELECT id,permissions,role FROM app_users WHERE personne
 </section>
 <?php endif; ?>
 
+<?php if($tab==='hareket'): ?>
 <section class="panel">
-<h2>🧾 İşlem Kaydı</h2>
+<h2>🧾 Hareket Geçmişi</h2>
 <p class="muted" style="margin:0 0 8px">Bu personelin yaptığı son işlemler (ürün/cari düzenleme, satış, stok hareketi vb.).</p>
 <?php echo function_exists('activity_user_html') ? activity_user_html($pdo,$staffUserId,50) : '<p class="muted">İşlem kaydı modülü yüklü değil.</p>'; ?>
 </section>
+<?php endif; ?>
+
+<style>
+.ptabs{display:flex;flex-wrap:wrap;gap:6px;margin:16px 0 4px}
+.ptab{background:#eef2f6;color:#101828;text-decoration:none;border-radius:999px;padding:9px 14px;font-weight:700;font-size:13.5px}
+.ptab.active{background:#111827;color:#fff}
+</style>
 
 <?php require_once __DIR__.'/layout_bottom.php'; ?>

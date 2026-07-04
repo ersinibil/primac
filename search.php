@@ -7,7 +7,7 @@ $pdo = db();
 <h1>🔍 Arama</h1>
 
 <form method="get" style="display:flex;gap:10px;margin-bottom:24px">
-    <input name="q" value="<?=htmlspecialchars($q)?>" placeholder="İş, cari, banka/kart, işlem, çek/senet, teklif, belge, stok veya personel ara…"
+    <input name="q" value="<?=htmlspecialchars($q)?>" placeholder="İş, cari, banka/kart, işlem, çek/senet, teklif, belge, stok, personel, görev, kullanıcı, not veya mesaj ara…"
         style="flex:1;border:1.5px solid #e5e7eb;border-radius:12px;padding:11px 14px;font-size:15px;outline:none"
         autofocus autocomplete="off">
     <button type="submit" style="background:#2563eb;color:#fff;border:0;border-radius:12px;padding:11px 20px;font-weight:800;cursor:pointer">Ara</button>
@@ -16,13 +16,14 @@ $pdo = db();
 <?php if ($q === ''): ?>
 <div style="text-align:center;color:#667085;padding:40px 0">
     <div style="font-size:48px;margin-bottom:12px">🔍</div>
-    <p>İş no, müşteri adı, banka/kart, işlem, çek/senet, teklif, belge, ürün veya personel ismi girin.</p>
+    <p>İş no, müşteri adı, banka/kart, işlem, çek/senet, teklif, belge, ürün, personel, görev, kullanıcı, not veya mesaj metni girin.</p>
 </div>
 <?php else:
     $r = search_run($pdo, $q);
     $jobs = $r['jobs']; $contacts = $r['contacts']; $stock = $r['stock']; $personnel = $r['personnel'];
     $accounts = $r['accounts']; $movements = $r['movements']; $checks = $r['checks']; $quotes = $r['quotes'];
     $documents = $r['documents']; $pages = $r['pages'];
+    $files = $r['files']; $tasks = $r['tasks']; $users = $r['users']; $notes = $r['notes']; $messages = $r['messages'];
     $found = search_total_count($r);
     $pageTargets = ['contacts_report'=>'contacts_report.php', 'report'=>'report.php', 'accounting'=>'accounting.php', 'takvim'=>'takvim.php'];
 ?>
@@ -275,6 +276,125 @@ $pdo = db();
         </td>
         <td style="padding:10px 8px;text-align:right;font-size:12px;color:#667085">
             <?php if($p['phone']): ?><?=search_hl($p['phone'],$q)?><?php endif; ?>
+        </td>
+    </tr>
+    <?php endforeach; ?>
+    </table>
+</div>
+<?php endif; ?>
+
+<?php if ($tasks): ?>
+<div class="panel" style="margin-bottom:20px">
+    <div style="font-weight:900;font-size:16px;margin-bottom:12px">✅ Görevler (<?=count($tasks)?>)</div>
+    <table style="width:100%;border-collapse:collapse">
+    <?php foreach($tasks as $t):
+        $taskHref = $t['job_id'] ? "job_view.php?id=".(int)$t['job_id'] : "tasks.php";
+    ?>
+    <tr style="border-bottom:1px solid #f1f5f9">
+        <td style="padding:10px 8px">
+            <a href="<?=htmlspecialchars($taskHref)?>" style="color:#101828;text-decoration:none;font-weight:700">
+                <?=search_hl($t['title'],$q)?>
+            </a>
+            <div style="font-size:12px;color:#667085;margin-top:2px">
+                <?php if($t['job_no']): ?><?=htmlspecialchars($t['job_no'])?> · <?php endif; ?>
+                <?php if($t['personnel_name']): ?>👤 <?=search_hl($t['personnel_name'],$q)?><?php endif; ?>
+            </div>
+        </td>
+        <td style="padding:10px 8px;text-align:right;white-space:nowrap">
+            <span style="background:#2563eb18;color:#2563eb;border-radius:20px;padding:4px 10px;font-size:12px;font-weight:700">
+                <?=htmlspecialchars($t['status'])?>
+            </span>
+        </td>
+    </tr>
+    <?php endforeach; ?>
+    </table>
+</div>
+<?php endif; ?>
+
+<?php if ($files): ?>
+<div class="panel" style="margin-bottom:20px">
+    <div style="font-weight:900;font-size:16px;margin-bottom:12px">📁 Dosyalar (<?=count($files)?>)</div>
+    <table style="width:100%;border-collapse:collapse">
+    <?php foreach($files as $f): ?>
+    <tr style="border-bottom:1px solid #f1f5f9">
+        <td style="padding:10px 8px">
+            <a href="job_view.php?id=<?=(int)$f['job_id']?>" style="color:#101828;text-decoration:none;font-weight:700">
+                <?=search_hl($f['original_name'],$q)?>
+            </a>
+            <div style="font-size:12px;color:#667085;margin-top:2px">
+                <?php if($f['job_no']): ?><?=search_hl($f['job_no'],$q)?> · <?php endif; ?>
+                <?php if($f['job_title']): ?><?=search_hl($f['job_title'],$q)?><?php endif; ?>
+            </div>
+        </td>
+        <td style="padding:10px 8px;text-align:right;font-size:12px;color:#667085">
+            <?=htmlspecialchars($f['approval_status'] ?? '')?>
+        </td>
+    </tr>
+    <?php endforeach; ?>
+    </table>
+</div>
+<?php endif; ?>
+
+<?php if ($users): ?>
+<div class="panel" style="margin-bottom:20px">
+    <div style="font-weight:900;font-size:16px;margin-bottom:12px">🧑‍💻 Kullanıcılar (<?=count($users)?>)</div>
+    <table style="width:100%;border-collapse:collapse">
+    <?php foreach($users as $u): ?>
+    <tr style="border-bottom:1px solid #f1f5f9">
+        <td style="padding:10px 8px">
+            <a href="users.php" style="color:#101828;text-decoration:none;font-weight:700">
+                <?=search_hl($u['full_name'] ?: $u['username'],$q)?>
+            </a>
+            <div style="font-size:12px;color:#667085;margin-top:2px">
+                <?=search_hl($u['username'],$q)?>
+                <?php if($u['phone']): ?> · <?=search_hl($u['phone'],$q)?><?php endif; ?>
+            </div>
+        </td>
+        <td style="padding:10px 8px;text-align:right;font-size:12px;color:#667085">
+            <?=htmlspecialchars($u['role'])?>
+        </td>
+    </tr>
+    <?php endforeach; ?>
+    </table>
+</div>
+<?php endif; ?>
+
+<?php if ($notes): ?>
+<div class="panel" style="margin-bottom:20px">
+    <div style="font-weight:900;font-size:16px;margin-bottom:12px">📝 Notlarım (<?=count($notes)?>)</div>
+    <table style="width:100%;border-collapse:collapse">
+    <?php foreach($notes as $n): ?>
+    <tr style="border-bottom:1px solid #f1f5f9">
+        <td style="padding:10px 8px">
+            <a href="notes.php" style="color:#101828;text-decoration:none;font-weight:700">
+                <?=search_hl($n['title'],$q)?>
+            </a>
+            <?php if($n['note']): ?><div style="font-size:12px;color:#667085;margin-top:2px"><?=search_hl(mb_substr($n['note'],0,80),$q)?></div><?php endif; ?>
+        </td>
+        <td style="padding:10px 8px;text-align:right;font-size:12px;color:#667085">
+            <?=htmlspecialchars($n['status'])?>
+        </td>
+    </tr>
+    <?php endforeach; ?>
+    </table>
+</div>
+<?php endif; ?>
+
+<?php if ($messages): ?>
+<div class="panel" style="margin-bottom:20px">
+    <div style="font-weight:900;font-size:16px;margin-bottom:12px">💬 Mesajlar (<?=count($messages)?>)</div>
+    <table style="width:100%;border-collapse:collapse">
+    <?php foreach($messages as $m):
+        $msgHref = $m['thread_id'] ? "messages.php?thread=".(int)$m['thread_id'] : "messages.php?u=".(int)$m['with_user_id'];
+    ?>
+    <tr style="border-bottom:1px solid #f1f5f9">
+        <td style="padding:10px 8px">
+            <a href="<?=htmlspecialchars($msgHref)?>" style="color:#101828;text-decoration:none;font-weight:700">
+                <?=search_hl(mb_substr($m['message'],0,80),$q)?>
+            </a>
+            <div style="font-size:12px;color:#667085;margin-top:2px">
+                💬 <?=htmlspecialchars($m['with_label'] ?: '-')?>
+            </div>
         </td>
     </tr>
     <?php endforeach; ?>

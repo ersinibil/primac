@@ -165,6 +165,7 @@ input,select,textarea{font-size:16px}
 
     <nav class="nav">
         <a href="dashboard.php" <?=($cur==='dashboard.php'?'class="active"':'')?>><span>🏛</span> Komuta Merkezi</a>
+        <a href="takvim.php" <?=($cur==='takvim.php'?'class="active"':'')?>><span>📅</span> Takvim</a>
         <a href="notes.php" <?=($cur==='notes.php'?'class="active"':'')?>><span>📝</span> Notlarım</a>
         <a href="mytasks.php" <?=($cur==='mytasks.php'?'class="active"':'')?>><span>✅</span> İşlerim</a>
 
@@ -195,7 +196,7 @@ input,select,textarea{font-size:16px}
         </details>
 
         <?php if(user_can('jobs')||user_can('tasks')||user_can('personnel')||user_can('users')): ?>
-        <details <?=(in_array($cur,$personelIsTakip_pages)?'open':'')?>><summary><span>🧭</span> Personel İş Takip Yönetimi</summary>
+        <details <?=(in_array($cur,$personelIsTakip_pages)?'open':'')?>><summary><span>🧭</span> İş / Üretim Yönetimi</summary>
             <div class="sub">
                 <?php if(user_can('jobs')): ?>
                 <a href="jobs.php" <?=($cur==='jobs.php'?'class="active"':'')?>><span>📁</span> İş Merkezi</a>

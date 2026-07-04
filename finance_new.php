@@ -29,6 +29,9 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         $accountId=(int)$_POST['account_id'];
         $catId=(int)($_POST['category_id']??0) ?: null;
         $personnelId=(int)($_POST['personnel_id']??0) ?: null;
+        // GİDER TÜRÜ CONTEXT-AWARE (2026-07-04): "Gider Türü" artık adıma özel bir katalogdan
+        // (finance_expense_type_options()) geliyor, mevcut payment_type kolonuna yazılıyor.
+        $paymentType=trim($_POST['payment_type']??'') ?: null;
         if($amount<=0) throw new Exception('Tutar sıfırdan büyük olmalı.');
         if(!$accountId) throw new Exception('Hesap seçilmelidir.');
 
@@ -38,11 +41,12 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         if($direction==='out'){
             $step=$_POST['record_step'] ?? 'diger';
             if($step==='cari' && !(int)($_POST['contact_id']??0)) throw new Exception('Cari Ödemesi için cari seçilmelidir.');
-            if($step==='isletme' && !$catId) throw new Exception('İşletme Gideri için Gider Türü seçilmelidir.');
             if($step==='personel' && !$personnelId) throw new Exception('Personel Ödemesi için personel seçilmelidir.');
-            if($step==='vergi' && !$catId) throw new Exception('Vergi / SGK için Gider Türü seçilmelidir.');
-            if($step==='arac' && !$catId) throw new Exception('Araç Gideri için Gider Türü seçilmelidir.');
             if($step==='diger' && trim($_POST['description']??'')==='') throw new Exception('Diğer seçildiğinde açıklama zorunludur.');
+            if(in_array($step,finance_expense_type_required_steps(),true) && !$paymentType){
+                $stepLabels=['isletme'=>'İşletme Gideri','vergi'=>'Vergi / SGK','arac'=>'Araç Gideri'];
+                throw new Exception(($stepLabels[$step]??'Bu adım').' için Gider Türü seçilmelidir.');
+            }
         }
 
         if($editId){
@@ -65,8 +69,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             exit;
         }
 
-        $stmt=$pdo->prepare("INSERT INTO finance_movements(contact_id,category_id,personnel_id,job_id,direction,amount,payment_channel,account_id,status,movement_date,description,movement_type,reference_no)
-            VALUES(?,?,?,NULL,?,?,?,?,?,?,?,'normal',?)");
+        $stmt=$pdo->prepare("INSERT INTO finance_movements(contact_id,category_id,personnel_id,job_id,direction,amount,payment_channel,payment_type,account_id,status,movement_date,description,movement_type,reference_no)
+            VALUES(?,?,?,NULL,?,?,?,?,?,?,?,?,'normal',?)");
         $status=$direction==='in'?'Tahsil Edildi':'Ödendi';
         $stmt->execute([
             (int)$_POST['contact_id'] ?: null,
@@ -75,6 +79,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             $direction,
             $amount,
             $_POST['payment_channel'],
+            $paymentType,
             $accountId,
             $status,
             $_POST['movement_date'] ?: date('Y-m-d'),
@@ -116,7 +121,6 @@ $contacts=$pdo->query("SELECT id,name,type FROM contacts ORDER BY name")->fetchA
 $accounts=$pdo->query("SELECT * FROM finance_accounts WHERE active=1 ORDER BY account_type,name")->fetchAll();
 $personnelList=[];
 try{ $personnelList=$pdo->query("SELECT id,name FROM personnel WHERE COALESCE(active,1)=1 ORDER BY name")->fetchAll(); }catch(Throwable $e){}
-$giderCats=acc_categories($pdo,'gider');
 $gelirCats=acc_categories($pdo,'gelir');
 $stepOpts=finance_record_type_options();
 // FINANCE UX REFACTOR (2026-07-04): düzenleme modunda mevcut kaydın dolu alanlarına bakarak en
@@ -152,6 +156,7 @@ $fAmount=$editRow['amount'] ?? '';
 $fDate=$editRow['movement_date'] ?? date('Y-m-d');
 $fRef=$editRow['reference_no'] ?? '';
 $fDesc=$editRow['description'] ?? '';
+$fPaymentType=$editRow['payment_type'] ?? '';
 $channelOpts=['Nakit','Banka / EFT','Kredi Kartı','POS','Çek','Senet','Diğer'];
 ?>
 <section class="panel">
@@ -171,7 +176,7 @@ $channelOpts=['Nakit','Banka / EFT','Kredi Kartı','POS','Çek','Senet','Diğer'
 </select>
 </label>
 
-<label id="fnField_contact_id">Cari <small style="font-weight:400;color:#667085">(opsiyonel)</small>
+<label id="fnField_contact_id">Cari
 <select name="contact_id">
 <option value="">Cari seçilmedi</option>
 <?php foreach($contacts as $c): ?>
@@ -189,14 +194,19 @@ $channelOpts=['Nakit','Banka / EFT','Kredi Kartı','POS','Çek','Senet','Diğer'
 </select>
 </label>
 
-<label><?=$direction==='out'?'Gider Türü':'Kategori'?> <small style="font-weight:400;color:#667085">(cari yerine/yanında — personel yol gideri, yakıt, vergi, telefon vb.)</small>
+<!-- GİDER TÜRÜ CONTEXT-AWARE (2026-07-04): payment_type-bağlı yeni "Gider Türü" — seçenekleri
+     fnApplyStep() ile adıma özel yeniden oluşturulur, Ödeme (out) tarafında görünür. -->
+<label id="fnField_payment_type" style="display:none">Gider Türü
+<select name="payment_type" id="fnTurSel" data-current="<?=h($fPaymentType)?>">
+<option value="">— Seç —</option>
+</select>
+</label>
+
+<label id="fnField_category_id">Kategori
 <select name="category_id" id="fnCatSel">
 <option value="">— Seç —</option>
-<?php foreach($giderCats as $c): ?>
-<option value="<?=(int)$c['id']?>" data-type="out" style="<?=$direction==='out'?'':'display:none'?>" <?=$fCatId===(int)$c['id']?'selected':''?>>[<?=h($c['group_name'])?>] <?=h($c['name'])?></option>
-<?php endforeach; ?>
 <?php foreach($gelirCats as $c): ?>
-<option value="<?=(int)$c['id']?>" data-type="in" style="<?=$direction==='in'?'':'display:none'?>" <?=$fCatId===(int)$c['id']?'selected':''?>>[<?=h($c['group_name'])?>] <?=h($c['name'])?></option>
+<option value="<?=(int)$c['id']?>" data-type="in" <?=$fCatId===(int)$c['id']?'selected':''?>>[<?=h($c['group_name'])?>] <?=h($c['name'])?></option>
 <?php endforeach; ?>
 </select>
 </label>
@@ -238,6 +248,11 @@ $channelOpts=['Nakit','Banka / EFT','Kredi Kartı','POS','Çek','Senet','Diğer'
 </form>
 </section>
 <script>
+// GİDER TÜRÜ CONTEXT-AWARE (2026-07-04): adıma özel "Gider Türü" katalogu — finance_lib.php'deki
+// finance_expense_type_options() ile BİREBİR aynı (web+mobil tek kaynak, PHP'den JSON'a dökülüyor).
+var FN_TUR_CATALOG = <?=json_encode(finance_expense_type_options())?>;
+var FN_TUR_REQUIRED = <?=json_encode(finance_expense_type_required_steps())?>;
+
 function fnFilterCats(){
   var t=document.getElementById('fnDirection').value;
   var opts=document.getElementById('fnCatSel').options;
@@ -248,29 +263,50 @@ function fnFilterCats(){
     if(o.dataset.type!==t&&o.selected) o.selected=false;
   }
 }
+function fnBuildTurOptions(step){
+  var sel=document.getElementById('fnTurSel');
+  var cur=sel.value || sel.dataset.current || '';
+  var opts=FN_TUR_CATALOG[step] || [];
+  sel.innerHTML='<option value="">— Seç —</option>';
+  for(var i=0;i<opts.length;i++){
+    var el=document.createElement('option');
+    el.value=opts[i].v; el.textContent=opts[i].t;
+    if(opts[i].v===cur) el.selected=true;
+    sel.appendChild(el);
+  }
+  sel.dataset.current='';
+}
 // FINANCE UX REFACTOR (2026-07-04): sihirbaz SADECE Ödeme (out) tarafında aktif — Tahsilat/Gelir
 // akışı bu ekranda hiç değişmiyor, sihirbaz seçilince gizlenir, alanlar zorunlu olmaz.
 function fnToggleWizard(){
   var out=document.getElementById('fnDirection').value==='out';
   document.getElementById('fnWizardLabel').style.display = out?'':'none';
+  document.getElementById('fnField_category_id').style.display = out?'none':'';
+  document.getElementById('fnCatSel').required = false;
   if(!out){
     document.getElementById('fnField_personnel_id').style.display='none';
     document.getElementById('fnField_personnel_id').querySelector('select').required=false;
     document.getElementById('fnField_contact_id').style.display='';
+    document.getElementById('fnField_contact_id').querySelector('select').required=false;
+    document.getElementById('fnField_payment_type').style.display='none';
+    document.getElementById('fnTurSel').required=false;
     document.getElementById('fnDesc').required=false;
   } else { fnApplyStep(); }
 }
+// Her adım sadece kendi ilgili alanını gösterir (yanlış kayıt ihtimalini azaltma amacı) — Cari
+// alanı SADECE "Cari Ödemesi" adımında görünür/zorunlu, Personel SADECE "Personel Ödemesi"nde.
 function fnApplyStep(){
   if(document.getElementById('fnDirection').value!=='out') return;
   var step=document.getElementById('fnStep').value;
-  var need={cari:'contact_id',isletme:'category_id',personel:'personnel_id',vergi:'category_id',arac:'category_id',kart:null,diger:null}[step];
   var contactBox=document.getElementById('fnField_contact_id');
-  contactBox.style.display = (step==='personel') ? 'none' : '';
-  contactBox.querySelector('select').required = (need==='contact_id');
-  document.getElementById('fnCatSel').required = (need==='category_id');
+  contactBox.style.display = (step==='cari') ? '' : 'none';
+  contactBox.querySelector('select').required = (step==='cari');
   var persBox=document.getElementById('fnField_personnel_id');
   persBox.style.display = (step==='personel') ? '' : 'none';
-  persBox.querySelector('select').required = (need==='personnel_id');
+  persBox.querySelector('select').required = (step==='personel');
+  document.getElementById('fnField_payment_type').style.display='';
+  fnBuildTurOptions(step);
+  document.getElementById('fnTurSel').required = (FN_TUR_REQUIRED.indexOf(step)!==-1);
   document.getElementById('fnDesc').required = (step==='diger');
 }
 fnToggleWizard();

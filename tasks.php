@@ -1,18 +1,17 @@
 <?php
 require_once __DIR__.'/boot.php'; require_login();
+require_once __DIR__.'/tasks_lib.php';
 $pdo=db();
+$me=(int)($_SESSION['user']['id']??0);
 // İşlem: durum güncelle / düzenle / sil (layout'tan önce → redirect)
 if($_SERVER['REQUEST_METHOD']==='POST'){
   try{
     if(isset($_POST['task_status']) && (int)($_POST['tid']??0)){
-      $st=$_POST['task_status'];
-      $pdo->prepare("UPDATE tasks SET status=?, completed_at=IF(?='Tamamlandı',NOW(),completed_at), started_at=IF(?='Devam Ediyor' AND started_at IS NULL,NOW(),started_at) WHERE id=?")
-          ->execute([$st,$st,$st,(int)$_POST['tid']]);
+      task_set_status($pdo,(int)$_POST['tid'],$_POST['task_status'],$me);
     }
     if(isset($_POST['edit_task']) && can_edit_delete()){
       $tid=(int)$_POST['tid'];
-      $pdo->prepare("UPDATE tasks SET title=?, description=?, due_date=?, priority=?, personnel_id=? WHERE id=?")
-          ->execute([trim($_POST['title']), trim($_POST['description']??''), $_POST['due_date']?:null, $_POST['priority']??'Normal', (int)($_POST['personnel_id']??0)?:null, $tid]);
+      task_apply_edit($pdo,$tid,$_POST,$me,true);
     }
   }catch(Throwable $e){}
   header('Location: tasks.php'.(!empty($_GET['f'])?'?f='.urlencode($_GET['f']):'')); exit;
@@ -20,8 +19,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 require_once __DIR__.'/layout_top.php';
 $f=$_GET['f']??'open';
 $fp=$_GET['p']??'';
-$where=''; if($f==='open') $where="WHERE t.status NOT IN ('Tamamlandı','İptal')"; elseif($f==='done') $where="WHERE t.status='Tamamlandı'";
-if($fp){ $where.=($where?' AND ':' WHERE ').'t.personnel_id='.(int)$fp; }
+$where='WHERE t.deleted_at IS NULL'; if($f==='open') $where.=" AND t.status NOT IN ('Tamamlandı','İptal')"; elseif($f==='done') $where.=" AND t.status='Tamamlandı'";
+if($fp){ $where.=' AND t.personnel_id='.(int)$fp; }
 ?>
 <h1>Görevler</h1>
 <section class="panel" style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
@@ -32,7 +31,7 @@ if($fp){ $where.=($where?' AND ':' WHERE ').'t.personnel_id='.(int)$fp; }
     <option value="">— Personel Filtresi —</option>
     <?php
     try{
-      $pl=$pdo->query("SELECT DISTINCT t.personnel_id, p.name FROM tasks t LEFT JOIN personnel p ON p.id=t.personnel_id WHERE t.personnel_id IS NOT NULL ORDER BY p.name")->fetchAll();
+      $pl=$pdo->query("SELECT DISTINCT t.personnel_id, p.name FROM tasks t LEFT JOIN personnel p ON p.id=t.personnel_id WHERE t.personnel_id IS NOT NULL AND t.deleted_at IS NULL ORDER BY p.name")->fetchAll();
       foreach($pl as $p) echo '<option value="'.(int)$p['personnel_id'].'"'.($fp==(int)$p['personnel_id']?' selected':'').'>'.h($p['name']).'</option>';
     }catch(Throwable $e){}
     ?>
@@ -52,7 +51,8 @@ foreach($rows as $r){
   echo "<td>".h($r['personnel_name']??'-')."</td><td style='color:".($gec?'#f87171':'inherit')."'>".h($r['due_date']??'-').($gec?' ⏰':'')."</td><td>".h($r['priority'])."</td>";
   echo "<td>".badge($r['status'],status_tone($r['status']))."</td>";
   echo "<td style='white-space:nowrap'>";
-  if($jl) echo "<a class='btn ghost' href='$jl'>Detay</a> ";
+  echo "<a class='btn ghost' href='task_view.php?id=".(int)$r['id']."'>👁 Detay</a> ";
+  if($jl) echo "<a class='btn ghost' href='$jl'>📋 İş</a> ";
   if($r['status']!=='Devam Ediyor' && $r['status']!=='Tamamlandı') echo "<form method='post' style='display:inline'><input type='hidden' name='tid' value='".(int)$r['id']."'><button class='btn ghost' name='task_status' value='Devam Ediyor'>▶ Başla</button></form> ";
   if($r['status']!=='Tamamlandı') echo "<form method='post' style='display:inline'><input type='hidden' name='tid' value='".(int)$r['id']."'><button class='btn' name='task_status' value='Tamamlandı'>✓ Tamamla</button></form> ";
   if(can_edit_delete()) echo "<details class='btn ghost' style='display:inline-flex;align-items:center;padding:6px 12px;cursor:pointer'><summary>✏️ Düzenle</summary>"

@@ -178,11 +178,18 @@ function finance_movement_update($pdo, $id, array $data){
     $accountId = (int)($data['account_id'] ?? 0);
     if(!$accountId) throw new Exception('Hesap seçilmelidir.');
     $contactId = (int)($data['contact_id'] ?? 0) ?: null;
-    $catId = (int)($data['category_id'] ?? 0) ?: null;
+    // GİDER TÜRÜ CONTEXT-AWARE (2026-07-04): category_id artık Ödeme/Gider (out) tarafında sihirbazda
+    // gösterilmiyor (Gider Türü artık payment_type) — sadece Tahsilat (in/Kategori) formu bu alanı
+    // yönetiyor. Ödeme (out) düzenlemesinde formda bu alan hiç yok/gizli olduğu için eski kaydın
+    // category_id'sini SIFIRLAMAMAK için (varsa) korunuyor, sadece 'in' düzenlemesinde güncelleniyor.
+    $catId = $direction==='in' ? ((int)($data['category_id'] ?? 0) ?: null) : $row['category_id'];
     // FINANCE UX REFACTOR (2026-07-04): "Ne kaydediyorsun?" sihirbazının "Personel Ödemesi" adımı
     // için — kolon migration 035'te zaten var (accounting.php'de kullanılıyordu), Ödeme/Gider
     // düzenlemesine buradan ilk kez ekleniyor. DB şeması DEĞİŞMEDİ, sadece bu UPDATE'e dahil edildi.
     $personnelId = (int)($data['personnel_id'] ?? 0) ?: null;
+    // GİDER TÜRÜ CONTEXT-AWARE (2026-07-04): sihirbazın adıma özel "Gider Türü" seçimi — mevcut
+    // payment_type kolonuna yazılır (migration 035'te zaten vardı). DB şeması DEĞİŞMEDİ.
+    $paymentType = array_key_exists('payment_type',$data) ? (trim((string)$data['payment_type']) ?: null) : ($row['payment_type'] ?? null);
     $channel = trim($data['payment_channel'] ?? '') ?: $row['payment_channel'];
     $date = !empty($data['movement_date']) ? $data['movement_date'] : $row['movement_date'];
     $desc = trim($data['description'] ?? '');
@@ -191,8 +198,8 @@ function finance_movement_update($pdo, $id, array $data){
 
     finance_movement_reverse_balance($pdo,$row);
 
-    $pdo->prepare("UPDATE finance_movements SET contact_id=?,category_id=?,personnel_id=?,direction=?,amount=?,payment_channel=?,account_id=?,status=?,movement_date=?,description=?,reference_no=? WHERE id=?")
-        ->execute([$contactId,$catId,$personnelId,$direction,$amount,$channel,$accountId,$status,$date,$desc,$ref,$id]);
+    $pdo->prepare("UPDATE finance_movements SET contact_id=?,category_id=?,personnel_id=?,direction=?,amount=?,payment_channel=?,payment_type=?,account_id=?,status=?,movement_date=?,description=?,reference_no=? WHERE id=?")
+        ->execute([$contactId,$catId,$personnelId,$direction,$amount,$channel,$paymentType,$accountId,$status,$date,$desc,$ref,$id]);
 
     finance_movement_apply_balance($pdo,$direction,$accountId,$amount);
 
@@ -207,6 +214,7 @@ function finance_movement_update($pdo, $id, array $data){
             'direction'=>$direction,
             'amount'=>$amount,
             'payment_channel'=>$channel,
+            'payment_type'=>$paymentType,
             'account_id'=>$accountId,
             'status'=>$status,
             'movement_date'=>$date,
@@ -253,6 +261,11 @@ function finance_record_type_info($row, $categoryGroupName=null, $accountType=nu
     $groupLc = mb_strtolower((string)$categoryGroupName);
     $accLc = mb_strtolower((string)$accountType);
     if(!empty($row['personnel_id'])) return 'personel';
+    // GİDER TÜRÜ CONTEXT-AWARE (2026-07-04): payment_type artık her adımın kendine özgü (adımlar
+    // arasında çakışmayan) Gider Türü değerini taşıyor (bkz. finance_expense_type_options()) — en
+    // kesin ipucu bu olduğu için eski grup-adı/hesap-türü tahmininden ÖNCE kontrol edilir.
+    $ptStep = finance_expense_type_step_for_value($row['payment_type'] ?? '');
+    if($ptStep) return $ptStep;
     if(in_array((string)($row['payment_type'] ?? ''), ['sgk','vergi'], true)) return 'vergi';
     if($groupLc!=='' && (strpos($groupLc,'vergi')!==false || strpos($groupLc,'sgk')!==false)) return 'vergi';
     if($groupLc!=='' && (strpos($groupLc,'araç')!==false || strpos($groupLc,'arac')!==false)) return 'arac';
@@ -260,6 +273,114 @@ function finance_record_type_info($row, $categoryGroupName=null, $accountType=nu
     if(!empty($row['contact_id'])) return 'cari';
     if(!empty($row['category_id'])) return 'isletme';
     return 'diger';
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * GİDER TÜRÜ CONTEXT-AWARE SİHİRBAZ (2026-07-04) — "Ne kaydediyorsun?" adımına göre "Gider Türü"
+ * dropdown'unun BİREBİR seçenek listesi (web+mobil TEK kaynak). Önceden bu liste her adımda aynı
+ * (tüm accounting_categories 'gider' satırları) geliyordu — artık adıma özel, sabit bir katalog.
+ * DB şemasına YENİ bir kolon eklenmedi: değer, finance_movements.payment_type'a yazılır (bu kolon
+ * migration 035'te zaten vardı, önceden sadece accounting.php'nin "Personel ise Ödeme Türü" alt
+ * seçiminde kullanılıyordu — burada TÜM adımlara genişletildi). accounting_categories/category_id
+ * dokunulmadı, sadece Gelir/Kategori tarafında (Tahsilat akışı) kullanılmaya devam ediyor.
+ * --------------------------------------------------------------------------------------------- */
+function finance_expense_type_options(){
+    return [
+        'cari' => [
+            ['v'=>'borc_odemesi','t'=>'Borç Ödemesi'],
+            ['v'=>'avans_iadesi','t'=>'Avans İadesi'],
+            ['v'=>'cari_mahsup','t'=>'Cari Mahsup'],
+            ['v'=>'diger','t'=>'Diğer'],
+        ],
+        'isletme' => [
+            ['v'=>'kira','t'=>'Kira'],
+            ['v'=>'elektrik','t'=>'Elektrik'],
+            ['v'=>'su','t'=>'Su'],
+            ['v'=>'internet','t'=>'İnternet'],
+            ['v'=>'telefon','t'=>'Telefon'],
+            ['v'=>'yazilim','t'=>'Yazılım'],
+            ['v'=>'ofis_malzemesi','t'=>'Ofis Malzemesi'],
+            ['v'=>'temizlik','t'=>'Temizlik'],
+            ['v'=>'kargo','t'=>'Kargo'],
+            ['v'=>'bakim','t'=>'Bakım'],
+            ['v'=>'aidat','t'=>'Aidat'],
+            ['v'=>'diger','t'=>'Diğer'],
+        ],
+        'personel' => [
+            ['v'=>'maas','t'=>'Maaş'],
+            ['v'=>'avans','t'=>'Avans'],
+            ['v'=>'prim','t'=>'Prim / İkramiye'],
+            ['v'=>'sgk_isveren','t'=>'SGK Primi İşveren'],
+            ['v'=>'sgk_isci','t'=>'SGK Primi İşçi'],
+            ['v'=>'yol','t'=>'Yol Gideri'],
+            ['v'=>'yemek','t'=>'Yemek'],
+            ['v'=>'konaklama','t'=>'Konaklama'],
+            ['v'=>'harcirah','t'=>'Harcırah'],
+            ['v'=>'diger','t'=>'Diğer'],
+        ],
+        'vergi' => [
+            ['v'=>'muhtasar','t'=>'Muhtasar'],
+            ['v'=>'kdv','t'=>'KDV'],
+            ['v'=>'damga','t'=>'Damga Vergisi'],
+            ['v'=>'gecici_vergi','t'=>'Geçici Vergi'],
+            ['v'=>'sgk','t'=>'SGK'],
+            ['v'=>'bagkur','t'=>'Bağkur'],
+            ['v'=>'diger','t'=>'Diğer'],
+        ],
+        'kart' => [
+            ['v'=>'kredi_karti_odemesi','t'=>'Kredi Kartı Ödemesi'],
+            ['v'=>'kredi_odemesi','t'=>'Kredi Ödemesi'],
+            ['v'=>'faiz','t'=>'Faiz'],
+            ['v'=>'komisyon','t'=>'Komisyon'],
+            ['v'=>'eft_havale','t'=>'EFT / Havale'],
+            ['v'=>'pos_kesintisi','t'=>'POS Kesintisi'],
+            ['v'=>'diger','t'=>'Diğer'],
+        ],
+        'arac' => [
+            ['v'=>'yakit','t'=>'Yakıt'],
+            ['v'=>'ogs_hgs','t'=>'OGS / HGS'],
+            ['v'=>'servis','t'=>'Servis'],
+            ['v'=>'lastik','t'=>'Lastik'],
+            ['v'=>'muayene','t'=>'Muayene'],
+            ['v'=>'sigorta','t'=>'Sigorta'],
+            ['v'=>'kasko','t'=>'Kasko'],
+            ['v'=>'yag_bakimi','t'=>'Yağ Bakımı'],
+            ['v'=>'ceza','t'=>'Ceza'],
+            ['v'=>'otopark','t'=>'Otopark'],
+            ['v'=>'diger','t'=>'Diğer'],
+        ],
+        'diger' => [
+            ['v'=>'genel_gider','t'=>'Genel Gider'],
+            ['v'=>'diger_odeme','t'=>'Diğer Ödeme'],
+            ['v'=>'aciklamali_kayit','t'=>'Açıklamalı Kayıt'],
+        ],
+    ];
+}
+
+// Bu adımlarda "Gider Türü" seçimi sunucu tarafında ZORUNLU (JS'e ek, savunma katmanlı) —
+// diğer adımlarda (cari/personel/kart/diger) opsiyonel kalır (o adımların asıl zorunlu alanı başka:
+// cari->contact_id, personel->personnel_id, diger->description).
+function finance_expense_type_required_steps(){
+    return ['isletme','vergi','arac'];
+}
+
+// Bir payment_type değerinin (varsa) hangi sihirbaz adımına ait olduğunu bulur — adımlar arası
+// çakışma yok ('diger' hariç, o yüzden hariç tutulur). finance_record_type_info() eski kayıtları
+// da (varsa payment_type'a bakarak) doğru adımla açabilsin diye kullanılır.
+function finance_expense_type_step_for_value($value){
+    $value=(string)$value;
+    if($value==='' || $value==='diger') return null;
+    static $map=null;
+    if($map===null){
+        $map=[];
+        foreach(finance_expense_type_options() as $step=>$opts){
+            foreach($opts as $o){
+                if($o['v']==='diger') continue;
+                if(!isset($map[$o['v']])) $map[$o['v']]=$step;
+            }
+        }
+    }
+    return isset($map[$value]) ? $map[$value] : null;
 }
 
 // Tahsilat/ödeme kaydını siler, hesap bakiyesini geri alır. Dönüş: ['ok'=>bool,'msg'=>string]

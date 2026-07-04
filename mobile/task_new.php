@@ -7,8 +7,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         $pid=(int)$_POST['personnel_id']; $title=trim($_POST['title'] ?? '');
         if(!$pid) throw new Exception('Personel seçin.');
         if($title==='') throw new Exception('Görev başlığı girin.');
-        $pdo->prepare("INSERT INTO tasks(job_id,personnel_id,title,description,due_date,status,priority) VALUES(?,?,?,?,?,'Atandı',?)")
-            ->execute([(int)($_POST['job_id']??0)?:null,$pid,$title,trim($_POST['description']??''),$_POST['due_date']?:null,$_POST['priority']??'Normal']);
+        $pdo->prepare("INSERT INTO tasks(job_id,personnel_id,title,description,due_date,status,priority,created_by) VALUES(?,?,?,?,?,'Atandı',?,?)")
+            ->execute([(int)($_POST['job_id']??0)?:null,$pid,$title,trim($_POST['description']??''),$_POST['due_date']?:null,$_POST['priority']??'Normal',(int)($_SESSION['user']['id']??0)?:null]);
         $tid=(int)$pdo->lastInsertId();
         // Personel adı + bağlı kullanıcı
         $pn=$pdo->prepare("SELECT name FROM personnel WHERE id=?"); $pn->execute([$pid]); $pname=$pn->fetch()['name']??'';
