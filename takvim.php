@@ -44,7 +44,7 @@ for($d=1;$d<=$daysIn;$d++){
     $itemStyle="display:block;font-size:11px;background:rgba(217,119,6,.15);border-left:3px solid $c;border-radius:4px;padding:2px 4px;margin-top:2px;color:#e7eefc;text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis";
     // Görev maddesi artık mytasks.php'ye gidiyor — 'tasks' yetkisi istemeyen kişisel görev
     // sayfası (bkz. mytasks.php), önceki "yetkisizse düz metin" geçici çözümüne gerek kalmadı.
-    $href=$isNote?'dashboard.php':($isTask?'mytasks.php':'job_view.php?id='.(int)$j['id']);
+    $href=$isNote?'notes.php':($isTask?'task_view.php?id='.(int)$j['id']:'job_view.php?id='.(int)$j['id']);
     echo "<a href='".h($href)."' style='$itemStyle'>".$icon.h($j['title'])."</a>";
   }
   echo "</td>"; $cell++;

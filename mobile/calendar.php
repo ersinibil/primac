@@ -72,7 +72,7 @@ $baslik = $g>0 ? ($g.' '.$mn[$first->format('m')].' işleri/notları') : 'Bu ay 
 <div style="font-weight:900;margin:6px 4px"><?=htmlspecialchars($baslik)?></div>
 <?php if(!$show): ?><div class="panel muted" style="text-align:center"><?=$g>0?'Bu günde iş/not yok.':'Bu ay termini olan iş/not yok.'?></div><?php endif; ?>
 <?php foreach($show as $j): $isNote=!empty($j['_note']); $isTask=!empty($j['_task']); $st=$j['status']; $sc=($isNote||$isTask)?'#eab308':(in_array($st,['Tamamlandı','Teslim Edildi'])?'#22c55e':($st==='İptal'?'#f87171':'#eab308')); $icon=$isNote?'📝 ':($isTask?'🎯 ':''); ?>
-  <a class="item" href="<?=($isNote||($isTask && !user_can('tasks')))?'mytasks.php':($isTask?'tasks.php':'job_view.php?id='.(int)$j['id'])?>">
+  <a class="item" href="<?=$isNote?'mytasks.php':($isTask?'task_view.php?id='.(int)$j['id']:'job_view.php?id='.(int)$j['id'])?>">
     <b><?=$icon.htmlspecialchars($j['title'])?></b> <span style="color:<?=$sc?>;font-weight:900;font-size:12px"><?=htmlspecialchars($st)?></span><br>
     <small class="muted">📅 <?=htmlspecialchars(date('d.m.Y',strtotime($j['due_date'])))?><?=$j['job_no']?' · '.htmlspecialchars($j['job_no']):''?></small>
   </a>
