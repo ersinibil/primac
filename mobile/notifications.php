@@ -22,25 +22,24 @@ topx('Bildirimler');
 try{
   $rows=notif_list_for_user($pdo,$ME,80);
   if(!$rows){ echo '<div class="panel muted" style="text-align:center">Bildirim yok 🔕</div>'; }
+  // UX SPRINT-001 (2026-07-04): kart artık sadece özet gösterir ve tamamı tıklanabilir —
+  // tekil aksiyonlar (Sil, İlgili Modüle Git) sadece notification_view.php'de. Liste ekranı
+  // sadece listeleme amacı taşır (bkz. PROJECT_RULES.md yeni UX standardı).
   foreach($rows as $n){
-    $go=!empty($n['action_url']) ? $n['action_url'] : 'index.php';
-    // Bazı bildirimler (örn. daily_reminder_lib.php) sadece web kökünde var olan bir sayfaya
-    // (gunluk_rapor.php gibi) link veriyor — mobile/ altında aynı isimde dosya yoksa burada
-    // olduğu gibi kullanılınca 404 veriyordu (2026-07-03 kullanıcı bildirimi, bkz. 62cd110'un
-    // web→mobil karşılığı). Hedef dosya mobile/ altında yoksa ama web kökünde varsa oraya çık.
-    $goFile=explode('?',$go,2)[0];
-    if($goFile!=='' && strpos($go,'../')!==0 && !file_exists(__DIR__.'/'.$goFile) && file_exists(__DIR__.'/../'.$goFile)){
-        $go='../'.$go;
+    $t=notif_type_info($n['title']);
+    $msg=(string)($n['message']??'');
+    $long=(mb_strlen($msg)>90 || substr_count($msg,"\n")>1);
+    echo '<a class="item notif-card" href="notification_view.php?id='.(int)$n['id'].'">';
+    echo '<div class="notif-icon '.$t['color'].'">'.$t['icon'].'</div>';
+    echo '<div class="notif-body">';
+    echo '<div class="notif-type">'.htmlspecialchars($t['label']).'</div>';
+    echo '<b>'.htmlspecialchars($t['title']).'</b>';
+    if($msg!==''){
+        echo '<div class="notif-summary">'.htmlspecialchars($msg).'</div>';
+        if($long) echo '<span class="notif-more">Devamını gör →</span>';
     }
-    echo '<div class="item" style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">';
-    echo '<div style="flex:1;min-width:0"><b>'.htmlspecialchars($n['title']).'</b>';
-    if(!empty($n['message'])) echo '<br><span class="muted">'.nl2br(htmlspecialchars($n['message'])).'</span>';
-    echo '<br><small class="muted">'.htmlspecialchars($n['created_at']??'').'</small></div>';
-    echo '<div style="flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:8px">';
-    echo '<a href="'.htmlspecialchars($go).'" class="btn" style="padding:6px 12px;font-size:13px">Aç</a>';
-    echo '<a href="notifications.php?del='.(int)$n['id'].'" style="color:#f87171;font-size:20px;text-decoration:none">🗑️</a>';
-    echo '</div>';
-    echo '</div>';
+    echo '<small class="muted" style="display:block;margin-top:4px">'.htmlspecialchars($n['created_at']??'').'</small>';
+    echo '</div></a>';
   }
 }catch(Throwable $e){ echo '<div class="err">'.htmlspecialchars($e->getMessage()).'</div>'; }
 botx();

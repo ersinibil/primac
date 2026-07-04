@@ -131,6 +131,65 @@ function notif_dismiss_all($pdo, $uid){
     }catch(Throwable $e){}
 }
 
+// ── UX SPRINT-001 (2026-07-04) — kart/detay ekranı için saf görüntü yardımcıları ──
+// Bildirim tipini DB'ye yeni bir 'type' kolonu eklemeden, mevcut başlık emoji ön ekinden türetir
+// (bkz. notify_user()/doğrudan INSERT çağıran her yer zaten başlığı emojiyle kuruyor). Saf
+// fonksiyon, DB'ye dokunmaz — sadece görüntü katmanı.
+function notif_type_info($title){
+    static $map=null;
+    if($map===null){
+        $map=[
+            '📋'=>['label'=>'Görev','color'=>'teal'],
+            '📨'=>['label'=>'Talep','color'=>'orange'],
+            '🏭'=>['label'=>'Üretim','color'=>'red'],
+            '📦'=>['label'=>'Üretim','color'=>'red'],
+            '📊'=>['label'=>'Rapor','color'=>'purple'],
+            '⚠️'=>['label'=>'Uyarı','color'=>'red'],
+            '✅'=>['label'=>'Onay','color'=>'green'],
+            '🖼'=>['label'=>'Dosya Onayı','color'=>'purple'],
+            '📝'=>['label'=>'Not','color'=>'gray'],
+            '🌅'=>['label'=>'Hatırlatma','color'=>'yellow'],
+            '💬'=>['label'=>'Mesaj','color'=>'teal'],
+            '👤'=>['label'=>'Personel','color'=>'purple'],
+        ];
+    }
+    $title=(string)$title;
+    foreach($map as $prefix=>$info){
+        if(strpos($title,$prefix)===0){
+            $clean=trim(mb_substr($title, mb_strlen($prefix)));
+            return ['icon'=>$prefix,'label'=>$info['label'],'color'=>$info['color'],'title'=>($clean!==''?$clean:$title)];
+        }
+    }
+    return ['icon'=>'🔔','label'=>'Bildirim','color'=>'gray','title'=>$title];
+}
+
+// Detay ekranı için sahiplik/görünürlük kontrollü TEKİL bildirim çekme — notif_list_for_user()
+// ile AYNI WHERE mantığı (kişisel: target_user_id=$uid, genel: gizlenmemiş). Sprint-001'de
+// kapatılan IDOR'un aynısının ?id= parametreli yeni bir ekranda yeniden açılmaması için var.
+function notif_get_for_user($pdo, $uid, $id){
+    $id=(int)$id;
+    if(!notif_status_has_table($pdo)){
+        $st=$pdo->prepare("SELECT n.*, n.is_read AS effective_is_read FROM internal_notifications n
+            WHERE n.id=? AND (n.target_user_id IS NULL OR n.target_user_id=?)");
+        $st->execute([$id,$uid]);
+        return $st->fetch();
+    }
+    $st=$pdo->prepare("SELECT n.*,
+            CASE WHEN n.target_user_id IS NOT NULL THEN n.is_read ELSE COALESCE(s.is_read,0) END AS effective_is_read
+        FROM internal_notifications n
+        LEFT JOIN user_notification_status s ON s.notification_id=n.id AND s.user_id=?
+        WHERE n.id=? AND (n.target_user_id=? OR (n.target_user_id IS NULL AND COALESCE(s.is_hidden,0)=0))");
+    $st->execute([$uid,$id,$uid]);
+    return $st->fetch();
+}
+
+// Mesaj metnini ÖNCE escape edip (XSS güvenli) SONRA düz http(s):// bağlantılarını tıklanabilir
+// yapar — "varsa bağlantılar" gereksinimini yeni bir DB alanı eklemeden karşılar.
+function notif_linkify($text){
+    $escaped=nl2br(htmlspecialchars((string)$text));
+    return preg_replace('/(https?:\/\/[^\s<]+)/', '<a href="$1" target="_blank" rel="noopener" style="color:var(--c-accent);word-break:break-all">$1</a>', $escaped);
+}
+
 // Admin-only: genel bir bildirimi HERKES için kalıcı sil. UI'ya bağlanması Sprint-001 kapsamı
 // dışında bırakıldı (bkz. plan) — fonksiyon hazır, ileride tek satır buton eklenebilir.
 function notif_admin_delete_global($pdo, $notifId){

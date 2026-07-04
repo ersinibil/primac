@@ -35,8 +35,21 @@ edildi ve onaylandı, `0ba36da` ile lokal checkpoint commit atıldı** (push yok
 global arama çubuğu, kart tutarlılığı/yoğunluk iyileştirmesi, bildirim test alanının admin'e
 taşınması. Detay → `CHANGELOG.md`. **Lokal checkpoint commit ile kaydedildi** (bu oturumun sonu,
 "END OF SESSION MODE"), primac.tr'de görsel doğrulama için DEV test paketi (`guncelleme.zip`,
-`~/Desktop/PRIMAC-GUNCELLEME/`) tazelendi — push yok, release yok, PROD'a gönderilmedi. Görsel
-kontrol kullanıcı tarafından yapılacak, sonraki adım ona bağlı.
+`~/Desktop/PRIMAC-GUNCELLEME/`) tazelendi — push yok, release yok, PROD'a gönderilmedi.
++ **UX SPRINT-001** (2026-07-04): Bildirimler modülü kart/detay standardına taşındı —
+`notif_type_info()` ile DB'siz tip türetme (ikon+renk), liste kartı tamamen tıklanabilir tek
+kart, tekil aksiyonlar (Sil, İlgili Modüle Git) yeni `mobile/notification_view.php` detay
+ekranına taşındı, `notif_get_for_user()` ile Sprint-001'deki sahiplik kuralı yeniden kullanıldı
+(IDOR açılmadı). Yeni standart UX kuralı `PROJECT_RULES.md`'ye eklendi. **primac.tr'de
+`primactr_ux_sprint001_test.zip` ile test edildi, 8/8 senaryo PASS** (liste görünümü, tam kart
+tıklama, detay ekranı, URL gizliliği, sahiplik/IDOR testi, tekil silme konumu, toplu silme,
+farklı ekran boyutları).
++ **UX İyileştirme — "Çalışma Alanı"** (2026-07-04): `layout_top.php`'deki işlevsiz "Aktif Şirket"
+dropdown'ı (hiçbir session/DB alanına bağlı değildi, projede gerçek bir çoklu-şirket/tenant
+altyapısı hiç yoktu) "Çalışma Alanı" bilgi etiketine sadeleştirildi — DB/session/route/iş mantığı
+değişmedi. Gerçek çoklu-çalışma-alanı mimarisi ayrı, büyük bir proje olarak `ROADMAP.md`'ye
+"Workspace (Multi-Tenant) Architecture" başlığıyla açıldı. Bu değişiklik DEV test kapsamına dahil
+edildi (yukarıdaki 8/8 PASS ile birlikte doğrulandı).
 
 ## Current Production Version
 **v1.0.0** (acanstr.com/ots)

@@ -14,6 +14,28 @@ sorusuna hızlı cevap.
   koda işlendi — commit durumu için `git status`/`git log` kontrol edilmeli, backlog.md ile
   memory/features.md buna göre güncellenmeli.
 
+## Workspace (Multi-Tenant) Architecture — ayrı, büyük bir proje (2026-07-04'te açıldı)
+`layout_top.php`'deki "Aktif Şirket" kutusu incelendiğinde tamamen işlevsiz olduğu görüldü:
+`name`/`onchange` yok, seçenekler (PRIMAC/ACANS/MEDYAROTA/DİJİMED) sabit HTML metni, hiçbir
+session/DB alanına bağlı değil. Kod genelinde `company_id`/`tenant_id`/`workspace` kavramı
+HİÇBİR yerde yok — ACANS ve PRIMAC zaten ayrı sunucu + ayrı veritabanı olarak çalışıyor (bkz.
+CLAUDE.md ortam modeli), yani bugün "workspace değiştirme" diye bir mekanizma yok, olamaz da
+(fiziksel olarak ayrı kurulumlar). 2026-07-04'te bu kutu "Çalışma Alanı" bilgi etiketine
+sadeleştirildi (bkz. `CHANGELOG.md`) — sahte dropdown kaldırıldı, DB/session/route/iş mantığı
+DEĞİŞMEDİ.
+
+Kullanıcının gelecekte istediği gerçek mimari — **ayrı bir proje olarak** — şunları kapsayacak:
+- Çoklu şirket
+- Çoklu şube
+- Çoklu organizasyon
+- Çoklu depo
+- Yetki bazlı çalışma alanları (kullanıcı sadece yetkili olduğu çalışma alanlarını görür)
+
+Bu, neredeyse her tabloya (`jobs`, `tasks`, `contacts`, `stock_items`, `finance_*`, `internal_notifications`
+vb.) yeni bir `workspace_id` kolonu + kapsamlı bir yetki/oturum katmanı gerektirir — yeni migration(lar),
+DB şema değişikliği ve yeni mimari anlamına gelir. Kullanıcı açıkça onaylamadan/istemeden
+BAŞLANMAYACAK, ayrı bir sprint/proje olarak ele alınacak.
+
 ## Açık — kapsamı netleşmemiş
 - **Mobil parite eksiği**: `work_center.php`, `trade_documents.php`, `design.php` sadece webde var,
   mobilde karşılığı yok (2026-07-03, commit `1ff6f1e` ile web tarafı eklendi ama mobil hâlâ eksik).

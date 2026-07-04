@@ -38,11 +38,12 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans
 .brand-title{font-weight:900;font-size:18px;letter-spacing:.2px;line-height:1.2}
 .brand-subtitle{color:#7fa8d0;font-size:11.5px;margin-top:3px;letter-spacing:.03em}
 
-/* Şirket seçici */
-.company-box{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);border-radius:14px;padding:11px 13px;margin:14px 12px 4px}
-.company-box small{display:block;color:#7fa8d0;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}
-.company-select{width:100%;background:rgba(255,255,255,.07);color:#e7eefc;border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:8px 10px;font-weight:800;font-size:14px;cursor:pointer;outline:none;transition:border-color .2s,background .2s}
-.company-select:hover,.company-select:focus{background:rgba(255,255,255,.11);border-color:rgba(37,99,235,.55)}
+/* Çalışma Alanı bilgi etiketi (2026-07-04: eskiden işlevsiz "Aktif Şirket" dropdown'ıydı — sahte
+   seçim kutusu kaldırıldı, tek gerçek değer bilgi metni olarak gösteriliyor. Gerçek çoklu-çalışma-
+   alanı mimarisi ayrı bir proje, bkz. ROADMAP.md "Workspace (Multi-Tenant) Architecture") */
+.workspace-box{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);border-radius:14px;padding:11px 13px;margin:14px 12px 4px}
+.workspace-box small{display:block;color:#7fa8d0;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}
+.workspace-name{color:#e7eefc;font-weight:800;font-size:14px}
 
 /* Navigasyon başlıkları */
 .nav-title{font-size:10.5px;color:#4d6a8a;letter-spacing:.12em;font-weight:900;margin:16px 18px 6px;text-transform:uppercase}
@@ -157,14 +158,9 @@ input,select,textarea{font-size:16px}
     </div>
 </a>
 
-<div class="company-box">
-        <small>Aktif Şirket</small>
-        <select class="company-select">
-            <option>PRIMAC</option>
-            <option>ACANS</option>
-            <option>MEDYAROTA</option>
-            <option>DİJİMED</option>
-        </select>
+<div class="workspace-box">
+        <small>Çalışma Alanı</small>
+        <div class="workspace-name"><?=htmlspecialchars(app_config()['app_name'] ?? 'OTS')?></div>
     </div>
 
     <nav class="nav">

@@ -85,6 +85,18 @@ tanımının (ACANS + PRIMAC ayrı ayrı canlı) YERİNE geçer.
 - **"İşler"** = üretim/iş takip listesi (`jobs.php`, `jobs` tablosu) — "İşlerim" ile KARIŞTIRILMAZ,
   farklı tablo (`jobs` vs `tasks`), farklı ekran.
 
+## Mobil UX Standardı (2026-07-04'ten itibaren — UX SPRINT-001)
+- **Liste ekranı = sadece listeleme.** Bir liste ekranındaki kart/satır tekil bir "Detay" ekranına
+  gitmek için TEK bir tıklanabilir alan olmalı (kart tamamı tıklanabilir, "Aç" gibi ayrı bir buton
+  zorunlu değil).
+- **Tekil aksiyonlar sadece Detay ekranında.** Sil, Paylaş, İlgili Modüle Git, İşaretle gibi
+  TEKİL (bir kayda özel) aksiyonlar liste kartının içine gömülmez — sadece o kaydın Detay ekranında
+  sunulur. Sayfa-seviyesi TOPLU aksiyonlar (ör. "Okunanları Sil", "Tümünü Sil") bu kuralın DIŞINDA,
+  liste ekranında kalabilir.
+- Bu ilke ilk olarak Bildirimler modülünde uygulandı (`mobile/notifications.php` liste +
+  `mobile/notification_view.php` detay, bkz. `CHANGELOG.md`) ve bundan sonra yazılacak/yeniden
+  tasarlanacak TÜM mobil liste ekranları için standarttır.
+
 ## Sürüm Takibi (2026-07-03'ten itibaren — RESMİ STANDART)
 - `VERSIONING.md` projenin resmi sürüm dokümanıdır (Current Dev/Prod Version, Release Durumu,
   Dağıtım Geçmişi vb.).
