@@ -23,6 +23,10 @@ foreach(personal_notes_for_month($pdo,$__me,$ym) as $n){
 }
 $mn=['01'=>'Ocak','02'=>'Şubat','03'=>'Mart','04'=>'Nisan','05'=>'Mayıs','06'=>'Haziran','07'=>'Temmuz','08'=>'Ağustos','09'=>'Eylül','10'=>'Ekim','11'=>'Kasım','12'=>'Aralık'];
 $today=(int)date('j'); $isThisMonth=($ym===date('Y-m'));
+// Gün filtresi (mobile/calendar.php ile aynı ?g= deseni) — kullanıcı bildirimi: "bir güne
+// tıklayınca sadece ilgili günü göstermeli" — önceden gün numarasının hiç linki yoktu, ay
+// ızgarası zaten tüm günleri iç içe gösterdiği için tıklamanın hiçbir etkisi olmuyordu.
+$g=(int)($_GET['g']??0);
 require_once __DIR__.'/layout_top.php';
 ?>
 <div class="panel-head"><h1>📅 Takvim — <?=$mn[$first->format('m')].' '.$first->format('Y')?></h1>
@@ -36,9 +40,9 @@ $cell=0;
 for($i=0;$i<$startW;$i++){ echo "<td></td>"; $cell++; }
 for($d=1;$d<=$daysIn;$d++){
   if($cell%7===0 && $cell>0) echo "</tr><tr>";
-  $isToday=($isThisMonth&&$d===$today);
-  echo "<td style='vertical-align:top;height:90px;padding:4px;".($isToday?'background:#1e3a5f':'')."'>";
-  echo "<div style='font-weight:700;".($isToday?'color:#60a5fa':'color:#7f95b2')."'>$d</div>";
+  $isToday=($isThisMonth&&$d===$today); $isSel=($g===$d);
+  echo "<td style='vertical-align:top;height:90px;padding:4px;".($isSel?'background:#334155':($isToday?'background:#1e3a5f':''))."'>";
+  echo "<a href='takvim.php?ay=".h($ym)."&g=$d' style='text-decoration:none;font-weight:700;display:block;".($isSel?'color:#fff':($isToday?'color:#60a5fa':'color:#7f95b2'))."'>$d</a>";
   if(!empty($byDay[$d])) foreach($byDay[$d] as $j){ $isNote=!empty($j['_note']); $isTask=!empty($j['_task']); $c=($isNote||$isTask)?'#eab308':(in_array($j['status'],['Tamamlandı','Teslim Edildi'])?'#16a34a':($j['status']==='İptal'?'#94a3b8':'#d97706'));
     $icon=$isNote?'📝 ':($isTask?'🎯 ':'');
     $itemStyle="display:block;font-size:11px;background:rgba(217,119,6,.15);border-left:3px solid $c;border-radius:4px;padding:2px 4px;margin-top:2px;color:#e7eefc;text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis";
@@ -53,4 +57,22 @@ while($cell%7!==0){ echo "<td></td>"; $cell++; }
 ?>
 </tr></tbody></table>
 </section>
+<?php if($g>0): ?>
+<section class="panel">
+<div class="panel-head"><h2><?=$g.' '.$mn[$first->format('m')]?> işleri/notları</h2>
+<a class="btn secondary" href="takvim.php?ay=<?=h($ym)?>">✕ Kapat</a></div>
+<?php if(empty($byDay[$g])): ?>
+<div class="muted" style="text-align:center;padding:12px">Bu günde iş/görev/not yok.</div>
+<?php else: foreach($byDay[$g] as $j):
+  $isNote=!empty($j['_note']); $isTask=!empty($j['_task']);
+  $icon=$isNote?'📝':($isTask?'🎯':'📋');
+  $href=$isNote?'notes.php':($isTask?'task_view.php?id='.(int)$j['id']:'job_view.php?id='.(int)$j['id']);
+?>
+<a href="<?=h($href)?>" style="display:flex;justify-content:space-between;align-items:center;padding:10px 4px;border-bottom:1px solid #eef2f6;text-decoration:none;color:inherit">
+<span><?=$icon?> <?=htmlspecialchars($j['title'])?></span>
+<span class="muted" style="font-size:12px"><?=htmlspecialchars($j['status'])?></span>
+</a>
+<?php endforeach; endif; ?>
+</section>
+<?php endif; ?>
 <?php require_once __DIR__.'/layout_bottom.php'; ?>
