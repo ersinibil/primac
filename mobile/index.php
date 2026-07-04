@@ -58,8 +58,7 @@ $myMsg=unread_msg(); $myNotif=unread_notif();
 <?php else: ?>
   <div class="panel"><b>Hoş geldin, <?=htmlspecialchars($name)?></b><p class="small">Personel paneli · satış, tahsilat, iş ve mesaj.</p>
   <div class="grid">
-    <a href="jobs.php" class="card blue"><span>📋</span><b><?=$open?></b><small>Açık iş</small></a>
-    <a href="messages.php" class="card teal"><span>💬</span><b><?=$myMsg?></b><small>Yeni mesaj</small></a>
+    <?php card('Açık İş',$open.' adet','📋','jobs.php','blue');card('Mesajlar',$myMsg.' yeni','💬','messages.php','teal');?>
   </div></div>
   <div class="grid">
     <?php
@@ -77,13 +76,13 @@ $myMsg=unread_msg(); $myNotif=unread_notif();
 <!-- ── Karşılaştırmalı KPI (Mobil Basitleştirilmiş) ── -->
 <div class="panel"><b>📊 Bu Ay vs Geçen Ay</b>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;font-size:12px">
-    <div style="background:#f0fdf4;border-radius:10px;padding:10px;border:1px solid #dcfce7">
+    <div style="background:#f0fdf4;border-radius:var(--radius-sm);padding:10px;border:1px solid var(--c-success-bg)">
       <span style="color:#059669;font-weight:700">💰 Tahsilat</span>
       <div style="font-size:14px;font-weight:900;color:#101828;margin-top:4px"><?=money($currM['rev'])?></div>
       <div style="color:#667085;font-size:11px;margin-top:2px">Geçen: <?=money($prevM['rev'])?></div>
     </div>
-    <div style="background:#fef2f2;border-radius:10px;padding:10px;border:1px solid #fee2e2">
-      <span style="color:#dc2626;font-weight:700">💸 Ödeme</span>
+    <div style="background:#fef2f2;border-radius:var(--radius-sm);padding:10px;border:1px solid var(--c-danger-bg)">
+      <span style="color:var(--c-danger);font-weight:700">💸 Ödeme</span>
       <div style="font-size:14px;font-weight:900;color:#101828;margin-top:4px"><?=money($currM['exp'])?></div>
       <div style="color:#667085;font-size:11px;margin-top:2px">Geçen: <?=money($prevM['exp'])?></div>
     </div>
@@ -92,19 +91,19 @@ $myMsg=unread_msg(); $myNotif=unread_notif();
 
 <!-- ── Gecikme Uyarı (Mobil) ── -->
 <?php if($overdue_count > 0 || $crit > 0): ?>
-<div class="panel" style="border-left:4px solid #ef4444"><b style="color:#ef4444">⚠️ Dikkat</b>
+<div class="panel" style="border-left:4px solid var(--c-danger)"><b style="color:var(--c-danger)">⚠️ Dikkat</b>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;font-size:12px">
-    <div style="background:#fee2e2;border-radius:8px;padding:10px;text-align:center">
-      <span style="color:#dc2626;font-weight:700;font-size:16px;display:block"><?=$overdue_count?></span>
+    <div style="background:var(--c-danger-bg);border-radius:var(--radius-sm);padding:10px;text-align:center">
+      <span style="color:var(--c-danger);font-weight:700;font-size:16px;display:block"><?=$overdue_count?></span>
       <span style="color:#667085;font-size:11px">Geciken İş</span>
     </div>
-    <div style="background:#fed7aa;border-radius:8px;padding:10px;text-align:center">
+    <div style="background:#fed7aa;border-radius:var(--radius-sm);padding:10px;text-align:center">
       <span style="color:#d97706;font-weight:700;font-size:16px;display:block"><?=$crit?></span>
       <span style="color:#667085;font-size:11px">Kritik Stok</span>
     </div>
   </div>
   <?php if($overdue_count > 0): ?>
-  <a href="jobs.php?filter=late" style="display:block;margin-top:8px;padding:8px;background:#f3f4f6;border-radius:8px;text-align:center;text-decoration:none;color:#2563eb;font-weight:700;font-size:12px">Geciken İşleri Gör →</a>
+  <a href="jobs.php?filter=late" style="display:block;margin-top:8px;padding:8px;background:#f3f4f6;border-radius:var(--radius-sm);text-align:center;text-decoration:none;color:var(--c-accent);font-weight:700;font-size:12px">Geciken İşleri Gör →</a>
   <?php endif; ?>
 </div>
 <?php endif; ?>

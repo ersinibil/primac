@@ -28,6 +28,31 @@ sorusuna hızlı cevap.
   çözüm için ACANS/PRIMAC sunucularındaki gerçek `config.php`'lere 3 satır elle eklenmeli — repo
   dışı erişim gerektirir, kullanıcı seyahatten dönünce yapılacak. Detay → `memory/backlog.md`.
 
+## UI/UX Sprinti (2026-07-04) — bilinçli kapsam dışı bırakılanlar (kullanıcı onayı: 2026-07-04)
+Mobil ana ekran + toolbar arama iyileştirmesi sırasında şu maddeler kasıtlı olarak ERTELENDİ
+(kapsam büyümesin diye, kullanıcıya danışılmadan yapılmayacak) — kullanıcı bu erteleme listesini
+2026-07-04'te onayladı, madde başlıkları hâlâ "kullanıcı açıkça istemeden uygulanmaz" kuralına tabi:
+- **Global aramanın gerçek zamanlı autocomplete'i**: Toolbar arama çubuğu (`mobile/common.php::
+  topx()`) şu an sadece `search.php`'ye normal GET submit yapıyor; DOM'da `#globalSearchInput` +
+  boş `#searchSuggest` kutusu ileride bir JS+debounce+AJAX katmanı için hazır duruyor ama bu katman
+  YAZILMADI — yeni bir JSON uç noktası (`search.php?ajax=1` gibi) gerektirir, "yeni özellik
+  eklenmeyecek" kısıtına takılır.
+- **Arama kapsamının genişletilmesi**: `search_lib.php` şu an 9 modülü (iş, cari, stok, personel,
+  finans hesap/hareket, çek-senet, teklif, ticari belge, sayfa kısayolları) kapsıyor. Kullanıcının
+  istediği tam liste (banka/kasa/tahsilat/ödeme/fatura/sipariş/üretim/üretim aşaması/dosya/etiket/
+  takvim/rapor/sistem kayıtları/İşlerim/Notlar/Bildirimler) çok daha geniş — her biri yeni SQL
+  sorgusu demek, "iş mantığı değişmeyecek" kısıtının dışında, ayrı ve büyük bir sprint gerektirir.
+- **FAB (Floating Action Button)**: Tasarım dili standardına eklendi ama somut bir ekrana
+  UYGULANMADI — liste ekranlarında (jobs.php, contacts.php gibi "+ Yeni" ihtiyacı olan yerlerde)
+  ayrı bir iş olarak değerlendirilmeli.
+- **Web arayüzünün mobil tasarım diline taşınması**: Kullanıcı "zaman içinde" dedi, bu sprint
+  sadece mobile/ ile sınırlı kaldı.
+- **40+ mobil sayfanın tamamının yeniden tasarımı**: Bu sprint `mobile/index.php` (ana ekran),
+  `mobile/common.php` (toolbar + design token'lar), `mobile/more.php` (test paneli taşıma) ile
+  sınırlı kaldı. Diğer ekranlar (jobs.php, contacts.php, messages.php vb.) yeni design token'ları
+  otomatik miras alıyor (ortak CSS'ten geliyor) ama sayfa-özel kompozisyon/yoğunluk iyileştirmesi
+  görmedi — ayrı, kademeli bir iş olarak planlanmalı.
+
 ## Bilinçli olarak ERTELENMİŞ (kullanıcıya danışılmadan yapılmayacak)
 - Bildirim id'lerinde sahiplik kontrolü eksikliğinin (IDOR, düşük risk) kapatılması — bkz.
   `KNOWN_BUGS.md`. Düşük öncelikli ama net bir düzeltme var, `PROJECT_RULES.md`'nin "Bug Fix"

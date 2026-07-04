@@ -24,14 +24,19 @@ gerçekten çalışır durumda olduğu ayrıca doğrulanmamıştır (bkz. `memor
 
 ## Current Development Version
 **v1.1.0-dev** (primac.tr) — ortam ayrımından SONRAKİ ilk geliştirme turu
-İçerik (bb8a710'dan SONRA yapılan, henüz DEV'de test aşamasında olan değişiklikler): "İşlerim"/
-"Görevlerim" terim standardizasyonu, "Kendime İş Ekle" özelliği, emoji paneli konumlandırma
-düzeltmesi, tek-ortam (DEV/PROD) yönetim modelinin resmileşmesi, `VERSIONING.md`/`ROADMAP.md`/
-`KNOWN_BUGS.md`/`DATABASE.md` dokümantasyon seti + **Sprint-001** (2026-07-04): Bildirimler modülünde
-sahiplik/toplu-silme güvenlik açığının kapatılması (migration 039, `notifications_lib.php`, yeni
-`user_notification_status` tablosu), İşlerim/İş Ekle/Kendime İş Ekle'de küçük tutarlılık
-düzeltmeleri. Detay → `CHANGELOG.md` "Sprint-001". Henüz onaylanmadı, commit edilmedi, PROD'a
-gönderilmedi, release paketi hazırlanmadı (kullanıcı bu sprintte açıkça istemedi).
+İçerik (bb8a710'dan SONRA yapılan değişiklikler): "İşlerim"/"Görevlerim" terim standardizasyonu,
+"Kendime İş Ekle" özelliği, emoji paneli konumlandırma düzeltmesi, tek-ortam (DEV/PROD) yönetim
+modelinin resmileşmesi, `VERSIONING.md`/`ROADMAP.md`/`KNOWN_BUGS.md`/`DATABASE.md` dokümantasyon
+seti + **Sprint-001** (2026-07-04): Bildirimler modülünde sahiplik/toplu-silme güvenlik açığının
+kapatılması (migration 039, `notifications_lib.php`, yeni `user_notification_status` tablosu),
+İşlerim/İş Ekle/Kendime İş Ekle'de küçük tutarlılık düzeltmeleri — **primac.tr'de fiilen test
+edildi ve onaylandı, `0ba36da` ile lokal checkpoint commit atıldı** (push yok, release yok).
++ **UI/UX Sprinti** (2026-07-04): mobil ana ekran + paylaşılan toolbar'a design token sistemi,
+global arama çubuğu, kart tutarlılığı/yoğunluk iyileştirmesi, bildirim test alanının admin'e
+taşınması. Detay → `CHANGELOG.md`. **Lokal checkpoint commit ile kaydedildi** (bu oturumun sonu,
+"END OF SESSION MODE"), primac.tr'de görsel doğrulama için DEV test paketi (`guncelleme.zip`,
+`~/Desktop/PRIMAC-GUNCELLEME/`) tazelendi — push yok, release yok, PROD'a gönderilmedi. Görsel
+kontrol kullanıcı tarafından yapılacak, sonraki adım ona bağlı.
 
 ## Current Production Version
 **v1.0.0** (acanstr.com/ots)

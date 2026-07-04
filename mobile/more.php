@@ -1,14 +1,10 @@
 <?php require_once 'common.php'; topx('Menü'); ?>
-<div class="grid">
-  <?php card('Ara','İş, cari, banka/kart, işlem, stok, personel…','🔍','search.php','blue'); ?>
-</div>
-
-<div class="panel" style="text-align:center">
-  <b>🔔 Bildirim & Ses</b>
-  <button class="btn dark" style="width:100%;padding:13px;margin-top:8px" onclick="var m=window.ACANS_TEST?ACANS_TEST():'hazır değil';document.getElementById('tres').textContent=m;">Bildirimleri Aç / Test Et</button>
-  <p id="tres" class="small" style="margin-top:8px;color:#4ade80"></p>
-</div>
-
+<?php
+/* "Ara" kartı ve "Bildirim & Ses" test paneli buradan kaldırıldı (2026-07-04, UI/UX sprinti):
+   arama artık her sayfanın üst toolbar'ında (bkz. common.php::topx()) global olarak mevcut;
+   bildirim test/kurulum alanı ise geliştirme/teşhis amaçlı olduğu için sadece admin'in gördüğü
+   "Genel Sistem Yönetimi" grubuna taşındı (aşağıda, user_can('users') şartıyla). */
+?>
 <?php
 /* Taksonomi — web sol menüyle (layout_top.php) hizalı: Personel İş Takip Yönetimi, Muhasebe
    İşlemleri, Mesajlar, Raporlama, Genel Sistem Yönetimi (2026-07-03: önce 6 gruptan 4'e
@@ -123,7 +119,6 @@
   <?php
   card('Talep Aç','Yönetime talep gönder','📨','request_new.php','orange');
   card('Profil','Şifre & hesap','👤','profile.php','blue');
-  card('Bildirim Kur','Push bildirim kurulum & teşhis','🔔','push_enable.php','yellow');
   card('Web Sürümü','Masaüstü Sürüm','🖥','../dashboard.php?web=1','gray');
   if(user_can('users')) {
     card('Kullanıcılar','Yetki yönetimi','👥','users.php','purple');
@@ -131,8 +126,17 @@
     card('WhatsApp Ayarları','Gateway kurulumu','📱','wa_settings.php','gray');
     card('Logo / Marka','Marka ayarları','🎨','brand_settings.php','gray');
     card('Veri Temizleme','Canlıya hazırlık','🧹','temizle_veri.php','red');
+    card('Bildirim Kur','Push bildirim kurulum & teşhis','🔔','push_enable.php','yellow');
   }
   card('Çıkış Yap','Oturumu kapat','🚪','../logout.php','red');
   ?>
 </div>
+<?php if(user_can('users')): ?>
+<div class="panel" style="text-align:center">
+  <b>🔔 Bildirim & Ses (Test)</b>
+  <p class="small" style="margin-top:4px">Sadece yöneticiler görür — geliştirme/teşhis amaçlıdır.</p>
+  <button class="btn dark" style="width:100%;padding:13px;margin-top:8px" onclick="var m=window.ACANS_TEST?ACANS_TEST():'hazır değil';document.getElementById('tres').textContent=m;">Bildirimleri Aç / Test Et</button>
+  <p id="tres" class="small" style="margin-top:8px;color:#4ade80"></p>
+</div>
+<?php endif; ?>
 <?php botx(); ?>
