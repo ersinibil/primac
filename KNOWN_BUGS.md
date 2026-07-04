@@ -36,6 +36,17 @@ Tam denetim raporu (mimari/performans/UX/veri modeli dahil) → System Audit Art
   `updated_by` kolonları eklendi, `task_new.php`/`mobile/task_new.php`/`mytask_new.php`/
   `mobile/mytask_new.php` artık `created_by` dolduruyor — admin'in atadığı iş ile kullanıcının kendine
   eklediği iş artık ayırt edilebilir.
+- **YÜKSEK — Web'den Satın Alma tamamen kırıktı (LOCAL QA MODE'da bulundu, 2026-07-04, henüz commit
+  edilmedi)** — `stock_lib.php:84` ve `purchase.php:73,77`'de kullanılan `mm()` fonksiyonu SADECE
+  `mobile/common.php`'de tanımlıydı; web'den (`purchase.php`) her satın alma denemesi "Call to
+  undefined function mm()" ile çöküp transaction rollback oluyordu — hiçbir stok/finans kaydı
+  yazılmıyordu, kullanıcıya da hata mesajı dışında bir ipucu verilmiyordu. Bugünkü sprintten ÖNCE de
+  vardı (mobil akış her zaman sorunsuzdu, mm() orada tanımlıydı). `money()` (boot.php, her iki
+  platformda evrensel) ile değiştirilerek kapatıldı.
+- **DÜŞÜK — Muhasebe'de boş tarih SQL hatası (LOCAL QA MODE'da bulundu, 2026-07-04, henüz commit
+  edilmedi)** — `accounting.php`/`accounting_lib.php`/`mobile/accounting.php`'de
+  `$_POST['entry_date'] ?? date('Y-m-d')` deseni boş string'i (NULL değil) yakalamıyordu, tarih alanı
+  boş gönderilirse "Incorrect date value" SQL hatası veriyordu. `??` yerine `?:` ile düzeltildi.
 - **YÜKSEK — `mobile/task_view.php` IDOR (SPRINT-003, 2026-07-04, henüz commit edilmedi)** —
   `task_status` güncellemesi `WHERE id=?` kullanıyordu, sahiplik kontrolü (`AND personnel_id=?`)
   yoktu; herhangi bir giriş yapmış kullanıcı `?id=` değiştirerek başkasının görev durumunu

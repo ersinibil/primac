@@ -48,7 +48,7 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['save_entry'])){
         $vatRate=(float)($_POST['vat_rate'] ?? 0);
         $vc=acc_calc_vat($rawAmount,$vatMode,$vatRate);
         $amount=$vc['amount'];
-        $date=$_POST['entry_date'] ?? date('Y-m-d');
+        $date=$_POST['entry_date'] ?: date('Y-m-d');
         $catId=(int)($_POST['category_id']??0) ?: null;
         $desc=trim($_POST['description'] ?? '');
         $refNo=trim($_POST['reference_no'] ?? '');

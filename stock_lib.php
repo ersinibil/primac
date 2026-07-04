@@ -81,7 +81,7 @@ function stock_add_purchase($pdo, $supplier, $pname, $qty, $price, $paymentMetho
         return [
             'ok' => true,
             'item_id' => $pid,
-            'message' => $pname.' alındı: '.mm($total).' ('.$paymentMethod.')'.($isNew?' · yeni stok kartı açıldı':''),
+            'message' => $pname.' alındı: '.money($total).' ('.$paymentMethod.')'.($isNew?' · yeni stok kartı açıldı':''),
             'total' => $total,
             'is_new' => $isNew
         ];

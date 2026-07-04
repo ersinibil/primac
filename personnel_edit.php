@@ -140,7 +140,7 @@ if(!$p){
 
 $tasks=[];
 try{
-    $ts=$pdo->prepare("SELECT t.*, j.job_no, j.title job_title FROM tasks t LEFT JOIN jobs j ON j.id=t.job_id WHERE t.personnel_id=? ORDER BY t.id DESC LIMIT 20");
+    $ts=$pdo->prepare("SELECT t.*, j.job_no, j.title job_title FROM tasks t LEFT JOIN jobs j ON j.id=t.job_id WHERE t.personnel_id=? AND t.deleted_at IS NULL ORDER BY t.id DESC LIMIT 20");
     $ts->execute([$id]);
     $tasks=$ts->fetchAll();
 }catch(Throwable $e){}
@@ -162,7 +162,7 @@ try{
     }
 }catch(Throwable $e){}
 try{
-    $tsd=$pdo->prepare("SELECT title, due_date, status FROM tasks WHERE personnel_id=? AND due_date IS NOT NULL ORDER BY due_date ASC LIMIT 20");
+    $tsd=$pdo->prepare("SELECT title, due_date, status FROM tasks WHERE personnel_id=? AND due_date IS NOT NULL AND deleted_at IS NULL ORDER BY due_date ASC LIMIT 20");
     $tsd->execute([$id]);
     foreach($tsd->fetchAll() as $t){
         $calendarItems[]=['tip'=>'Görev','baslik'=>$t['title'],'tarih'=>$t['due_date'],'durum'=>$t['status']];
@@ -224,7 +224,7 @@ if(!array_key_exists($tab,$tabLabels)) $tab='genel';
 <div class="card"><small>Rol</small><strong><?=h($p['role'] ?: '-')?></strong></div>
 <div class="card"><small>Çalışma</small><strong><?=h($p['work_type'] ?: '-')?></strong></div>
 <div class="card"><small>Durum</small><strong><?=$p['active']?badge('Aktif','green'):badge('Pasif','red')?></strong></div>
-<div class="card"><small>Açık Görev</small><strong><?=safe_count("SELECT COUNT(*) c FROM tasks WHERE personnel_id=".(int)$id." AND status!='Tamamlandı'")?></strong></div>
+<div class="card"><small>Açık Görev</small><strong><?=safe_count("SELECT COUNT(*) c FROM tasks WHERE personnel_id=".(int)$id." AND status!='Tamamlandı' AND deleted_at IS NULL")?></strong></div>
 </div>
 
 <div class="ptabs">

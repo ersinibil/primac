@@ -30,13 +30,13 @@ try{
         $pid=(int)$r['id'];
         $openTasks=0;
         try{
-            $s=db()->prepare("SELECT COUNT(*) c FROM tasks WHERE personnel_id=? AND status!='Tamamlandı'");
+            $s=db()->prepare("SELECT COUNT(*) c FROM tasks WHERE personnel_id=? AND status!='Tamamlandı' AND deleted_at IS NULL");
             $s->execute([$pid]);
             $openTasks=(int)($s->fetch()['c'] ?? 0);
         }catch(Throwable $e){}
         $todayTasks=0;
         try{
-            $s=db()->prepare("SELECT COUNT(*) c FROM tasks WHERE personnel_id=? AND due_date=CURDATE()");
+            $s=db()->prepare("SELECT COUNT(*) c FROM tasks WHERE personnel_id=? AND due_date=CURDATE() AND deleted_at IS NULL");
             $s->execute([$pid]);
             $todayTasks=(int)($s->fetch()['c'] ?? 0);
         }catch(Throwable $e){}

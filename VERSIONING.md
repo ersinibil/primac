@@ -39,8 +39,11 @@ yapılmadı** — bir sonraki oturumun ilk işi.
 "Personel İş Takip Yönetimi" adının aslında personel yönetmediği bulundu, üretim/iş sistemi
 TAŞINMADI, sadece etiket düzeltildi), Finans bağlam-duyarlı Gider Türü. Yan ürün olarak 2 açık/bug
 daha kapatıldı: `mobile/task_view.php` IDOR, `accounting.php` sihirbaz JS scope hatası. Detay →
-`CHANGELOG.md`. **php -l temiz, yerel ortamda kısmen doğrulandı (İşlerim), primac.tr'de HENÜZ test
-edilmedi, HENÜZ commit edilmedi** — SECURITY SPRINT-001'den ayrı, kendi onay/test turunu bekliyor.
+`CHANGELOG.md`. **LOCAL QA MODE'da 7/7 modül yerel MariaDB'de uçtan uca test edildi, bulunan 4 sorun
+(web Satın Alma'nın `mm()` hatasıyla tamamen kırık olması, görev arama route'u, personel soft-delete
+sayaç filtresi, boş-tarih SQL hatası) düzeltilip yeniden doğrulandı.** `php -l` temiz. **primac.tr'de
+HENÜZ test edilmedi, HENÜZ commit edilmedi** — SECURITY SPRINT-001'den ayrı, kendi onay/test turunu
+bekliyor.
 İçerik (bb8a710'dan SONRA yapılan değişiklikler): "İşlerim"/"Görevlerim" terim standardizasyonu,
 "Kendime İş Ekle" özelliği, emoji paneli konumlandırma düzeltmesi, tek-ortam (DEV/PROD) yönetim
 modelinin resmileşmesi, `VERSIONING.md`/`ROADMAP.md`/`KNOWN_BUGS.md`/`DATABASE.md` dokümantasyon

@@ -3,8 +3,37 @@
 Bu dosya `memory/features.md`'nin (tam gerekçe/kod detayıyla) kök dizindeki kısa özetidir — hızlı
 taramak için. Detaylı "neden böyle yapıldı" analizleri için `memory/features.md`'ye bakın.
 
-## UI/UX İyileştirmeleri + SPRINT-003 (2026-07-04, DEV — 7 ajanla tamamlandı, henüz commit edilmedi,
-primac.tr'de HENÜZ test edilmedi — sadece php -l + yerel MariaDB test ortamında kısmi doğrulama yapıldı)
+## LOCAL QA MODE + düzeltmeler (2026-07-04, DEV — yerel MariaDB'de 7 modülün tamamı uçtan uca test
+edildi, 4 bulgu bulunup düzeltildi ve yeniden doğrulandı; primac.tr'de HENÜZ test edilmedi)
+Aşağıdaki "UI/UX İyileştirmeleri + SPRINT-003" paketinin 7 maddesi yerel (primac.tr'ye dokunmadan)
+MariaDB test ortamında gerçek HTTP istekleriyle test edildi. 6/7 madde ilk turda PASS, 2 madde
+(#3 Satın Alma, #4 Global Arama) bulgu içeriyordu; ayrıca #6 Personel Kart+Sekme'de bir sayaç
+tutarsızlığı bulundu. Bulunan 4 sorun düzeltildi ve tekrar test edilerek doğrulandı:
+1. **[YÜKSEK, pre-existing]** `stock_lib.php:84` + `purchase.php:73,77` — `mm()` fonksiyonu (sadece
+   `mobile/common.php`'de tanımlı) web bağlamında "Call to undefined function" hatası veriyordu, web'den
+   HER satın alma denemesi çöküp transaction rollback oluyordu (hiçbir kayıt yazılmıyordu). `money()`
+   (boot.php, her iki platformda da her zaman erişilebilir) ile değiştirildi — `mm()` zaten sadece
+   `money()`'e delege ettiği için davranış birebir aynı kaldı. Bu, bugünkü sprintten ÖNCE de var olan
+   bir hataydı, İşlerim'in yeni "Satın Alma inline ürün ekleme" testine takılarak ortaya çıktı.
+2. **[ORTA]** `search.php:291` — görev arama sonuçları artık yeni oluşturulan `task_view.php?id=`'e
+   gidiyor (önceden `job_view.php`'ye ya da genel `tasks.php`'ye gidiyordu — İşlerim ve Global Arama
+   ajanlarının paralel çalışıp birbirinin yeni sayfasından haberdar olmamasından kaynaklanıyordu; mobil
+   taraf zaten doğruydu, sadece web etkilenmişti).
+3. **[ORTA]** `personnel.php` (kart sayaçları) + `personnel_edit.php` (Görevler/Takvim sekmeleri, Genel
+   sekmedeki sayaç) — `tasks` sorgularına `deleted_at IS NULL` eklendi. Öncesinde soft-delete edilmiş
+   bir görev hâlâ "Açık Görev" sayısına dahil ediliyor ve Görevler sekmesinde listeleniyordu (test:
+   1 silinmiş görev sayacı 2 gösteriyordu, düzeltmeden sonra doğru şekilde 1'e döndü).
+4. **[DÜŞÜK, pre-existing]** `accounting.php:51`, `accounting_lib.php:88`, `mobile/accounting.php:52`
+   — `$_POST['entry_date'] ?? date('Y-m-d')` deseni boş string'i (NULL değil) yakalamıyordu, tarih
+   alanı boş gönderilirse "Incorrect date value" SQL hatası veriyordu. `??` yerine `?:` kullanılarak
+   düzeltildi (boş string de bugünün tarihine/mevcut kayda düşüyor).
+
+`php -l` her 8 dosyada temiz, tüm 4 düzeltme yerel ortamda tekrar canlı test edilip doğrulandı
+(hata logları temiz). Detaylı test raporu (7 madde, senaryo/beklenen/PASS-FAIL/risk) bu oturumun
+sohbet geçmişinde mevcuttur.
+
+## UI/UX İyileştirmeleri + SPRINT-003 (2026-07-04, DEV — 7 ajanla tamamlandı, primac.tr'de HENÜZ
+test edilmedi — yerel MariaDB'de tam test edildi, yukarıdaki bölüme bakın)
 Kullanıcının verdiği iki ayrı talimat (4 maddelik UI/UX isteği + "SPRINT-003" mimari revizyon isteği)
 7 bağımsız işe bölünüp paralel `ots-feature-dev` ajanlarıyla uygulandı:
 1. **Üst Menü** — `layout_top.php`'de "Takvim" linki artık Komuta Merkezi/Notlarım ile aynı seviyede

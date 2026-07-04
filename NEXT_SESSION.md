@@ -5,11 +5,10 @@ hızlı giriş yapmak için var. Detay için ilgili dosyalara bakın (`CHANGELOG
 `KNOWN_BUGS.md`, `VERSIONING.md`, `memory/*.md`).
 
 ## Bir Sonraki Oturumun İlk Önceliği
-**UI/UX İyileştirmeleri + SPRINT-003 paketinin primac.tr'de test edilip commit edilmesi.** Bu paket
-(7 iş: Üst Menü, Notlarım Düzenle, Satın Alma inline ürün, Global Arama, İşlerim Düzenle/Detay/Sil,
-Personel kart+sekme, Finans bağlam-duyarlı Gider Türü) `php -l` temiz ve yerel MariaDB test
-ortamında kısmen doğrulandı (İşlerim akışı uçtan uca test edildi) ama **primac.tr'nin kendisinde
-hiç test edilmedi ve henüz commit edilmedi**. İkinci öncelik: SECURITY SPRINT-001'in primac.tr'de
+**UI/UX İyileştirmeleri + SPRINT-003 paketinin primac.tr'de smoke test edilip DEV'e onaylanması.**
+Bu paket (7 iş) artık **yerel MariaDB ortamında 7/7 modül uçtan uca test edildi, bulunan 4 sorun
+düzeltilip yeniden doğrulandı** (bkz. `CHANGELOG.md` "LOCAL QA MODE + düzeltmeler") — ama
+**primac.tr'nin kendisinde hiç test edilmedi**. İkinci öncelik: SECURITY SPRINT-001'in primac.tr'de
 smoke test edilmesi (kod zaten commit edildi, `d511fad` — sadece canlı doğrulama eksik).
 
 ## Bugün Tamamlanan Çalışmalar (2026-07-04)
@@ -20,6 +19,11 @@ smoke test edilmesi (kod zaten commit edildi, `d511fad` — sadece canlı doğru
   sınırlı (yeni migration gerekmedi, mevcut `permissions` JSON altyapısı kullanıldı).
   **Yerel MariaDB test ortamında (primac.tr'ye dokunmadan, izole) uçtan uca doğrulandı** — 8/8
   senaryo PASS. **primac.tr'nin kendisinde henüz smoke test yapılmadı.**
+- **LOCAL QA MODE** (7 modül yerelde uçtan uca test edildi, 4 bulgu düzeltildi — bkz. `CHANGELOG.md`):
+  en önemlisi, web'den **Satın Alma tamamen kırıktı** (`mm()` fonksiyonu web'de tanımsız, her satın
+  alma denemesi transaction rollback ile sessizce başarısız oluyordu) — bu, bugünkü sprintten ÖNCE de
+  var olan bir hataydı, şimdi düzeltildi. Ayrıca görev arama route'u, personel modülünün soft-delete
+  sayaç filtresi ve boş-tarih SQL hatası düzeltildi.
 - **UI/UX İyileştirmeleri + SPRINT-003** (7 ajanla tamamlandı, HENÜZ commit edilmedi): Detay →
   `CHANGELOG.md` "UI/UX İyileştirmeleri + SPRINT-003" bölümü. Özetle: Üst Menü, Notlarım Düzenle,
   Satın Alma inline ürün, Global Arama (5 yeni modül), İşlerim (Düzenle/Detay/Sil + soft-delete,

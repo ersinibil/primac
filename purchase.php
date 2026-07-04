@@ -70,11 +70,11 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['action']) && $_POST['act
                 $sn=$pdo->prepare("SELECT name FROM contacts WHERE id=?");
                 $sn->execute([$supplier]);
                 $sname=$sn->fetch()['name']??'';
-                activity_log('Satın Alma','Alış',$sname.' · '.implode(', ',$descParts).' '.mm($finResult['total']),$pm,'purchase',$firstItemId,'purchase.php','🛒');
+                activity_log('Satın Alma','Alış',$sname.' · '.implode(', ',$descParts).' '.money($finResult['total']),$pm,'purchase',$firstItemId,'purchase.php','🛒');
             }
         }catch(Throwable $e){}
 
-        $ok=implode(', ',$descParts).' alındı: '.mm($finResult['total']).($finResult['vat_amount']>0?' (KDV: '.mm($finResult['vat_amount']).')':'').' ('.$pm.')';
+        $ok=implode(', ',$descParts).' alındı: '.money($finResult['total']).($finResult['vat_amount']>0?' (KDV: '.money($finResult['vat_amount']).')':'').' ('.$pm.')';
     }catch(Throwable $e){
         $er=$e->getMessage();
     }

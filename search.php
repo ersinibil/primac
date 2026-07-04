@@ -288,7 +288,7 @@ $pdo = db();
     <div style="font-weight:900;font-size:16px;margin-bottom:12px">✅ Görevler (<?=count($tasks)?>)</div>
     <table style="width:100%;border-collapse:collapse">
     <?php foreach($tasks as $t):
-        $taskHref = $t['job_id'] ? "job_view.php?id=".(int)$t['job_id'] : "tasks.php";
+        $taskHref = "task_view.php?id=".(int)$t['id'];
     ?>
     <tr style="border-bottom:1px solid #f1f5f9">
         <td style="padding:10px 8px">
