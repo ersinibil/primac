@@ -56,7 +56,7 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['set_qstatus']) && (int)(
 }
 
 // Teklif düzenle
-if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['edit_quote']) && is_admin()){
+if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['edit_quote']) && can_edit_delete()){
   $eid=(int)($_POST['edit_id']??0);
   if($eid){
     try{
@@ -141,7 +141,7 @@ if($id && !$editMode){
 .paper.lh>.lhbody{position:relative!important;z-index:1}
 .pdfmode .paper.lh{aspect-ratio:auto}
 </style>
-<div class="panel-head"><h1>Teklif <?=h($q['quote_no'])?></h1><div class="actions noprint"><a class="btn secondary" href="teklif.php">Liste</a><?php if(is_admin()): ?><a class="btn" href="teklif.php?id=<?=$id?>&edit=1" style="background:#0369a1">✏️ Düzenle</a><?php endif; ?><?=delete_button('quote',$id)?></div></div>
+<div class="panel-head"><h1>Teklif <?=h($q['quote_no'])?></h1><div class="actions noprint"><a class="btn secondary" href="teklif.php">Liste</a><?php if(can_edit_delete()): ?><a class="btn" href="teklif.php?id=<?=$id?>&edit=1" style="background:#0369a1">✏️ Düzenle</a><?php endif; ?><?=delete_button('quote',$id)?></div></div>
 
 <?php $lh = ($fi && !empty($fi['letterhead']) && is_file(__DIR__.'/'.$fi['letterhead'])) ? $fi['letterhead'] : ''; ?>
 <div id="repArea" style="max-width:780px;margin:0 auto">
@@ -224,7 +224,7 @@ if($id && !$editMode){
 <?php require __DIR__.'/layout_bottom.php'; exit; }
 
 /* ---------- DÜZENLE ---------- */
-if($editMode && is_admin()){
+if($editMode && can_edit_delete()){
   $q=null; try{ $s=$pdo->prepare("SELECT * FROM quotes WHERE id=?"); $s->execute([$id]); $q=$s->fetch(); }catch(Throwable $e){}
   if(!$q){ echo '<div class="alert">Teklif bulunamadı.</div>'; require __DIR__.'/layout_bottom.php'; exit; }
   $items=[]; try{ $it=$pdo->prepare("SELECT * FROM quote_items WHERE quote_id=? ORDER BY id"); $it->execute([$id]); $items=$it->fetchAll(); }catch(Throwable $e){}
@@ -341,18 +341,19 @@ addRow(); calc();
 <div class="panel-head"><h1>Teklifler</h1><a class="btn" href="teklif.php?new=1">+ Yeni Teklif</a></div>
 <section class="panel">
 <table>
-<thead><tr><th>No</th><th>Müşteri</th><th>Tarih</th><th>Durum</th><th style="text-align:right">Tutar</th></tr></thead>
+<thead><tr><th>No</th><th>Müşteri</th><th>Tarih</th><th>Durum</th><th style="text-align:right">Tutar</th><th></th></tr></thead>
 <tbody>
 <?php
 try{
   $rows=$pdo->query("SELECT id,quote_no,customer_name,total,status,quote_date FROM quotes ORDER BY id DESC LIMIT 200")->fetchAll();
-  if(!$rows) echo '<tr><td colspan="5" class="muted">Henüz teklif yok.</td></tr>';
+  if(!$rows) echo '<tr><td colspan="6" class="muted">Henüz teklif yok.</td></tr>';
   foreach($rows as $r){
     echo '<tr style="cursor:pointer" onclick="location.href=\'teklif.php?id='.(int)$r['id'].'\'">';
     echo '<td>'.h($r['quote_no']).'</td><td>'.h($r['customer_name']?:'—').'</td><td>'.h($r['quote_date']).'</td>';
-    echo '<td>'.h($r['status']).'</td><td style="text-align:right;font-weight:700">'.money($r['total']).'</td></tr>';
+    echo '<td>'.h($r['status']).'</td><td style="text-align:right;font-weight:700">'.money($r['total']).'</td>';
+    echo '<td style="white-space:nowrap"><a class="btn ghost" href="teklif.php?id='.(int)$r['id'].'" onclick="event.stopPropagation()">Detay</a></td></tr>';
   }
-}catch(Throwable $e){ echo '<tr><td colspan="5"><div class="alert">'.h($e->getMessage()).'</div></td></tr>'; }
+}catch(Throwable $e){ echo '<tr><td colspan="6"><div class="alert">'.h($e->getMessage()).'</div></td></tr>'; }
 ?>
 </tbody>
 </table>

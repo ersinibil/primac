@@ -1,12 +1,58 @@
 # ROADMAP.md — Açık Maddeler ve Bekleyen Kararlar
 
-## Web Push bildirimi — canlıda VAPID doğrulaması gerekiyor (2026-07-04, SPRINT CLOSE)
+## Sıradaki sıra (2026-07-05'te kullanıcı tarafından netleştirildi)
+UX/STABILITY PATCH-002 DEV QA PASS aldı (bkz. `CHANGELOG.md`). Production'a deploy YAPILMAYACAK —
+ayrı "DEPLOY MODE" komutu gerekir. Bir sonraki oturumun sırası:
+1. **iPhone Safari gerçek cihaz testi** — mobil mesajlaşma boşluğu (CONDITIONAL PASS) ve PWA Push
+   arka plan teslimatı (SERVER-SIDE PASS) için tek eksik doğrulama bu — aşağıdaki iki maddeye bakın.
+2. **SYSTEM AUDIT** — büyük sprint sonrası standart denetim (bkz. `PROJECT_RULES.md` "Sürekli Kalite
+   Denetimi Standardı").
+3. **SECURITY SPRINT-003** — `KNOWN_BUGS.md`'deki açık güvenlik bulguları (brute-force,
+   accounting.php XSS, users.php rol yükseltme, is_admin() bayatlığı, session fixation vb.).
+
+## WhatsApp gelen mesaj takibi — ayrı WHATSAPP INTEGRATION SPRINT (2026-07-05)
+Bu, UX/STABILITY PATCH-002 kapsamında bilinçli olarak dışarıda bırakıldı ve kendi başına bir sprint
+olarak planlanacak (yeni webhook alıcı + yeni konuşma tablosu = yeni mimari, kullanıcı onayı
+gerektirir). Detay için aşağıdaki "WhatsApp — gelen mesajların takibi" maddesine bakın — bu madde
+artık ayrı bir sprint/proje başlığı olarak ele alınacak, rastgele bir sonraki turun kapsamına
+sessizce eklenmeyecek.
+
+## Yerel QA notu — migrate.php doğrudan çalıştırılmamalı (2026-07-05)
+`migrate.php` başarılı migration sonrası KENDİNİ SİLİYOR (production güvenlik önlemi, bilinçli
+tasarım). UX/STABILITY PATCH-002'nin QA MODE turunda bu yerel çalışma dizininde de tetiklendi ve
+dosya silindi — `git restore migrate.php` ile geri getirildi, veri kaybı olmadı. **Bundan sonraki
+her yerel QA turunda migrate.php'nin bir KOPYASI üzerinden çalıştırılması gerekiyor** (örn.
+`cp migrate.php migrate_qa_copy.php` ile), orijinal dosya asla doğrudan yerel sunucuya karşı
+çalıştırılmamalı.
+
+## Finansal hatırlatmalar — ileride ayrı "Hatırlatmalar" modülü (2026-07-05, UX REFINEMENT PATCH)
+Finansal vadeler, çek/senet hatırlatmaları ve ödeme günleri ileride ayrı Hatırlatmalar modülü altında
+toplanacaktır. Bu turda `checks_notes.php`/`checks_notes_lib.php` mimarisine ve mevcut davranışına
+dokunulmadı — sadece bu karar kayıt altına alındı, kullanıcı onayı olmadan uygulanmayacak.
+
+## Web Push bildirimi — canlıda VAPID doğrulaması gerekiyor (2026-07-04, SPRINT CLOSE; 2026-07-05
+UX/STABILITY PATCH-002'de yeniden gündeme geldi — Safari'de arka planda bildirim gelmiyor şikayeti)
 Web push bildirimi (`sw.js`, `layout_bottom.php`) yerel ortamda gerçek Chromium ile uçtan uca
 doğrulandı (abonelik + teslimat başarılı) — ancak bu test `push_lib.php`'nin fallback (kod içi
 sabit) VAPID anahtarlarıyla çalıştı. primac.tr'nin GERÇEK sunucu `config.php`'sinde
 `vapid_public`/`vapid_private` tanımlı mı, `gmp`/`bcmath` PHP eklentisi var mı — bunlar sadece canlı
 sunucudan doğrulanabilir (bkz. `memory/deploy.md` "EYLEM GEREKİYOR" kaydı, 2026-07-03'ten beri açık).
 Kullanıcının primac.tr'de gerçek bir cihazdan bildirim izni verip test etmesi gerekiyor.
+**2026-07-05 güncellemesi**: `push_to_user()`'ın önceden TÜM hataları sessizce yuttuğu bulundu
+(loglama yoktu) — `push_lib.php`'ye `push_log()` eklendi, artık başarısız bir push denemesi
+`push_debug.log`'da görülebilir (repoya girmez, `.gitignore`'da `*.log` zaten var). Bu, sunucu
+erişimi olmadan kesin teşhis yapılamamasının nedenini gidermez ama BİR SONRAKİ arızada gerçek hata
+mesajını (VAPID mi, eklenti mi, ağ mı) sağlayacak.
+
+## WhatsApp — gelen mesajların takibi (2026-07-05, UX/STABILITY PATCH-002'de tespit edildi)
+Kullanıcı isteği: WhatsApp konuşmalarının (gönderilen+gelen, geçmiş, son mesaj, durum) sistem
+içinde web-WhatsApp benzeri görülebilmesi. Tespit: mevcut entegrasyon (`share_lib.php`, UltraMsg
+gateway) SADECE gönderim yapıyor — hiçbir webhook alıcı endpoint'i, hiçbir konuşma/mesaj geçmişi
+tablosu yok. Bu bir API kısıtı DEĞİL (UltraMsg gelen mesaj webhook'unu destekliyor) — sadece bu
+projede hiç uygulanmamış. Gerçekleştirmek için: (1) UltraMsg webhook URL'i alıp yeni bir alıcı
+endpoint (`wa_webhook.php` benzeri) yazmak, (2) yeni bir `wa_messages`/konuşma tablosu (migration),
+(3) bir liste+detay ekranı. Üçü de yeni mimari/yeni tablo = kullanıcı onayı olmadan
+BAŞLANMAYACAK, bu turda sadece tespit yapıldı.
 
 ## Finans Gider Türü sihirbazı — kategori raporu açık noktası (2026-07-04)
 "Ne kaydediyorsun?" sihirbazının context-aware Gider Türü'ü `category_id` yerine `payment_type`

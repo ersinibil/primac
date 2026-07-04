@@ -65,7 +65,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 $sn=$pdo->prepare("SELECT name FROM contacts WHERE id=?");
                 $sn->execute([$supplier]);
                 $sname=$sn->fetch()['name']??'';
-                activity_log('Satın Alma','Alış',$sname.' · '.implode(', ',$descParts).' '.mm($finResult['total']),$pm,'purchase',$firstItemId,'mobile/purchase.php','🛒');
+                activity_log('Satın Alma','Alış',$sname.' · '.implode(', ',$descParts).' '.mm($finResult['total']),$pm,'purchase',$firstItemId,'purchase.php','🛒');
             }
         }catch(Throwable $e){}
 

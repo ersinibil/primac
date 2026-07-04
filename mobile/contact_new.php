@@ -39,7 +39,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 trim($_POST['notes'] ?? '')
             ]);
         $nid=(int)$pdo->lastInsertId();
-        try{ if(function_exists('activity_log')) activity_log('Cari','Yeni',$name,$_POST['type']??'','contact',$nid,'mobile/contact_view.php?id='.$nid,'👥'); }catch(Throwable $e){}
+        try{ if(function_exists('activity_log')) activity_log('Cari','Yeni',$name,$_POST['type']??'','contact',$nid,'contact_view.php?id='.$nid,'👥'); }catch(Throwable $e){}
         $ok=$name.' eklendi.';
     }catch(Throwable $e){ $er=$e->getMessage(); }
 }

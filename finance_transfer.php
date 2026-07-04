@@ -30,7 +30,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         $a->execute([$from]); $fromName=$a->fetch()['name'] ?? 'Kaynak';
         $a->execute([$to]); $toName=$a->fetch()['name'] ?? 'Hedef';
 
-        activity_log('Finans','Transfer','Hesaplar arası transfer yapıldı',$fromName.' → '.$toName.' · '.money($amount),'finance',$fmId,'finance_accounts.php','↔️');
+        activity_log('Finans','Transfer','Hesaplar arası transfer yapıldı',$fromName.' → '.$toName.' · '.money($amount),'finance',$fmId,base_url().'finance_accounts.php','↔️');
 
         header("Location: finance_accounts.php");
         exit;

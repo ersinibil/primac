@@ -3,6 +3,131 @@
 Bu dosya `memory/features.md`'nin (tam gerekçe/kod detayıyla) kök dizindeki kısa özetidir — hızlı
 taramak için. Detaylı "neden böyle yapıldı" analizleri için `memory/features.md`'ye bakın.
 
+## UX / STABILITY PATCH-002 — DEV QA PASS (2026-07-05, yerel QA MODE ile doğrulandı)
+Yerel `ots_sectest` MariaDB + `php -S` + gerçek HTTP istekleriyle (admin ve `edit_delete` yetkili
+admin-olmayan test kullanıcısı) 7 maddenin tamamı tek tek test edildi. Sonuç:
+- **Son İşlemler routing**: PASS (Cari/Stok/Satış/Satın Alma/Personel/Cari-belge, web+mobil, içerik
+  doğrulamalı).
+- **Teklif liste/detay**: PASS (Detay linki + admin-olmayan `edit_delete` yetkili kullanıcı gerçekten
+  düzenleyip kaydedebildi).
+- **Çek/Senet çift kayıt**: PASS (POST artık 302 redirect veriyor, F5 simülasyonunda tek kayıt kaldı,
+  takvimde tek görünüyor).
+- **Takvim günlük filtre**: PASS (bir gün seçiliyken diğer günlerin başlığı ızgarada görünmüyor,
+  sadece rozet).
+- **Mobil Mesajlaşma boşluğu**: **CONDITIONAL PASS** — CSS özgüllük düzeltmesi (`body.chat-mode.kb`)
+  render edilen sayfada doğrulandı, üstünlüğü matematiksel olarak kesin; ancak bu ortamda gerçek
+  tarayıcı/klavye render'ı yapılamadığı için piksel-seviye görsel doğrulama YAPILAMADI —
+  **gerçek iPhone Safari cihaz testi bekliyor.**
+- **PWA Push**: **SERVER-SIDE PASS** — `push_to_user()` gerçek bir FCM aboneliğine başarıyla
+  gönderim yaptı (sunucu 201 "OK" ile kabul etti), yeni eklenen `push_log()` hem başarı hem
+  başarısızlık (410 Gone testi) senaryosunda doğru çalıştı. Ancak Safari/iOS'a özgü arka
+  plan/kapalı-uygulama teslimatı bu ortamdan (Chrome/FCM aboneliği üzerinden) test edilemedi —
+  **gerçek iPhone Safari cihaz testi bekliyor.**
+- **WhatsApp**: kapsam dışı bırakıldı (kod değişikliği yok) — gelen mesaj takibi ayrı bir
+  **WHATSAPP INTEGRATION SPRINT** olarak ele alınacak (yeni webhook + yeni tablo gerektiriyor).
+- **Yan not**: `migrate.php` yerelde çalıştırılınca kendini siliyor (production güvenlik önlemi) —
+  yerel QA sırasında silindi, `git restore` ile geri getirildi. **Bundan sonra yerel QA'da
+  migrate.php'nin bir KOPYASI üzerinden çalıştırılması gerekiyor**, orijinali üzerinde değil.
+
+FAIL yok. Kod değişikliği bu turda YAPILMADI (sadece test) — commit edilmedi, push edilmedi,
+**production'a dokunulmadı** (ayrı "DEPLOY MODE" komutu bekliyor).
+
+## UX / STABILITY PATCH-002 (2026-07-05, DEV — commit edilmedi, primac.tr'ye henüz yüklenmedi)
+Son kullanıcı testinde bulunan 7 maddelik kararlılık/navigasyon turu. DB/mimari değişikliği yok.
+1. **"Son İşlemler" — çapraz-platform kırık linkler (11 dosya)** — kök neden: birçok
+   `activity_log()` çağrısı ya web-mobil arasında farklı isimlendirilen sayfalara (`kasa.php` ↔
+   `finance.php`, `personnel_view.php` sadece mobilde) BARE (öneksiz) path ile ya da gereksiz
+   `mobile/` önekiyle yazılmıştı — bu, Son İşlemler web'den açılınca mobil ekrana ("mobil başka
+   ekrana gidiyor"), mobilden açılınca `mobile/mobile/...` çift path'e (404, "tamamen alakasız
+   sayfa") düşüyordu. İki düzeltme kalıbı uygulandı: (a) aynı isimli dosya HER İKİ tarafta da varsa
+   (`contact_view.php`, `sales.php`, `purchase.php`, `product_view.php`) `mobile/` öneki kaldırıldı;
+   (b) isim ayrışıyorsa (`finance.php`/`kasa.php`, `finance_accounts.php`, mobil
+   `personnel_view.php`, `trade_document_view.php`) `base_url()` ile MUTLAK path yazıldı — hangi
+   taraftan açılırsa açılsın doğru hedefe gider. Dosyalar: `mobile/product_new.php`,
+   `mobile/sales.php`, `mobile/contact_new.php`, `mobile/purchase.php`, `mobile/collection.php`,
+   `mobile/transfer.php`, `mobile/payment.php`, `finance_new.php` (×2), `finance_transfer.php`,
+   `mobile/personnel_new.php`, `trade_core.php`. Not/Mesaj/Bildirim türleri `activity_logs`'a HİÇ
+   yazılmıyor (yeni loglama eklemek yeni özellik sayılırdı, bu tur kapsamı dışında bırakıldı).
+2. **Teklif — liste/detay CRUD tutarsızlığı** — liste satırı zaten tıklanabilirdi ama görünür bir
+   "Detay" bağlantısı yoktu (jobs.php'deki standart eksikti) → eklendi. Detay ekranındaki "✏️
+   Düzenle" (web+mobil, 3 yer) ham `is_admin()`/`$isAdmin` kontrolü kullanıyordu — projede zaten var
+   olan kademeli "Düzenleme/Silme Yetkisi" (`can_edit_delete()`) yerine — bu yüzden `edit_delete`
+   yetkili ama admin olmayan biri Düzenle'yi hiç göremiyordu (mobilde görüp kaydedemiyordu). Üçü de
+   `can_edit_delete()`'e çevrildi. "Sil" bilinçli olarak DOKUNULMADI — paylaşılan `delete_button()`
+   (boot.php) tüm modüllerde admin-only olacak şekilde tasarlanmış, teklif'e özel değil, mimari
+   değişikliği bu yamanın kapsamı dışında.
+3. **WhatsApp — gelen mesajlar görünmüyor (kod değişikliği yok, sadece tespit)** — kök neden:
+   entegrasyon (`share_lib.php`, UltraMsg gateway) SADECE gönderim (outbound) yapıyor; hiçbir
+   webhook alıcı endpoint'i ve hiçbir konuşma/mesaj geçmişi tablosu yok. Bu bir API kısıtı DEĞİL —
+   UltraMsg gelen mesaj webhook'unu destekliyor, sadece bu projede hiç uygulanmamış. Konuşma
+   geçmişi göstermek yeni bir webhook receiver + yeni bir tablo gerektirir = yeni özellik, bu
+   yamanın kapsamı dışında tutuldu.
+4. **Mesajlaşma — liste/composer arası boşluk regresyonu** — kök neden: `mobile/common.php`'de
+   `body.chat-mode{padding-bottom:0}` ile `body.kb{padding-bottom:env(safe-area-inset-bottom)}`
+   AYNI özgüllükte (tek sınıf seçici) ve `body.kb` kaynak sırasında SONRA geliyordu — kullanıcı
+   mesaj yazma alanına dokunduğunda (klavye açılıp `kb` sınıfı eklenince) `chat-mode`'un
+   sıfırladığı boşluk `kb` kuralı tarafından geri getiriliyordu. `body.chat-mode.kb{padding-bottom:0}`
+   (bileşik seçici, daha yüksek özgüllük) eklenerek kalıcı hale getirildi — artık kural SIRASINDAN
+   bağımsız.
+5. **PWA Push — Safari'de arka planda bildirim gelmiyor (kod seviyesinde teşhis)** — kök neden KESİN
+   olarak doğrulanamadı: `push_to_user()` (push_lib.php) TÜM hataları (`catch(Throwable){return
+   false;}`) sessizce yutuyordu, hiçbir iz bırakmıyordu — bu yüzden bugüne kadar teşhis mümkün
+   değildi. Loglama eklendi (`push_log()`, `push_debug.log`, `.gitignore`'da zaten `*.log` var).
+   İki önceden bilinen, primac.tr SUNUCUSUNDAN doğrulanması gereken ön koşul hâlâ ROADMAP'te açık:
+   VAPID anahtarlarının config.php'de gerçek olup olmadığı, gmp/bcmath PHP eklentisinin kurulu olup
+   olmadığı — ikisi de bu repodan/yerelden görülemez, kesin teşhis için sunucu erişimi gerekir.
+6. **Takvim — aynı çek/senet iki kez görünüyordu** — kök neden BULUNDU: `checks_notes.php` (web)
+   `save_cn` işleminde PRG (Post-Redirect-Get) YOKTU — sayfa yenilenince (F5) form yeniden POST
+   edilip aynı çek/senedin ikinci kaydı + `checks_notes_auto_create_task()` ile ikinci bir otomatik
+   hatırlatma görevi oluşuyordu (bu görev takvime düşüyor, dolayısıyla "aynı çek iki kez" görünümü).
+   `mobile/checks_notes.php` zaten PRG kullanıyordu, web şimdi aynı deseni kullanıyor (redirect +
+   session flash mesaj).
+7. **Takvim günlük detay filtresi çalışmıyordu** — kök neden: `?g=` filtresi altındaki DETAY paneli
+   zaten doğru filtreleniyordu, ama AY IZGARASI (takvim.php'nin üstteki grid'i) bir gün seçilse de
+   HER günün madde başlıklarını basmaya devam ediyordu — kullanıcı bunu "filtre çalışmıyor, hepsi
+   geliyor" olarak yaşıyordu. Bir gün seçiliyken diğer günler artık sadece bir "●" + sayı rozeti
+   gösteriyor, madde başlıkları SADECE seçili günde görünüyor.
+
+`php -l` 17 değişen PHP dosyada temiz. Regresyon: checks_notes.php'nin edit_cn/delete_cn dalları
+davranış olarak DEĞİŞMEDİ (sadece save_cn PRG aldı), teklif.php'nin Sil'i ve delete_button()
+paylaşılan fonksiyonu dokunulmadı, mobile/calendar.php zaten doğru filtreliyordu (değişmedi).
+
+## UX REFINEMENT PATCH (2026-07-05, DEV — commit edilmedi, primac.tr'ye henüz yüklenmedi)
+Bir önceki sprintin son kullanıcı testinde yakalanan 4 küçük UX eksiği düzeltildi. DB/mimari
+değişikliği yok, tüm değişiklikler mevcut ekran/fonksiyonları yeniden kullanıyor:
+1. **`finance.php` "Son Finans Hareketleri" satırları artık tam tıklanabilir** — düzenlenebilir
+   satırlar `finance_new.php?id=` (mevcut Düzenle hedefiyle aynı, yeni bir detay sayfası
+   eklenmedi) linkine gidiyor; ✏️ Düzenle ve 🗑 Sil kendi davranışında kaldı (`event.target.closest`
+   ile satır-tıklamasından ayrıştırıldı). Mobildeki karşılığı (`mobile/payment.php`/`kasa.php`/
+   `collection.php` → `movement_view.php`) zaten tam tıklanabilirdi, bu değişiklik web'i mobille
+   aynı seviyeye getirdi.
+2. **Çek/senet ve finansal hatırlatmalar** — mimari/davranış DEĞİŞMEDİ, sadece ileride ayrı bir
+   Hatırlatmalar modülü altında toplanacağı kararı `ROADMAP.md`'ye işlendi.
+3. **"Son İşlemler" (activity.php) — mobil parite + kırık/yanlış link düzeltmeleri**:
+   `mobile/activity.php`'deki kartlar hiç tıklanabilir DEĞİLDİ (düz `<div>`), web'deki
+   `activity_render_list()` deseniyle aynı şekilde `<a>` linke çevrildi. Ayrıca kaynağında
+   boş/yanlış URL üreten 9 `activity_log()` çağrısı düzeltildi: `tasks_lib.php`'deki 4 çağrı
+   (Düzenleme/Silme/Yorum/Dosya Ekleme) boş url yerine `task_view.php?id=` veriyor artık;
+   `public_file.php`'deki müşteri onay/red kaydı boş url yerine ilgili `job_view.php?id=`'e
+   gidiyor (zaten fetch edilen `job_id` kullanıldı); "İş Ekle"/"Kendime İş Ekle"/İşlerim durum
+   güncellemesi (web+mobil, 6 dosya) artık genel `mytasks.php`/`tasks.php` listesi yerine
+   SPRINT-003'te eklenen spesifik `task_view.php?id=`'e gidiyor (task_view.php'nin GET'i zaten
+   korumasız/herkese açık olduğu için yetki riski yok). Not/Mesaj/Bildirim türleri şu an
+   `activity_logs`'a hiç yazılmıyor (yeni loglama eklenmedi — kapsam dışı, mimari/DB değişikliği
+   sayılırdı) — bu yüzden bu turda "kırık" bir Not/Mesaj/Bildirim linki yoktu, sadece mevcut
+   Görev/İş türü linkleri düzeltildi.
+4. **`mobile/push_enable.php` sadeleştirildi** — Notification API/PushManager/ServiceWorker/
+   Standalone gibi teknik teşhis artık SADECE `user_can('users')` (admin/yönetici) görüyor
+   (`#env` paneli + adım adım teknik `#log` çıktısı). Normal kullanıcı artık tek, sade bir durum
+   mesajı görüyor: başarılı → "Bildirimler aktif. Bu cihaz bildirim almaya hazır.", izin reddi →
+   "Bildirim izni verilmedi. Telefon ayarlarından bildirimleri açabilirsiniz.", diğer teknik
+   hatalarda (desteklenmeyen tarayıcı, VAPID/sunucu hatası) genel "Bildirimler şu anda
+   etkinleştirilemedi. Lütfen tekrar deneyin." Admin için teknik akış davranışı DEĞİŞMEDİ (aynı
+   adımlar, aynı hata mesajları).
+
+`php -l` 11 değişen dosyada temiz. DB şeması değişmedi, yeni dosya/route eklenmedi. Henüz primac.tr'ye
+yüklenmedi, commit edilmedi (kullanıcı talebiyle bu turda push/release yok).
+
 ## SPRINT CLOSE — DEV'de test edildi, PASS (2026-07-04)
 Aşağıdaki "LOCAL QA MODE + düzeltmeler" ve "UI/UX İyileştirmeleri + SPRINT-003" paketleri primac.tr
 (DEV) üzerinde fiilen yüklenip smoke test edildi, kullanıcı PASS onayı verdi. Bu turda ayrıca DEV

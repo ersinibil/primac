@@ -101,7 +101,7 @@ function task_apply_edit($pdo,$id,array $post,$uid,$allowReassign){
         $params[]=(int)$id;
     }
     $pdo->prepare($sql)->execute($params);
-    try{ if(function_exists('activity_log')) activity_log('Görev','Düzenleme','#'.(int)$id.' · '.$title,'','task',(int)$id,'','✏️'); }catch(Throwable $e){}
+    try{ if(function_exists('activity_log')) activity_log('Görev','Düzenleme','#'.(int)$id.' · '.$title,'','task',(int)$id,'task_view.php?id='.(int)$id,'✏️'); }catch(Throwable $e){}
 }
 
 // Soft delete — hiçbir kayıt fiziksel silinmez. Çağrı öncesi task_can_delete() ile yetki kontrolü
@@ -109,7 +109,7 @@ function task_apply_edit($pdo,$id,array $post,$uid,$allowReassign){
 function task_soft_delete($pdo,$id,$uid=null){
     $st=$pdo->prepare("UPDATE tasks SET deleted_at=NOW(), updated_by=COALESCE(?,updated_by) WHERE id=? AND deleted_at IS NULL");
     $ok=$st->execute([$uid?:null,(int)$id]);
-    try{ if(function_exists('activity_log')) activity_log('Görev','Silme (soft)','#'.(int)$id,'','task',(int)$id,'','🗑'); }catch(Throwable $e){}
+    try{ if(function_exists('activity_log')) activity_log('Görev','Silme (soft)','#'.(int)$id,'','task',(int)$id,'task_view.php?id='.(int)$id,'🗑'); }catch(Throwable $e){}
     return $ok;
 }
 
@@ -126,7 +126,7 @@ function task_comment_add($pdo,$taskId,$uid,$text){
     $text=trim((string)$text);
     if($text==='') throw new Exception('Yorum boş olamaz.');
     $pdo->prepare("INSERT INTO task_comments(task_id,user_id,comment) VALUES(?,?,?)")->execute([(int)$taskId,(int)$uid ?: null,$text]);
-    try{ if(function_exists('activity_log')) activity_log('Görev','Yorum','#'.(int)$taskId,mb_substr($text,0,80),'task',(int)$taskId,'','💬'); }catch(Throwable $e){}
+    try{ if(function_exists('activity_log')) activity_log('Görev','Yorum','#'.(int)$taskId,mb_substr($text,0,80),'task',(int)$taskId,'task_view.php?id='.(int)$taskId,'💬'); }catch(Throwable $e){}
 }
 
 // ---- Dosyalar ----
@@ -169,7 +169,7 @@ function task_file_upload($pdo,$taskId,$uid,array $file){
     $relative='uploads/task_files/'.$stored;
     $pdo->prepare("INSERT INTO task_files(task_id,uploaded_by,original_name,stored_name,file_path,mime_type,file_size) VALUES(?,?,?,?,?,?,?)")
         ->execute([(int)$taskId,(int)$uid ?: null,$original,$stored,$relative,$mime,$size]);
-    try{ if(function_exists('activity_log')) activity_log('Görev','Dosya Ekleme','#'.(int)$taskId,$original,'task',(int)$taskId,'','📎'); }catch(Throwable $e){}
+    try{ if(function_exists('activity_log')) activity_log('Görev','Dosya Ekleme','#'.(int)$taskId,$original,'task',(int)$taskId,'task_view.php?id='.(int)$taskId,'📎'); }catch(Throwable $e){}
     return (int)$pdo->lastInsertId();
 }
 

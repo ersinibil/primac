@@ -24,6 +24,16 @@ gerçekten çalışır durumda olduğu ayrıca doğrulanmamıştır (bkz. `memor
 
 ## Current Development Version
 **v1.1.0-dev** (primac.tr) — ortam ayrımından SONRAKİ ilk geliştirme turu
++ **UX / STABILITY PATCH-002 — DEV QA PASS** (2026-07-05, henüz commit/push edilmedi, primac.tr'ye
+henüz yüklenmedi): Son İşlemler routing (11 çapraz-platform link), Teklif liste/detay CRUD
+tutarsızlığı, Çek/Senet F5 çift kayıt (PRG eklendi), Takvim günlük filtre — hepsi yerel `ots_sectest`
+QA'da **PASS** aldı (gerçek HTTP istekleri + içerik doğrulamasıyla). İki madde **koşullu**:
+Mobil Mesajlaşma boşluğu **CONDITIONAL PASS** (CSS düzeltmesi doğrulandı, piksel-seviye görsel teyit
+gerçek cihaz gerektiriyor), PWA Push **SERVER-SIDE PASS** (sunucu→FCM teslimatı doğrulandı, Safari/iOS
+arka plan teslimatı test edilemedi). WhatsApp gelen mesaj takibi kapsam dışı bırakıldı, ayrı
+**WHATSAPP INTEGRATION SPRINT** olarak planlanacak. Detay → `CHANGELOG.md`, `KNOWN_BUGS.md`,
+`ROADMAP.md` "Sıradaki sıra". **Production'a DOKUNULMADI, dokunulmayacak** (ayrı "DEPLOY MODE"
+komutu bekliyor).
 + **SECURITY SPRINT-001** (2026-07-04, `d511fad` ile commit edildi): `mobile/personnel_view.php`
 kritik şifre sıfırlama açığı (System Audit bulgusu) kapatıldı — `reset_pw`/`make_login` artık
 `$_POST['uid']`'e hiç güvenmiyor, hedef hesabı DB'den görüntülenen personele (`$id`) bağlı gerçek

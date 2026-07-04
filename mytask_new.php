@@ -17,7 +17,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         if($title==='') throw new Exception('İş başlığı girin.');
         $pdo->prepare("INSERT INTO tasks(personnel_id,title,description,due_date,status,priority,created_by) VALUES(?,?,?,?,'Atandı',?,?)")
             ->execute([$pid,$title,trim($_POST['description']??''),$_POST['due_date']?:null,$_POST['priority']??'Normal',$me?:null]);
-        try{ if(function_exists('activity_log')) activity_log('Görev','Kendime Ekle',$title,'','task',(int)$pdo->lastInsertId(),'mytasks.php','📋'); }catch(Throwable $e){}
+        $newTid=(int)$pdo->lastInsertId();
+        try{ if(function_exists('activity_log')) activity_log('Görev','Kendime Ekle',$title,'','task',$newTid,'task_view.php?id='.$newTid,'📋'); }catch(Throwable $e){}
         header('Location: mytasks.php?ok=1'); exit;
     }catch(Throwable $e){ $error=$e->getMessage(); }
 }

@@ -20,7 +20,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             if(function_exists('notify_user')) notify_user($ruid,'📋 Yeni görev: '.$title,($pname?$pname.' · ':'').($_POST['description']??''),'mytasks.php');
             try{ $sid=$_SESSION['user']['id']??null; $pdo->prepare("INSERT INTO internal_messages(sender_user_id,receiver_user_id,message,is_read) VALUES(?,?,?,0)")->execute([$sid,$ruid,$msgText]); }catch(Throwable $e){}
         }
-        try{ if(function_exists('activity_log')) activity_log('Görev','Atama',$pname.' · '.$title,'','task',$tid,'tasks.php','📋'); }catch(Throwable $e){}
+        try{ if(function_exists('activity_log')) activity_log('Görev','Atama',$pname.' · '.$title,'','task',$tid,'task_view.php?id='.$tid,'📋'); }catch(Throwable $e){}
         $ok='Görev atandı, '.($pname?:'personele').' bildirim gönderildi.';
     }catch(Throwable $e){ $er=$e->getMessage(); }
 }

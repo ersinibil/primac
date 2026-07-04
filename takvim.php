@@ -43,13 +43,24 @@ for($d=1;$d<=$daysIn;$d++){
   $isToday=($isThisMonth&&$d===$today); $isSel=($g===$d);
   echo "<td style='vertical-align:top;height:90px;padding:4px;".($isSel?'background:#334155':($isToday?'background:#1e3a5f':''))."'>";
   echo "<a href='takvim.php?ay=".h($ym)."&g=$d' style='text-decoration:none;font-weight:700;display:block;".($isSel?'color:#fff':($isToday?'color:#60a5fa':'color:#7f95b2'))."'>$d</a>";
-  if(!empty($byDay[$d])) foreach($byDay[$d] as $j){ $isNote=!empty($j['_note']); $isTask=!empty($j['_task']); $c=($isNote||$isTask)?'#eab308':(in_array($j['status'],['Tamamlandı','Teslim Edildi'])?'#16a34a':($j['status']==='İptal'?'#94a3b8':'#d97706'));
-    $icon=$isNote?'📝 ':($isTask?'🎯 ':'');
-    $itemStyle="display:block;font-size:11px;background:rgba(217,119,6,.15);border-left:3px solid $c;border-radius:4px;padding:2px 4px;margin-top:2px;color:#e7eefc;text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis";
-    // Görev maddesi artık mytasks.php'ye gidiyor — 'tasks' yetkisi istemeyen kişisel görev
-    // sayfası (bkz. mytasks.php), önceki "yetkisizse düz metin" geçici çözümüne gerek kalmadı.
-    $href=$isNote?'notes.php':($isTask?'task_view.php?id='.(int)$j['id']:'job_view.php?id='.(int)$j['id']);
-    echo "<a href='".h($href)."' style='$itemStyle'>".$icon.h($j['title'])."</a>";
+  // Bir gün seçiliyken (g>0) ızgara SADECE seçili günün maddelerini gösterir — diğer günler için
+  // sadece bir nokta rozeti (kaç madde olduğu) kalır. UX/STABILITY PATCH-002: kullanıcı "bir güne
+  // basınca sadece o gün görünmeli, başka gün gösterilmeyecek" dedi — önceden ızgara HER günün
+  // madde başlıklarını hep birlikte gösteriyordu, bu da "gün filtresi çalışmıyor" izlenimi
+  // veriyordu (aslında sadece alttaki detay paneli filtreleniyordu, ızgara değil).
+  if(!empty($byDay[$d])){
+    if($g>0 && !$isSel){
+      echo "<span style='display:block;text-align:center;margin-top:4px;font-size:10px;color:#d97706'>●".(count($byDay[$d])>1?' '.count($byDay[$d]):'')."</span>";
+    }else{
+      foreach($byDay[$d] as $j){ $isNote=!empty($j['_note']); $isTask=!empty($j['_task']); $c=($isNote||$isTask)?'#eab308':(in_array($j['status'],['Tamamlandı','Teslim Edildi'])?'#16a34a':($j['status']==='İptal'?'#94a3b8':'#d97706'));
+        $icon=$isNote?'📝 ':($isTask?'🎯 ':'');
+        $itemStyle="display:block;font-size:11px;background:rgba(217,119,6,.15);border-left:3px solid $c;border-radius:4px;padding:2px 4px;margin-top:2px;color:#e7eefc;text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis";
+        // Görev maddesi artık mytasks.php'ye gidiyor — 'tasks' yetkisi istemeyen kişisel görev
+        // sayfası (bkz. mytasks.php), önceki "yetkisizse düz metin" geçici çözümüne gerek kalmadı.
+        $href=$isNote?'notes.php':($isTask?'task_view.php?id='.(int)$j['id']:'job_view.php?id='.(int)$j['id']);
+        echo "<a href='".h($href)."' style='$itemStyle'>".$icon.h($j['title'])."</a>";
+      }
+    }
   }
   echo "</td>"; $cell++;
 }

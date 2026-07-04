@@ -109,7 +109,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             }
 
             // 5) Log
-            try{ if(function_exists('activity_log')) activity_log('Satış','Mobil',$desc.' '.mm($grandTotal).' (kâr '.mm($profitTotal).')',$method,'sale',$lines[0]['item']['id'],'mobile/sales.php','🧾'); }catch(Throwable $e){}
+            try{ if(function_exists('activity_log')) activity_log('Satış','Mobil',$desc.' '.mm($grandTotal).' (kâr '.mm($profitTotal).')',$method,'sale',$lines[0]['item']['id'],'sales.php','🧾'); }catch(Throwable $e){}
 
             $kz = $profitTotal>=0 ? ('Kâr: '.mm($profitTotal)) : ('Zarar: '.mm(-$profitTotal));
             $ok=implode(', ',$descParts).' satıldı: '.mm($grandTotal).($grandVat>0?' (KDV: '.mm($grandVat).')':'').' ('.$method.') · '.$kz;

@@ -100,7 +100,9 @@ try{
     foreach($rows as $r){
         $rid=(int)$r['id'];
         $canEdit=in_array($r['movement_type'],$editableTypes,true) && can_edit_delete();
-        echo "<tr>";
+        // Satırın tamamı tıklanabilir → finance_new.php?id= (mevcut Düzenle/Sil hedefiyle aynı,
+        // yeni bir detay sayfası icat edilmedi) — Düzenle/Sil'e tıklamak kendi davranışında kalır.
+        echo "<tr".($canEdit?" style=\"cursor:pointer\" onclick=\"if(event.target.closest('a,button,form'))return;location.href='finance_new.php?id=".$rid."'\"":"").">";
         echo "<td>".h($r['movement_date'])."</td>";
         echo "<td>".h($r['movement_type']==='transfer'?'Transfer':($r['direction']=='in'?'Tahsilat':'Ödeme'))."</td>";
         echo "<td>".h($r['contact_name'] ?: '-')."</td>";

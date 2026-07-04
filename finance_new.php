@@ -63,7 +63,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             $accountName=$as->fetch()['name'] ?? $_POST['payment_channel'];
             $title = ($direction==='in'?'Tahsilat güncellendi':'Ödeme güncellendi');
             $desc = $contactName.' · '.number_format($amount,2,',','.').' ₺ · '.$accountName;
-            activity_log('Finans',$direction==='in'?'Tahsilat':'Ödeme',$title,$desc,'finance',$editId,'finance.php','✏️');
+            activity_log('Finans',$direction==='in'?'Tahsilat':'Ödeme',$title,$desc,'finance',$editId,base_url().'finance.php','✏️');
 
             header("Location: finance.php");
             exit;
@@ -106,7 +106,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 
         $title = ($direction==='in'?'Tahsilat yapıldı':'Ödeme yapıldı');
         $desc = $contactName.' · '.number_format($amount,2,',','.').' ₺ · '.$accountName;
-        activity_log('Finans',$direction==='in'?'Tahsilat':'Ödeme',$title,$desc,'finance',$fmId,'finance.php','💰');
+        activity_log('Finans',$direction==='in'?'Tahsilat':'Ödeme',$title,$desc,'finance',$fmId,base_url().'finance.php','💰');
 
         header("Location: finance.php");
         exit;

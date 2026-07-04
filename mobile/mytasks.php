@@ -17,7 +17,7 @@ if($_SERVER['REQUEST_METHOD']==='POST' && (int)($_POST['tid']??0)){
         if(in_array($st,['Devam Ediyor','Tamamlandı']) && $pid){
             $pdo->prepare("UPDATE tasks SET status=?, completed_at=IF(?='Tamamlandı',NOW(),completed_at), started_at=IF(?='Devam Ediyor' AND started_at IS NULL,NOW(),started_at) WHERE id=? AND personnel_id=? AND deleted_at IS NULL")
                 ->execute([$st,$st,$st,$tid,$pid]);
-            try{ if(function_exists('activity_log')) activity_log('Görev',$st,'#'.$tid,'','task',$tid,'mytasks.php',$st==='Tamamlandı'?'✅':'▶'); }catch(Throwable $e){}
+            try{ if(function_exists('activity_log')) activity_log('Görev',$st,'#'.$tid,'','task',$tid,'task_view.php?id='.$tid,$st==='Tamamlandı'?'✅':'▶'); }catch(Throwable $e){}
         }
     }catch(Throwable $e){}
     header('Location: mytasks.php'.(!empty($_GET['f'])?'?f='.urlencode($_GET['f']):'')); exit;

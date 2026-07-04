@@ -23,7 +23,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             ->execute([$contact,'in',$amount,$pm,$accId,'Tahsil Edildi',date('Y-m-d'),trim($_POST['description'] ?? '')]);
         if($accId){ try{ $pdo->prepare("UPDATE finance_accounts SET current_balance=current_balance+? WHERE id=?")->execute([$amount,$accId]); }catch(Throwable $e){} }
         $cn=$pdo->prepare("SELECT name FROM contacts WHERE id=?"); $cn->execute([$contact]); $cname=$cn->fetch()['name']??'';
-        try{ if(function_exists('activity_log')) activity_log('Finans','Tahsilat',$cname.' · '.mm($amount),$pm,'finance',$contact,'mobile/contact_view.php?id='.$contact,'💰'); }catch(Throwable $e){}
+        try{ if(function_exists('activity_log')) activity_log('Finans','Tahsilat',$cname.' · '.mm($amount),$pm,'finance',$contact,'contact_view.php?id='.$contact,'💰'); }catch(Throwable $e){}
         $_SESSION['collection_ok']=$cname.' tahsilat: '.mm($amount).' ('.$pm.')';
         header('Location: collection.php?contact_id='.$contact); exit;
     }catch(Throwable $e){

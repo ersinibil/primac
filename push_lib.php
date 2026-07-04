@@ -35,16 +35,24 @@ function push_available(){
         && (extension_loaded('gmp') || extension_loaded('bcmath'));
 }
 
+// Teşhis logu: push_to_user()'ın önceden TÜM hataları sessizce yuttuğu, hiçbir iz bırakmadığı
+// UX/STABILITY PATCH-002 sırasında bulundu (Safari'de arka planda bildirim gelmeme şikayeti kesin
+// teşhis edilemiyordu). Sadece dosyaya yazar, mevcut akışı/dönüş değerlerini DEĞİŞTİRMEZ.
+function push_log($msg){
+    try{ @file_put_contents(__DIR__.'/push_debug.log', date('Y-m-d H:i:s').' '.$msg.PHP_EOL, FILE_APPEND); }catch(Throwable $e){}
+}
+
 /** Bir kullanıcının tüm cihazlarına push gönder. */
 function push_to_user($userId,$title,$body,$url='mobile/index.php'){
-    if(!$userId || !push_available()) return false;
+    if(!$userId){ push_log("push_to_user: userId yok"); return false; }
+    if(!push_available()){ push_log("push_to_user: push_available()=false (vendor/openssl/curl/gmp+bcmath eksik olabilir) user=$userId"); return false; }
     require_once __DIR__.'/vendor/autoload.php';
     push_install();
     try{
         $subs=db()->prepare("SELECT * FROM push_subs WHERE user_id=?");
         $subs->execute([$userId]);
         $rows=$subs->fetchAll();
-        if(!$rows) return false;
+        if(!$rows){ push_log("push_to_user: user=$userId için push_subs kaydı yok (hiç abone olmamış)"); return false; }
 
         $v=push_vapid();
         $webPush=new \Minishlink\WebPush\WebPush(['VAPID'=>$v]);
@@ -62,9 +70,10 @@ function push_to_user($userId,$title,$body,$url='mobile/index.php'){
         }
         foreach($webPush->flush() as $report){
             if(!$report->isSuccess()){
+                push_log("push_to_user: BAŞARISIZ endpoint=".$report->getEndpoint()." reason=".$report->getReason());
                 try{ db()->prepare("DELETE FROM push_subs WHERE endpoint=?")->execute([$report->getEndpoint()]); }catch(Throwable $e){}
             }
         }
         return true;
-    }catch(Throwable $e){ return false; }
+    }catch(Throwable $e){ push_log("push_to_user: İSTİSNA — ".$e->getMessage()); return false; }
 }

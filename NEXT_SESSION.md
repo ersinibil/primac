@@ -5,108 +5,125 @@ hızlı giriş yapmak için var. Detay için ilgili dosyalara bakın (`CHANGELOG
 `KNOWN_BUGS.md`, `VERSIONING.md`, `memory/*.md`).
 
 ## Bir Sonraki Oturumun İlk Önceliği
-**Bu oturumdaki sprint primac.tr'de test edilip PASS aldı, GitHub'a push edildi — sprint kapandı.**
-Bir sonraki oturum tamamen yeni bir sprint için boş bir sayfa. Açık/karar bekleyen maddeler için
-`ROADMAP.md`'ye bakın (öne çıkanlar: web push'un primac.tr'nin GERÇEK sunucusunda VAPID/gmp-bcmath
-doğrulaması, Finans Gider Türü kategori-raporu açık noktası, Personel modülü mobil parite borcu).
+**UX / STABILITY PATCH-002, yerel DEV QA'da PASS aldı — ama henüz commit edilmedi, primac.tr'ye
+yüklenmedi, production'a dokunulmadı.** Çalışma dizininde 27 PHP dosyası + 3 doküman
+(CHANGELOG/KNOWN_BUGS/ROADMAP) hâlâ commit edilmemiş durumda (bkz. bu oturumun sonundaki `git
+status`). Bir sonraki oturum önce bu commit durumunu netleştirmeli (kullanıcı ile teyit edilmeden
+push/DEV paketi/production adımına geçilmeyecek).
 
-## Bugün Tamamlanan Çalışmalar (2026-07-04) — hepsi primac.tr'de test edildi, PASS, GitHub'a push edildi
-- **SECURITY SPRINT-001** (`d511fad`): `mobile/personnel_view.php` kritik şifre sıfırlama açığı
-  kapatıldı — `reset_pw`/`make_login` artık `$_POST['uid']`'e hiç güvenmiyor. Kapsam kullanıcı
-  kararıyla genişledi: admin VEYA yeni `personnel_accounts` yetkili "alt yönetici" ile sınırlı.
-- **UI/UX İyileştirmeleri + SPRINT-003** (`5fb2c43`): Üst Menü, Notlarım Düzenle, Satın Alma inline
-  ürün, Global Arama (5 yeni modül), İşlerim (Düzenle/Detay/Sil + soft-delete, migration 040),
-  Personel kart+sekme (SADECE web), Finans bağlam-duyarlı Gider Türü. Yan ürün: `mobile/task_view.php`
-  IDOR + `accounting.php` JS scope hatası da kapatıldı.
-- **LOCAL QA MODE düzeltmeleri** (`697f985`): 7 modülün tamamı yerel MariaDB'de test edildi, 4 bulgu
-  düzeltildi — en önemlisi, web'den **Satın Alma tamamen kırıktı** (`mm()` fonksiyonu web'de
-  tanımsızdı, bugünkü sprintten ÖNCE de vardı).
-- **SPRINT CLOSE ek düzeltmeleri** (`b5c8410`..`d7c593a`): Komuta Merkezi'ne Takvim modül kutusu
-  (topbar pill denemesi kullanıcı adını bozduğu için geri alınıp doğru yere taşındı), web mesaj
-  rozeti + sıfırdan web Push bildirimi (gerçek Chromium ile uçtan uca doğrulandı), Takvim'de
-  görev/not linklerinin düzeltilmesi + silinmiş görevin artık görünmemesi, web takvimde gün
-  numarasının tıklanabilir hale getirilip günlük filtreli detay paneli eklenmesi.
+## Bu Oturumda Yapılanlar (2026-07-05)
+1. **UX REFINEMENT PATCH** — 4 madde (Ödeme/Gider kartları, çek/senet hatırlatma notu, Son İşlemler
+   parite, Bildirim Kur sadeleştirme).
+2. **UX / STABILITY PATCH-002** — 7 madde (Son İşlemler routing, Teklif CRUD, WhatsApp tespiti,
+   Mesajlaşma boşluğu, PWA Push loglaması, Takvim çift kayıt, Takvim günlük filtre).
+3. **QA MODE** — yukarıdaki 7 maddenin TAMAMI yerel `ots_sectest` MariaDB + gerçek HTTP istekleriyle
+   test edildi. Sonuç tablosu:
+   - Son İşlemler routing: **PASS**
+   - Teklif liste/detay: **PASS**
+   - Çek/Senet çift kayıt: **PASS**
+   - Takvim günlük filtre: **PASS**
+   - **Mobil Mesajlaşma: CONDITIONAL PASS** — CSS düzeltmesi doğrulandı, gerçek iPhone Safari cihaz
+     testi bekliyor (piksel-seviye görsel teyit yerelde yapılamadı).
+   - **PWA Push: SERVER-SIDE PASS** — sunucu→FCM teslimatı gerçek abonelikle doğrulandı (201 OK),
+     Safari/iOS arka plan teslimatı gerçek cihaz testi bekliyor.
+   - **WhatsApp: kapsam dışı** — kod değişikliği yok, ayrı **WHATSAPP INTEGRATION SPRINT** olarak
+     planlanacak (yeni webhook + yeni tablo gerektiriyor, yeni özellik).
+   - FAIL yok.
 
-Detaylı liste → `CHANGELOG.md` "SPRINT CLOSE" ve üstündeki bölümler.
+## Sıradaki Sıra (kullanıcı tarafından netleştirildi)
+1. **iPhone Safari gerçek cihaz testi** — Mobil Mesajlaşma (CONDITIONAL PASS) + PWA Push
+   (SERVER-SIDE PASS) için tek eksik doğrulama. Test notları aşağıda.
+2. **SYSTEM AUDIT** — büyük sprint sonrası standart denetim.
+3. **SECURITY SPRINT-003** — `KNOWN_BUGS.md`'deki açık SYSTEM AUDIT bulguları (brute-force,
+   accounting.php XSS, users.php rol yükseltme, is_admin() bayatlığı, session fixation).
+
+**Production'a deploy YAPILMAYACAK** — ayrı, açık bir "DEPLOY MODE" komutu gerekir.
+
+## iOS Safari Gerçek Cihaz Test Notları (bir sonraki oturumun 1. maddesi)
+Bu iki madde SADECE gerçek bir iPhone + Safari ile doğrulanabilir, yerel ortamda (curl/php -S)
+zaten test edildi ama piksel/cihaz seviyesinde teyit edilemedi:
+
+**A) Mobil Mesajlaşma boşluğu (CONDITIONAL PASS → PASS/FAIL)**
+1. primac.tr'ye giriş yap, uygulamayı ana ekran ikonundan (standalone) aç.
+2. Mesajlar → herhangi bir sohbete gir.
+3. Yazma alanına (composer) dokun, klavye açılsın.
+4. **Beklenen**: son mesaj balonu ile composer arasında boş alan KALMAMALI.
+5. **FAIL olursa**: `mobile/common.php`'deki `body.chat-mode.kb{padding-bottom:0}` kuralının
+   gerçekten devrede olup olmadığını Safari'nin Web Inspector'ıyla (Mac'e USB ile bağlayıp
+   Safari → Geliştir menüsünden) kontrol et — Elements panelinde `<body>` etiketinin class'ları
+   arasında hem `chat-mode` hem `kb` var mı, hangi kural "computed" olarak kazanıyor.
+
+**B) PWA Push — Safari arka planda/kapalıyken bildirim (SERVER-SIDE PASS → PASS/FAIL)**
+1. primac.tr'yi ana ekran ikonundan aç, `mobile/push_enable.php` ("Bildirim Kur", admin menüsü) ile
+   bildirimleri aç, izin ver.
+2. Uygulamayı TAMAMEN kapat (arka plandan da kaldır) veya sadece arka plana al.
+3. Başka bir kullanıcıdan/ekrandan bu kullanıcıya bir mesaj/görev bildirimi tetikle (ör. birine iş
+   ata, mesaj gönder) — bu `notify_user()` üzerinden `push_to_user()`'ı tetikler.
+4. **Beklenen**: telefon kilit ekranında/bildirim merkezinde sistem bildirimi görünmeli.
+5. **FAIL olursa**: primac.tr sunucusunda `push_debug.log` dosyasını kontrol et (proje kök dizini,
+   `push_lib.php`'nin yanında) — artık her başarısız denemede gerçek hata mesajı yazıyor
+   (`push_available()=false` → gmp/bcmath eksik; `İSTİSNA` → VAPID/ağ hatası; `BAŞARISIZ endpoint=...
+   reason=...` → spesifik HTTP hata kodu). Bu log dosyasının içeriği bir sonraki oturuma aynen
+   yapıştırılabilir, kesin teşhis için yeterli olacak.
+
+İkisi de PASS alırsa UX/STABILITY PATCH-002 tamamen kapanır, `VERSIONING.md`/`KNOWN_BUGS.md`'deki
+"CONDITIONAL"/"SERVER-SIDE" etiketleri düz "PASS"a çevrilir. FAIL alırsa ilgili dosya (mobile/common.php
+veya push_lib.php/config.php) için ayrı, küçük bir düzeltme turu açılır — commit a36db68'e yeni bir
+commit olarak eklenir, üzerine yazılmaz.
 
 ## Devam Eden Sprint
-Yok — bu oturumun sprinti kapandı (primac.tr'de PASS, GitHub'a push edildi). Bir sonraki oturum
-yeni bir sprint/talep ile başlayacak.
+Yok (kod tarafında) — UX/STABILITY PATCH-002 DEV QA PASS ile kapandı, ama commit/push/DEV paketi
+adımı henüz atılmadı (bkz. yukarı). Bir sonraki oturum "Sıradaki sıra" listesiyle devam edecek.
 
 ## Açık Kalan Hatalar
 (Tam liste → `KNOWN_BUGS.md`)
-1. `sifre_sifirla.php`'de brute-force koruması yok (6 haneli kod, deneme sınırı/lockout yok).
-2. `accounting.php`'de `tab` parametresiyle yansıyan XSS (satır 8, 111-130).
-3. `users.php`'de "users" modül yetkisi = fiili tam admin, kendine rol yükseltme mümkün.
-4. `is_admin()` session'da bayatlıyor, `user_can()` gibi DB'den taze okumuyor.
-5. Login'de `session_regenerate_id(true)` çağrılmıyor (session fixation).
-6. Hiçbir tabloda FK kısıtı yok — personel/cari/iş silme akışlarında yetim kayıt riski (özellikle
-   `job_logs`).
-7. `jobs`/`finance_movements`/`internal_messages`/`internal_notifications` tablolarında eksik index
-   (performans + veri büyüdükçe risk) — `tasks` bugün eklenen migration 040 ile kısmen iyileşti.
-8. Sabit migration/temizlik anahtarı (`acans-migrate-2026`) hardcoded — repo public olursa
-   değiştirilmeli.
-9. Finans Gider Türü sihirbazının `category_id` yerine `payment_type` kullanması nedeniyle
-   kategori-bazlı raporların yeni kayıtları kapsamaması (bkz. `ROADMAP.md`, güvenlik açığı değil).
-10. Web push bildiriminin primac.tr'nin GERÇEK sunucusunda VAPID/gmp-bcmath doğrulaması henüz
-    yapılmadı (bkz. `ROADMAP.md`) — yerelde Chromium ile doğrulandı ama canlı cihaz testi eksik.
+1. `sifre_sifirla.php`'de brute-force koruması yok.
+2. `accounting.php`'de `tab` parametresiyle yansıyan XSS.
+3. `users.php`'de rol yükseltme açığı.
+4. `is_admin()` session'da bayatlıyor.
+5. Login'de session fixation koruması yok.
+6. FK kısıtı yok (yetim kayıt riski).
+7. Bazı tablolarda eksik index.
+8. Sabit migration/temizlik anahtarı (`acans-migrate-2026`).
+9. **PWA Push** — Safari arka plan teslimatı (SERVER-SIDE PASS, cihaz testi bekliyor).
+10. **Mobil Mesajlaşma boşluğu** — CSS düzeltildi (CONDITIONAL PASS, cihaz testi bekliyor).
+11. **WhatsApp** — gelen mesaj takibi yok (ayrı sprint, yeni mimari gerektiriyor).
 
 ## Açık Güvenlik Riskleri
 1. **YÜKSEK** — `sifre_sifirla.php` brute-force + `accounting.php` XSS.
 2. **ORTA** — `users.php` rol yükseltme, `is_admin()` session bayatlığı, session fixation.
 3. **BİLGİ** — Proje genelinde CSRF token mekanizması yok.
 
-**Çözüldü (bu oturum, primac.tr'de PASS aldı)**:
-- `mobile/personnel_view.php` keyfi şifre sıfırlama (SECURITY SPRINT-001).
-- `mobile/task_view.php` IDOR (İşlerim işi sırasında bonus düzeltme).
-
-Tam bulgu listesi ve satır referansları → `KNOWN_BUGS.md` ve 2026-07-04 tarihli System Audit raporu
-(Artifact + `~/Desktop/OTS_System_Audit_2026-07-04.txt`).
+Bunların tamamı **SECURITY SPRINT-003**'ün kapsamı (bkz. yukarı "Sıradaki sıra").
 
 ## Dikkat Edilmesi Gereken Mimari Kararlar
-- **Tek geliştirme ortamı modeli**: DEV=primac.tr (TÜM geliştirme/test burada), PROD=acanstr.com/ots
-  (SADECE "DEPLOY MODE" komutuyla dokunulur, kod güncellenmez). Ayrı DB'ler — kod dağıtımı ile veri
-  taşınması birbirinden bağımsız, asla karıştırılmamalı.
-- **Yerel `config.php` PROD veritabanı bilgisi içeriyor** (2026-07-04'te fark edildi) — bu makinede
-  yerel MySQL kurulu değildi, bu yüzden bu dosya fiilen "ölü" kalıyordu, sızıntı riski yok
-  (`.gitignore`'da). Bu oturumda kurulan yerel MariaDB + `ots_sectest` DB, gerçek `config.php`'ye ASLA
-  dokunmadan (geçici kopyayla test edip orijinali restore ederek) tüm testler için kullanıldı — bir
-  sonraki oturumda da aynı yöntem izlenebilir (MariaDB kurulu kaldı, `brew services` ile başlatılır).
-- **"Alt yönetici" yetki modeli** (SECURITY SPRINT-001): `boot.php::module_list()`'e eklenen
-  `personnel_accounts` yetkisi — admin, `users.php` üzerinden birine bu yetkiyi verirse o kişi de
-  personel şifre sıfırlama/hesap oluşturma yapabilir. Düz `personnel` yetkisi ARTIK yetersiz.
-- **"Personel İş Takip Yönetimi" adı yanıltıcıydı** (SPRINT-003 analizinde bulundu): bu menü grubu
-  personel YÖNETMİYOR, jobs/tasks/production/design gibi şirket-geneli üretim sayfalarını içeriyor —
-  web'de "İş / Üretim Yönetimi" olarak düzeltildi, `mobile/more.php`'deki karşılığı henüz
-  düzeltilmedi (ayrı onay gerekiyor, bkz. `ROADMAP.md`).
-- **Personel detay artık sekmeli (SADECE web, `personnel_edit.php`)** — Görevler/Takvim/Mesajlar/
-  Notlar/Maaş-Avans-Prim sekmeleri var olan sorguların personele FİLTRELENMİŞ görünümleri, altta
-  yatan jobs/tasks/finance modülleri TAŞINMADI. Mobilde karşılığı yok, ayrı bir tur gerekiyor.
-- **`tasks` artık soft-delete kullanıyor** (migration 040): `deleted_at` dolu olan kayıtlar HİÇBİR
-  yerde gösterilmemeli — yeni bir `tasks` sorgusu yazılırken `deleted_at IS NULL` filtresi
-  unutulmamalı. Bugüne kadar güncellenenler: `mytasks.php`/`tasks.php`/`task_view.php`/`mobile/*`/
-  `personnel.php`/`personnel_edit.php`/`takvim.php`/`mobile/calendar.php`. `dashboard.php`/`kpi.php`
-  gibi bazı diğer sayaç sorguları hâlâ BİLİNÇLİ OLARAK güncellenmedi — bkz. `memory/backlog.md`.
-- **Web Push bildirimi bugün sıfırdan eklendi** (`sw.js`, `layout_bottom.php`) — mobildeki
-  `mobile/sw.js`'in aksine offline cache YOK, sadece push. `push_subscribe.php` zaten paylaşılan/
-  path-agnostik olduğu için değişmedi. Yeni bir sayfa eklenirken `layout_bottom.php`'nin her sayfada
-  yüklendiğinden emin olunmalı (push script'i orada).
-- **Finans Gider Türü artık `payment_type` kolonunda** (migration yok) — `category_id` SADECE
-  Tahsilat/Gelir tarafında kullanılıyor. Kategori-bazlı raporlar yeni giderleri kapsamıyor, bkz.
-  `ROADMAP.md`.
-- **Deploy git-tabanlı DEĞİL**: `~/Desktop/PRIMAC-GUNCELLEME/` (DEV) klasöründeki `guncelleme.zip`
-  (`git archive HEAD` + `vendor/`) + `guncelle.php` ile cPanel üzerinden yükleniyor. Bu oturumun
-  sonunda primac.tr'ye yüklenen sürüm `d7c593a` — bir sonraki değişiklikte zip yeniden tazelenmeli.
-- **Sürekli Kalite Denetimi Standardı**: SYSTEM AUDIT MODE her büyük sprint/RC/major sürüm/
-  production öncesi otomatik tekrarlanır.
-- **"Ne kaydediyorsun?" sihirbaz deseni** (`finance_lib.php::finance_record_type_info()`): tür
-  bilgisi DB'de SAKLANMIYOR (Gider Türü artık `payment_type`, kayıt tipi hâlâ türetiliyor).
-- **Ödeme/Gider ile Muhasebe ekranları bilerek AYRI bırakıldı** — bkz. `ROADMAP.md`.
+- **Tek geliştirme ortamı modeli**: DEV=primac.tr, PROD=acanstr.com/ots (SADECE "DEPLOY MODE"
+  komutuyla dokunulur). Ayrı DB'ler.
+- **Yerel `config.php` PROD veritabanı bilgisi içerir** — yerel test SIRASINDA geçici olarak
+  `ots_sectest`'e yönlendirilip test bitince BİREBİR orijinaline geri yüklendi (diff ile
+  doğrulandı). Bir sonraki oturumda da AYNI yöntem izlenmeli: gerçek config.php'yi asla kalıcı
+  değiştirme, geçici kopyayla test et, orijinali diff ile doğrulayarak geri yükle.
+- **`migrate.php` yerelde çalıştırılınca KENDİNİ SİLİYOR** (production güvenlik önlemi). Bu oturumda
+  yerel QA sırasında silindi, `git restore` ile geri getirildi. **Bundan sonra yerel QA'da
+  migrate.php'nin bir KOPYASI üzerinden çalıştırılması gerekiyor**, orijinali üzerinde değil (bkz.
+  `ROADMAP.md`).
+- **Yerel MariaDB + `ots_sectest` DB kurulu kaldı** (`brew services` ile başlatılır, `mysql -u acans`
+  ile şifresiz erişilir — unix_socket auth, OS kullanıcı adıyla eşleşiyor). İçinde artık QA test
+  verisi de var (QA Test Cari, QA Test Ürün, QA-CEK-001 vb. — gerçek veri değil, temizlenmedi).
+- **`altyonetici` test kullanıcısının şifresi/yetkileri bu oturumda değiştirildi** (yerel
+  `ots_sectest`'te, GERÇEK sunucuda DEĞİL) — `edit_delete`+`teklif` yetkisi eklendi, şifre
+  `QaTest123!` yapıldı, teklif CRUD testinde admin-olmayan kullanıcı senaryosu için kullanıldı.
+- **`tasks` soft-delete kullanıyor** (migration 040): `deleted_at IS NULL` filtresi unutulmamalı.
+- **Son İşlemler (`activity_logs`) linkleri artık iki kalıpla düzeltiliyor**: aynı isimli dosya
+  her iki tarafta da varsa (`contact_view.php`, `sales.php`, `purchase.php`, `product_view.php`)
+  önek YOK (bare path); isim ayrışıyorsa (`finance.php`/`kasa.php`, mobil `personnel_view.php`,
+  `trade_document_view.php`) `base_url()` ile MUTLAK path. Yeni bir `activity_log()` çağrısı
+  eklenirken bu kalıba uyulmalı.
+- **Teklif Düzenle artık `can_edit_delete()` kullanıyor** (web+mobil), ham `is_admin()` değil —
+  Sil hâlâ paylaşılan `delete_button()` üzerinden bilinçli olarak admin-only (mimari karar,
+  değiştirilmedi).
 - **Design token sistemi** (`mobile/common.php`): yeni renk/radius eklenirken `var(--c-*)`/
   `var(--radius-*)` kullanılmalı.
-- **Mobil hâlâ referans tasarım**: yeni bir modül tasarlanırken önce mobil düşünülmeli — ANCAK bu
-  oturumdaki Personel kart+sekme işi istisnai olarak SADECE web'de yapıldı (kullanıcı onayıyla),
-  mobil parite borcu var.
 
 ## Referanslar
 Ortam kuralları → `PROJECT_RULES.md`. Sürüm durumu → `VERSIONING.md`. Açık kararlar → `ROADMAP.md`.

@@ -17,7 +17,7 @@ if($file && $_SERVER['REQUEST_METHOD']==='POST'){
             ->execute([$decision,trim($_POST['note'] ?? ''),$file['id']]);
         try{ $pdo->prepare("INSERT INTO internal_notifications(title,message,action_url,is_read) VALUES(?,?,?,0)")
             ->execute(['🖼 Müşteri '.$decision.': '.$file['original_name'],($file['customer']?:'').' · '.($file['job_no']?:''),!empty($file['job_id'])?('job_view.php?id='.$file['job_id']):null]); }catch(Throwable $e){}
-        try{ if(function_exists('activity_log')) activity_log('Onay','Müşteri',$decision.' · '.$file['original_name'],'','job_file',(int)$file['id'],'',$decision==='Onaylandı'?'✅':'❌'); }catch(Throwable $e){}
+        try{ if(function_exists('activity_log')) activity_log('Onay','Müşteri',$decision.' · '.$file['original_name'],'','job_file',(int)$file['id'],!empty($file['job_id'])?('job_view.php?id='.$file['job_id']):'',$decision==='Onaylandı'?'✅':'❌'); }catch(Throwable $e){}
         $ok='Yanıtınız kaydedildi. Teşekkürler.';
         $file['approval_status']=$decision;
     }

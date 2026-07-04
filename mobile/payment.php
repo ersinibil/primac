@@ -48,7 +48,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 
         $cname='Cari seçilmedi';
         if($contact){ try{ $cn=$pdo->prepare("SELECT name FROM contacts WHERE id=?"); $cn->execute([$contact]); $cname=$cn->fetch()['name']??$cname; }catch(Throwable $e){} }
-        try{ if(function_exists('activity_log')) activity_log('Finans','Ödeme',$cname.' · '.mm($amount),$pm,'finance',$contact?:0,'mobile/kasa.php','💸'); }catch(Throwable $e){}
+        try{ if(function_exists('activity_log')) activity_log('Finans','Ödeme',$cname.' · '.mm($amount),$pm,'finance',$contact?:0,base_url().'finance.php','💸'); }catch(Throwable $e){}
     }catch(Throwable $e){ $err=$e->getMessage(); }
     if($err===''){ header('Location: kasa.php?ok=payment'); exit; }
     $_SESSION['payment_err']=$err;

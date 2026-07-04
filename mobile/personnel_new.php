@@ -30,7 +30,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             $uid=(int)$pdo->lastInsertId();
             $pdo->prepare("UPDATE personnel SET user_id=?, login_enabled=1 WHERE id=?")->execute([$uid,$pid]);
         }
-        try{ if(function_exists('activity_log')) activity_log('Personel','Yeni',$name,'','personnel',$pid,'personnel_view.php?id='.$pid,'👷'); }catch(Throwable $e){}
+        try{ if(function_exists('activity_log')) activity_log('Personel','Yeni',$name,'','personnel',$pid,base_url().'mobile/personnel_view.php?id='.$pid,'👷'); }catch(Throwable $e){}
         header('Location: personnel_view.php?id='.$pid); exit;
     }catch(Throwable $e){ $er=$e->getMessage(); }
 }

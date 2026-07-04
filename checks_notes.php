@@ -6,38 +6,48 @@ require_once __DIR__.'/checks_notes_lib.php';
 
 $pdo=db();
 $error='';
-$ok = !empty($_GET['deleted']) ? 'Kayıt silindi.' : '';
+$ok = !empty($_GET['deleted']) ? 'Kayıt silindi.' : (!empty($_GET['ok']) ? 'Kayıt eklendi.' : '');
+if(!empty($_SESSION['cn_err'])){ $error=$_SESSION['cn_err']; unset($_SESSION['cn_err']); }
 $typeFilter = $_GET['type'] ?? '';
 $statusFilter = $_GET['status'] ?? '';
 $dirFilter = $_GET['direction'] ?? '';
 $u = current_user();
 
 if($_SERVER['REQUEST_METHOD']==='POST'){
-    try{
-        if(isset($_POST['save_cn'])){
+    // save_cn artık PRG (Post-Redirect-Get) deseniyle redirect ediyor — UX/STABILITY PATCH-002'de
+    // bulundu: önceden redirect YOKTU, sayfa yenilendiğinde (F5) form yeniden POST edilip AYNI
+    // çek/senedin ikinci bir kaydı + ikinci bir otomatik hatırlatma görevi oluşuyordu (takvimde aynı
+    // çekin iki kez görünmesinin kök nedeni). mobile/checks_notes.php zaten bu deseni kullanıyordu.
+    if(isset($_POST['save_cn'])){
+        try{
             $newId = checks_notes_create($pdo, $_POST, $u['id'] ?? null);
-            $ok='Kayıt eklendi.';
             activity_log('Finans','Çek/Senet',
                 (($_POST['type'] ?? '')==='senet'?'Senet':'Çek').' kaydı eklendi',
                 trim($_POST['number'] ?? '').' · '.number_format((float)str_replace(',','.',$_POST['amount'] ?? 0),2,',','.').' ₺',
                 'checks_notes',$newId,'checks_notes.php','🧾');
-        }elseif(isset($_POST['edit_cn'])){
+            header('Location: checks_notes.php?ok=1'); exit;
+        }catch(Throwable $e){
+            $_SESSION['cn_err']=$e->getMessage();
+            header('Location: checks_notes.php'); exit;
+        }
+    }elseif(isset($_POST['edit_cn'])){
+        try{
             if(!can_edit_delete()){
                 $error='Bu işlem için yetkiniz yok.';
             }else{
                 checks_notes_update($pdo, (int)$_POST['id'], $_POST);
                 $ok='Kayıt güncellendi.';
             }
-        }elseif(isset($_POST['delete_cn'])){
+        }catch(Throwable $e){ $error=$e->getMessage(); }
+    }elseif(isset($_POST['delete_cn'])){
+        try{
             if(!can_edit_delete()){
                 $error='Silme için yetkiniz yok.';
             }else{
                 $res=checks_notes_delete($pdo,(int)$_POST['id']);
                 if($res['ok']) $ok=$res['msg']; else $error=$res['msg'];
             }
-        }
-    }catch(Throwable $e){
-        $error=$e->getMessage();
+        }catch(Throwable $e){ $error=$e->getMessage(); }
     }
 }
 

@@ -29,8 +29,46 @@ Tam denetim raporu (mimari/performans/UX/veri modeli dahil) → System Audit Art
    `acans-migrate-2026` anahtarını paylaşıyor. Admin oturumu zaten yeterli kontrol sağlıyor, anahtar
    sadece kurulum-öncesi (kullanıcı yokken) bypass amaçlı. Repo public olursa değiştirilmeli.
 
+## Açık — DEV QA'da SERVER-SIDE PASS aldı, gerçek iPhone Safari cihaz testi bekliyor (2026-07-05)
+
+9. **PWA Push — Safari'de arka planda/uygulama kapalıyken bildirim gelmiyor.** `push_to_user()`'a
+   loglama eklendi (`push_log()`, `push_debug.log`) ve yerel QA'da hem başarı (gerçek bir Chrome/FCM
+   aboneliğine gönderim, sunucu 201 "OK" ile kabul etti) hem başarısızlık (410 Gone) senaryosu uçtan
+   uca doğrulandı — **SERVER-SIDE PASS**. Ancak Safari/iOS'a özgü arka plan teslimatı bu ortamdan
+   (gerçek bir iOS aboneliği yok) test edilemedi. primac.tr'de gerçek bir iPhone'dan test + başarısız
+   olursa `push_debug.log` kontrolü hâlâ gerekiyor (bkz. `ROADMAP.md` "Sıradaki sıra").
+10. **Mobil Mesajlaşma — liste/composer arası boşluk (regresyon).** CSS özgüllük çakışması
+    (`body.chat-mode` vs `body.kb`) `body.chat-mode.kb{padding-bottom:0}` ile düzeltildi, DEV QA'da
+    render edilen sayfada kural varlığı ve üstünlüğü (2 sınıf > 1 sınıf, sıradan bağımsız) doğrulandı
+    — **CONDITIONAL PASS**. Piksel-seviye görsel doğrulama (gerçek klavye açılışı) yerel ortamda
+    yapılamadı, gerçek iPhone Safari cihaz testi bekliyor.
+11. **WhatsApp — gelen (inbound) mesajlar sistemde görünmüyor.** API kısıtı değil — mevcut entegrasyon
+    (`share_lib.php`, UltraMsg) sadece gönderim yapıyor, hiçbir webhook alıcı endpoint'i veya
+    konuşma geçmişi tablosu yok. Eklemek yeni webhook + yeni tablo gerektirir (yeni özellik),
+    kullanıcı onayı bekliyor.
+
 ## Son Çözülenler (detay → `memory/bugs.md`)
 
+- **Takvimde aynı çek/senet iki kez görünüyordu (UX/STABILITY PATCH-002, 2026-07-05)** —
+  `checks_notes.php` (web) `save_cn` işleminde PRG (redirect) yoktu, sayfa yenilenince form
+  yeniden POST edilip ikinci bir çek/senet kaydı + ikinci bir otomatik hatırlatma görevi
+  oluşuyordu (takvime düşen bu görev "iki kayıt" görünümüne sebep oluyordu). PRG eklendi.
+- **Takvim günlük detay filtresi "çalışmıyor" gibi görünüyordu (UX/STABILITY PATCH-002,
+  2026-07-05)** — `takvim.php`'nin AY IZGARASI bir gün seçilse de her günün madde başlıklarını
+  basmaya devam ediyordu (alttaki detay paneli aslında doğru filtreleniyordu). Bir gün
+  seçiliyken diğer günler artık sadece bir sayı rozeti gösteriyor.
+- **"Son İşlemler" birçok kayıtta yanlış/kırık sayfaya gidiyordu (UX/STABILITY PATCH-002,
+  2026-07-05)** — 11 `activity_log()` çağrısı web/mobil arasında isim uyuşmazlığı yüzünden
+  (`kasa.php`↔`finance.php`, sadece mobilde olan `personnel_view.php` vb.) yanlış platforma veya
+  404'e gidiyordu. `base_url()` ile mutlak path / gereksiz `mobile/` önekinin kaldırılmasıyla
+  düzeltildi.
+- **Teklif listesinde/detayında Düzenle-Sil-Detay eksikti (UX/STABILITY PATCH-002, 2026-07-05)** —
+  liste satırına görünür "Detay" bağlantısı eklendi; Düzenle (web+mobil) ham `is_admin()` yerine
+  projenin kademeli `can_edit_delete()` yetkisini kullanacak şekilde düzeltildi.
+- **Mesajlaşmada liste/composer arası boşluk (regresyon, UX/STABILITY PATCH-002, 2026-07-05)** —
+  `body.chat-mode` ile `body.kb` CSS kuralları aynı özgüllükte çakışıyordu, klavye açılınca
+  `chat-mode`'un sıfırladığı boşluk geri geliyordu. Bileşik seçici (`body.chat-mode.kb`) ile
+  kalıcı olarak düzeltildi.
 - **Web takvimde gün tıklama hiçbir şey yapmıyordu (SPRINT CLOSE, 2026-07-04, `d7c593a`)** —
   `takvim.php`'de gün numarasının hiç linki yoktu, ay ızgarası zaten tüm günleri iç içe gösterdiği
   için tıklamanın hiçbir etkisi olamazdı. Mobildeki `?g=` gün-filtreleme deseni web'e de eklendi.

@@ -131,7 +131,7 @@ function trade_apply_document($documentId){
     if(function_exists('activity_log')){
         $mod=$doc['document_type']==='purchase'?'Alış':'Satış';
         $icon=$doc['document_type']==='purchase'?'🛒':'🧾';
-        activity_log('Cari',$mod,$mod.' belgesi oluşturuldu',($doc['contact_name'] ?: 'Cari yok').' · '.$doc['document_no'].' · '.trade_money($doc['grand_total']),'trade_document',$documentId,'trade_document_view.php?id='.$documentId,$icon);
+        activity_log('Cari',$mod,$mod.' belgesi oluşturuldu',($doc['contact_name'] ?: 'Cari yok').' · '.$doc['document_no'].' · '.trade_money($doc['grand_total']),'trade_document',$documentId,base_url().'trade_document_view.php?id='.$documentId,$icon);
     }
 }
 ?>

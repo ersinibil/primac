@@ -10,7 +10,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             VALUES(?,?,?,?,?,?,?,?,1)")
             ->execute([$code,$name,trim($_POST['unit'] ?? 'adet'),(float)($_POST['quantity']??0),(float)($_POST['critical_level']??0),
             (float)($_POST['purchase_price']??0),(float)($_POST['sale_price']??0),(float)($_POST['purchase_price']??0)]);
-        try{ if(function_exists('activity_log')) activity_log('Stok','Yeni Ürün',$name,'','product',(int)$pdo->lastInsertId(),'mobile/stock.php','📦'); }catch(Throwable $e){}
+        $newPid=(int)$pdo->lastInsertId();
+        try{ if(function_exists('activity_log')) activity_log('Stok','Yeni Ürün',$name,'','product',$newPid,'product_view.php?id='.$newPid,'📦'); }catch(Throwable $e){}
         $ok=$name.' eklendi.';
     }catch(Throwable $e){ $er=$e->getMessage(); }
 }

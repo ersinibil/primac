@@ -29,7 +29,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             $a=$pdo->prepare("SELECT name FROM finance_accounts WHERE id=?");
             $a->execute([$from]); $fromName=$a->fetch()['name'] ?? 'Kaynak';
             $a->execute([$to]); $toName=$a->fetch()['name'] ?? 'Hedef';
-            if(function_exists('activity_log')) activity_log('Finans','Transfer','Hesaplar arası transfer',$fromName.' → '.$toName.' · '.mm($amount),'finance',$fmId,'mobile/kasa.php','↔️');
+            if(function_exists('activity_log')) activity_log('Finans','Transfer','Hesaplar arası transfer',$fromName.' → '.$toName.' · '.mm($amount),'finance',$fmId,base_url().'finance.php','↔️');
         }catch(Throwable $e){}
     }catch(Throwable $e){ $err=$e->getMessage(); }
     if($err===''){ header('Location: kasa.php?ok=transfer'); exit; }

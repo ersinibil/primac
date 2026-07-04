@@ -68,7 +68,7 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['del_quote']) && $isAdmin
 }
 
 // Teklif düzenle (topx'tan önce)
-if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['edit_quote']) && $isAdmin){
+if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['edit_quote']) && can_edit_delete()){
   $eid=(int)($_POST['edit_id']??0);
   if($eid){
     try{
