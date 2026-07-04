@@ -34,11 +34,18 @@ if(!empty($_GET['ok'])) echo '<div class="ok">Hareket güncellendi.</div>';
 if(!empty($_SESSION['mv_err'])){ echo '<div class="err">'.htmlspecialchars($_SESSION['mv_err']).'</div>'; unset($_SESSION['mv_err']); }
 
 try{
-    $m=$pdo->prepare("SELECT f.*, c.name cari FROM finance_movements f LEFT JOIN contacts c ON c.id=f.contact_id WHERE f.id=?");
+    $m=$pdo->prepare("SELECT f.*, c.name cari, ac.group_name cat_group, fa.account_type acc_type FROM finance_movements f
+        LEFT JOIN contacts c ON c.id=f.contact_id
+        LEFT JOIN accounting_categories ac ON ac.id=f.category_id
+        LEFT JOIN finance_accounts fa ON fa.id=f.account_id
+        WHERE f.id=?");
     $m->execute([$id]); $mv=$m->fetch();
     if(!$mv) throw new Exception('Hareket bulunamadı.');
     $in=$mv['direction']==='in';
     $editable=in_array($mv['movement_type'],finance_movement_editable_types(),true);
+    // FINANCE UX REFACTOR (2026-07-04): mevcut kaydın dolu alanlarına bakarak en olası sihirbaz
+    // adımını türet — DB'ye yeni bir "tür" kolonu eklemeden, eski kayıtlar da doğru adımla açılır.
+    $initialStep = finance_record_type_info($mv, $mv['cat_group'] ?? null, $mv['acc_type'] ?? null);
 ?>
 <div class="panel">
   <h2 style="margin:0 0 4px;color:<?=$in?'#4ade80':'#f87171'?>"><?=$in?'💰 Tahsilat':'💸 Ödeme'?></h2>
@@ -62,22 +69,41 @@ try{
   <summary style="font-weight:900;cursor:pointer">✏️ Hareketi Düzenle</summary>
   <form method="post" style="margin-top:10px">
     <?php
-    $cs=[]; $accounts=[]; $giderCats=[]; $gelirCats=[];
+    $cs=[]; $accounts=[]; $giderCats=[]; $gelirCats=[]; $personnel=[];
     try{ $cs=$pdo->query("SELECT id,name FROM contacts ORDER BY name")->fetchAll(); }catch(Throwable $e){}
     try{ $accounts=$pdo->query("SELECT * FROM finance_accounts WHERE COALESCE(active,1)=1 ORDER BY account_type,name")->fetchAll(); }catch(Throwable $e){}
+    try{ $personnel=$pdo->query("SELECT id,name FROM personnel WHERE COALESCE(active,1)=1 ORDER BY name")->fetchAll(); }catch(Throwable $e){}
     $giderCats = acc_categories($pdo, 'gider');
     $gelirCats = acc_categories($pdo, 'gelir');
+    $stepOpts = finance_record_type_options();
     ?>
     <label>İşlem Tipi</label>
-    <select name="direction" id="mvDirection" onchange="mvFilterCats()">
+    <select name="direction" id="mvDirection" onchange="mvFilterCats();mvToggleWizard()">
       <option value="in" <?=$in?'selected':''?>>Tahsilat</option>
       <option value="out" <?=!$in?'selected':''?>>Ödeme</option>
     </select>
+
+    <div id="mvWizard" style="<?=$in?'display:none':''?>">
+    <label>Ne kaydediyorsun?</label>
+    <select name="record_step" id="mvStep" onchange="mvApplyStep()">
+      <?php foreach($stepOpts as $key=>$o): ?><option value="<?=$key?>" <?=$initialStep===$key?'selected':''?>><?=$o['icon']?> <?=htmlspecialchars($o['label'])?></option><?php endforeach; ?>
+    </select>
+    </div>
+
+    <div id="mvField_contact_id">
     <label>Cari <small class="muted">(opsiyonel)</small></label>
     <select name="contact_id"><option value="">— Cari seçilmedi —</option>
     <?php foreach($cs as $c): ?><option value="<?=$c['id']?>" <?=(int)$mv['contact_id']===(int)$c['id']?'selected':''?>><?=htmlspecialchars($c['name'])?></option><?php endforeach; ?></select>
-    <label>Kategori <small class="muted">(opsiyonel)</small></label>
-    <select name="category_id" id="mvCatSel"><option value="">— Kategori seçilmedi —</option>
+    </div>
+
+    <div id="mvField_personnel_id" style="display:none">
+    <label>Personel</label>
+    <select name="personnel_id"><option value="">— Personel seçilmedi —</option>
+    <?php foreach($personnel as $p): ?><option value="<?=(int)$p['id']?>" <?=(int)($mv['personnel_id']??0)===(int)$p['id']?'selected':''?>><?=htmlspecialchars($p['name'])?></option><?php endforeach; ?></select>
+    </div>
+
+    <label><?=$in?'Kategori':'Gider Türü'?> <small class="muted">(opsiyonel)</small></label>
+    <select name="category_id" id="mvCatSel"><option value="">— Seçilmedi —</option>
     <?php foreach($giderCats as $c): ?><option value="<?=(int)$c['id']?>" data-type="out" style="<?=$in?'display:none':''?>" <?=(int)$mv['category_id']===(int)$c['id']?'selected':''?>>[<?=htmlspecialchars($c['group_name'])?>] <?=htmlspecialchars($c['name'])?></option><?php endforeach; ?>
     <?php foreach($gelirCats as $c): ?><option value="<?=(int)$c['id']?>" data-type="in" style="<?=$in?'':'display:none'?>" <?=(int)$mv['category_id']===(int)$c['id']?'selected':''?>>[<?=htmlspecialchars($c['group_name'])?>] <?=htmlspecialchars($c['name'])?></option><?php endforeach; ?>
     </select>
@@ -90,7 +116,7 @@ try{
     <?php foreach(['Nakit','Banka','Kredi Kartı','POS','Çek','Senet','Diğer'] as $ch): ?><option <?=$mv['payment_channel']===$ch?'selected':''?>><?=$ch?></option><?php endforeach; ?>
     </select>
     <label>Tarih</label><input type="date" name="movement_date" value="<?=htmlspecialchars($mv['movement_date'])?>">
-    <label>Açıklama</label><textarea name="description" rows="2"><?=htmlspecialchars($mv['description']??'')?></textarea>
+    <label>Açıklama</label><textarea name="description" id="mvDesc" rows="2"><?=htmlspecialchars($mv['description']??'')?></textarea>
     <button class="btn dark" name="edit_movement" value="1" style="width:100%;padding:13px;margin-top:8px">💾 Kaydet</button>
   </form>
 </details>
@@ -105,6 +131,32 @@ function mvFilterCats(){
     if(o.dataset.type!==t&&o.selected) o.selected=false;
   }
 }
+// FINANCE UX REFACTOR (2026-07-04): sihirbaz SADECE Ödeme (out) tarafında aktif — Tahsilat/Gelir
+// akışı bu ekranda da hiç değişmiyor, sihirbaz seçilince gizlenir, alanlar zorunlu olmaz.
+function mvToggleWizard(){
+  var out=document.getElementById('mvDirection').value==='out';
+  document.getElementById('mvWizard').style.display = out?'':'none';
+  if(!out){
+    document.getElementById('mvField_personnel_id').style.display='none';
+    document.getElementById('mvField_personnel_id').querySelector('select').required=false;
+    document.getElementById('mvField_contact_id').style.display='';
+    document.getElementById('mvDesc').required=false;
+  } else { mvApplyStep(); }
+}
+function mvApplyStep(){
+  if(document.getElementById('mvDirection').value!=='out') return;
+  var step=document.getElementById('mvStep').value;
+  var need={cari:'contact_id',isletme:'category_id',personel:'personnel_id',vergi:'category_id',arac:'category_id',kart:null,diger:null}[step];
+  var contactBox=document.getElementById('mvField_contact_id');
+  contactBox.style.display = (step==='personel') ? 'none' : '';
+  contactBox.querySelector('select').required = (need==='contact_id');
+  document.getElementById('mvCatSel').required = (need==='category_id');
+  var persBox=document.getElementById('mvField_personnel_id');
+  persBox.style.display = (step==='personel') ? '' : 'none';
+  persBox.querySelector('select').required = (need==='personnel_id');
+  document.getElementById('mvDesc').required = (step==='diger');
+}
+mvToggleWizard();
 </script>
 <?php endif; ?>
 <?php

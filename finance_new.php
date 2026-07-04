@@ -28,8 +28,22 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         $amount=(float)$_POST['amount'];
         $accountId=(int)$_POST['account_id'];
         $catId=(int)($_POST['category_id']??0) ?: null;
+        $personnelId=(int)($_POST['personnel_id']??0) ?: null;
         if($amount<=0) throw new Exception('Tutar sıfırdan büyük olmalı.');
         if(!$accountId) throw new Exception('Hesap seçilmelidir.');
+
+        // FINANCE UX REFACTOR (2026-07-04): "Ne kaydediyorsun?" sihirbazı sadece Ödeme (out)
+        // tarafında aktif — Tahsilat (in) hiç etkilenmiyor. Sunucu tarafı doğrulama (JS'e ek,
+        // savunma katmanlı) — "Diğer" her zaman bir kaçış kapısı.
+        if($direction==='out'){
+            $step=$_POST['record_step'] ?? 'diger';
+            if($step==='cari' && !(int)($_POST['contact_id']??0)) throw new Exception('Cari Ödemesi için cari seçilmelidir.');
+            if($step==='isletme' && !$catId) throw new Exception('İşletme Gideri için Gider Türü seçilmelidir.');
+            if($step==='personel' && !$personnelId) throw new Exception('Personel Ödemesi için personel seçilmelidir.');
+            if($step==='vergi' && !$catId) throw new Exception('Vergi / SGK için Gider Türü seçilmelidir.');
+            if($step==='arac' && !$catId) throw new Exception('Araç Gideri için Gider Türü seçilmelidir.');
+            if($step==='diger' && trim($_POST['description']??'')==='') throw new Exception('Diğer seçildiğinde açıklama zorunludur.');
+        }
 
         if($editId){
             finance_movement_update($pdo,$editId,$_POST);
@@ -51,12 +65,13 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             exit;
         }
 
-        $stmt=$pdo->prepare("INSERT INTO finance_movements(contact_id,category_id,job_id,direction,amount,payment_channel,account_id,status,movement_date,description,movement_type,reference_no)
-            VALUES(?,?,NULL,?,?,?,?,?,?,?,'normal',?)");
+        $stmt=$pdo->prepare("INSERT INTO finance_movements(contact_id,category_id,personnel_id,job_id,direction,amount,payment_channel,account_id,status,movement_date,description,movement_type,reference_no)
+            VALUES(?,?,?,NULL,?,?,?,?,?,?,?,'normal',?)");
         $status=$direction==='in'?'Tahsil Edildi':'Ödendi';
         $stmt->execute([
             (int)$_POST['contact_id'] ?: null,
             $catId,
+            $personnelId,
             $direction,
             $amount,
             $_POST['payment_channel'],
@@ -99,8 +114,24 @@ require_once __DIR__.'/layout_top.php';
 
 $contacts=$pdo->query("SELECT id,name,type FROM contacts ORDER BY name")->fetchAll();
 $accounts=$pdo->query("SELECT * FROM finance_accounts WHERE active=1 ORDER BY account_type,name")->fetchAll();
+$personnelList=[];
+try{ $personnelList=$pdo->query("SELECT id,name FROM personnel WHERE COALESCE(active,1)=1 ORDER BY name")->fetchAll(); }catch(Throwable $e){}
 $giderCats=acc_categories($pdo,'gider');
 $gelirCats=acc_categories($pdo,'gelir');
+$stepOpts=finance_record_type_options();
+// FINANCE UX REFACTOR (2026-07-04): düzenleme modunda mevcut kaydın dolu alanlarına bakarak en
+// olası sihirbaz adımını türet (DB'ye yeni kolon eklemeden, notif_type_info() ile aynı desen).
+$initialStep='diger';
+if($editRow){
+    $catGroup=null; $accType=null;
+    if(!empty($editRow['category_id'])){
+        try{ $cg=$pdo->prepare("SELECT group_name FROM accounting_categories WHERE id=?"); $cg->execute([$editRow['category_id']]); $catGroup=$cg->fetch()['group_name'] ?? null; }catch(Throwable $e){}
+    }
+    if(!empty($editRow['account_id'])){
+        try{ $ag=$pdo->prepare("SELECT account_type FROM finance_accounts WHERE id=?"); $ag->execute([$editRow['account_id']]); $accType=$ag->fetch()['account_type'] ?? null; }catch(Throwable $e){}
+    }
+    $initialStep=finance_record_type_info($editRow,$catGroup,$accType);
+}
 ?>
 
 <div class="panel-head">
@@ -128,13 +159,19 @@ $channelOpts=['Nakit','Banka / EFT','Kredi Kartı','POS','Çek','Senet','Diğer'
 <?php if($editId): ?><input type="hidden" name="id" value="<?=$editId?>"><?php endif; ?>
 
 <label>İşlem Tipi
-<select name="direction" id="fnDirection" onchange="fnFilterCats()">
+<select name="direction" id="fnDirection" onchange="fnFilterCats();fnToggleWizard()">
 <option value="in" <?=$direction==='in'?'selected':''?>>Tahsilat</option>
 <option value="out" <?=$direction==='out'?'selected':''?>>Ödeme</option>
 </select>
 </label>
 
-<label>Cari <small style="font-weight:400;color:#667085">(opsiyonel)</small>
+<label id="fnWizardLabel" class="full" style="<?=$direction==='out'?'':'display:none'?>">Ne kaydediyorsun?
+<select name="record_step" id="fnStep" onchange="fnApplyStep()">
+<?php foreach($stepOpts as $key=>$o): ?><option value="<?=$key?>" <?=$initialStep===$key?'selected':''?>><?=$o['icon']?> <?=h($o['label'])?></option><?php endforeach; ?>
+</select>
+</label>
+
+<label id="fnField_contact_id">Cari <small style="font-weight:400;color:#667085">(opsiyonel)</small>
 <select name="contact_id">
 <option value="">Cari seçilmedi</option>
 <?php foreach($contacts as $c): ?>
@@ -143,7 +180,16 @@ $channelOpts=['Nakit','Banka / EFT','Kredi Kartı','POS','Çek','Senet','Diğer'
 </select>
 </label>
 
-<label>Kategori <small style="font-weight:400;color:#667085">(cari yerine/yanında — personel yol gideri, yakıt, vergi, telefon vb.)</small>
+<label id="fnField_personnel_id" style="display:none">Personel
+<select name="personnel_id">
+<option value="">Personel seçilmedi</option>
+<?php foreach($personnelList as $p): ?>
+<option value="<?=(int)$p['id']?>" <?=(int)($editRow['personnel_id']??0)===(int)$p['id']?'selected':''?>><?=h($p['name'])?></option>
+<?php endforeach; ?>
+</select>
+</label>
+
+<label><?=$direction==='out'?'Gider Türü':'Kategori'?> <small style="font-weight:400;color:#667085">(cari yerine/yanında — personel yol gideri, yakıt, vergi, telefon vb.)</small>
 <select name="category_id" id="fnCatSel">
 <option value="">— Seç —</option>
 <?php foreach($giderCats as $c): ?>
@@ -185,7 +231,7 @@ $channelOpts=['Nakit','Banka / EFT','Kredi Kartı','POS','Çek','Senet','Diğer'
 </label>
 
 <label class="full">Açıklama
-<textarea name="description" rows="3"><?=h($fDesc)?></textarea>
+<textarea name="description" id="fnDesc" rows="3"><?=h($fDesc)?></textarea>
 </label>
 
 <button class="btn"><?=$editId?'💾 Güncelle':'Kaydet'?></button>
@@ -202,6 +248,32 @@ function fnFilterCats(){
     if(o.dataset.type!==t&&o.selected) o.selected=false;
   }
 }
+// FINANCE UX REFACTOR (2026-07-04): sihirbaz SADECE Ödeme (out) tarafında aktif — Tahsilat/Gelir
+// akışı bu ekranda hiç değişmiyor, sihirbaz seçilince gizlenir, alanlar zorunlu olmaz.
+function fnToggleWizard(){
+  var out=document.getElementById('fnDirection').value==='out';
+  document.getElementById('fnWizardLabel').style.display = out?'':'none';
+  if(!out){
+    document.getElementById('fnField_personnel_id').style.display='none';
+    document.getElementById('fnField_personnel_id').querySelector('select').required=false;
+    document.getElementById('fnField_contact_id').style.display='';
+    document.getElementById('fnDesc').required=false;
+  } else { fnApplyStep(); }
+}
+function fnApplyStep(){
+  if(document.getElementById('fnDirection').value!=='out') return;
+  var step=document.getElementById('fnStep').value;
+  var need={cari:'contact_id',isletme:'category_id',personel:'personnel_id',vergi:'category_id',arac:'category_id',kart:null,diger:null}[step];
+  var contactBox=document.getElementById('fnField_contact_id');
+  contactBox.style.display = (step==='personel') ? 'none' : '';
+  contactBox.querySelector('select').required = (need==='contact_id');
+  document.getElementById('fnCatSel').required = (need==='category_id');
+  var persBox=document.getElementById('fnField_personnel_id');
+  persBox.style.display = (step==='personel') ? '' : 'none';
+  persBox.querySelector('select').required = (need==='personnel_id');
+  document.getElementById('fnDesc').required = (step==='diger');
+}
+fnToggleWizard();
 </script>
 
 <?php require_once __DIR__.'/layout_bottom.php'; ?>

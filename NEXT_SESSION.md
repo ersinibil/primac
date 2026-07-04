@@ -4,87 +4,98 @@ Bu dosya bir "yapılacaklar listesi" değil, bir sonraki oturuma "neredeydik, ne
 hızlı giriş yapmak için var. Detay için ilgili dosyalara bakın (`CHANGELOG.md`, `ROADMAP.md`,
 `KNOWN_BUGS.md`, `VERSIONING.md`, `memory/*.md`).
 
-## Son Tamamlanan İşler
-- **Sprint-001** (2026-07-04, commit `0ba36da`): Bildirimler modülünde toplu-silmenin TÜM
-  kullanıcıları etkileyen sahiplik açığı kapatıldı (`user_notification_status` tablosu, migration
-  039, `notifications_lib.php`); İşlerim/İş Ekle/Kendime İş Ekle tutarlılık düzeltmeleri; kendine-not
-  mesaj rozeti sabitlenmesi; emoji buton taşma düzeltmesi. primac.tr'de fiilen test edildi, DEV test
-  zip'i (`primactr_dev_sprint001_test.zip`) ve tüm yardımcı teşhis script'leri sunucudan temizlendi.
-- **UI/UX Sprinti** (2026-07-04, bu oturumda lokal checkpoint commit edildi): `mobile/common.php`'ye
-  design token sistemi (`:root` CSS değişkenleri), paylaşılan toolbar'a global arama çubuğu
-  (`#globalSearchInput`, mevcut `search.php`'ye GET ile gidiyor, route/API değişmedi), ana ekran
-  kart tutarlılığı (`card()` fonksiyonuna geçiş) + yoğunluk artışı, bildirim test panelinin admin-only
-  "Genel Sistem Yönetimi" grubuna taşınması (`mobile/more.php`). Kullanıcı, ertelenen maddeler
-  listesini (autocomplete, arama kapsamı genişletme, FAB, web tasarım taşıması, tam mobil redesign)
-  onayladı — bkz. `ROADMAP.md`.
-- Dokümantasyon seti (`CLAUDE.md`, `PROJECT_RULES.md`, `VERSIONING.md`, `DATABASE.md`,
-  `KNOWN_BUGS.md`, `ROADMAP.md`, `memory/deploy.md`) tek-ortam (DEV=primac.tr / PROD=acanstr.com/ots)
-  modeliyle uyumlu hale getirildi, staleness (eski/çelişkili ifadeler) temizlendi.
+## Bir Sonraki Oturumun İlk Önceliği
+**SECURITY SPRINT-001: `mobile/personnel_view.php` kritik şifre sıfırlama yetki açığının
+kapatılması.** (Admin olmayan, sadece `personnel` modül yetkisi olan bir kullanıcı, `uid` POST
+alanına başka bir kullanıcının id'sini yazarak o hesabın şifresini değiştirebiliyor — bkz.
+`KNOWN_BUGS.md` madde 1, satır referansı `mobile/personnel_view.php:78-81`.) Bu, her şeyden önce
+ele alınmalı.
 
-## Devam Eden İşler
-- **UI/UX Sprinti'nin primac.tr'de görsel doğrulaması bekleniyor** — bu ortamda canlı tarayıcı/DB
-  erişimi yok, tüm değişiklikler sadece `php -l` + git diff incelemesiyle statik doğrulandı. Kullanıcı
-  primac.tr'ye yüklenen güncel `guncelleme.zip`'i test edip onaylamadan sonraki adıma geçilmeyecek.
-- DEV test paketi bu oturumda `~/Desktop/PRIMAC-GUNCELLEME/guncelleme.zip` olarak tazelendi (`git
-  archive HEAD` + `vendor/`) — primac.tr'ye cPanel File Manager ile yüklenip `guncelle.php`
-  çalıştırılmalı. Yeni migration YOK bu turda (sadece HTML/CSS/kompozisyon değişikliği).
-- PROD'a (acanstr.com/ots) hiçbir değişiklik gönderilmedi — "DEPLOY MODE" komutu bekleniyor,
-  kullanıcının kararı.
+## Bugün Tamamlanan Çalışmalar (2026-07-04)
+- **UX SPRINT-001** (commit `d9c938b`): Bildirimler modülü kart/detay standardına taşındı,
+  `notif_type_info()` ile DB'siz tip türetme, `mobile/notification_view.php` yeni detay ekranı,
+  `notif_get_for_user()` ile IDOR kapatıldı. + **"Çalışma Alanı"** UX düzeltmesi. **primac.tr'de
+  canlı cihazdan doğrulandı, DEPLOY MODE ile güncel referans sürüm olarak yüklendi.**
+- **Deploy Standardı** (commit `2e2f2ca`): kalıcı 7 adımlı deploy akışı (Hazırla→Yükle→Doğrula→
+  Migration→Smoke Test→Temizlik→Son Doğrulama) `PROJECT_RULES.md`'ye işlendi, `guncelle.php`
+  otomatik temizlik+rapor+son doğrulama yapacak şekilde yeniden yazıldı.
+- **SYSTEM AUDIT MODE** (read-only, kod/DB değişmedi): 5 ajanla mimari/güvenlik/performans/UX-UI/
+  veri modeli/kod kalitesi kapsamlı denetimi yapıldı. Bulgular `KNOWN_BUGS.md`/`ROADMAP.md`'ye
+  işlendi, tam rapor Artifact + Masaüstü metin dosyası olarak paylaşıldı. Bu denetim artık her
+  büyük sprint/RC/major sürüm/production öncesi otomatik tekrarlanacak kalıcı standart.
+- **FINANCE UX REFACTOR** (bu oturumun checkpoint'i, `checkpoint(security-prep)`): Ödeme/Gider +
+  Muhasebe ekranlarına "Ne kaydediyorsun?" sihirbazı eklendi (7 seçenek). DB şeması DEĞİŞMEDİ, tür
+  bilgisi `finance_record_type_info()` ile mevcut kayıttan türetiliyor. 6 dosya değişti
+  (`finance_lib.php`, `finance_new.php`, `accounting.php`, `mobile/payment.php`,
+  `mobile/movement_view.php`, `mobile/accounting.php`). Tahsilat/Gelir akışı hiç değişmedi.
+  **Henüz primac.tr'de test edilmedi.**
 
-## Açık Buglar
+## Devam Eden Sprint
+**FINANCE UX REFACTOR primac.tr'de test/onay bekliyor** — bu oturumda DEV'e yüklendi ama henüz
+kullanıcı tarafından smoke test yapılmadı. Test edilecekler: 7 sihirbaz seçeneğinde doğru alan
+zorunlu/görünür oluyor mu (4 ekranda da — web+mobil, Ödeme/Gider+Muhasebe), düzenleme ekranlarında
+eski kayıtlar doğru adımla açılıyor mu, Tahsilat/Gelir akışı hiç bozulmamış mı.
+
+## Açık Kalan Hatalar
 (Tam liste → `KNOWN_BUGS.md`)
-1. Sabit migration/temizlik anahtarı (`acans-migrate-2026`) `migrate.php`/`temizle.php`'de hardcoded
-   — admin oturumu zaten koruyor, repo public olursa değiştirilmeli.
-2. `tasks` tablosunda kayıt-kaynağı ayrımı yok (`created_by` benzeri) — admin'in atadığı iş ile
-   kullanıcının kendine eklediği iş `tasks.php`'de görsel ayırt edilemiyor. Güvenlik açığı değil,
-   izlenebilirlik notu.
-3. Bildirim id'lerinde düşük riskli IDOR (bkz. `ROADMAP.md` "Bilinçli olarak ERTELENMİŞ") — net
-   düzeltme var ama kullanıcı onayı bekliyor.
+1. `sifre_sifirla.php`'de brute-force koruması yok (6 haneli kod, deneme sınırı/lockout yok).
+2. `accounting.php`'de `tab` parametresiyle yansıyan XSS (satır 8, 111-130).
+3. `users.php`'de "users" modül yetkisi = fiili tam admin, kendine rol yükseltme mümkün.
+4. `is_admin()` session'da bayatlıyor, `user_can()` gibi DB'den taze okumuyor.
+5. Login'de `session_regenerate_id(true)` çağrılmıyor (session fixation).
+6. Hiçbir tabloda FK kısıtı yok — personel/cari/iş silme akışlarında yetim kayıt riski (özellikle
+   `job_logs`).
+7. `jobs`/`tasks`/`finance_movements`/`internal_messages`/`internal_notifications` tablolarında
+   eksik index (performans + veri büyüdükçe risk).
+8. Sabit migration/temizlik anahtarı (`acans-migrate-2026`) hardcoded — repo public olursa
+   değiştirilmeli.
+9. `tasks` tablosunda kayıt-kaynağı ayrımı yok (`created_by` benzeri) — izlenebilirlik notu, güvenlik
+   açığı değil.
 
-## Bir Sonraki Oturumun İlk 10 Önceliği
-1. Kullanıcının primac.tr'de UI/UX sprintini görsel olarak onaylaması — onaylanırsa VERSIONING.md
-   "Release Durumu" güncellenir, onaylanmazsa geri bildirime göre küçük düzeltme turu açılır.
-2. Görsel onay sonrası: PROD'a gönderim zamanlaması kararı (DEPLOY MODE ne zaman verilecek).
-3. Mobil parite eksiği — `work_center.php`/`trade_documents.php`/`design.php` mobilde yok, kapsam
-   kararı (ayrı sayfa mı, mevcut sayfaya filtre mi) kullanıcıdan bekleniyor.
-4. VAPID push anahtarının ACANS+PRIMAC sunucu `config.php`'lerine elle taşınması (kullanıcı
-   seyahatten dönünce yapılacak, bkz. `ROADMAP.md`).
-5. Global arama canlı-autocomplete kararı — istenirse yeni `search.php?ajax=1` uç noktası + JS
-   debounce katmanı ayrı bir iş olarak planlanmalı (DOM iskeleti zaten hazır).
-6. Arama kapsamının kullanıcının istediği tam modül listesine genişletilmesi kararı (büyük, ayrı
-   sprint gerektirir — bkz. `ROADMAP.md`).
-7. FAB (Floating Action Button) desenin somut bir liste ekranına (jobs.php, contacts.php gibi)
-   uygulanması kararı.
-8. Web arayüzünün mobil tasarım diline ne zaman taşınacağı kararı ("zaman içinde" denildi, tarih yok).
-9. `notif_admin_delete_global()` fonksiyonunun bir admin UI butonuna bağlanıp bağlanmayacağı kararı.
-10. `/Users/acans/PRIMAC-OTS` (donmuş, 2026-07-02'den beri bağlantısız) ve `/Users/acans/ots`
-    (neredeyse boş) klasörlerinin ne yapılacağına dair karar — hâlâ dokunulmadı, sadece risk notu.
+## Açık Güvenlik Riskleri
+1. **KRİTİK — `mobile/personnel_view.php` keyfi şifre sıfırlama** (satır 78-81): `uid` POST
+   alanının gerçekten görüntülenen personelin hesabı olduğu doğrulanmıyor — admin olmayan bir
+   kullanıcı herhangi bir hesabın (admin dahil) şifresini değiştirebilir. **Bir sonraki oturumun
+   ilk işi (yukarı bakın).**
+2. **YÜKSEK — `mobile/task_view.php` IDOR** (satır 14-19): görev durumu güncellemesinde sahiplik
+   kontrolü yok, `?id=` değiştirilerek başkasının görevi değiştirilebilir.
+3. **YÜKSEK** — `sifre_sifirla.php` brute-force + `accounting.php` XSS (yukarıdaki "Açık Kalan
+   Hatalar" madde 1-2 ile aynı).
+4. **ORTA** — `users.php` rol yükseltme, `is_admin()` session bayatlığı, session fixation
+   (yukarıdaki madde 3-5 ile aynı).
+5. **BİLGİ** — Proje genelinde CSRF token mekanizması yok.
+
+Tam bulgu listesi ve satır referansları → `KNOWN_BUGS.md` ve 2026-07-04 tarihli System Audit raporu
+(Artifact + `~/Desktop/OTS_System_Audit_2026-07-04.txt`).
 
 ## Dikkat Edilmesi Gereken Mimari Kararlar
 - **Tek geliştirme ortamı modeli**: DEV=primac.tr (TÜM geliştirme/test burada), PROD=acanstr.com/ots
-  (SADECE "DEPLOY MODE" komutuyla dokunulur, kod güncellenmez). Ayrı DB'ler (u7883898_primactr /
-  u7883898_primacos) — kod dağıtımı ile veri taşınması birbirinden bağımsız, asla karıştırılmamalı.
-- **Deploy git-tabanlı DEĞİL**: Sunucuda git yok, `~/Desktop/PRIMAC-GUNCELLEME/` (DEV) ve
-  `~/Desktop/ACANS-GUNCELLEME/` (PROD) klasörlerindeki `guncelleme.zip` (`git archive HEAD` +
-  `vendor/`) + `guncelle.php` ile cPanel üzerinden elle yükleniyor. `git archive HEAD` SADECE commit
-  edilmiş içeriği paketler — uncommitted değişiklik varsa ya önce commit atılmalı ya da elle/curated
-  zip hazırlanmalı (bu oturumda önce commit atıldı, sonra zip tazelendi). Commitsiz zip tazeleme,
-  "eski kod"la yanlış test izlenimi vermişti (önceki oturumda yaşanan somut sorun) — bu yüzden zip
-  tazelemeden önce her zaman güncel bir commit olduğundan emin olunmalı.
-- **`user_notification_status` mimarisi** (migration 039): global (`target_user_id` NULL)
-  bildirimler ARTIK HİÇBİR ZAMAN fiziksel silinmiyor — her kullanıcının okuma/gizleme durumu kendi
-  satırında. Kişisel bildirimleri (`target_user_id` dolu) hâlâ doğrudan `internal_notifications`
-  üzerinden fiziksel silinebiliyor, sadece sahibi tarafından. Yeni bir bildirim-silme özelliği
-  eklenecekse bu ayrımı BOZMAMAK gerekiyor.
-- **Design token sistemi** (`mobile/common.php` `:root` CSS değişkenleri, 2026-07-04): yeni renk/
-  radius eklenirken ham hex/px yerine `var(--c-*)`/`var(--radius-*)` kullanılmalı — aksi halde
-  dağınıklık geri gelir. Işık-modu (light-background) mini-stat kutularındaki bazı renkler (`#059669`,
-  `#d97706`, `#fed7aa` vb.) BİLİNÇLİ OLARAK token'a çekilmedi (karanlık tema tonlarıyla uyumsuz) —
-  bunlar için ayrı bir "light" token seti gerekirse yeni bir karar gerekir.
-- **Mobil artık referans tasarım**: Kullanıcı mobil PWA'yı OTS'nin resmi referans UX'i ilan etti; web
-  arayüzü zamanla buna hizalanacak (tarih yok). Yeni bir modül tasarlanırken önce mobil düşünülmeli.
-- **Toolbar arama tüm mobil sayfalarda ortak component** — sayfa-özel override gerekiyorsa (ör. chat
-  ekranı) `body.chat-mode` gibi CSS sınıfı deseniyle gizlenmeli, `topx()`'in kendisi çatallanmamalı.
+  (SADECE "DEPLOY MODE" komutuyla dokunulur, kod güncellenmez). Ayrı DB'ler — kod dağıtımı ile veri
+  taşınması birbirinden bağımsız, asla karıştırılmamalı.
+- **Deploy git-tabanlı DEĞİL**: `~/Desktop/PRIMAC-GUNCELLEME/` (DEV) klasöründeki `guncelleme.zip`
+  (`git archive HEAD` + `vendor/`) + `guncelle.php` ile cPanel üzerinden yükleniyor. Zip tazelemeden
+  önce her zaman güncel bir commit olduğundan emin olunmalı (`git archive HEAD` sadece commit
+  edilmiş içeriği paketler).
+- **7 adımlı Deploy Standardı** (`PROJECT_RULES.md`): Hazırla→Yükle→Doğrula→Migration→Smoke Test→
+  Temizlik→Son Doğrulama. Temizlik Smoke Test'ten SONRA gelir, `guncelle.php` migration'dan hemen
+  sonra kendini silmez — `?cleanup=1` ile ayrı bir adım.
+- **Sürekli Kalite Denetimi Standardı**: SYSTEM AUDIT MODE her büyük sprint/RC/major sürüm/
+  production öncesi otomatik tekrarlanır, bulgular 5 dokümana (CHANGELOG/VERSIONING/ROADMAP/
+  KNOWN_BUGS/NEXT_SESSION) işlenir.
+- **`user_notification_status` mimarisi** (migration 039): global bildirimler asla fiziksel
+  silinmiyor, her kullanıcının okuma/gizleme durumu kendi satırında. Yeni bir bildirim-silme
+  özelliği eklenecekse bu ayrımı BOZMAMAK gerekiyor.
+- **"Ne kaydediyorsun?" sihirbaz deseni** (`finance_lib.php::finance_record_type_info()`,
+  2026-07-04): tür bilgisi DB'de SAKLANMIYOR, mevcut dolu alanlardan (personnel_id/contact_id/
+  category group_name/account_type) türetiliyor — `notif_type_info()` ile aynı desen. Yeni bir
+  finans alanı eklenirken bu türetme fonksiyonunun öncelik sırası (personel > vergi/sgk > araç >
+  kredi/kart > cari > işletme > diğer) bozulmamalı.
+- **Ödeme/Gider ile Muhasebe ekranları bilerek AYRI bırakıldı** — personel ödemesi artık iki
+  ekrandan da girilebiliyor (bkz. `ROADMAP.md` "FINANCE UX REFACTOR — bilinen açık nokta"),
+  birleştirme ayrı bir karar gerektirir.
+- **Design token sistemi** (`mobile/common.php`): yeni renk/radius eklenirken `var(--c-*)`/
+  `var(--radius-*)` kullanılmalı. Web'de token benimsenmesi hâlâ çok düşük (System Audit bulgusu).
+- **Mobil hâlâ referans tasarım**: yeni bir modül tasarlanırken önce mobil düşünülmeli.
 
 ## Referanslar
 Ortam kuralları → `PROJECT_RULES.md`. Sürüm durumu → `VERSIONING.md`. Açık kararlar → `ROADMAP.md`.

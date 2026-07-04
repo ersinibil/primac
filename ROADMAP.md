@@ -5,6 +5,48 @@ kaydıdır. `PROJECT_RULES.md` gereği proje artık aktif geliştirme aşamasın
 hiçbir madde kullanıcı açıkça istemeden uygulanmaz. Amaç: bir sonraki oturumda "neredeydik"
 sorusuna hızlı cevap.
 
+## FINANCE UX REFACTOR — bilinen açık nokta (2026-07-04)
+"Ne kaydediyorsun?" sihirbazı Ödeme/Gider (`finance_new.php`/`mobile/payment.php`) ekranına
+`personnel_id` alanını ilk kez ekledi — bu, Muhasebe ekranının (`accounting.php`/
+`mobile/accounting.php`) zaten sahip olduğu personel ödemesi girişiyle aynı anda var olacak.
+Bu turda İKİSİ DE bilinçli olarak ayrı ekranlar olarak bırakıldı (kullanıcı onayı: "sistem
+bütünlüğü açısında ikisini de düzenleyelim" ama TEK bir ekrana indirgeme YAPILMADI). İleride bu
+iki giriş noktasının birleştirilip birleştirilmeyeceği ayrı bir karar/sprint gerektirir.
+
+## SYSTEM AUDIT — Teknik Borç ve Öncelikler (2026-07-04, read-only denetim)
+5 uzman ajanla (güvenlik, veri modeli, mimari/kod kalitesi, performans, UX/UI) yapılan kapsamlı
+sistem denetiminin özeti — tam rapor bir Artifact olarak sunuldu, kritik/yüksek güvenlik bulguları
+`KNOWN_BUGS.md`'ye işlendi. Burada sadece **kod değişikliği gerektiren, henüz karar bekleyen**
+maddeler listeleniyor (denetim sırasında hiçbir kod/DB değiştirilmedi):
+
+1. **Index eksikliği** — `jobs`, `tasks`, `finance_movements`, `stock_movements`,
+   `internal_messages`, `internal_notifications` tablolarında PRIMARY KEY dışında index yok.
+   Öneri: tek bir `040_add_missing_indexes.sql` (idempotent, `information_schema` kontrolü ile) —
+   `ots-db-migration-dev`'e yazdırılabilir, kullanıcı onayı bekliyor.
+2. **FK yok / silme akışlarında yetim kayıt riski** — personel/cari/iş silme akışları tüm bağımlı
+   tabloları temizlemiyor (özellikle `job_logs` — ironik biçimde projenin önceki bir schema-drift
+   bug'ının kaynağı olan tablo). Tam cascade listesi veya gerçek FK kısıtları eklenmeli.
+3. **`personnel_devices` vs `personnel.telegram_*`** — paralel/çakışan iki model, ürün kararı
+   gerekiyor (terk mi edildi, gelecek özellik mi).
+4. **Yeni UX standardının (liste=sade, aksiyon=detayda) rollout'u** — şu an sadece
+   `mobile/notifications.php`'de var, `jobs.php`/`tasks.php`/`mytasks.php` hâlâ eski, aksiyon-yüklü
+   liste satırı deseninde. Kademeli bir taşıma planı gerekiyor.
+5. **Design token benimsenmesi çok düşük** — mobilde 66 dosyadan sadece 2'si, webde 96 dosyadan
+   sadece 1'i token kullanıyor. Web'in kendi ayrı/hardcoded paleti var, mobil ile senkron değil.
+6. **`composer.json`/`composer.lock` repoda yok** — vendor'un hangi sürümlerle kurulduğu
+   dokümante değil, reprodüksiyon imkânsız.
+7. **En büyük dosyaların lib'e bölünmesi** — `messages.php` (684 satır), `dashboard.php` (564,
+   5 fonksiyon gömülü), `sales.php` (455), `teklif.php` (360) — CLAUDE.md kural 5 ihlali.
+8. **Toolbar aramadaki ölü `#searchSuggest` DOM'u** — canlı öneri JS'i hiç yazılmadı, kullanıcıyı
+   yanıltan boş bir iskelet duruyor — ya inşa edilmeli ya kaldırılmalı.
+9. **Web'de dar ekranda arama tamamen kayboluyor** (`layout_top.php:117`,
+   `@media(max-width:960px){.search{display:none}}`) — alternatif erişim yok.
+10. **CSRF token mekanizması proje genelinde yok** — büyük bir mimari karar, ayrı değerlendirme
+    gerektirir.
+
+Öncelik sırası ve tam gerekçeler → System Audit raporu (Artifact, 2026-07-04). Hiçbiri kullanıcı
+onayı olmadan uygulanmayacak — bu liste sadece görünürlük için.
+
 ## Muhtemelen ÇÖZÜLDÜ, backlog.md güncellenmeli (not, bu dosyada kod değişikliği yapılmadı)
 - `memory/backlog.md`'deki **"Web'de 'Görevlerim' sayfası yok"** maddesi (2026-07-03 tarihli) artık
   güncel değil: aynı gün içinde ilerleyen bir oturumda web'e `mytasks.php` ("İşlerim") eklendi,

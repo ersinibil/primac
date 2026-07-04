@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__.'/layout_top.php';
 require_once __DIR__.'/accounting_lib.php';
+require_once __DIR__.'/finance_lib.php';
 $pdo=db();
 
 $month=(int)($_GET['m'] ?? date('m'));
@@ -12,6 +13,16 @@ $msg=''; $err='';
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['edit_entry'])){
     try{
         if(!can_edit_delete()) throw new Exception('Bu işlem için yetkiniz yok.');
+        // FINANCE UX REFACTOR (2026-07-04): sihirbaz sadece gider tarafında aktif.
+        if(($_POST['type'] ?? 'gider')==='gider'){
+            $step=$_POST['record_step'] ?? 'diger';
+            if($step==='cari' && !(int)($_POST['contact_id']??0)) throw new Exception('Cari Ödemesi için cari seçilmelidir.');
+            if($step==='isletme' && !(int)($_POST['category_id']??0)) throw new Exception('İşletme Gideri için Gider Türü seçilmelidir.');
+            if($step==='personel' && !(int)($_POST['personnel_id']??0)) throw new Exception('Personel Ödemesi için personel seçilmelidir.');
+            if($step==='vergi' && !(int)($_POST['category_id']??0)) throw new Exception('Vergi / SGK için Gider Türü seçilmelidir.');
+            if($step==='arac' && !(int)($_POST['category_id']??0)) throw new Exception('Araç Gideri için Gider Türü seçilmelidir.');
+            if($step==='diger' && trim($_POST['description']??'')==='') throw new Exception('Diğer seçildiğinde açıklama zorunludur.');
+        }
         accounting_entry_update($pdo, (int)$_POST['id'], $_POST);
         $msg='Kayıt güncellendi.';
     }catch(Throwable $e){ $err=$e->getMessage(); }
@@ -45,6 +56,17 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['save_entry'])){
         $contactId=(int)($_POST['contact_id']??0) ?: null;
         $direction = $type==='gelir' ? 'in' : 'out';
         if($amount<=0) throw new Exception('Tutar sıfırdan büyük olmalı.');
+        // FINANCE UX REFACTOR (2026-07-04): "Ne kaydediyorsun?" sihirbazı sadece gider (out)
+        // tarafında aktif — Gelir kayıtları hiç etkilenmiyor. Sunucu tarafı doğrulama (JS'e ek).
+        if($type==='gider'){
+            $step=$_POST['record_step'] ?? 'diger';
+            if($step==='cari' && !$contactId) throw new Exception('Cari Ödemesi için cari seçilmelidir.');
+            if($step==='isletme' && !$catId) throw new Exception('İşletme Gideri için Gider Türü seçilmelidir.');
+            if($step==='personel' && !$pid) throw new Exception('Personel Ödemesi için personel seçilmelidir.');
+            if($step==='vergi' && !$catId) throw new Exception('Vergi / SGK için Gider Türü seçilmelidir.');
+            if($step==='arac' && !$catId) throw new Exception('Araç Gideri için Gider Türü seçilmelidir.');
+            if($step==='diger' && $desc==='') throw new Exception('Diğer seçildiğinde açıklama zorunludur.');
+        }
         // 2026-07-03: Muhasebe kayıtları artık finance_movements'a yazılır (movement_type='muhasebe')
         // — böylece cari (varsa) ekstresinde ve genel finans raporlarında otomatik görünür.
         $pdo->prepare("INSERT INTO finance_movements(contact_id,category_id,direction,amount,vat_mode,vat_rate,vat_amount,account_id,personnel_id,payment_type,status,movement_date,description,reference_no,movement_type)
@@ -77,7 +99,7 @@ $catF=(int)($_GET['cat'] ?? 0);
 if($catF) $where.=" AND fm.category_id=$catF";
 try{
     $entries=$pdo->query("SELECT fm.*, fm.movement_date entry_date, IF(fm.direction='in','gelir','gider') type,
-        ac.name cat_name,ac.group_name,fa.name acc_name,p.name pers_name,c.name contact_name
+        ac.name cat_name,ac.group_name,fa.name acc_name,fa.account_type,p.name pers_name,c.name contact_name
         FROM finance_movements fm
         LEFT JOIN accounting_categories ac ON ac.id=fm.category_id
         LEFT JOIN finance_accounts fa ON fa.id=fm.account_id
@@ -138,9 +160,15 @@ $groups=acc_group_summary($pdo,$month,$year);
 <input type="hidden" name="save_entry" value="1">
 
 <label>Tür
-<select name="type" id="entryType" onchange="filterCats()">
+<select name="type" id="entryType" onchange="filterCats();accToggleWizard()">
   <option value="gider">Gider</option>
   <option value="gelir">Gelir</option>
+</select>
+</label>
+
+<label id="accWizardLabel" class="full">Ne kaydediyorsun?
+<select name="record_step" id="accStep" onchange="accApplyStep()">
+  <?php foreach(finance_record_type_options() as $key=>$o): ?><option value="<?=$key?>"><?=$o['icon']?> <?=h($o['label'])?></option><?php endforeach; ?>
 </select>
 </label>
 
@@ -148,7 +176,7 @@ $groups=acc_group_summary($pdo,$month,$year);
 <input type="date" name="entry_date" value="<?=date('Y-m-d')?>">
 </label>
 
-<label>Kategori
+<label id="accCatLabel">Gider Türü
 <select name="category_id" id="catSel">
   <option value="">— Seç —</option>
   <?php foreach($giderCats as $c): ?>
@@ -182,7 +210,7 @@ $groups=acc_group_summary($pdo,$month,$year);
 <div id="vatPreview" class="full" style="display:none;font-size:13px;color:#475467;margin-top:-8px"></div>
 
 <label>Açıklama
-<input name="description" placeholder="İsteğe bağlı">
+<input name="description" id="accDesc" placeholder="İsteğe bağlı">
 </label>
 
 <label>Belge / Ref No
@@ -198,7 +226,7 @@ $groups=acc_group_summary($pdo,$month,$year);
 </select>
 </label>
 
-<label>Cari <small style="font-weight:400;color:#667085">(opsiyonel — bir tedarikçi/müşteriye bağlıysa, o carinin ekstresinde de görünür)</small>
+<label id="accContactLabel">Cari <small style="font-weight:400;color:#667085">(opsiyonel — bir tedarikçi/müşteriye bağlıysa, o carinin ekstresinde de görünür)</small>
 <select name="contact_id">
   <option value="">— Cari seçilmedi —</option>
   <?php foreach($contacts as $c): ?>
@@ -207,7 +235,7 @@ $groups=acc_group_summary($pdo,$month,$year);
 </select>
 </label>
 
-<label id="persLabel">Personel (Ödeme ise)
+<label id="persLabel">Personel
 <select name="personnel_id">
   <option value="">— Yok —</option>
   <?php foreach($personnel as $p): ?>
@@ -254,6 +282,35 @@ function filterCatsEdit(id){
     if(o.dataset.type!==t&&o.selected) o.selected=false;
   }
 }
+// FINANCE UX REFACTOR (2026-07-04): "Ne kaydediyorsun?" sihirbazı sadece Gider tarafında aktif —
+// Gelir kayıtları hiç etkilenmiyor, sihirbaz gizlenir, alanlar zorunlu olmaz.
+function accToggleWizard(){
+  var gider=document.getElementById('entryType').value==='gider';
+  document.getElementById('accWizardLabel').style.display=gider?'':'none';
+  var catLabelText=document.getElementById('accCatLabel').childNodes[0];
+  if(catLabelText) catLabelText.textContent = gider ? 'Gider Türü' : 'Kategori';
+  if(!gider){
+    document.getElementById('persLabel').style.display='none';
+    document.getElementById('persLabel').querySelector('select').required=false;
+    document.getElementById('accContactLabel').style.display='';
+    document.getElementById('accDesc').required=false;
+    document.getElementById('catSel').required=false;
+  } else { accApplyStep(); }
+}
+function accApplyStep(){
+  if(document.getElementById('entryType').value!=='gider') return;
+  var step=document.getElementById('accStep').value;
+  var need={cari:'contact_id',isletme:'category_id',personel:'personnel_id',vergi:'category_id',arac:'category_id',kart:null,diger:null}[step];
+  var contactBox=document.getElementById('accContactLabel');
+  contactBox.style.display=(step==='personel')?'none':'';
+  contactBox.querySelector('select').required=(need==='contact_id');
+  document.getElementById('catSel').required=(need==='category_id');
+  var persBox=document.getElementById('persLabel');
+  persBox.style.display=(step==='personel')?'':'none';
+  persBox.querySelector('select').required=(need==='personnel_id');
+  document.getElementById('accDesc').required=(step==='diger');
+}
+accToggleWizard();
 // KDV dahil/hariç hesabı (yeni kayıt formu)
 function toggleVatRate(){
   var m=document.getElementById('vatMode').value;
@@ -369,15 +426,21 @@ foreach($entries as $e):
   <form method="post" class="form-grid">
     <input type="hidden" name="id" value="<?=(int)$e['id']?>">
     <label>Tür
-      <select name="type" id="editType<?=(int)$e['id']?>" onchange="filterCatsEdit(<?=(int)$e['id']?>)">
+      <select name="type" id="editType<?=(int)$e['id']?>" onchange="filterCatsEdit(<?=(int)$e['id']?>);accToggleWizardEdit(<?=(int)$e['id']?>)">
         <option value="gider" <?=$e['type']==='gider'?'selected':''?>>Gider</option>
         <option value="gelir" <?=$e['type']==='gelir'?'selected':''?>>Gelir</option>
+      </select>
+    </label>
+    <?php $eStep=finance_record_type_info($e, $e['group_name']??null, $e['account_type']??null); ?>
+    <label id="editWizardLabel<?=(int)$e['id']?>" class="full" style="<?=$isGider?'':'display:none'?>">Ne kaydediyorsun?
+      <select name="record_step" id="editStep<?=(int)$e['id']?>" onchange="accApplyStepEdit(<?=(int)$e['id']?>)">
+        <?php foreach(finance_record_type_options() as $key=>$o): ?><option value="<?=$key?>" <?=$eStep===$key?'selected':''?>><?=$o['icon']?> <?=h($o['label'])?></option><?php endforeach; ?>
       </select>
     </label>
     <label>Tarih
       <input type="date" name="entry_date" value="<?=h($e['entry_date'])?>">
     </label>
-    <label>Kategori
+    <label id="editCatLabel<?=(int)$e['id']?>"><?=$isGider?'Gider Türü':'Kategori'?>
       <select name="category_id" id="editCatSel<?=(int)$e['id']?>">
         <option value="">— Seç —</option>
         <?php foreach($giderCats as $c): ?>
@@ -406,7 +469,7 @@ foreach($entries as $e):
       </select>
     </label>
     <label class="full">Açıklama
-      <input name="description" value="<?=h($e['description'] ?? '')?>">
+      <input name="description" id="editDesc<?=(int)$e['id']?>" value="<?=h($e['description'] ?? '')?>">
     </label>
     <label class="full">Belge / Ref No
       <input name="reference_no" value="<?=h($e['reference_no'] ?? '')?>">
@@ -419,7 +482,7 @@ foreach($entries as $e):
         <?php endforeach; ?>
       </select>
     </label>
-    <label>Cari <small style="font-weight:400;color:#667085">(opsiyonel)</small>
+    <label id="editContactLabel<?=(int)$e['id']?>">Cari <small style="font-weight:400;color:#667085">(opsiyonel)</small>
       <select name="contact_id">
         <option value="">— Cari seçilmedi —</option>
         <?php foreach($contacts as $c): ?>
@@ -427,7 +490,7 @@ foreach($entries as $e):
         <?php endforeach; ?>
       </select>
     </label>
-    <label>Personel (Ödeme ise)
+    <label id="editPersLabel<?=(int)$e['id']?>">Personel
       <select name="personnel_id">
         <option value="">— Yok —</option>
         <?php foreach($personnel as $p): ?>
@@ -452,9 +515,42 @@ foreach($entries as $e):
     </div>
   </form>
 </div>
+<script>accToggleWizardEdit(<?=(int)$e['id']?>);</script>
 <?php endif; ?>
 <?php endforeach; ?>
 </section>
 <?php endif; ?>
+
+<script>
+// FINANCE UX REFACTOR (2026-07-04): satır-içi düzenleme formlarının sihirbaz mantığı (add-form'daki
+// accToggleWizard/accApplyStep ile aynı desen, sadece id son eki ile satıra özel).
+function accToggleWizardEdit(id){
+  var wl=document.getElementById('editWizardLabel'+id); if(!wl) return;
+  var gider=document.getElementById('editType'+id).value==='gider';
+  wl.style.display=gider?'':'none';
+  var catLabel=document.getElementById('editCatLabel'+id).childNodes[0];
+  if(catLabel) catLabel.textContent = gider ? 'Gider Türü' : 'Kategori';
+  if(!gider){
+    document.getElementById('editPersLabel'+id).style.display='none';
+    document.getElementById('editPersLabel'+id).querySelector('select').required=false;
+    document.getElementById('editContactLabel'+id).style.display='';
+    document.getElementById('editDesc'+id).required=false;
+    document.getElementById('editCatSel'+id).required=false;
+  } else { accApplyStepEdit(id); }
+}
+function accApplyStepEdit(id){
+  if(document.getElementById('editType'+id).value!=='gider') return;
+  var step=document.getElementById('editStep'+id).value;
+  var need={cari:'contact_id',isletme:'category_id',personel:'personnel_id',vergi:'category_id',arac:'category_id',kart:null,diger:null}[step];
+  var contactBox=document.getElementById('editContactLabel'+id);
+  contactBox.style.display=(step==='personel')?'none':'';
+  contactBox.querySelector('select').required=(need==='contact_id');
+  document.getElementById('editCatSel'+id).required=(need==='category_id');
+  var persBox=document.getElementById('editPersLabel'+id);
+  persBox.style.display=(step==='personel')?'':'none';
+  persBox.querySelector('select').required=(need==='personnel_id');
+  document.getElementById('editDesc'+id).required=(step==='diger');
+}
+</script>
 
 <?php require_once __DIR__.'/layout_bottom.php'; ?>

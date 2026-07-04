@@ -179,6 +179,10 @@ function finance_movement_update($pdo, $id, array $data){
     if(!$accountId) throw new Exception('Hesap seçilmelidir.');
     $contactId = (int)($data['contact_id'] ?? 0) ?: null;
     $catId = (int)($data['category_id'] ?? 0) ?: null;
+    // FINANCE UX REFACTOR (2026-07-04): "Ne kaydediyorsun?" sihirbazının "Personel Ödemesi" adımı
+    // için — kolon migration 035'te zaten var (accounting.php'de kullanılıyordu), Ödeme/Gider
+    // düzenlemesine buradan ilk kez ekleniyor. DB şeması DEĞİŞMEDİ, sadece bu UPDATE'e dahil edildi.
+    $personnelId = (int)($data['personnel_id'] ?? 0) ?: null;
     $channel = trim($data['payment_channel'] ?? '') ?: $row['payment_channel'];
     $date = !empty($data['movement_date']) ? $data['movement_date'] : $row['movement_date'];
     $desc = trim($data['description'] ?? '');
@@ -187,8 +191,8 @@ function finance_movement_update($pdo, $id, array $data){
 
     finance_movement_reverse_balance($pdo,$row);
 
-    $pdo->prepare("UPDATE finance_movements SET contact_id=?,category_id=?,direction=?,amount=?,payment_channel=?,account_id=?,status=?,movement_date=?,description=?,reference_no=? WHERE id=?")
-        ->execute([$contactId,$catId,$direction,$amount,$channel,$accountId,$status,$date,$desc,$ref,$id]);
+    $pdo->prepare("UPDATE finance_movements SET contact_id=?,category_id=?,personnel_id=?,direction=?,amount=?,payment_channel=?,account_id=?,status=?,movement_date=?,description=?,reference_no=? WHERE id=?")
+        ->execute([$contactId,$catId,$personnelId,$direction,$amount,$channel,$accountId,$status,$date,$desc,$ref,$id]);
 
     finance_movement_apply_balance($pdo,$direction,$accountId,$amount);
 
@@ -199,6 +203,7 @@ function finance_movement_update($pdo, $id, array $data){
             'id'=>$id,
             'contact_id'=>$contactId,
             'category_id'=>$catId,
+            'personnel_id'=>$personnelId,
             'direction'=>$direction,
             'amount'=>$amount,
             'payment_channel'=>$channel,
@@ -211,6 +216,50 @@ function finance_movement_update($pdo, $id, array $data){
     }
 
     return true;
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * FINANCE UX REFACTOR (2026-07-04) — "Ne kaydediyorsun?" sihirbazı, paylaşılan tanım + tür türetme.
+ * Kullanıcı şikayeti: Ödeme/Gider ekranında cari/kategori/personel/kasa/ödeme yöntemi karışıyor.
+ * Çözüm DB'ye yeni bir "tür" kolonu EKLEMİYOR — sihirbazın hangi adımda olduğu hiçbir yerde
+ * saklanmıyor, sadece mevcut dolu alanlara bakılarak (personnel_id/contact_id/category_id/
+ * account_type) her ekranda YENİDEN türetiliyor (bkz. notifications_lib.php::notif_type_info()
+ * ile aynı desen — saf fonksiyon, DB yazmaz). Bu sayede eski kayıtlar da (movement_type ne olursa
+ * olsun) sihirbazda doğru adımla açılabiliyor, "sistemin geriye dönük yenilenebilir olması" isteği
+ * bu şekilde karşılanıyor.
+ * --------------------------------------------------------------------------------------------- */
+
+// 7 sihirbaz seçeneğinin tek kaynağı — web+mobil, Ödeme/Gider+Muhasebe ekranlarının hepsi buradan
+// okur. 'field' o adımda ZORUNLU olan asıl alanı belirtir (account_id/amount zaten her adımda
+// zorunlu, ayrıca burada tekrar edilmiyor).
+function finance_record_type_options(){
+    return [
+        'cari'      => ['label'=>'Cari Ödemesi',        'icon'=>'👥', 'field'=>'contact_id'],
+        'isletme'   => ['label'=>'İşletme Gideri',      'icon'=>'🧾', 'field'=>'category_id'],
+        'personel'  => ['label'=>'Personel Ödemesi',    'icon'=>'👷', 'field'=>'personnel_id'],
+        'vergi'     => ['label'=>'Vergi / SGK',         'icon'=>'🏛', 'field'=>'category_id', 'group_hint'=>['vergi','sgk']],
+        'kart'      => ['label'=>'Banka / Kredi / Kart','icon'=>'💳', 'field'=>'account_id', 'group_hint'=>['kredi','kart','banka']],
+        'arac'      => ['label'=>'Araç Gideri',         'icon'=>'🚗', 'field'=>'category_id', 'group_hint'=>['araç','arac','vehicle']],
+        'diger'     => ['label'=>'Diğer',               'icon'=>'📋', 'field'=>'description'],
+    ];
+}
+
+// Var olan bir finance_movements satırından en olası sihirbaz adımını türetir. $categoryGroupName
+// ve $accountType çağıran ekran zaten JOIN ile çekiyorsa (liste/düzenleme sorgusu) parametre olarak
+// verilebilir — yoksa fonksiyon sadece $row'daki ham kolonlara bakar (personnel_id/contact_id/
+// category_id dolu mu). Öncelik sırası önemli: aynı satırda hem personnel_id hem contact_id doluysa
+// (bugünkü accounting.php formu ikisine de izin veriyor) "Personel Ödemesi" kazanır.
+function finance_record_type_info($row, $categoryGroupName=null, $accountType=null){
+    $groupLc = mb_strtolower((string)$categoryGroupName);
+    $accLc = mb_strtolower((string)$accountType);
+    if(!empty($row['personnel_id'])) return 'personel';
+    if(in_array((string)($row['payment_type'] ?? ''), ['sgk','vergi'], true)) return 'vergi';
+    if($groupLc!=='' && (strpos($groupLc,'vergi')!==false || strpos($groupLc,'sgk')!==false)) return 'vergi';
+    if($groupLc!=='' && (strpos($groupLc,'araç')!==false || strpos($groupLc,'arac')!==false)) return 'arac';
+    if(strpos($accLc,'kredi kartı')!==false || strpos($accLc,'kredi')!==false || strpos($groupLc,'kart')!==false) return 'kart';
+    if(!empty($row['contact_id'])) return 'cari';
+    if(!empty($row['category_id'])) return 'isletme';
+    return 'diger';
 }
 
 // Tahsilat/ödeme kaydını siler, hesap bakiyesini geri alır. Dönüş: ['ok'=>bool,'msg'=>string]

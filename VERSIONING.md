@@ -50,6 +50,19 @@ altyapısı hiç yoktu) "Çalışma Alanı" bilgi etiketine sadeleştirildi — 
 değişmedi. Gerçek çoklu-çalışma-alanı mimarisi ayrı, büyük bir proje olarak `ROADMAP.md`'ye
 "Workspace (Multi-Tenant) Architecture" başlığıyla açıldı. Bu değişiklik DEV test kapsamına dahil
 edildi (yukarıdaki 8/8 PASS ile birlikte doğrulandı).
++ **SYSTEM AUDIT MODE** (2026-07-04, read-only, kod/DB değişmedi): 5 ajanla mimari/güvenlik/
+performans/UX-UI/veri modeli/kod kalitesi kapsamlı denetimi yapıldı. 2 kritik/yüksek güvenlik
+açığı (`mobile/personnel_view.php` şifre sıfırlama, `mobile/task_view.php` IDOR) `KNOWN_BUGS.md`'ye
+işlendi, teknik borç `ROADMAP.md`'ye işlendi. Bu denetim artık her büyük sprint/RC/major sürüm/
+production öncesi otomatik tekrarlanacak kalıcı bir standart (`PROJECT_RULES.md`).
++ **FINANCE UX REFACTOR** (2026-07-04, `checkpoint(security-prep)` ile commit edilecek): Ödeme/
+Gider + Muhasebe ekranlarına "Ne kaydediyorsun?" sihirbazı eklendi (7 seçenek: Cari Ödemesi/
+İşletme Gideri/Personel Ödemesi/Vergi-SGK/Banka-Kredi-Kart/Araç Gideri/Diğer). DB şeması
+DEĞİŞMEDİ — tür DB'de saklanmıyor, `finance_record_type_info()` ile mevcut kayıttan türetiliyor.
+6 dosya (`finance_lib.php`, `finance_new.php`, `accounting.php`, `mobile/payment.php`,
+`mobile/movement_view.php`, `mobile/accounting.php`), Tahsilat/Gelir akışı hiç değişmedi. Detay →
+`CHANGELOG.md`. **Henüz primac.tr'de test edilmedi** — bu oturumda DEV'e yükleniyor, sonraki
+oturumda test/onay bekliyor.
 
 ## Current Production Version
 **v1.0.0** (acanstr.com/ots)

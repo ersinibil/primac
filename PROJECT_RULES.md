@@ -98,6 +98,21 @@ işlemlerinde aşağıdaki 7 adım sırayla tamamlanmadan deploy "başarılı" s
 6. Bu standart `~/Desktop/PRIMAC-GUNCELLEME/guncelle.php` (DEV) ve "DEPLOY MODE" sırasında
    `~/Desktop/ACANS-GUNCELLEME/guncelle.php` (PROD) için AYNI şablondan uygulanır.
 
+## Sürekli Kalite Denetimi Standardı (2026-07-04'ten itibaren — RESMİ STANDART)
+SYSTEM AUDIT MODE (mimari, güvenlik, performans, UX/UI, veri modeli, kod kalitesi — read-only,
+kod/DB değiştirmeden) tek seferlik bir denetim değildir. Kullanıcı tekrar belirtmese bile aşağıdaki
+durumlarda OTOMATİK olarak yeniden çalıştırılır:
+- Her büyük Sprint sonunda.
+- Her Release Candidate (RC) öncesinde.
+- Her Major sürüm (v1.x, v2.x vb.) öncesinde.
+- Production'a ("DEPLOY MODE") çıkmadan hemen önce.
+
+Her denetim sonunda `CHANGELOG.md`, `VERSIONING.md`, `ROADMAP.md`, `KNOWN_BUGS.md`,
+`NEXT_SESSION.md` gözden geçirilir ve gerekiyorsa güncellenir — denetimde bulunan güvenlik açıkları
+`KNOWN_BUGS.md`'ye, mimari/performans/UX teknik borçları `ROADMAP.md`'ye işlenir. Denetim raporunun
+kendisi kod/dosya değiştirmez, commit oluşturmaz — sadece bulguları belgeler; bulguların
+düzeltilmesi ayrı, kullanıcı onaylı bir iş turu olarak ele alınır.
+
 ## Kavram Standardı (2026-07-03'te netleşti)
 - **"İşlerim"** = bana atanmış işler/görevler listesi (`mytasks.php` / `mobile/mytasks.php`).
   **"Görevlerim" ifadesi artık kullanılmaz.**
