@@ -13,7 +13,7 @@ try{ $q=$pdo->query("SELECT id,job_no,title,status,due_date,DAY(due_date) d FROM
 // Bana atanan görevler (Görevler modülü) — admin tüm görevleri, personel sadece kendine atananları görür.
 try{
   $taskWhere = is_admin() ? "" : " AND personnel_id IN (SELECT id FROM personnel WHERE user_id=$__me)";
-  $tq=$pdo->query("SELECT id,title,status,due_date,DAY(due_date) d FROM tasks WHERE due_date IS NOT NULL AND DATE_FORMAT(due_date,'%Y-%m')='$ym'$taskWhere ORDER BY due_date");
+  $tq=$pdo->query("SELECT id,title,status,due_date,DAY(due_date) d FROM tasks WHERE due_date IS NOT NULL AND deleted_at IS NULL AND DATE_FORMAT(due_date,'%Y-%m')='$ym'$taskWhere ORDER BY due_date");
   foreach($tq->fetchAll() as $r){ $byDay[(int)$r['d']][]=['id'=>$r['id'],'status'=>$r['status'],'_task'=>true,'title'=>$r['title']]; }
 }catch(Throwable $e){}
 // Kişisel notlar (sadece kendi user_id'n) — kullanıcı isteği: "takvime de işlensin".

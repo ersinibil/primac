@@ -22,7 +22,7 @@ try{
 // Bana atanan görevler (Görevler modülü) — admin tüm görevleri, personel sadece kendine atananları görür.
 try{
   $taskWhere = $isAdmin ? "" : " AND personnel_id IN (SELECT id FROM personnel WHERE user_id=$me)";
-  $tq=$pdo->query("SELECT id,title,status,due_date,DAY(due_date) d FROM tasks WHERE due_date IS NOT NULL AND DATE_FORMAT(due_date,'%Y-%m')='$ym'$taskWhere ORDER BY due_date");
+  $tq=$pdo->query("SELECT id,title,status,due_date,DAY(due_date) d FROM tasks WHERE due_date IS NOT NULL AND deleted_at IS NULL AND DATE_FORMAT(due_date,'%Y-%m')='$ym'$taskWhere ORDER BY due_date");
   foreach($tq->fetchAll() as $r){
     $row=['id'=>$r['id'],'job_no'=>null,'title'=>$r['title'],'status'=>$r['status'],'due_date'=>$r['due_date'],'_task'=>true];
     $d=(int)date('j',strtotime($r['due_date']));
