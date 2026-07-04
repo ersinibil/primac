@@ -134,6 +134,10 @@ function module_list(){
         'stock'=>'Stok / Ürün / Satın Alma','report'=>'Raporlar','personnel'=>'Personel',
         'muhasebe'=>'Muhasebe (Gider/Gelir/Personel Ödemeleri)','users'=>'Kullanıcı / Yetki',
         'edit_delete'=>'Var Olan Kaydı Düzenleme / Silme Yetkisi',
+        // SECURITY SPRINT-001 (2026-07-04): "alt yönetici" yetkisi — admin, 'personnel' modül
+        // yetkisi olan birine EK olarak bu yetkiyi verirse, o kişi de personel şifre sıfırlama/
+        // giriş hesabı oluşturma yapabilir. Bu yetki olmadan sadece admin bu işlemleri yapabilir.
+        'personnel_accounts'=>'Personel Şifre/Hesap Yönetimi (Alt Yönetici Yetkisi)',
     ];
 }
 function module_label($key){ $m=module_list(); return $m[$key] ?? $key; }

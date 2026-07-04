@@ -6,40 +6,34 @@ ve en yakın zamanda çözülenlerin kısa özeti tutulur.
 
 ## Açık — SYSTEM AUDIT MODE bulguları (2026-07-04, read-only denetim, henüz düzeltilmedi)
 
-1. **KRİTİK — `mobile/personnel_view.php` keyfi şifre sıfırlama (hesap ele geçirme)** — satır
-   78-81: `reset_pw` POST işlemi `$_POST['uid']`'in gerçekten görüntülenen personelin bağlı hesabı
-   olduğunu DOĞRULAMIYOR. `personnel` modül yetkisi olan admin-olmayan bir kullanıcı, `uid` alanına
-   başka bir kullanıcının (admin dahil) id'sini yazıp POST ederek o hesabın şifresini
-   değiştirebilir. Tek koruma `block_personel('personnel')` — yetersiz. Öneri: işlemi `is_admin()`'e
-   kilitle + `uid`'in `personnel.id=$id`'ye bağlı gerçek hesap olduğunu DB'den doğrula.
-2. **YÜKSEK — `mobile/task_view.php` IDOR** — satır 14-19: `task_status` güncellemesi
+1. **YÜKSEK — `mobile/task_view.php` IDOR** — satır 14-19: `task_status` güncellemesi
    `WHERE id=?` kullanıyor, `AND personnel_id=?` yok (karşılaştır: `mytasks.php:21-22` doğru
    yapıyor). Herhangi bir giriş yapmış kullanıcı `?id=` değiştirerek başkasının görev durumunu
    değiştirebilir.
-3. **YÜKSEK — `sifre_sifirla.php` brute-force koruması yok** — 6 haneli kod (`random_int(100000,999999)`),
+2. **YÜKSEK — `sifre_sifirla.php` brute-force koruması yok** — 6 haneli kod (`random_int(100000,999999)`),
    30 dakika geçerli, deneme sayısı sınırı/lockout yok.
-4. **ORTA-YÜKSEK — `accounting.php` yansıyan XSS** — satır 8, 111-130: `$_GET['tab']` escape
+3. **ORTA-YÜKSEK — `accounting.php` yansıyan XSS** — satır 8, 111-130: `$_GET['tab']` escape
    edilmeden href'e basılıyor (`h()`/`htmlspecialchars()` eksik). Mobilde bu parametre kullanılmıyor.
-5. **ORTA — `users.php` rol yükseltme** — satır 41-51: `users` modül yetkisi olan admin-olmayan
+4. **ORTA — `users.php` rol yükseltme** — satır 41-51: `users` modül yetkisi olan admin-olmayan
    biri kendini/başkasını `admin` rolüne yükseltebilir, `uid===1` dışında kısıtlama yok.
-6. **ORTA — `is_admin()` session'da bayatlıyor** — `boot.php:124-127`, `user_can()` gibi DB'den
+5. **ORTA — `is_admin()` session'da bayatlıyor** — `boot.php:124-127`, `user_can()` gibi DB'den
    taze okumuyor; rolü alınan bir admin aktif oturumu boyunca admin yetkisiyle işlem yapabilir.
-7. **ORTA — Login'de session fixation koruması yok** — `index.php:12-40`, başarılı girişte
+6. **ORTA — Login'de session fixation koruması yok** — `index.php:12-40`, başarılı girişte
    `session_regenerate_id(true)` çağrılmıyor.
-8. **DÜŞÜK — `cron.php:7`'de yeni sabit anahtar** (`acans-cron-2026`) — `acans-migrate-2026`'dan
+7. **DÜŞÜK — `cron.php:7`'de yeni sabit anahtar** (`acans-cron-2026`) — `acans-migrate-2026`'dan
    farklı, daha önce raporlanmamış.
-9. **BİLGİ — Proje genelinde CSRF token mekanizması yok.**
+8. **BİLGİ — Proje genelinde CSRF token mekanizması yok.**
 
 Tam denetim raporu (mimari/performans/UX/veri modeli dahil) → System Audit Artifact (2026-07-04),
 öncelik sırası → `ROADMAP.md` "SYSTEM AUDIT — Teknik Borç ve Öncelikler" bölümü.
 
 ## Açık — önceki turlardan
 
-10. **Sabit migration/temizlik anahtarı** — `migrate.php` ve `temizle.php` aynı sabit kodlanmış
+9. **Sabit migration/temizlik anahtarı** — `migrate.php` ve `temizle.php` aynı sabit kodlanmış
    `acans-migrate-2026` anahtarını paylaşıyor. Admin oturumu zaten yeterli kontrol sağlıyor, anahtar
    sadece kurulum-öncesi (kullanıcı yokken) bypass amaçlı. Repo public olursa değiştirilmeli.
 
-11. **`tasks` tablosunda kayıt kaynağı ayrımı yok** — Admin'in başkasına atadığı iş (`task_new.php`)
+10. **`tasks` tablosunda kayıt kaynağı ayrımı yok** — Admin'in başkasına atadığı iş (`task_new.php`)
    ile kullanıcının kendine eklediği iş (`mytask_new.php`, 2026-07-03'te eklendi) aynı tabloya,
    ayrım kolonu olmadan yazılıyor. `tasks.php` ("Tüm Görevler") admin görünümünde ikisi görsel
    olarak ayırt edilemiyor. Güvenlik açığı değil, izlenebilirlik eksikliği — gerekirse `created_by`
@@ -47,6 +41,12 @@ Tam denetim raporu (mimari/performans/UX/veri modeli dahil) → System Audit Art
 
 ## Son Çözülenler (detay → `memory/bugs.md`)
 
+- **KRİTİK — `mobile/personnel_view.php` keyfi şifre sıfırlama (SECURITY SPRINT-001,
+  2026-07-04)** — `reset_pw` POST işlemi hedef hesabı `$_POST['uid']`'den değil, DB'den
+  görüntülenen personele (`$id`, `app_users.personnel_id`/`personnel.user_id` bağı) göre
+  çekecek şekilde değiştirildi; artık POST'a hangi `uid` yazılırsa yazılsın sadece o personelin
+  gerçek hesabı etkileniyor. Kullanılmayan gizli `uid` form alanı da kaldırıldı. Henüz DEV'de
+  (primac.tr) smoke test edilmedi.
 - **Mesaj rozeti kalıcı şişiyordu (Sprint-001 DEV testinde bulundu, 2026-07-04, `0ba36da` ile
   commit edildi)** — `notes_lib.php`'nin "Kendime Not Ekle" kendine-mesaj kaydı `is_read=0` ile
   oluşuyordu; mesaj kişi listesi kullanıcının kendisini hariç tuttuğu için bu mesaj hiçbir zaman

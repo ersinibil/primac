@@ -5,11 +5,12 @@ hızlı giriş yapmak için var. Detay için ilgili dosyalara bakın (`CHANGELOG
 `KNOWN_BUGS.md`, `VERSIONING.md`, `memory/*.md`).
 
 ## Bir Sonraki Oturumun İlk Önceliği
-**SECURITY SPRINT-001: `mobile/personnel_view.php` kritik şifre sıfırlama yetki açığının
-kapatılması.** (Admin olmayan, sadece `personnel` modül yetkisi olan bir kullanıcı, `uid` POST
-alanına başka bir kullanıcının id'sini yazarak o hesabın şifresini değiştirebiliyor — bkz.
-`KNOWN_BUGS.md` madde 1, satır referansı `mobile/personnel_view.php:78-81`.) Bu, her şeyden önce
-ele alınmalı.
+**SECURITY SPRINT-001 tamamlandı, primac.tr'de smoke test bekliyor.** `mobile/personnel_view.php`
+kritik şifre sıfırlama yetki açığı (satır 78-81, `$_POST['uid']` doğrulanmıyordu) kapatıldı — hedef
+hesap artık DB'den görüntülenen personele (`$id`) bağlı gerçek hesaptan çekiliyor, POST'taki `uid`
+hiç kullanılmıyor. `php -l` ile doğrulandı, henüz primac.tr'ye yüklenip test edilmedi. Bir sonraki
+öncelik: bu değişikliği DEV'e yükleyip test etmek, ardından `KNOWN_BUGS.md`'deki bir sonraki
+maddeye (`mobile/task_view.php` IDOR) geçmek.
 
 ## Bugün Tamamlanan Çalışmalar (2026-07-04)
 - **UX SPRINT-001** (commit `d9c938b`): Bildirimler modülü kart/detay standardına taşındı,
@@ -29,6 +30,10 @@ ele alınmalı.
   (`finance_lib.php`, `finance_new.php`, `accounting.php`, `mobile/payment.php`,
   `mobile/movement_view.php`, `mobile/accounting.php`). Tahsilat/Gelir akışı hiç değişmedi.
   **Henüz primac.tr'de test edilmedi.**
+- **SECURITY SPRINT-001** (bu oturum, henüz commit edilmedi): `mobile/personnel_view.php` kritik
+  şifre sıfırlama açığı kapatıldı — `reset_pw` artık hedef hesabı `$_POST['uid']`'den değil, DB'den
+  görüntülenen personele (`$id`) bağlı gerçek hesaptan çekiyor. Kullanılmayan gizli `uid` form alanı
+  kaldırıldı. `php -l` ile doğrulandı. **Henüz primac.tr'de test edilmedi.**
 
 ## Devam Eden Sprint
 **FINANCE UX REFACTOR primac.tr'de test/onay bekliyor** — bu oturumda DEV'e yüklendi ama henüz
@@ -53,17 +58,17 @@ eski kayıtlar doğru adımla açılıyor mu, Tahsilat/Gelir akışı hiç bozul
    açığı değil.
 
 ## Açık Güvenlik Riskleri
-1. **KRİTİK — `mobile/personnel_view.php` keyfi şifre sıfırlama** (satır 78-81): `uid` POST
-   alanının gerçekten görüntülenen personelin hesabı olduğu doğrulanmıyor — admin olmayan bir
-   kullanıcı herhangi bir hesabın (admin dahil) şifresini değiştirebilir. **Bir sonraki oturumun
+1. **YÜKSEK — `mobile/task_view.php` IDOR** (satır 14-19): görev durumu güncellemesinde sahiplik
+   kontrolü yok, `?id=` değiştirilerek başkasının görevi değiştirilebilir. **Bir sonraki oturumun
    ilk işi (yukarı bakın).**
-2. **YÜKSEK — `mobile/task_view.php` IDOR** (satır 14-19): görev durumu güncellemesinde sahiplik
-   kontrolü yok, `?id=` değiştirilerek başkasının görevi değiştirilebilir.
-3. **YÜKSEK** — `sifre_sifirla.php` brute-force + `accounting.php` XSS (yukarıdaki "Açık Kalan
+2. **YÜKSEK** — `sifre_sifirla.php` brute-force + `accounting.php` XSS (yukarıdaki "Açık Kalan
    Hatalar" madde 1-2 ile aynı).
-4. **ORTA** — `users.php` rol yükseltme, `is_admin()` session bayatlığı, session fixation
+3. **ORTA** — `users.php` rol yükseltme, `is_admin()` session bayatlığı, session fixation
    (yukarıdaki madde 3-5 ile aynı).
-5. **BİLGİ** — Proje genelinde CSRF token mekanizması yok.
+4. **BİLGİ** — Proje genelinde CSRF token mekanizması yok.
+
+**Çözüldü (bu oturum)**: `mobile/personnel_view.php` keyfi şifre sıfırlama — bkz. "Bugün
+Tamamlanan Çalışmalar".
 
 Tam bulgu listesi ve satır referansları → `KNOWN_BUGS.md` ve 2026-07-04 tarihli System Audit raporu
 (Artifact + `~/Desktop/OTS_System_Audit_2026-07-04.txt`).

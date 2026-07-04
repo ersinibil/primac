@@ -24,6 +24,10 @@ gerçekten çalışır durumda olduğu ayrıca doğrulanmamıştır (bkz. `memor
 
 ## Current Development Version
 **v1.1.0-dev** (primac.tr) — ortam ayrımından SONRAKİ ilk geliştirme turu
++ **SECURITY SPRINT-001** (2026-07-04, henüz commit edilmedi): `mobile/personnel_view.php` kritik
+şifre sıfırlama açığı (System Audit bulgusu) kapatıldı — `reset_pw` hedef hesabı artık `$_POST['uid']`
+yerine DB'den görüntülenen personele (`$id`) bağlı gerçek hesaptan çekiyor. Detay → `CHANGELOG.md`.
+**Henüz primac.tr'de test edilmedi.**
 İçerik (bb8a710'dan SONRA yapılan değişiklikler): "İşlerim"/"Görevlerim" terim standardizasyonu,
 "Kendime İş Ekle" özelliği, emoji paneli konumlandırma düzeltmesi, tek-ortam (DEV/PROD) yönetim
 modelinin resmileşmesi, `VERSIONING.md`/`ROADMAP.md`/`KNOWN_BUGS.md`/`DATABASE.md` dokümantasyon

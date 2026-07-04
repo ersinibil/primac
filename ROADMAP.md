@@ -5,6 +5,17 @@ kaydıdır. `PROJECT_RULES.md` gereği proje artık aktif geliştirme aşamasın
 hiçbir madde kullanıcı açıkça istemeden uygulanmaz. Amaç: bir sonraki oturumda "neredeydik"
 sorusuna hızlı cevap.
 
+## SECURITY SPRINT-001 sonrası açık nokta — "Bilgileri Düzenle" yetkisi (2026-07-04)
+`mobile/personnel_view.php`'de şifre/hesap işlemleri artık admin + yeni `personnel_accounts`
+yetkili "alt yönetici" ile sınırlı (bkz. `CHANGELOG.md`). Ancak aynı sayfadaki "✏️ Bilgileri
+Düzenle" formu (Ad/Rol/Telefon/E-posta/IBAN/Notlar/Aktif) BİLİNÇLİ OLARAK dokunulmadan bırakıldı —
+kullanıcı "personel sadece diğer personelin özel olmayan bilgilerini görüntüleyebilir (adres/
+telefon/mail vb.), diğer bilgiler özeldir" dedi ama bu formu şimdilik admin-only yapmak yerine
+"şimdilik dokunma" kararını verdi. Kullanıcı onayı olmadan bu form değiştirilmeyecek — ileride
+netleşirse: (a) formu tamamen admin+alt-yönetici'ye kilitlemek, veya (b) alanları "özel" (IBAN,
+Notlar, Aktif) / "özel olmayan" (Ad, Telefon, E-posta, Rol) olarak ikiye bölüp sadece özel olanları
+kısıtlamak — iki seçenek de ayrı bir karar gerektirir.
+
 ## FINANCE UX REFACTOR — bilinen açık nokta (2026-07-04)
 "Ne kaydediyorsun?" sihirbazı Ödeme/Gider (`finance_new.php`/`mobile/payment.php`) ekranına
 `personnel_id` alanını ilk kez ekledi — bu, Muhasebe ekranının (`accounting.php`/

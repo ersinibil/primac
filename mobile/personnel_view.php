@@ -4,6 +4,9 @@ require_once __DIR__.'/../share_lib.php';
 require_once __DIR__.'/../personnel_lib.php';
 block_personel('personnel');
 $pdo=db(); $id=(int)($_GET['id']??0); $ok=''; $er=''; $waCred='';
+// SECURITY SPRINT-001 (2026-07-04): şifre/hesap işlemleri admin'e VEYA admin'in ayrıca
+// 'personnel_accounts' yetkisi verdiği bir "alt yönetici"ye açık — düz 'personnel' yetkisi yeterli değil.
+$canManageAccounts = $isAdmin || (function_exists('user_can') && user_can('personnel_accounts'));
 $hasCvCol = personnel_has_cv_column($pdo);
 
 /* Personeli sil (admin-only, topx'tan ÖNCE) */
@@ -64,6 +67,11 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             $ok='Bilgiler güncellendi.';
         }
         if(isset($_POST['make_login']) && trim($_POST['username']??'')!=='' && trim($_POST['password']??'')!==''){
+            // GÜVENLİK (2026-07-04 SECURITY SPRINT-001): hesap/kimlik bilgisi işlemleri (kullanıcı
+            // adı/şifre oluşturma) sadece admin veya 'personnel_accounts' yetkili "alt yönetici"
+            // yapabilir — düz "personnel" modül yetkisi personel bilgilerini görüntüleme/düzenleme
+            // içindir, başkasının giriş hesabını yönetme yetkisi vermez.
+            if(!$canManageAccounts) throw new Exception('Bu işlem için yönetici yetkisi gerekir.');
             $un=trim($_POST['username']);
             $ex=$pdo->prepare("SELECT id FROM app_users WHERE username=?"); $ex->execute([$un]);
             if($ex->fetch()) throw new Exception('Bu kullanıcı adı zaten var.');
@@ -75,10 +83,20 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             $ok='Giriş hesabı oluşturuldu.';
             $waCred=cred_wa($pr['phone']??'',$un,$_POST['password']);
         }
-        if(isset($_POST['reset_pw']) && trim($_POST['newpw']??'')!=='' && (int)$_POST['uid']){
-            $pdo->prepare("UPDATE app_users SET password_hash=? WHERE id=?")->execute([password_hash($_POST['newpw'],PASSWORD_DEFAULT),(int)$_POST['uid']]);
+        if(isset($_POST['reset_pw']) && trim($_POST['newpw']??'')!==''){
+            // GÜVENLİK (2026-07-04 SECURITY SPRINT-001): şifre sıfırlama admin veya
+            // 'personnel_accounts' yetkili "alt yönetici" tarafından yapılabilir (bkz. make_login
+            // üzerindeki aynı gerekçe). Ayrıca $_POST['uid'] doğrudan güvenilmiyor — başka bir
+            // hesabın id'si POST edilerek o hesabın şifresi değiştirilebiliyordu, hedef hesap her
+            // zaman görüntülenen personele ($id) bağlı gerçek hesaptan çekiliyor.
+            if(!$canManageAccounts) throw new Exception('Bu işlem için yönetici yetkisi gerekir.');
+            $bu=$pdo->prepare("SELECT u.id FROM app_users u LEFT JOIN personnel p ON p.user_id=u.id WHERE u.personnel_id=? OR p.id=? LIMIT 1");
+            $bu->execute([$id,$id]); $br=$bu->fetch();
+            if(!$br) throw new Exception('Bu personele bağlı bir giriş hesabı yok.');
+            $boundUid=(int)$br['id'];
+            $pdo->prepare("UPDATE app_users SET password_hash=? WHERE id=?")->execute([password_hash($_POST['newpw'],PASSWORD_DEFAULT),$boundUid]);
             $ok='Şifre güncellendi.';
-            try{ $cu=$pdo->prepare("SELECT u.username,p.phone FROM app_users u LEFT JOIN personnel p ON p.id=u.personnel_id WHERE u.id=?"); $cu->execute([(int)$_POST['uid']]); $cr=$cu->fetch(); if($cr) $waCred=cred_wa($cr['phone']??'',$cr['username'],$_POST['newpw']); }catch(Throwable $e){}
+            try{ $cu=$pdo->prepare("SELECT u.username,p.phone FROM app_users u LEFT JOIN personnel p ON p.id=u.personnel_id WHERE u.id=?"); $cu->execute([$boundUid]); $cr=$cu->fetch(); if($cr) $waCred=cred_wa($cr['phone']??'',$cr['username'],$_POST['newpw']); }catch(Throwable $e){}
         }
     }catch(Throwable $e){ $er=$e->getMessage(); }
 }
@@ -144,16 +162,18 @@ try{
 </div>
 <?php endif; ?>
 
+<?php if($canManageAccounts): ?>
 <div class="panel"><b>🔑 Giriş Hesabı</b>
 <?php if($usr): ?>
   <p class="muted" style="margin:8px 0">Kullanıcı: <b><?=htmlspecialchars($usr['username'])?></b> · durum: <?=$usr['active']?'aktif':'pasif'?></p>
-  <form method="post" style="display:flex;gap:8px"><input type="hidden" name="uid" value="<?=(int)$usr['id']?>"><input name="newpw" placeholder="Yeni şifre" style="flex:1;margin:0"><button class="btn" name="reset_pw" value="1" style="background:#334155;color:#fff">Şifre Sıfırla</button></form>
+  <form method="post" style="display:flex;gap:8px"><input name="newpw" placeholder="Yeni şifre" style="flex:1;margin:0"><button class="btn" name="reset_pw" value="1" style="background:#334155;color:#fff">Şifre Sıfırla</button></form>
 <?php else: ?>
   <p class="muted" style="margin:8px 0">Bu personelin uygulama girişi yok. Oluştur:</p>
   <form method="post"><div style="display:flex;gap:8px"><input name="username" placeholder="Kullanıcı adı" style="flex:1;margin:0"><input name="password" placeholder="Şifre" style="flex:1;margin:0"></div>
   <button class="btn dark" name="make_login" value="1" style="width:100%;padding:12px;margin-top:8px">🔑 Giriş Hesabı Oluştur</button></form>
 <?php endif; ?>
 </div>
+<?php endif; ?>
 
 <div class="panel"><b>🧾 İşlem Kaydı</b>
   <p class="muted" style="margin:4px 0 8px;font-size:12px">Bu personelin yaptığı son işlemler (düzenleme/ekleme/satış vb.).</p>

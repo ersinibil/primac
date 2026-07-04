@@ -3,6 +3,33 @@
 Bu dosya `memory/features.md`'nin (tam gerekçe/kod detayıyla) kök dizindeki kısa özetidir — hızlı
 taramak için. Detaylı "neden böyle yapıldı" analizleri için `memory/features.md`'ye bakın.
 
+## SECURITY SPRINT-001 (2026-07-04, DEV — henüz commit edilmedi, primac.tr'de test bekliyor)
+`mobile/personnel_view.php`'deki kritik şifre sıfırlama açığı kapatıldı (System Audit'te bulunmuştu,
+bkz. `KNOWN_BUGS.md`). Kök neden: `reset_pw` POST işlemi hedef hesabı doğrudan `$_POST['uid']`'den
+alıyordu, bu alanın gerçekten görüntülenen personelin (`$id`) bağlı hesabı olduğu hiç
+doğrulanmıyordu — `personnel` modül yetkisi olan admin-olmayan bir kullanıcı `uid` alanına başka
+bir kullanıcının (admin dahil) id'sini yazarak o hesabın şifresini değiştirebiliyordu. Çözüm:
+POST'taki `uid` artık HİÇ kullanılmıyor, hedef hesap DB'den `app_users.personnel_id=$id` /
+`personnel.user_id` bağı üzerinden (mevcut `$usr` fetch'iyle aynı OR-mantığıyla) çekiliyor. Ayrıca
+artık işlevsiz kalan gizli `uid` form alanı formdan kaldırıldı.
+
+**Politika değişikliği (aynı sprint içinde, kullanıcı kararı)**: DEV testinde kullanıcı, "personnel"
+yetkili (admin olmayan) birinin BAŞKA bir personelin şifresini değiştirebilmesinin (kendi yönettiği
+olsa bile) kabul edilemez olduğuna karar verdi — "personel personelin şifresini değiştirmez, kişisel
+şifre/kullanıcı adı admin kontrolünde olmalı." Bunun üzerine:
+- `reset_pw` ve `make_login` (Giriş Hesabı Oluştur) işlemleri artık **admin/yönetici** VEYA admine
+  ek olarak yeni **`personnel_accounts`** modül yetkisi verilmiş bir "alt yönetici"ye kilitlendi
+  (`boot.php::module_list()`'e eklendi, `users.php`'deki yetki listesinde otomatik checkbox olarak
+  çıkar — yeni migration/şema gerekmedi, mevcut `permissions` JSON altyapısı kullanıldı).
+- "🔑 Giriş Hesabı" paneli artık sadece bu yetkiye sahip kullanıcılara görünüyor (`$canManageAccounts`).
+- "✏️ Bilgileri Düzenle" formu (ad/rol/telefon/e-posta/IBAN/notlar/aktif) bu turda BİLİNÇLİ OLARAK
+  değiştirilmedi — kullanıcı "şimdilik dokunma" dedi, bu ayrı bir karar/sprint (bkz. `ROADMAP.md`).
+
+`php -l` ile doğrulandı (her iki dosya). Web tarafında eşdeğer bir `reset_pw`/`make_login` akışı
+olmadığı için parite endişesi yok. Yerel fonksiyonel test YAPILAMADI — yerel `config.php` prod
+veritabanı bilgisi içeriyor ve yerel MySQL kurulu değil, bu yüzden canlı primac.tr'de kullanıcı
+tarafından manuel doğrulanması gerekiyor (bkz. `NEXT_SESSION.md`).
+
 ## FINANCE UX REFACTOR (2026-07-04, DEV — checkpoint commit ile kaydedildi, push/release yok)
 Ödeme/Gider ve Muhasebe ekranlarında cari/kategori/personel/kasa/ödeme yöntemi karışıklığını
 çözmek için "Ne kaydediyorsun?" sihirbazı eklendi (Cari Ödemesi / İşletme Gideri / Personel
