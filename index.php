@@ -1,8 +1,15 @@
 <?php
 require_once __DIR__.'/boot.php';
+require_once __DIR__.'/share_lib.php';
 
 $pdo=db();
 $error='';
+
+// SECURITY SPRINT-005 FAZ-3: login brute-force/rate-limit (IP+kullanıcı adı bazında, dost mesaj —
+// bkz. share_lib.php rate_limit_*()). sifre_sifirla.php'nin reset_ratelimit.json'ıyla karışmaz.
+define('LOGIN_RL_FILE', __DIR__.'/login_ratelimit.json');
+define('LOGIN_RL_MAX_HITS', 8);
+define('LOGIN_RL_WINDOW', 600); // 10 dakika
 
 if(!empty($_SESSION['user'])){
     redirect('dashboard.php');
@@ -22,13 +29,22 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         $username=trim($_POST['username'] ?? '');
         $password=$_POST['password'] ?? '';
 
+        // SECURITY SPRINT-005 FAZ-3: limitteyse şifre doğru olsa bile kimlik doğrulamaya geçilmez.
+        $__rlKey = ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0').'|'.strtolower($username);
+        if(rate_limit_blocked(LOGIN_RL_FILE, $__rlKey, LOGIN_RL_MAX_HITS, LOGIN_RL_WINDOW)){
+            throw new Exception('Çok fazla başarısız giriş denemesi algılandı. Lütfen birkaç dakika sonra tekrar deneyin.');
+        }
+
         $st=$pdo->prepare("SELECT * FROM app_users WHERE username=? AND active=1 LIMIT 1");
         $st->execute([$username]);
         $u=$st->fetch();
 
         if(!$u || !password_verify($password,$u['password_hash'])){
+            rate_limit_hit(LOGIN_RL_FILE, $__rlKey, LOGIN_RL_WINDOW);
             throw new Exception('Kullanıcı adı veya şifre hatalı.');
         }
+
+        rate_limit_clear(LOGIN_RL_FILE, $__rlKey);
 
         $perms=json_decode($u['permissions'] ?? '[]',true);
         if(!is_array($perms)) $perms=[];

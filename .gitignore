@@ -11,6 +11,7 @@ uploads/
 
 # Çalışma zamanı durumu (kod değil)
 reset_ratelimit.json
+login_ratelimit.json
 
 # Paketler / loglar / sistem
 *.zip

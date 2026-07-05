@@ -388,3 +388,61 @@ function share_buttons($text,$phone='',$subject=null){
         .'<a href="'.htmlspecialchars($ml).'" class="btn" style="flex:1;text-align:center;background:#2563eb;color:#fff;padding:10px;text-decoration:none">✉️ Mail</a>'
         .'</div>';
 }
+
+// ---------------------------------------------------------------------------
+// SECURITY SPRINT-005 FAZ-3 — Genelleştirilmiş dosya-tabanlı rate-limit.
+// sifre_sifirla.php'deki kanıtlanmış _rate_limit_hit() deseninin (flock ile kilitli JSON dosyası,
+// zaman-penceresi içindeki hit sayımı, fail-open) aynı mantığı — sadece check/hit/clear'a ayrıldı
+// çünkü login akışı SADECE başarısız denemeleri saymalı ve başarılı girişte sayacı temizlemeli
+// (sifre_sifirla.php'nin "her istek sayılır" modelinden farklı bir ihtiyaç). Her çağıran kendi
+// dosya yolunu verir — sifre_sifirla.php'nin reset_ratelimit.json'ı ile KARIŞMAZ.
+// ---------------------------------------------------------------------------
+
+// Bucket şu an limitte mi? (salt okuma — yeni hit EKLEMEZ)
+function rate_limit_blocked($file, $bucketKey, $maxHits, $windowSeconds){
+    $fp = @fopen($file, 'c+');
+    if(!$fp){ error_log('rate_limit_blocked: dosya açılamadı ('.$file.'), kontrol atlandı'); return false; }
+    if(!flock($fp, LOCK_SH)){ fclose($fp); return false; }
+    $size = filesize($file);
+    $raw  = $size > 0 ? fread($fp, $size) : '';
+    $data = $raw ? json_decode($raw, true) : [];
+    if(!is_array($data)) $data = [];
+    $bucket = isset($data[$bucketKey]) && is_array($data[$bucketKey]) ? $data[$bucketKey] : [];
+    $now = time(); $count = 0;
+    foreach($bucket as $ts){ if(($now - (int)$ts) < $windowSeconds) $count++; }
+    flock($fp, LOCK_UN); fclose($fp);
+    return $count >= $maxHits;
+}
+
+// Bucket'a yeni bir "başarısız deneme" kaydı ekler (süresi geçmiş eski kayıtlar budanır).
+function rate_limit_hit($file, $bucketKey, $windowSeconds){
+    $fp = @fopen($file, 'c+');
+    if(!$fp){ error_log('rate_limit_hit: dosya açılamadı ('.$file.'), kontrol atlandı'); return; }
+    if(!flock($fp, LOCK_EX)){ fclose($fp); return; }
+    $now  = time();
+    $size = filesize($file);
+    $raw  = $size > 0 ? fread($fp, $size) : '';
+    $data = $raw ? json_decode($raw, true) : [];
+    if(!is_array($data)) $data = [];
+    $bucket = isset($data[$bucketKey]) && is_array($data[$bucketKey]) ? $data[$bucketKey] : [];
+    $hits = [];
+    foreach($bucket as $ts){ if(($now - (int)$ts) < $windowSeconds) $hits[] = (int)$ts; }
+    $hits[] = $now;
+    $data[$bucketKey] = $hits;
+    ftruncate($fp, 0); rewind($fp); fwrite($fp, json_encode($data)); fflush($fp);
+    flock($fp, LOCK_UN); fclose($fp);
+}
+
+// Bucket sayaçlarını tamamen temizler (ör. başarılı login sonrası).
+function rate_limit_clear($file, $bucketKey){
+    $fp = @fopen($file, 'c+');
+    if(!$fp) return;
+    if(!flock($fp, LOCK_EX)){ fclose($fp); return; }
+    $size = filesize($file);
+    $raw  = $size > 0 ? fread($fp, $size) : '';
+    $data = $raw ? json_decode($raw, true) : [];
+    if(!is_array($data)) $data = [];
+    unset($data[$bucketKey]);
+    ftruncate($fp, 0); rewind($fp); fwrite($fp, json_encode($data)); fflush($fp);
+    flock($fp, LOCK_UN); fclose($fp);
+}
