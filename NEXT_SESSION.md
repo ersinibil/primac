@@ -40,8 +40,13 @@ provider_message_id, gelen medya indirme, çoklu-cari-aynı-telefon, konuşma ar
 senkronizasyonu, attachment desteği, gerçek-zamanlı güncelleme) — hiçbiri onay olmadan
 uygulanmayacak. Detay → `CHANGELOG.md`, `VERSIONING.md`.
 
-**Sıradaki iş**: SECURITY SPRINT-005 — Login Hardening (önerilen kapsam hazır, `ROADMAP.md`'de —
-kullanıcı onayı bekliyor, otomatik başlanmayacak). Ayrıca FAZ-5D'de bulunan yan bulgu:
+**SECURITY SPRINT-005 FAZ-1 — Session Fixation Hardening: PASS** (2026-07-05, commit `b973e01`,
+GitHub'a push edildi) — `index.php` login sonrası + `boot.php` `remember_check()` remember-me
+otomatik girişi sonrası `session_regenerate_id(true)`. Yerel `ots_sectest` QA'da normal login,
+remember-me (anonim oturum+remember cookie birlikte, en katı senaryo), logout, `return_to`,
+çoklu-sekme — hepsi PASS, sıfır FAIL. Session fixation riski kapandı, kalan CRITICAL risk yok.
+**Sıradaki iş**: FAZ-2 — Login CSRF (önerilen kapsam `ROADMAP.md`'de — kullanıcı onayı bekliyor,
+otomatik başlanmayacak). Ayrıca FAZ-5D'de bulunan yan bulgu:
 `requests.php`/`mobile/requests.php`'de CSRF ile ilgisiz bir schema-drift hatası (`manager_note` vs
 `response_note` kolon uyuşmazlığı, talep güncellemesi sessizce başarısız oluyor) — ayrı bir bug-fix
 turu gerektiriyor, `ROADMAP.md`'ye eklendi.
@@ -94,14 +99,42 @@ Production'a (acanstr.com/ots) henüz dokunulmadı — ayrı "DEPLOY MODE" komut
 3. ~~**SECURITY SPRINT-004**~~ — **TAMAMLANDI (FINAL AUDIT: PASS, 2026-07-05)**. Merkezi CSRF
    Koruma Altyapısı, FAZ-1→FAZ-4F + FAZ-5A→5F (CRM `4708cd6`, Stok/Ürün `ae8116a`, İş/Görev
    `a68637a`, Mesajlaşma/Talep `48d943f`, Satış/Satın Alma `b4b2c9a`, Temizlik `7077a6d`), toplam
-   57 enforced basename — proje genelinde `index.php` dışında POST-handling dosya kalmadı. Sıradaki:
-   **SECURITY SPRINT-005 — Login Hardening** (`index.php` login CSRF + session fixation + session
-   rotation + cookie hardening + remember-me + login rate-limit, önerilen kapsam `ROADMAP.md`'de,
-   onay bekliyor). `KNOWN_BUGS.md`'de hâlâ
-   açık, henüz sprint numarasına atanmamış diğer bulgular: accounting.php XSS, users.php rol
-   yükseltme, is_admin() bayatlığı, session fixation.
+   57 enforced basename — proje genelinde `index.php` dışında POST-handling dosya kalmadı.
+   **SECURITY SPRINT-005 — Login Hardening devam ediyor**: **FAZ-1 — Session Fixation Hardening
+   PASS** (commit `b973e01`). Sıradaki: FAZ-2 — Login CSRF, FAZ-3 — brute-force/rate-limit, FAZ-4 —
+   remember-me sertleştirme, FAZ-5 — timing/enumeration, FAZ-6 — FINAL AUDIT (hepsi önerilen kapsam
+   `ROADMAP.md`'de, onay bekliyor, otomatik geçilmiyor). `KNOWN_BUGS.md`'de hâlâ açık, henüz sprint
+   numarasına atanmamış diğer bulgular: accounting.php XSS, users.php rol yükseltme, is_admin()
+   bayatlığı.
 
 **Production'a deploy YAPILMAYACAK** — ayrı, açık bir "DEPLOY MODE" komutu gerekir.
+
+## REOPEN Listesi — SECURITY SPRINT-005 tamamlanmadan başlanmayacak (2026-07-05'te netleştirildi)
+Kullanıcı gerçek kullanım testinde 3 önceki "PASS" bulguyu FAILED/REOPEN olarak işaretledi — bu
+üçü SECURITY SPRINT-005 bitene kadar **dokunulmayacak**, sonra sıfırdan yeni kabul kriterleriyle
+tekrar açılacak:
+- **REOPEN-001 — Takvim Günlük Filtre**: seçilen gün dışındaki günlerin not/görevleri de görünmeye
+  devam ediyor (PATCH-003'ün "kod değişikliği yok, deploy açığı" bulgusu kullanıcı testinde
+  doğrulanmadı — gerçek kök neden hâlâ açık).
+  * Root-cause taraması bu oturumda TAMAMLANMADI (kullanıcı SPRINT-005 önceliğini koyunca durduruldu) — bir sonraki oturumda `takvim.php` gün-tıklama JS/PHP filtre mantığından başlanmalı.
+- **REOPEN-002 — Son İşlemler Route Resolver**: satış/satın alma kayıtları hâlâ ilgisiz bir "yeni
+  kayıt" formuna (`sales.php`/`purchase.php`) yönleniyor. **Kısmi kök neden bu oturumda bulundu**
+  (kod değiştirilmedi): `activity_target_url()`'nin `$map` dizisinde `'sale'`/`'purchase'`
+  `entity_type` değerleri hiç yok → fonksiyon `null` döner → `activity_row_html()` satır 126'daki
+  `$resolved ?? ($r['url'] ?: '#')` stored-url fallback'ine düşer → stored url zaten write-time'da
+  `sales.php`/`purchase.php` (`mobile/sales.php:112`, `mobile/purchase.php:68`, `sales.php:136`,
+  `purchase.php:73`) — yani YENİ KAYIT formu, detay değil. Düzeltme: bu iki `entity_type` için ya
+  gerçek bir detay görünümü ya da resolver'ın "detay ekranı yok → pasif/disabled" durumu döndürmesi
+  gerekiyor (stored-url fallback'e körlemesine düşmemeli).
+- **REOPEN-003 — WhatsApp Conversation**: mevcut ekran gerçek "Web WhatsApp" mantığında değil,
+  gelen cevaplar ekranda görünmüyor (webhook/DB/sorgu zincirinin neresinde koptuğu bu oturumda analiz
+  EDİLMEDİ — kullanıcı SPRINT-005 önceliğini koyunca durduruldu).
+
+**Öncelik sırası (kullanıcı tarafından netleştirildi, 2026-07-05)**: SECURITY SPRINT-005 → REOPEN-001
+→ REOPEN-002 → REOPEN-003 → Dashboard 2.0 → Calendar 2.0 → CRM 2.0 → Purchase & Sales 2.0 → UX
+Polish → Performance → Mobile Experience → System Audit → Release Candidate. Detay ve çalışma
+felsefesi ("Evolution not Revolution", REOPEN durum makinesi: OPEN→IN PROGRESS→USER TEST→PASS/REOPEN)
+→ `memory/feedback_evolution_not_revolution.md`.
 
 ## iOS Safari Gerçek Cihaz Test Notları (bir sonraki oturumun 1. maddesi)
 Bu iki madde SADECE gerçek bir iPhone + Safari ile doğrulanabilir, yerel ortamda (curl/php -S)
@@ -136,11 +169,10 @@ veya push_lib.php/config.php) için ayrı, küçük bir düzeltme turu açılır
 commit olarak eklenir, üzerine yazılmaz.
 
 ## Devam Eden Sprint
-Şu an devam eden bir güvenlik sprint'i yok. **SECURITY SPRINT-004 — Merkezi CSRF Koruma Altyapısı**
-tamamlandı (FINAL AUDIT: PASS, bkz. yukarı "Son Durum"). Sıradaki önerilen: **SECURITY SPRINT-005 —
-Login Hardening** (onay bekliyor, bkz. `ROADMAP.md` "Security Roadmap"). Ayrıca UX/STABILITY
-PATCH-002 tamamlandı, commit edildi, GitHub'a push edildi; DEV (primac.tr) deploy edildi, migration
-çalıştırıldı, DEV aktif (bkz. yukarı).
+**SECURITY SPRINT-005 — Login Hardening** devam ediyor. **FAZ-1 — Session Fixation Hardening: PASS**
+(commit `b973e01`). Sıradaki: FAZ-2 — Login CSRF (onay bekliyor, bkz. `ROADMAP.md` "Security
+Roadmap"). Ayrıca UX/STABILITY PATCH-002 tamamlandı, commit edildi, GitHub'a push edildi; DEV
+(primac.tr) deploy edildi, migration çalıştırıldı, DEV aktif (bkz. yukarı).
 
 ## Açık Kalan Hatalar
 (Tam liste → `KNOWN_BUGS.md`)
@@ -149,22 +181,24 @@ PATCH-002 tamamlandı, commit edildi, GitHub'a push edildi; DEV (primac.tr) depl
 2. `accounting.php`'de `tab` parametresiyle yansıyan XSS — henüz sprint numarası atanmadı.
 3. `users.php`'de rol yükseltme açığı — henüz sprint numarası atanmadı.
 4. `is_admin()` session'da bayatlıyor — henüz sprint numarası atanmadı.
-5. Login'de session fixation koruması yok — **SECURITY SPRINT-005 (Login Hardening) önerilen
-   kapsamına eklendi** (onay bekliyor).
+5. ~~Login'de session fixation koruması yok~~ — **SECURITY SPRINT-005 FAZ-1'de çözüldü**
+   (2026-07-05, commit `b973e01`).
 6. FK kısıtı yok (yetim kayıt riski).
 7. Bazı tablolarda eksik index.
 8. Sabit migration/temizlik anahtarı (`acans-migrate-2026`).
 9. **PWA Push** — Safari arka plan teslimatı (SERVER-SIDE PASS, cihaz testi bekliyor).
 10. **Mobil Mesajlaşma boşluğu** — CSS düzeltildi (CONDITIONAL PASS, cihaz testi bekliyor).
-11. **WhatsApp** — gelen mesaj takibi yok — **WhatsApp Conversation/Inbound MVP ile 2026-07-05'te
-    çözüldü** (commit `dae3e62`), kalan 7 madde teknik borç olarak `ROADMAP.md`'de.
+11. **WhatsApp** — gelen mesaj takibi için MVP eklendi (commit `dae3e62`) ama gerçek kullanıcı
+    testinde **REOPEN-003** olarak işaretlendi (2026-07-05) — ekran gerçek "Web WhatsApp" mantığında
+    değil, gelen cevaplar görünmüyor. Kök neden bu oturumda analiz EDİLMEDİ (SPRINT-005 önceliği
+    nedeniyle durduruldu) — bkz. yukarı "REOPEN Listesi".
 12. `requests.php`/`mobile/requests.php` — `manager_note`/`response_note` schema-drift (FAZ-5D'de
     bulundu, CSRF ile ilgisiz, ayrı bugfix turu bekliyor).
 
 ## Açık Güvenlik Riskleri
 1. **ORTA-YÜKSEK** — `accounting.php`'de yansıyan XSS (henüz sprint numarası atanmadı).
 2. **ORTA** — `users.php` rol yükseltme, `is_admin()` session bayatlığı (henüz sprint numarası
-   atanmadı); session fixation (**SECURITY SPRINT-005 önerilen kapsamında**, onay bekliyor).
+   atanmadı). ~~Session fixation~~ — **SECURITY SPRINT-005 FAZ-1'de çözüldü** (`b973e01`).
 3. ~~Proje genelinde CSRF token mekanizması yok~~ — **SECURITY SPRINT-004 ile 2026-07-05'te
    çözüldü** (57 enforced basename, `index.php` login formu hariç — bkz. SPRINT-005).
 

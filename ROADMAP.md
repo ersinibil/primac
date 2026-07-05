@@ -17,19 +17,22 @@ Tamamlandı:
   `CHANGELOG.md` "SECURITY SPRINT-004 — FINAL AUDIT".
 
 Devam Ediyor:
-- (yok — SECURITY SPRINT-004 tamamlandı; sıradaki güvenlik işi SPRINT-005 önerisi, aşağıya bakın)
-
-Planlanan (kullanıcı onayı bekliyor, henüz başlanmadı):
-- 🔜 **SECURITY SPRINT-005 — Login Hardening** (2026-07-05'te SPRINT-004 kapanışıyla birlikte
-  önerildi): `index.php` login formu CSRF'i (companion-fix — `layout_top.php`'den geçmiyor, elle
-  `csrf_field()` gerektiriyor) + session fixation (`index.php:12-40`'ta başarılı girişte
-  `session_regenerate_id()` yok, `KNOWN_BUGS.md`) + session rotation + cookie hardening
-  (`remember_set()`'in `setcookie('acans_remember', ...)` çağrısında SameSite bayrağı yok,
-  session cookie'de zaten `samesite=Lax` var) + remember-me incelemesi (`boot.php`
-  `remember_set()`/`remember_check()` mevcut, sha256 hash'li token) + login brute-force/rate-limit
-  (şu an `index.php`'de yok, sadece `sifre_sifirla.php`'de var). Bu 6 madde TEK bir fazda birlikte
-  ele alınmalı (kullanıcının kendi gerekçesi: login standart CRUD endpoint'i değil, parçalı
-  yapılırsa tutarsız/güvenilmez oturum davranışı riski taşır).
+- 🔄 **SECURITY SPRINT-005 — Login Hardening.** Kapsam sonradan (2026-07-05) kademeli fazlara
+  bölündü (tek fazda toplu yapma kararından vazgeçildi — session fixation'ın izole, düşük
+  blast-radius bir değişiklik olduğu görülünce önce o kapatıldı):
+  - ✅ **FAZ-1 — Session Fixation Hardening: PASS** (commit `b973e01`) — `index.php` login sonrası +
+    `boot.php` `remember_check()` sonrası `session_regenerate_id(true)`. Yerel QA'da normal login,
+    remember-me, logout, `return_to`, çoklu-sekme senaryoları PASS, sıfır FAIL. Detay →
+    `CHANGELOG.md`.
+  - 🔜 **FAZ-2 — Login CSRF** (`index.php` companion-fix — `layout_top.php`'den geçmiyor, elle
+    `csrf_field()` gerektiriyor, en yüksek blast-radius: yanlış yapılırsa TÜM girişler kilitlenir).
+  - 🔜 **FAZ-3 — Login brute-force/rate-limit** (şu an `index.php`'de yok, sadece
+    `sifre_sifirla.php`'de var — aynı `_rate_limit_hit()` deseni paylaşılabilir).
+  - 🔜 **FAZ-4 — Remember-me sertleştirme** (token rotasyonu yok; `remember_set()`'in
+    `setcookie('acans_remember', ...)` çağrısında SameSite bayrağı yok).
+  - 🔜 **FAZ-5 — Timing/enumeration inceliği** (isteğe bağlı, LOW öncelik).
+  - 🔜 **FAZ-6 — FINAL AUDIT**.
+  Her faz kullanıcı onayı ile tek tek açılıyor, otomatik geçilmiyor.
 
 ## Arşiv — SECURITY SPRINT-004 faz detayı (tamamlandı, referans için korunuyor)
 FAZ-1 → FAZ-4F tamamlandı, **HIGH-RISK CSRF CHECKPOINT AUDIT: PASS** (checkpoint commit `a32893c`).

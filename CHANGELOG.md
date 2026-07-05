@@ -3,6 +3,31 @@
 Bu dosya `memory/features.md`'nin (tam gerekçe/kod detayıyla) kök dizindeki kısa özetidir — hızlı
 taramak için. Detaylı "neden böyle yapıldı" analizleri için `memory/features.md`'ye bakın.
 
+## SECURITY SPRINT-005 FAZ-1 — Session Fixation Hardening: PASS (2026-07-05, commit `b973e01`)
+Kapsam: SADECE session fixation riski. `index.php` başarılı login sonrası ve `boot.php`
+`remember_check()`'te remember-me ile başarılı otomatik giriş sonrası `session_regenerate_id(true)`
+eklendi (toplam 2 satır, 2 dosya). Login CSRF, rate-limit, remember-me rotasyonu, cookie değişikliği
+bilinçli olarak bu fazın DIŞINDA bırakıldı (ayrı fazlar).
+
+Yerel `ots_sectest` + `php -S` + gerçek HTTP istekleriyle (cookie jar bazlı) test edildi:
+- Normal login: login öncesi/sonrası `PHPSESSID` **farklı** (PASS), session verisi (`$_SESSION['user']`)
+  korunmuş — regenerate sonrası `dashboard.php` login'e düşmeden açıldı (PASS).
+- Remember-Me: önceden var olan anonim bir `PHPSESSID`'ye `acans_remember` çerezi eklenip
+  `dashboard.php`'ye erişildiğinde otomatik giriş oldu VE `PHPSESSID` **farklı** bir değere değişti
+  (PASS — en katı senaryo: var olan girişsiz oturum + remember cookie birlikte test edildi).
+- Logout: `acans_remember` çerezi temizlendi (`deleted`/`Max-Age=0`), sonraki istek `/index.php`'ye
+  redirect oldu (PASS).
+- `return_to`: girişsiz halde korumalı bir sayfaya (`contacts.php`) direkt erişim → login'e
+  yönlendirme → login sonrası **doğru sayfaya** (`/contacts.php`, `dashboard.php`'ye değil) redirect
+  (PASS) — regenerate, `$_SESSION['return_to']`'yu bozmadı.
+- Çoklu sekme: aynı cookie jar ile 3 eşzamanlı istek (dashboard/contacts/tasks) — tümü 200, server
+  log'da hata/uyarı yok (PASS).
+- `php -l` 2/2 temiz. FAIL yok.
+
+**Sonuç**: Session fixation riski (önceki SPRINT-005 PREPARATION REPORT'ta CRITICAL olarak
+işaretlenmişti) kapandı. Kalan CRITICAL risk yok. Sıradaki önerilen faz: **FAZ-2 — Login CSRF**
+(`index.php` companion-fix). Kullanıcı onayı bekliyor, otomatik geçilmedi.
+
 ## SECURITY SPRINT-004 — FINAL AUDIT: PASS — Sprint Resmen Kapandı (2026-07-05)
 Kapsam: merkezi CSRF (Cross-Site Request Forgery) koruma altyapısının kurulması ve kademeli olarak
 (yüksek riskten düşük riske) tüm CRUD/işlem POST endpoint'lerine yayılması. **57 benzersiz basename**

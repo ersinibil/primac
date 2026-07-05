@@ -49,14 +49,18 @@ netleştirildi — bkz. `ROADMAP.md` "Security Roadmap"):
   kalmadı (57/57, fark sıfır). `index.php` login CSRF'i kullanıcı onayıyla bilinçli olarak
   **SECURITY SPRINT-005**'e (Login Hardening) devredildi — bkz. aşağı ve `ROADMAP.md` "Security
   Roadmap". Detay → `CHANGELOG.md` "SECURITY SPRINT-004 — FINAL AUDIT".
-- 🔜 **SECURITY SPRINT-005 — Login Hardening (önerilen kapsam, henüz başlanmadı)**: `index.php`
-  login formu CSRF'i (companion-fix gerektiriyor), session fixation (`index.php:12-40` başarılı
-  girişte `session_regenerate_id()` yok — `KNOWN_BUGS.md`), session rotation, cookie hardening
-  (mevcut: `session_set_cookie_params` `samesite=Lax` zaten var, `remember_set()` cookie'sinde
-  SameSite bayrağı yok — gözden geçirilecek), remember-me incelemesi (`boot.php` `remember_set()`/
-  `remember_check()` — sha256 hash'li token, mevcut ama SameSite eksik), login brute-force/rate-limit
-  (password-reset'teki gibi ayrı bir mekanizma login'de yok). Kullanıcı onayı bekliyor, henüz
-  geliştirmeye başlanmadı.
+- 🔄 **SECURITY SPRINT-005 — Login Hardening (devam ediyor).** **FAZ-1 — Session Fixation
+  Hardening: PASS** (2026-07-05, commit `b973e01`) — `index.php` login sonrası +
+  `boot.php` `remember_check()` remember-me otomatik girişi sonrası `session_regenerate_id(true)`.
+  Yerel `ots_sectest` QA'da normal login, remember-me (anonim oturum+remember cookie birlikte),
+  logout, `return_to`, çoklu-sekme senaryoları PASS, sıfır FAIL. Session fixation riski kapandı,
+  kalan CRITICAL risk yok. Detay → `CHANGELOG.md`.
+
+  **Kalan önerilen fazlar (henüz başlanmadı, onay bekliyor)**: FAZ-2 — Login CSRF (`index.php`
+  companion-fix gerektiriyor), FAZ-3 — login brute-force/rate-limit (password-reset'teki gibi ayrı
+  bir mekanizma login'de yok), FAZ-4 — remember-me sertleştirme (token rotasyonu yok; `remember_set()`
+  cookie'sinde SameSite bayrağı yok), FAZ-5 — timing/enumeration inceliği (isteğe bağlı), FAZ-6 —
+  FINAL AUDIT.
 
 ## Current Development Version
 **v1.1.0-dev** (primac.tr) — ortam ayrımından SONRAKİ ilk geliştirme turu
