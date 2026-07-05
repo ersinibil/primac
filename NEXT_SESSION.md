@@ -5,22 +5,22 @@ hızlı giriş yapmak için var. Detay için ilgili dosyalara bakın (`CHANGELOG
 `KNOWN_BUGS.md`, `VERSIONING.md`, `memory/*.md`).
 
 ## Son Durum
-🔄 **SECURITY SPRINT-004 — DEVAM EDİYOR** (2026-07-05) — Merkezi CSRF Koruma Altyapısı. FAZ-1'den
-FAZ-4F'ye kadar tüm fazlar tamamlandı, **HIGH-RISK CSRF CHECKPOINT AUDIT: PASS**. **FAZ-5A — CRM
-grubu PASS** (commit `4708cd6`). **FAZ-5B — Stok/Ürün grubu PASS** (commit `ae8116a`). **FAZ-5C —
-İş/Görev grubu PASS** (commit `a68637a`). **FAZ-5D — Mesajlaşma/Talep grubu PASS** (commit
-`48d943f`). **FAZ-5E — Satış/Satın Alma grubu PASS** (commit `b4b2c9a`). **FAZ-5F — "Temizlik"
-grubu PASS** (`accounting_categories.php`, `check_note_view.php`, `report.php`,
+✅ **SECURITY SPRINT-004 — TAMAMLANDI (FINAL AUDIT: PASS, 2026-07-05)** — Merkezi CSRF Koruma
+Altyapısı. FAZ-1'den FAZ-4F'ye kadar tüm fazlar tamamlandı, **HIGH-RISK CSRF CHECKPOINT AUDIT:
+PASS**. **FAZ-5A — CRM grubu PASS** (commit `4708cd6`). **FAZ-5B — Stok/Ürün grubu PASS** (commit
+`ae8116a`). **FAZ-5C — İş/Görev grubu PASS** (commit `a68637a`). **FAZ-5D — Mesajlaşma/Talep grubu
+PASS** (commit `48d943f`). **FAZ-5E — Satış/Satın Alma grubu PASS** (commit `b4b2c9a`). **FAZ-5F —
+"Temizlik" grubu PASS** (`accounting_categories.php`, `check_note_view.php`, `report.php`,
 `ajax_quick_add.php`, `wa_settings.php`, commit `7077a6d`, GitHub'a push edildi).
-**Toplam enforced basename: 57.**
+**Toplam enforced basename: 57. 15 commit, 15 modül/işlevsel grup, sıfır FAIL, sıfır regresyon.**
 
-**FAZ-5 dizisi (5A→5F) fiilen TAMAMLANDI** — proje genelinde tam POST-dosya taraması yapıldı,
-`index.php` (login) DIŞINDA hiçbir POST-handling dosya enforced liste dışında kalmadı. **SECURITY
-FINAL AUDIT'e kalan tek gerçek iş: `index.php` Login Hardening** (companion-fix gerektiriyor —
-`layout_top.php`'den geçmiyor, CSRF meta/auto-inject yok; TÜM kullanıcıların girişini kilitleme
-riski taşıyan en yüksek blast-radius dosya; `KNOWN_BUGS.md`'deki "session fixation" ile birlikte
-ayrı, dikkatli bir fazda ele alınmalı) — bkz. `ROADMAP.md` "Security Roadmap".
-Detay → `CHANGELOG.md`, `VERSIONING.md` "Security Sprint Durumu", `ROADMAP.md` "Security Roadmap".
+**FINAL AUDIT'te proje genelinde tam POST-dosya taraması tekrarlandı** — `index.php` (login)
+DIŞINDA hiçbir POST-handling dosya enforced liste dışında kalmadı (57/57, fark sıfır). `index.php`
+kullanıcı onayıyla (2026-07-05) bilinçli olarak **SECURITY SPRINT-005 — Login Hardening**'e
+taşındı (login CSRF + session fixation + session rotation + cookie hardening + remember-me
+incelemesi + login brute-force/rate-limit, TEK fazda birlikte — kullanıcı onayı bekliyor, henüz
+başlanmadı). Detay → `CHANGELOG.md` "SECURITY SPRINT-004 — FINAL AUDIT", `VERSIONING.md` "Security
+Sprint Durumu", `ROADMAP.md` "Security Roadmap".
 
 **Bu turda ayrıca**: UX/STABILITY PATCH-003 (Takvim günlük filtre) incelendi — **kod değişikliği
 YOK**, primac.tr'nin muhtemelen `dd35352` (asıl düzeltme) öncesi `d7c593a` referans sürümünde
@@ -40,23 +40,24 @@ provider_message_id, gelen medya indirme, çoklu-cari-aynı-telefon, konuşma ar
 senkronizasyonu, attachment desteği, gerçek-zamanlı güncelleme) — hiçbiri onay olmadan
 uygulanmayacak. Detay → `CHANGELOG.md`, `VERSIONING.md`.
 
-**Sıradaki iş**: SECURITY SPRINT-004 — `index.php` Login Hardening fazı (kullanıcı onayı bekliyor,
-otomatik geçilmeyecek) VEYA doğrudan SECURITY FINAL AUDIT (login hariç). Ayrıca FAZ-5D'de bulunan
-yan bulgu: `requests.php`/`mobile/requests.php`'de CSRF ile ilgisiz bir schema-drift hatası
-(`manager_note` vs `response_note` kolon uyuşmazlığı, talep güncellemesi sessizce başarısız oluyor)
-— ayrı bir bug-fix turu gerektiriyor, `ROADMAP.md`'ye eklendi.
+**Sıradaki iş**: SECURITY SPRINT-005 — Login Hardening (önerilen kapsam hazır, `ROADMAP.md`'de —
+kullanıcı onayı bekliyor, otomatik başlanmayacak). Ayrıca FAZ-5D'de bulunan yan bulgu:
+`requests.php`/`mobile/requests.php`'de CSRF ile ilgisiz bir schema-drift hatası (`manager_note` vs
+`response_note` kolon uyuşmazlığı, talep güncellemesi sessizce başarısız oluyor) — ayrı bir bug-fix
+turu gerektiriyor, `ROADMAP.md`'ye eklendi.
 
 ✅ **SECURITY SPRINT-003 PASS** (2026-07-05) — `sifre_sifirla.php` brute-force + rate-limit
 sertleştirmesi, yerel QA'da 8/8 senaryo PASS. Detay → `CHANGELOG.md`, `KNOWN_BUGS.md` "Son
 Çözülenler", `VERSIONING.md` "Security Sprint Durumu".
 
-**Devam Eden Sprint: SECURITY SPRINT-004 — Sıradaki: `index.php` Login Hardening, onay bekliyor**
-FAZ-5A (CRM) PASS commit `4708cd6`, FAZ-5B (Stok/Ürün) PASS commit `ae8116a`, FAZ-5C (İş/Görev)
-PASS commit `a68637a`, FAZ-5D (Mesajlaşma/Talep) PASS commit `48d943f`, FAZ-5E (Satış/Satın Alma)
-PASS commit `b4b2c9a`, FAZ-5F ("Temizlik" grubu) PASS commit `7077a6d`. Toplam enforced basename:
-57 — `index.php` DIŞINDA proje genelinde enforced olmayan POST dosyası kalmadı (tam tarama ile
-doğrulandı). Tamamlanan fazlar (FAZ-1 → FAZ-4F, FAZ-5A→5F) ve HIGH-RISK CHECKPOINT AUDIT detayı →
-`CHANGELOG.md`.
+**SECURITY SPRINT-004 — TAMAMLANDI (FINAL AUDIT: PASS).** FAZ-5A (CRM) PASS commit `4708cd6`,
+FAZ-5B (Stok/Ürün) PASS commit `ae8116a`, FAZ-5C (İş/Görev) PASS commit `a68637a`, FAZ-5D
+(Mesajlaşma/Talep) PASS commit `48d943f`, FAZ-5E (Satış/Satın Alma) PASS commit `b4b2c9a`, FAZ-5F
+("Temizlik" grubu) PASS commit `7077a6d`. Toplam enforced basename: 57 — `index.php` DIŞINDA proje
+genelinde enforced olmayan POST dosyası kalmadı (FINAL AUDIT'te tam tarama tekrarlandı, sonuç
+aynı). Tamamlanan fazlar (FAZ-1 → FAZ-4F, FAZ-5A→5F), HIGH-RISK CHECKPOINT AUDIT ve FINAL AUDIT
+detayı → `CHANGELOG.md`. **Sıradaki: SECURITY SPRINT-005 — Login Hardening (önerilen kapsam hazır,
+onay bekliyor).**
 
 Ayrıca açık **Security Technical Debt** (bug değil, mimari/deployment notu — bkz. `ROADMAP.md`):
 rate-limit'in uzun vadede `security_rate_limits`/`security_events` tablosuna taşınması,
@@ -90,12 +91,13 @@ Production'a (acanstr.com/ots) henüz dokunulmadı — ayrı "DEPLOY MODE" komut
 1. **iPhone Safari gerçek cihaz testi** — Mobil Mesajlaşma (CONDITIONAL PASS) + PWA Push
    (SERVER-SIDE PASS) için tek eksik doğrulama. Test notları aşağıda.
 2. **SYSTEM AUDIT** — büyük sprint sonrası standart denetim.
-3. **SECURITY SPRINT-004** — Merkezi CSRF Koruma Altyapısı. FAZ-1→FAZ-4F + FAZ-5A→5F (CRM
-   `4708cd6`, Stok/Ürün `ae8116a`, İş/Görev `a68637a`, Mesajlaşma/Talep `48d943f`, Satış/Satın Alma
-   `b4b2c9a`, Temizlik `7077a6d`) tamamlandı, toplam 57 enforced basename — **proje genelinde
-   `index.php` dışında POST-handling dosya kalmadı** (tam tarama ile doğrulandı). Sıradaki:
-   `index.php` (login) ayrı bir "Login Hardening" fazı olarak değerlendirilmeli (gerekçe →
-   `ROADMAP.md`), sonrasında SECURITY FINAL AUDIT ile sprint kapanabilir. `KNOWN_BUGS.md`'de hâlâ
+3. ~~**SECURITY SPRINT-004**~~ — **TAMAMLANDI (FINAL AUDIT: PASS, 2026-07-05)**. Merkezi CSRF
+   Koruma Altyapısı, FAZ-1→FAZ-4F + FAZ-5A→5F (CRM `4708cd6`, Stok/Ürün `ae8116a`, İş/Görev
+   `a68637a`, Mesajlaşma/Talep `48d943f`, Satış/Satın Alma `b4b2c9a`, Temizlik `7077a6d`), toplam
+   57 enforced basename — proje genelinde `index.php` dışında POST-handling dosya kalmadı. Sıradaki:
+   **SECURITY SPRINT-005 — Login Hardening** (`index.php` login CSRF + session fixation + session
+   rotation + cookie hardening + remember-me + login rate-limit, önerilen kapsam `ROADMAP.md`'de,
+   onay bekliyor). `KNOWN_BUGS.md`'de hâlâ
    açık, henüz sprint numarasına atanmamış diğer bulgular: accounting.php XSS, users.php rol
    yükseltme, is_admin() bayatlığı, session fixation.
 
@@ -134,31 +136,39 @@ veya push_lib.php/config.php) için ayrı, küçük bir düzeltme turu açılır
 commit olarak eklenir, üzerine yazılmaz.
 
 ## Devam Eden Sprint
-**SECURITY SPRINT-004 — Merkezi CSRF Koruma Altyapısı** (FAZ-1 → FAZ-4F tamamlandı, HIGH-RISK
-CSRF CHECKPOINT AUDIT PASS, checkpoint commit `a32893c`). Sıradaki faz: FAZ-5A — CRM
-(`contact_new.php`, `contact_view.php`). Ayrıca UX/STABILITY PATCH-002 tamamlandı, commit edildi,
-GitHub'a push edildi; DEV (primac.tr) deploy edildi, migration çalıştırıldı, DEV aktif (bkz. yukarı).
+Şu an devam eden bir güvenlik sprint'i yok. **SECURITY SPRINT-004 — Merkezi CSRF Koruma Altyapısı**
+tamamlandı (FINAL AUDIT: PASS, bkz. yukarı "Son Durum"). Sıradaki önerilen: **SECURITY SPRINT-005 —
+Login Hardening** (onay bekliyor, bkz. `ROADMAP.md` "Security Roadmap"). Ayrıca UX/STABILITY
+PATCH-002 tamamlandı, commit edildi, GitHub'a push edildi; DEV (primac.tr) deploy edildi, migration
+çalıştırıldı, DEV aktif (bkz. yukarı).
 
 ## Açık Kalan Hatalar
 (Tam liste → `KNOWN_BUGS.md`)
-1. `sifre_sifirla.php`'de brute-force koruması yok.
-2. `accounting.php`'de `tab` parametresiyle yansıyan XSS.
-3. `users.php`'de rol yükseltme açığı.
-4. `is_admin()` session'da bayatlıyor.
-5. Login'de session fixation koruması yok.
+1. ~~`sifre_sifirla.php`'de brute-force koruması yok~~ — **SECURITY SPRINT-003'te çözüldü**
+   (2026-07-05).
+2. `accounting.php`'de `tab` parametresiyle yansıyan XSS — henüz sprint numarası atanmadı.
+3. `users.php`'de rol yükseltme açığı — henüz sprint numarası atanmadı.
+4. `is_admin()` session'da bayatlıyor — henüz sprint numarası atanmadı.
+5. Login'de session fixation koruması yok — **SECURITY SPRINT-005 (Login Hardening) önerilen
+   kapsamına eklendi** (onay bekliyor).
 6. FK kısıtı yok (yetim kayıt riski).
 7. Bazı tablolarda eksik index.
 8. Sabit migration/temizlik anahtarı (`acans-migrate-2026`).
 9. **PWA Push** — Safari arka plan teslimatı (SERVER-SIDE PASS, cihaz testi bekliyor).
 10. **Mobil Mesajlaşma boşluğu** — CSS düzeltildi (CONDITIONAL PASS, cihaz testi bekliyor).
-11. **WhatsApp** — gelen mesaj takibi yok (ayrı sprint, yeni mimari gerektiriyor).
+11. **WhatsApp** — gelen mesaj takibi yok — **WhatsApp Conversation/Inbound MVP ile 2026-07-05'te
+    çözüldü** (commit `dae3e62`), kalan 7 madde teknik borç olarak `ROADMAP.md`'de.
+12. `requests.php`/`mobile/requests.php` — `manager_note`/`response_note` schema-drift (FAZ-5D'de
+    bulundu, CSRF ile ilgisiz, ayrı bugfix turu bekliyor).
 
 ## Açık Güvenlik Riskleri
-1. **YÜKSEK** — `sifre_sifirla.php` brute-force + `accounting.php` XSS.
-2. **ORTA** — `users.php` rol yükseltme, `is_admin()` session bayatlığı, session fixation.
-3. **BİLGİ** — Proje genelinde CSRF token mekanizması yok.
+1. **ORTA-YÜKSEK** — `accounting.php`'de yansıyan XSS (henüz sprint numarası atanmadı).
+2. **ORTA** — `users.php` rol yükseltme, `is_admin()` session bayatlığı (henüz sprint numarası
+   atanmadı); session fixation (**SECURITY SPRINT-005 önerilen kapsamında**, onay bekliyor).
+3. ~~Proje genelinde CSRF token mekanizması yok~~ — **SECURITY SPRINT-004 ile 2026-07-05'te
+   çözüldü** (57 enforced basename, `index.php` login formu hariç — bkz. SPRINT-005).
 
-Bunların tamamı **SECURITY SPRINT-003**'ün kapsamı (bkz. yukarı "Sıradaki sıra").
+Detay ve sprint numaraları → `ROADMAP.md` "Security Roadmap".
 
 ## Dikkat Edilmesi Gereken Mimari Kararlar
 - **Tek geliştirme ortamı modeli**: DEV=primac.tr, PROD=acanstr.com/ots (SADECE "DEPLOY MODE"

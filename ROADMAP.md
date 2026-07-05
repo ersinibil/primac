@@ -11,36 +11,36 @@ Tamamlandı:
   kapatılmıştı, SECURITY SPRINT numaralandırmasına bu tarihte dahil edildi.*
 - ✅ **SECURITY SPRINT-003** — `sifre_sifirla.php` brute-force + rate-limit sertleştirmesi
   (2026-07-05, yerel QA'da 8/8 PASS).
+- ✅ **SECURITY SPRINT-004 — Merkezi CSRF Koruma Altyapısı — TAMAMLANDI (FINAL AUDIT: PASS,
+  2026-07-05).** 57 enforced basename, 15 commit, 15 modül/işlevsel grup, sıfır FAIL, sıfır
+  regresyon. `index.php` (login) kullanıcı onayıyla SECURITY SPRINT-005'e taşındı. Detay →
+  `CHANGELOG.md` "SECURITY SPRINT-004 — FINAL AUDIT".
 
 Devam Ediyor:
-- 🔄 **SECURITY SPRINT-004 — Merkezi CSRF Koruma Altyapısı.** FAZ-1 → FAZ-4F tamamlandı, **HIGH-RISK
-  CSRF CHECKPOINT AUDIT: PASS** (son checkpoint commit: `a32893c`). **FAZ-5A — CRM grubu PASS**
-  (commit `4708cd6`). **FAZ-5B — Stok/Ürün grubu PASS** (commit `ae8116a`). **FAZ-5C — İş/Görev
-  grubu PASS** (commit `a68637a`). **FAZ-5D — Mesajlaşma/Talep grubu PASS** (commit `48d943f`).
-  **FAZ-5E — Satış/Satın Alma grubu PASS** (commit `b4b2c9a`). **FAZ-5F — "Temizlik" grubu PASS**
-  (`accounting_categories.php`, `check_note_view.php`, `report.php`, `ajax_quick_add.php`,
-  `wa_settings.php`, commit `7077a6d`, 2026-07-05). **Toplam enforced basename: 57.** Detay →
-  `CHANGELOG.md`, `VERSIONING.md` "Security Sprint Durumu".
+- (yok — SECURITY SPRINT-004 tamamlandı; sıradaki güvenlik işi SPRINT-005 önerisi, aşağıya bakın)
 
-  **FAZ-5F sonunda proje genelinde tam tarama yapıldı** (`grep -rl "REQUEST_METHOD.*POST"` tüm
-  `.php` dosyalarında) — enforced liste ile karşılaştırıldığında **`index.php` (login) DIŞINDA
-  hiçbir POST-handling dosya kalmadı.** Bu, FAZ-5 dizisinin (5A→5F) fiilen tamamlandığı ve
-  SECURITY FINAL AUDIT'e kalan tek gerçek işin `index.php` olduğu anlamına geliyor.
+Planlanan (kullanıcı onayı bekliyor, henüz başlanmadı):
+- 🔜 **SECURITY SPRINT-005 — Login Hardening** (2026-07-05'te SPRINT-004 kapanışıyla birlikte
+  önerildi): `index.php` login formu CSRF'i (companion-fix — `layout_top.php`'den geçmiyor, elle
+  `csrf_field()` gerektiriyor) + session fixation (`index.php:12-40`'ta başarılı girişte
+  `session_regenerate_id()` yok, `KNOWN_BUGS.md`) + session rotation + cookie hardening
+  (`remember_set()`'in `setcookie('acans_remember', ...)` çağrısında SameSite bayrağı yok,
+  session cookie'de zaten `samesite=Lax` var) + remember-me incelemesi (`boot.php`
+  `remember_set()`/`remember_check()` mevcut, sha256 hash'li token) + login brute-force/rate-limit
+  (şu an `index.php`'de yok, sadece `sifre_sifirla.php`'de var). Bu 6 madde TEK bir fazda birlikte
+  ele alınmalı (kullanıcının kendi gerekçesi: login standart CRUD endpoint'i değil, parçalı
+  yapılırsa tutarsız/güvenilmez oturum davranışı riski taşır).
 
-  - **ÖZEL DURUM — `index.php` (login formu)**: **Enforced listeye HENÜZ eklenmesi önerilmiyor.**
-    Gerekçe: (1) `index.php` `layout_top.php`'den geçmiyor, kendi bağımsız `<head>`'i var — CSRF
-    meta tag/auto-inject JS'i YOK, bu yüzden basit bir array-ekleme yeterli değil,
-    `sifre_sifirla.php`'deki gibi elle `csrf_field()` companion-fix'i gerektirir. (2) Klasik CSRF
-    kimliği doğrulanmış bir kurbanın oturumunu hedefler — login POST'u TANIM GEREĞİ kimlik
-    doğrulama ÖNCESİ çalışır, bu yüzden etki farklı ve daha dar bir sınıf ("login CSRF" — kurbanın
-    saldırganın hesabına habersizce giriş yapması, veri değişikliği değil) — klasik CSRF'ten daha
-    düşük öncelikli. (3) Yanlış yapılırsa TÜM kullanıcıların girişini kilitleme riski (en yüksek
-    blast-radius dosya) — companion-fix + ekstra dikkatli QA gerektirir. Öneri: index.php'yi genel
-    FAZ-5 dizisine sokmak yerine, `KNOWN_BUGS.md`'deki "session fixation" bulgusuyla birlikte ayrı,
-    küçük bir "Login Hardening" fazında (SECURITY FINAL AUDIT öncesi) ele almak.
-
-  Hepsi tamamlanınca **SECURITY FINAL AUDIT** (tüm POST endpoint'leri = enforced liste, sıfır fark)
-  ile sprint kapanabilir.
+## Arşiv — SECURITY SPRINT-004 faz detayı (tamamlandı, referans için korunuyor)
+FAZ-1 → FAZ-4F tamamlandı, **HIGH-RISK CSRF CHECKPOINT AUDIT: PASS** (checkpoint commit `a32893c`).
+**FAZ-5A — CRM grubu PASS** (commit `4708cd6`). **FAZ-5B — Stok/Ürün grubu PASS** (commit
+`ae8116a`). **FAZ-5C — İş/Görev grubu PASS** (commit `a68637a`). **FAZ-5D — Mesajlaşma/Talep grubu
+PASS** (commit `48d943f`). **FAZ-5E — Satış/Satın Alma grubu PASS** (commit `b4b2c9a`). **FAZ-5F —
+"Temizlik" grubu PASS** (`accounting_categories.php`, `check_note_view.php`, `report.php`,
+`ajax_quick_add.php`, `wa_settings.php`, commit `7077a6d`, 2026-07-05). **Toplam enforced basename:
+57.** Proje genelinde FINAL AUDIT'te tam tarama tekrarlandı — `index.php` (login) DIŞINDA hiçbir
+POST-handling dosya kalmadı (57/57, fark sıfır). Detay → `CHANGELOG.md`, `VERSIONING.md` "Security
+Sprint Durumu".
 
 ## FAZ-5D'de bulunan yan bulgu — `requests.php` schema drift (CSRF ile ilgisiz, 2026-07-05)
 `requests.php`/`mobile/requests.php`'de talep durumu/not güncelleme kodu `manager_note` kolonuna
@@ -73,8 +73,9 @@ ayrı "DEPLOY MODE" komutu gerekir. Bir sonraki oturumun sırası:
    arka plan teslimatı (SERVER-SIDE PASS) için tek eksik doğrulama bu — aşağıdaki iki maddeye bakın.
 2. **SYSTEM AUDIT** — büyük sprint sonrası standart denetim (bkz. `PROJECT_RULES.md` "Sürekli Kalite
    Denetimi Standardı").
-3. **SECURITY SPRINT-004** — Merkezi CSRF Koruma Altyapısı, devam ediyor. HIGH-RISK rollout PASS
-   (checkpoint `a32893c`), sıradaki faz FAZ-5A (CRM) (bkz. yukarı "Security Roadmap").
+3. ~~**SECURITY SPRINT-004**~~ — **TAMAMLANDI** (FINAL AUDIT: PASS, 2026-07-05, bkz. yukarı
+   "Security Roadmap"). Sıradaki: **SECURITY SPRINT-005 — Login Hardening** (önerilen kapsam hazır,
+   onay bekliyor).
 
 ## WhatsApp gelen mesaj takibi — ayrı WHATSAPP INTEGRATION SPRINT (2026-07-05)
 Bu, UX/STABILITY PATCH-002 kapsamında bilinçli olarak dışarıda bırakıldı ve kendi başına bir sprint

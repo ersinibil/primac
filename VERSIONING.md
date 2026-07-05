@@ -33,20 +33,30 @@ netleştirildi — bkz. `ROADMAP.md` "Security Roadmap"):
   numaralandırmasına bu tarihte dahil edildi, uydurma tarih/detay eklenmedi.* **PASS**.
 - ✅ **SECURITY SPRINT-003** — `sifre_sifirla.php` brute-force + rate-limit sertleştirmesi
   (2026-07-05). Yerel QA'da 8/8 senaryo **PASS**. Detay → `CHANGELOG.md`.
-- 🔄 **SECURITY SPRINT-004** (devam ediyor) — Merkezi CSRF Koruma Altyapısı. FAZ-1 → FAZ-4F
-  tamamlandı, **HIGH-RISK CSRF CHECKPOINT AUDIT: PASS** (checkpoint commit `a32893c`). **FAZ-5A —
-  CRM: PASS** (commit `4708cd6`). **FAZ-5B — Stok/Ürün: PASS** (commit `ae8116a`). **FAZ-5C — İş/
-  Görev: PASS** (commit `a68637a`). **FAZ-5D — Mesajlaşma/Talep: PASS** (commit `48d943f`). **FAZ-5E
-  — Satış/Satın Alma: PASS** (commit `b4b2c9a`). **FAZ-5F — "Temizlik" grubu: PASS**
-  (`accounting_categories.php`, `check_note_view.php`, `report.php`, `ajax_quick_add.php`,
-  `wa_settings.php`, commit `7077a6d`, yerel QA PASS — muhasebe kategorisi, çek/senet düzenleme
-  (finansal veriler bozulmadı), rapor CSV+mesaj, inline hızlı ekleme (`X-CSRF-Token`), WhatsApp
-  ayarları). **Toplam enforced basename: 57.**
+- ✅ **SECURITY SPRINT-004 — TAMAMLANDI (FINAL AUDIT: PASS, 2026-07-05)** — Merkezi CSRF Koruma
+  Altyapısı. FAZ-1 → FAZ-4F tamamlandı, **HIGH-RISK CSRF CHECKPOINT AUDIT: PASS** (checkpoint
+  commit `a32893c`). **FAZ-5A — CRM: PASS** (commit `4708cd6`). **FAZ-5B — Stok/Ürün: PASS**
+  (commit `ae8116a`). **FAZ-5C — İş/Görev: PASS** (commit `a68637a`). **FAZ-5D — Mesajlaşma/Talep:
+  PASS** (commit `48d943f`). **FAZ-5E — Satış/Satın Alma: PASS** (commit `b4b2c9a`). **FAZ-5F —
+  "Temizlik" grubu: PASS** (`accounting_categories.php`, `check_note_view.php`, `report.php`,
+  `ajax_quick_add.php`, `wa_settings.php`, commit `7077a6d`, yerel QA PASS — muhasebe kategorisi,
+  çek/senet düzenleme (finansal veriler bozulmadı), rapor CSV+mesaj, inline hızlı ekleme
+  (`X-CSRF-Token`), WhatsApp ayarları). **Toplam enforced basename: 57. Sprint boyunca sıfır FAIL,
+  sıfır regresyon.**
 
-  **Proje genelinde `REQUEST_METHOD===POST` içeren TÜM dosyalar taranarak enforced liste ile
-  karşılaştırıldı — `index.php` (login) DIŞINDA hiçbir POST-handling dosya kalmadı.** SECURITY
-  FINAL AUDIT için kalan tek iş: `index.php` login formu (ayrı "Login Hardening" fazı — bkz. aşağı
-  ve `ROADMAP.md` "Security Roadmap"). Detay → `CHANGELOG.md`, `ROADMAP.md` "Security Roadmap".
+  **FINAL AUDIT sonucu**: proje genelinde `REQUEST_METHOD===POST` içeren TÜM dosyalar taranarak
+  enforced liste ile karşılaştırıldı — `index.php` (login) DIŞINDA hiçbir POST-handling dosya
+  kalmadı (57/57, fark sıfır). `index.php` login CSRF'i kullanıcı onayıyla bilinçli olarak
+  **SECURITY SPRINT-005**'e (Login Hardening) devredildi — bkz. aşağı ve `ROADMAP.md` "Security
+  Roadmap". Detay → `CHANGELOG.md` "SECURITY SPRINT-004 — FINAL AUDIT".
+- 🔜 **SECURITY SPRINT-005 — Login Hardening (önerilen kapsam, henüz başlanmadı)**: `index.php`
+  login formu CSRF'i (companion-fix gerektiriyor), session fixation (`index.php:12-40` başarılı
+  girişte `session_regenerate_id()` yok — `KNOWN_BUGS.md`), session rotation, cookie hardening
+  (mevcut: `session_set_cookie_params` `samesite=Lax` zaten var, `remember_set()` cookie'sinde
+  SameSite bayrağı yok — gözden geçirilecek), remember-me incelemesi (`boot.php` `remember_set()`/
+  `remember_check()` — sha256 hash'li token, mevcut ama SameSite eksik), login brute-force/rate-limit
+  (password-reset'teki gibi ayrı bir mekanizma login'de yok). Kullanıcı onayı bekliyor, henüz
+  geliştirmeye başlanmadı.
 
 ## Current Development Version
 **v1.1.0-dev** (primac.tr) — ortam ayrımından SONRAKİ ilk geliştirme turu

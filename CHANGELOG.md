@@ -3,6 +3,47 @@
 Bu dosya `memory/features.md`'nin (tam gerekçe/kod detayıyla) kök dizindeki kısa özetidir — hızlı
 taramak için. Detaylı "neden böyle yapıldı" analizleri için `memory/features.md`'ye bakın.
 
+## SECURITY SPRINT-004 — FINAL AUDIT: PASS — Sprint Resmen Kapandı (2026-07-05)
+Kapsam: merkezi CSRF (Cross-Site Request Forgery) koruma altyapısının kurulması ve kademeli olarak
+(yüksek riskten düşük riske) tüm CRUD/işlem POST endpoint'lerine yayılması. **57 benzersiz basename**
+enforced (`boot.php` `$__csrf_enforced_pages`, basename eşleşmesi web+mobil aynı isimli dosyaları
+otomatik kapsıyor), **15 modül/işlevsel grup** etkilendi, **15 commit** üretildi (tamamı push
+edildi): `90dffa7, a32893c, 198e541, 4708cd6, 9b08296, ae8116a, a97ccee, a68637a, 4f329c3, 48d943f,
+be032b2, b4b2c9a, dee36eb, 7077a6d, e108dad`.
+
+**Fazlar (sırayla, tamamı PASS)**: FAZ-1 (altyapı: `csrf_token()`/`csrf_field()`/`csrf_verify()` +
+auto-inject) → FAZ-2 (AJAX `X-CSRF-Token` header) → FAZ-3A (pilot: `users.php`/`sil.php`) → FAZ-3B
+(Bildirimler) → FAZ-3C (Finans/Muhasebe) → FAZ-4A (Finans işlem ekranları) → FAZ-4B (Personel) →
+FAZ-4C (Kimlik/Sistem) → FAZ-4D (Mali belge/Teklif) → FAZ-4E (WhatsApp gönderim) → FAZ-4F (İş/Görev
+detay) → **HIGH-RISK CHECKPOINT AUDIT: PASS** → FAZ-5A (CRM, `4708cd6`) → FAZ-5B (Stok/Ürün,
+`ae8116a`) → FAZ-5C (İş/Görev ana formları, `a68637a`) → FAZ-5D (Mesajlaşma/Talep, `48d943f`) →
+FAZ-5E (Satış/Satın Alma, `b4b2c9a`) → FAZ-5F (Temizlik grubu, `7077a6d`).
+
+**Konsolide test/regresyon durumu**: her fazda yerel `ots_sectest` MariaDB + gerçek `php -S` HTTP
+istekleriyle token'lı POST (gerçek DB etkisiyle başarı) ve token'sız POST (403) doğrulandı. Sayısal
+belgelenen fazlar: FAZ-5B 12/12, FAZ-5C 14/14, FAZ-5E 4/4, FAZ-5F 5/5 dosya — GET regresyonu FAZ-5B
+10/10, FAZ-5C 16/16, FAZ-5D 14/14, FAZ-5E 10/10, FAZ-5F 14/14 (tümü 200); `php -l` FAZ-5B 13/13,
+FAZ-5C 15/15, FAZ-5D 10/10, FAZ-5E 5/5, FAZ-5F 9/9 temiz. **Sprint boyunca sıfır FAIL, sıfır
+regresyon.**
+
+**Bilinçli olarak sprint dışı bırakılanlar**: `index.php` (login formu) CSRF'i — companion-fix
+gerektiriyor (`layout_top.php`'den geçmiyor), en yüksek blast-radius dosya — **kullanıcı onayıyla
+SECURITY SPRINT-005'e taşındı** (Login Hardening: login CSRF + session fixation + session rotation +
+cookie hardening + remember-me incelemesi + login brute-force/rate-limit). `job_view.php`/
+`task_view.php` yetki modeli (bilinçli olarak `page_module_map()` dışında) ayrı Authorization
+Audit/SPRINT-009 kapsamına bırakıldı.
+
+**Açık teknik borçlar** (CSRF'siz, sprint kapsamı dışında): `requests.php`/`mobile/requests.php`
+`manager_note`/`response_note` schema-drift bug'ı (FAZ-5D'de bulundu), rate-limit'in JSON dosyadan
+merkezi tabloya taşınması, `REMOTE_ADDR` reverse-proxy güvenilirliği, `KNOWN_BUGS.md`'deki
+`accounting.php` XSS + `users.php` rol yükseltme (henüz sprint numarası atanmadı), WhatsApp MVP'nin 7
+teknik borç maddesi.
+
+**Sonuç: PASS.** Sprint'in kendi kapsamı (merkezi CSRF altyapısının tüm CRUD/işlem endpoint'lerine
+yayılması) sıfır FAIL ve sıfır regresyonla tamamlandı; `index.php` bilinçli, gerekçeli bir kapsam
+kararıyla SPRINT-005'e devredildi. Detay → `VERSIONING.md` "Security Sprint Durumu", `ROADMAP.md`
+"Security Roadmap".
+
 ## SECURITY SPRINT-004 FAZ-5F — "Temizlik" Grubu CSRF Enforcement: PASS (2026-07-05, commit `7077a6d`)
 Kapsam: `accounting_categories.php` (web+mobil), `check_note_view.php` (**mobil-only**),
 `report.php` (web GET-only, mobil `send_msg` POST var), `ajax_quick_add.php` (**web-only** ama
