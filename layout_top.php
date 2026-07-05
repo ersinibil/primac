@@ -201,7 +201,7 @@ input,select,textarea{font-size:16px}
            kendi başına ayrı bir grup. */
         $personelIsTakip_pages = ['jobs.php','job_new.php','takvim.php','tasks.php','approval_waiting.php','external.php','production.php','assembly.php','design.php','work_center.php','requests.php','personnel.php','personnel_new.php','kpi.php','gunluk_rapor.php'];
         $muhasebe_pages = ['contacts.php','contact_new.php','contacts_report.php','teklif.php','sales.php','purchase.php','stock.php','product_new.php','stock_movement_new.php','product_categories.php','product_taxonomy.php','finance.php','finance_accounts.php','finance_new.php','finance_transfer.php','checks_notes.php','check_note_view.php','accounting.php','accounting_categories.php','trade_documents.php','trade_document_new.php','trade_document_view.php'];
-        $mesajlar_pages = ['messages.php','notifications.php','wa_send_now.php'];
+        $mesajlar_pages = ['messages.php','notifications.php','wa_send_now.php','wa_conversations.php','wa_conversation_view.php'];
         $rapor_pages = ['activity.php','report.php'];
         $sistem_pages = ['users.php','audit_log.php','wa_settings.php','brand_settings.php','profile.php','request_new.php','temizle_veri.php','logout.php'];
         ?>
@@ -212,6 +212,7 @@ input,select,textarea{font-size:16px}
                 <a href="notifications.php" <?=($cur==='notifications.php'?'class="active"':'')?>><span>🔔</span> Bildirimler</a>
                 <?php if(user_can('users')): ?>
                 <a href="wa_send_now.php" <?=($cur==='wa_send_now.php'?'class="active"':'')?>><span>📤</span> WhatsApp Mesaj Gönder</a>
+                <a href="wa_conversations.php" <?=(in_array($cur,['wa_conversations.php','wa_conversation_view.php'])?'class="active"':'')?>><span>💬</span> WhatsApp Konuşmaları</a>
                 <?php endif; ?>
             </div>
         </details>

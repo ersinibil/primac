@@ -70,6 +70,15 @@ try{
     $s=db()->prepare("SELECT * FROM contacts WHERE id=?"); $s->execute([$id]); $c=$s->fetch();
     if(!$c) throw new Exception('Cari bulunamadı.');
 
+    // WhatsApp konuşma geçmişi — bu cariye ait bir conversation varsa direkt oraya, yoksa yeni
+    // mesaj gönderme ekranına (telefon önceden dolu) yönlendirilir.
+    $waConvId=null;
+    try{
+        $waq=db()->prepare("SELECT id FROM wa_conversations WHERE contact_id=? ORDER BY last_message_at DESC LIMIT 1");
+        $waq->execute([$id]);
+        $waConvId=$waq->fetchColumn() ?: null;
+    }catch(Throwable $e){}
+
     // Bakiye: açılış + tahsilat(in) - ödeme(out)
     $f=db()->prepare("SELECT
         COALESCE(SUM(CASE WHEN direction='in' THEN amount ELSE 0 END),0) tin,
@@ -115,6 +124,11 @@ try{
   <a class="card orange" href="sales.php?contact_id=<?=$id?>"><span>🧾</span><b>Satış</b><small>Bu cariye satış yap</small></a>
   <a class="card purple" href="thread_open.php?type=cari&ref=<?=$id?>"><span>💬</span><b>Cari Sohbeti</b><small>Bu cariyle ilgili ekip sohbeti</small></a>
   <a class="card blue" href="report.php?modul=cari_detay&ref=<?=$id?>"><span>📊</span><b>Cari Raporu</b><small>Ekstre · hareketler · işler (PDF/paylaş)</small></a>
+  <?php if($waConvId): ?>
+  <a class="card green" href="wa_conversation_view.php?id=<?=(int)$waConvId?>"><span>📲</span><b>WhatsApp</b><small>Konuşma geçmişi</small></a>
+  <?php elseif(!empty($c['phone'])): ?>
+  <a class="card green" href="wa_send_now.php?phone=<?=urlencode($c['phone'])?>"><span>📲</span><b>WhatsApp</b><small>Mesaj gönder</small></a>
+  <?php endif; ?>
 </div>
 
 <?php if(!empty($c['phone']) || !empty($c['email']) || !empty($c['website'])): ?>

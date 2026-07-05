@@ -99,6 +99,7 @@
   card('Bildirimler','Tüm bildirimler','🔔','notifications.php','yellow');
   if(user_can('users')) {
     card('WhatsApp Gönder','Anlık mesaj gönder','📤','wa_send_now.php','green');
+    card('WhatsApp Konuşmaları','Gelen/giden geçmiş','💬','wa_conversations.php','teal');
   }
   ?>
 </div>

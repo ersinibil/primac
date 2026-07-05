@@ -102,6 +102,15 @@ try{
     $personnel=[];
 }
 
+// WhatsApp konuşma geçmişi — bu cariye ait bir conversation varsa direkt oraya, yoksa yeni mesaj
+// gönderme ekranına (telefon önceden dolu) yönlendirilir.
+$waConvId=null;
+try{
+    $waq=$pdo->prepare("SELECT id FROM wa_conversations WHERE contact_id=? ORDER BY last_message_at DESC LIMIT 1");
+    $waq->execute([$id]);
+    $waConvId=$waq->fetchColumn() ?: null;
+}catch(Throwable $e){}
+
 $assigned=[];
 try{
     $as=$pdo->prepare("SELECT personnel_id FROM contact_representatives WHERE contact_id=?");
@@ -140,6 +149,9 @@ $balance=(float)$c['opening_balance'] + $in - $out;
 <a class="btn" href="finance_new.php?direction=in&contact_id=<?=$id?>">+ Tahsilat</a>
 <a class="btn secondary" href="finance_new.php?direction=out&contact_id=<?=$id?>">+ Ödeme</a>
 <a class="btn" href="report.php?modul=cari_detay&ref=<?=$id?>">📊 Cari Raporu</a>
+<?php if($waConvId): ?><a class="btn secondary" href="wa_conversation_view.php?id=<?=(int)$waConvId?>">💬 WhatsApp</a>
+<?php elseif(!empty($c['phone'])): ?><a class="btn secondary" href="wa_send_now.php?phone=<?=urlencode($c['phone'])?>">💬 WhatsApp</a>
+<?php endif; ?>
 <a class="btn secondary" href="contacts.php">Cari Listesi</a>
 <?php if(is_admin() || user_can('contacts')): ?>
 <?php $isActive=(int)($c['active'] ?? 1); ?>

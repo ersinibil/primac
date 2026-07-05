@@ -23,6 +23,17 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['action']) && $_POST['act
     $msg='Ayarlar kaydedildi.'; $msg_type='ok';
 }
 
+// Gelen mesaj webhook anahtarı — sabit/koddaki bir anahtar yerine (bkz. KNOWN_BUGS.md "sabit
+// migration/temizlik anahtarı" notu) DB'de saklanan, ilk kullanımda otomatik üretilen rastgele bir
+// anahtar. wa_webhook.php bu anahtarı ?key= ile bekler.
+if(!get_setting('wa_webhook_key','')){
+    set_setting('wa_webhook_key', bin2hex(random_bytes(16)));
+}
+if($_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'')==='regen_webhook_key'){
+    set_setting('wa_webhook_key', bin2hex(random_bytes(16)));
+    $msg='Webhook anahtarı yenilendi — UltraMsg panelindeki webhook URL\'ini güncellemeyi unutmayın.'; $msg_type='ok';
+}
+
 // Test gönder
 $test_result='';
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['action']) && $_POST['action']==='test'){
@@ -42,12 +53,17 @@ $s_provider = get_setting('wa_provider','ultramsg');
 $s_instance = get_setting('wa_instance','');
 $s_token    = get_setting('wa_token','');
 $s_url      = get_setting('wa_url','');
+$s_webhook_key = get_setting('wa_webhook_key','');
+$webhook_url   = base_url().'wa_webhook.php?key='.$s_webhook_key;
 
 $page_title='WhatsApp Ayarları';
 require_once __DIR__.'/layout_top.php';
 ?>
 
+<div class="panel-head">
 <h1>📱 WhatsApp Otomatik Gönderim Ayarları</h1>
+<a class="btn secondary" href="wa_conversations.php">💬 Konuşmalar</a>
+</div>
 <p class="muted">Günlük hatırlatıcılar ve bildirimler bu ayarlarla otomatik WhatsApp mesajı gönderir.</p>
 
 <?php if($msg): ?>
@@ -94,6 +110,22 @@ require_once __DIR__.'/layout_top.php';
             <button type="submit" class="btn">💾 Kaydet</button>
         </div>
     </form>
+</div>
+
+<div class="panel" style="max-width:680px;margin-top:20px">
+    <div class="panel-head"><h2>Gelen Mesaj Webhook'u</h2></div>
+    <p class="muted" style="margin:0 0 10px">
+        Karşı taraftan gelen WhatsApp cevaplarının sisteme düşmesi için bu URL'i UltraMsg panelinde
+        (Instance → Settings → Webhook URL) tanımlayın. Anahtar bu sistemde üretildi, kimseyle
+        paylaşmayın — sızarsa hemen yenileyin.
+    </p>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input type="text" readonly value="<?=h($webhook_url)?>" onclick="this.select()" style="flex:1;min-width:280px;border:1px solid #d0d5dd;border-radius:12px;padding:11px;background:#f8fafc;font-family:monospace;font-size:13px">
+        <form method="post" onsubmit="return confirm('Anahtar yenilenirse UltraMsg panelindeki eski webhook URL çalışmaz hale gelir. Emin misiniz?')">
+            <input type="hidden" name="action" value="regen_webhook_key">
+            <button type="submit" class="btn secondary small">🔄 Anahtarı Yenile</button>
+        </form>
+    </div>
 </div>
 
 <div class="panel" style="max-width:680px;margin-top:20px">

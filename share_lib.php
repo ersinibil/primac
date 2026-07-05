@@ -149,6 +149,116 @@ function wa_send_media($phone,$mediaUrl,$type,$caption=''){
     }catch(Throwable $e){ return false; }
 }
 
+// --- WhatsApp Konuşma Geçmişi (2026-07-05, kullanıcı isteği) ---
+// "Sender scope" allowlist: HANGİ modüllerin gönderdiği mesajların conversation history'ye
+// yazılacağını tek yerden kontrol eder. Bugün sadece 'wa_send_now' (manuel/müşteri iletişimi
+// ekranı, web+mobil) etkin — sifre_sifirla.php (OTP), users.php (giriş bilgisi),
+// daily_reminder_lib.php (otomatik rapor) gibi sistem mesajları BİLİNÇLİ OLARAK dışarıda: bunlar
+// hassas/tek kullanımlık içerik, kalıcı ve ekrandan görülebilir bir geçmişte durmamalı. İleride
+// başka bir modülü dahil etmek için TEK satır: aşağıdaki diziye kaynak adını eklemek yeterli.
+function wa_log_enabled_sources(){
+    return ['wa_send_now'];
+}
+
+// Migration 041 ile aynı şema — activity_lib.php::activity_install() ile aynı desen (kod, tablo
+// henüz migrate edilmemiş bir ortamda da kendi kendine iyileşsin diye tam şemayı burada da taşır;
+// migration idempotent olduğu için ikisi çakışmaz).
+function wa_install(){
+    try{
+        db()->exec("CREATE TABLE IF NOT EXISTS wa_conversations (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            phone VARCHAR(32) NOT NULL,
+            contact_id INT NULL,
+            last_message_at DATETIME NULL,
+            last_message_preview VARCHAR(255) NULL,
+            last_direction VARCHAR(10) NULL,
+            unread_count INT NOT NULL DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY uniq_phone(phone),
+            INDEX idx_contact(contact_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        db()->exec("CREATE TABLE IF NOT EXISTS wa_messages (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            conversation_id INT NOT NULL,
+            direction VARCHAR(10) NOT NULL,
+            source VARCHAR(40) NULL,
+            body TEXT NULL,
+            media_url VARCHAR(500) NULL,
+            media_type VARCHAR(30) NULL,
+            provider_message_id VARCHAR(120) NULL,
+            status VARCHAR(30) NULL,
+            is_read TINYINT(1) NOT NULL DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_conversation(conversation_id),
+            INDEX idx_provider_msg(provider_message_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    }catch(Throwable $e){}
+}
+
+// Telefona göre var olan cari eşleşmesini bulur (contacts.phone/phone2, normalize edilmiş
+// karşılaştırma — DB'de ham format tutarsız olabileceği için PHP tarafında normalize edilip
+// kıyaslanıyor, küçük/orta ölçekli cari tablosu için performans sorunu yaratmaz).
+function wa_match_contact_by_phone($normalizedPhone){
+    if(!$normalizedPhone) return null;
+    try{
+        $rows=db()->query("SELECT id,phone,phone2 FROM contacts WHERE phone<>'' OR phone2<>''")->fetchAll();
+        foreach($rows as $r){
+            if(_wa_normalize_phone($r['phone']??'')===$normalizedPhone) return (int)$r['id'];
+            if(_wa_normalize_phone($r['phone2']??'')===$normalizedPhone) return (int)$r['id'];
+        }
+    }catch(Throwable $e){}
+    return null;
+}
+
+// Bir konuşmayı (yoksa oluşturarak) telefon numarasına göre bulur, son-mesaj özetini günceller.
+// $direction='inbound' ise unread_count arttırılır (webhook'tan çağrılır); 'outbound' okunmuş sayılır.
+function wa_conversation_touch($phone,$direction,$preview){
+    $p=_wa_normalize_phone($phone);
+    if(!$p) return null;
+    $pdo=db();
+    $contactId=wa_match_contact_by_phone($p);
+    $preview=mb_substr((string)$preview,0,255);
+    wa_install();
+    try{
+        $s=$pdo->prepare("SELECT id FROM wa_conversations WHERE phone=?"); $s->execute([$p]);
+        $convId=$s->fetchColumn();
+        if($convId){
+            $inc = $direction==='inbound' ? ",unread_count=unread_count+1" : ",unread_count=0";
+            $pdo->prepare("UPDATE wa_conversations SET contact_id=?, last_message_at=NOW(), last_message_preview=?, last_direction=?$inc WHERE id=?")
+                ->execute([$contactId,$preview,$direction,$convId]);
+            return (int)$convId;
+        }
+        $unread = $direction==='inbound' ? 1 : 0;
+        $pdo->prepare("INSERT INTO wa_conversations(phone,contact_id,last_message_at,last_message_preview,last_direction,unread_count) VALUES(?,?,NOW(),?,?,?)")
+            ->execute([$p,$contactId,$preview,$direction,$unread]);
+        return (int)$pdo->lastInsertId();
+    }catch(Throwable $e){ return null; }
+}
+
+// Tek bir mesajı wa_messages'a yazar + ilgili konuşmayı günceller. $source, wa_log_enabled_sources()
+// allowlist'i ile eşleşmeli (çağıran zaten bu kontrolü wa_send_logged() üzerinden yapıyor).
+function wa_message_log($phone,$direction,$body,$source=null,$mediaUrl=null,$mediaType=null,$providerMsgId=null,$status=null){
+    $convId=wa_conversation_touch($phone,$direction,$body!==''?$body:($mediaUrl?'📎 Medya':''));
+    if(!$convId) return false;
+    try{
+        db()->prepare("INSERT INTO wa_messages(conversation_id,direction,source,body,media_url,media_type,provider_message_id,status,is_read)
+            VALUES(?,?,?,?,?,?,?,?,?)")
+            ->execute([$convId,$direction,$source,$body,$mediaUrl,$mediaType,$providerMsgId,$status,$direction==='outbound'?1:0]);
+        return true;
+    }catch(Throwable $e){ return false; }
+}
+
+// wa_send()/wa_send_media() sarmalayıcısı — GÖNDERME davranışı birebir aynı, TEK fark $source
+// wa_log_enabled_sources() allowlist'indeyse başarılı gönderim conversation history'ye de yazılır.
+// Allowlist'te olmayan kaynaklar (OTP, sistem mesajları) öncekiyle birebir aynı şekilde LOGSUZ kalır.
+function wa_send_logged($phone,$text,$source,$mediaUrl=null,$mediaType=null){
+    $sent = $mediaUrl ? wa_send_media($phone,$mediaUrl,$mediaType,$text) : wa_send($phone,$text);
+    if($sent && in_array($source, wa_log_enabled_sources(), true)){
+        try{ wa_message_log($phone,'outbound',$text,$source,$mediaUrl,$mediaType); }catch(Throwable $e){}
+    }
+    return $sent;
+}
+
 // Yüklenen dosyayı uploads/wa_send/ altına taşır, DIŞARIDAN erişilebilir tam URL döner (veya hata
 // mesajı). İç mesajlaşmadaki (messages.php) attach mantığıyla aynı tür/uzantı ayrımını kullanır.
 function wa_upload_media($field,&$err){

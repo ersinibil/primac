@@ -26,7 +26,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             if(!$error){
                 $sentCount=0; $failed=[];
                 foreach($picked as $ph){
-                    $s = $media ? wa_send_media($ph,$media['url'],$media['type'],$message) : wa_send($ph,$message);
+                    $s = wa_send_logged($ph,$message,'wa_send_now',$media['url']??null,$media['type']??null);
                     if($s) $sentCount++; else $failed[]=$ph;
                 }
                 if($sentCount){
@@ -51,11 +51,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 if(!$media && $uploadErr) $error=$uploadErr;
             }
             if(!$error){
-                if($media){
-                    $sent=wa_send_media($phone,$media['url'],$media['type'],$message);
-                } else {
-                    $sent=wa_send($phone,$message);
-                }
+                $sent=wa_send_logged($phone,$message,'wa_send_now',$media['url']??null,$media['type']??null);
                 if($sent){
                     $ok='Mesaj gönderildi.';
                 } else {
@@ -126,7 +122,7 @@ require_once __DIR__.'/layout_top.php';
 </label>
 
 <label class="full">Telefon
-<input type="text" id="phone" name="phone" placeholder="05XX XXX XX XX" value="<?=h($_POST['phone'] ?? '')?>" required>
+<input type="text" id="phone" name="phone" placeholder="05XX XXX XX XX" value="<?=h($_POST['phone'] ?? $_GET['phone'] ?? '')?>" required>
 </label>
 </div>
 

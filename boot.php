@@ -22,7 +22,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 // Mobil cihaz → otomatik mobil arayüz (/mobile). Masaüstü görünümü için bir kez ?web=1.
 if (isset($_GET['web'])) $_SESSION['force_web'] = 1;
-$__mpub = ['public_file.php','quote_approve.php','cron.php','ics.php','icon.php','manifest.php','sw.php','kur.php','migrate.php','logout.php'];
+$__mpub = ['public_file.php','quote_approve.php','cron.php','ics.php','icon.php','manifest.php','sw.php','kur.php','migrate.php','logout.php','wa_webhook.php'];
 if (empty($_SESSION['force_web'])
     && !empty($_SESSION['user'])
     && strpos($_SERVER['SCRIPT_NAME'] ?? '', '/mobile/') === false
