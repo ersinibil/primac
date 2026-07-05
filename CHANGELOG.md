@@ -3,6 +3,49 @@
 Bu dosya `memory/features.md`'nin (tam gerekçe/kod detayıyla) kök dizindeki kısa özetidir — hızlı
 taramak için. Detaylı "neden böyle yapıldı" analizleri için `memory/features.md`'ye bakın.
 
+## WhatsApp Conversation/Inbound MVP — PASS (2026-07-05, commit `dae3e62`)
+Kullanıcı bildirimi: OTS'den WhatsApp mesajı gönderiliyor ama karşı tarafın cevabı sistemde hiç
+görünmüyor, kalıcı konuşma geçmişi yok. **Analiz**: provider **UltraMsg**; `wa_send()`/
+`wa_send_media()` (`share_lib.php`) sadece gönderiyor, HİÇBİR şeyi DB'ye yazmıyordu; hiçbir inbound
+webhook, hiçbir konuşma/mesaj tablosu yoktu.
+
+**Migration `041_whatsapp_conversations.sql`**: `wa_conversations` (phone normalize+unique,
+contact_id nullable, last_message_at/preview/direction, unread_count) + `wa_messages`
+(conversation_id, direction, **source**, body, media_url/type, provider_message_id, status,
+is_read). `share_lib.php::wa_install()` aynı şemayı self-heal olarak da taşıyor
+(`activity_install()` ile aynı desen).
+
+**Sender-scope genişleyebilir mimari**: `wa_log_enabled_sources()` allowlist'i + `wa_send_logged()`
+sarmalayıcısı — gönderme davranışı `wa_send()`/`wa_send_media()` ile birebir aynı, SADECE
+`$source` allowlist'teyse ve gönderim başarılıysa conversation history'ye yazılıyor. **Bugün
+sadece `wa_send_now.php` (web+mobil) etkin.** `sifre_sifirla.php` (OTP), `users.php`/
+`mobile/users.php` (giriş bilgisi), `daily_reminder_lib.php` (otomatik rapor), `notes_lib.php`,
+`mobile/wa_settings.php` **HİÇ DEĞİŞTİRİLMEDİ** — ham `wa_send()` çağırmaya devam ediyorlar,
+hassas/tek kullanımlık içerik kalıcı geçmişte durmuyor. Yarın başka bir modülü dahil etmek tek
+satır (allowlist'e ekle + o çağrıyı `wa_send_logged()`'e çevir).
+
+**`wa_webhook.php`** (yeni, public, `boot.php` `$__mpub`'a eklendi): UltraMsg'in gerçek payload
+şemasına (`data.from/body/type/id/fromMe`) göre inbound mesajı işliyor; sabit kod-içi anahtar
+yerine `wa_settings.php`'de otomatik üretilip DB'de saklanan rastgele `?key=` ile korunuyor
+(`KNOWN_BUGS.md`'deki "sabit anahtar" anti-pattern'i tekrarlanmadı). `fromMe=true` (kendi
+yankımız) tekrar loglanmıyor (zaten gönderim anında yazıldı). Telefon→cari eşleştirmesi
+`_wa_normalize_phone()` ile mevcut `contacts.phone`/`phone2`'ye karşı yapılıyor, eşleşme yoksa
+sadece telefonla conversation açılıyor.
+
+**Ekranlar**: `wa_conversations.php` + `wa_conversation_view.php` (web), `mobile/wa_conversations.php`
++ `mobile/wa_conversation_view.php` (mobil — okunabilir + mevcut `wa_send_now.php`'ye yönlendirme,
+ayrı bir compose kutusu icat edilmedi). `contact_view.php`/`mobile/contact_view.php`'ye "💬
+WhatsApp" linki eklendi (konuşma varsa direkt oraya, yoksa telefon ön-dolu gönderme ekranına).
+Menü: `layout_top.php` "Mesajlar" grubu, `mobile/more.php`.
+
+**Test** (yerel `ots_sectest`, stub "UltraMsg" sunucusuyla gerçek başarılı gönderim simüle edildi):
+outbound log + contact eşleşmesi (PASS), inbound webhook geçerli mesaj/`fromMe=true` dedup/yanlış
+key 403/bozuk JSON crash yok (4/4 PASS), eşleşmeyen numaradan gelen mesaj → `contact_id=NULL` yeni
+conversation (PASS), web+mobil liste/detay ekranları (okunma sıfırlama, mine/theirs bubble, PASS),
+`contact_view.php` entegrasyonu (PASS), migration dosyası doğrudan çalıştırıldı (idempotent,
+PASS), OTP/sistem mesajı dosyaları değişmedi (`git diff` ile doğrulandı), regresyon yok (`php -l`
+14/14 temiz). FAIL yok.
+
 ## UX/STABILITY PATCH-004 — Son İşlemler Route Resolver: PASS (2026-07-05, commit `dff59d5`)
 Kullanıcı bildirimi: "Son İşlemler" listesindeki kayıtlar yanlış sayfaya gidiyor, bazıları mobil
 route açıyor, bazıları çalışmıyor. **Kök neden**: `activity_logs.url` her `activity_log()` çağrısında

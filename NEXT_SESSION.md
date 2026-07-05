@@ -21,8 +21,17 @@ eklendi, çapraz-platform yönlendirme + silinmiş kayıt fallback düzeltildi. 
 `ROADMAP.md`'ye eklendi: Satış/Satın Alma detay ekranı yok (yeni özellik), `trade_document_view.php`
 mobil parite açığı. Detay → `CHANGELOG.md`, `VERSIONING.md`.
 
-**Sıradaki iş**: WhatsApp inbound/conversation entegrasyonu (ayrı, büyük mimari iş — kullanıcı
-"bunlardan sonra" dedi, henüz başlanmadı, kod değişikliği için ayrıca onay gerekecek).
+**WhatsApp Conversation/Inbound MVP: PASS** (2026-07-05, commit `dae3e62`, GitHub'a push edildi) —
+migration `041_whatsapp_conversations.sql`, inbound webhook `wa_webhook.php` (DB'de saklanan
+rastgele `?key=`), sender-scope allowlist mimarisi (bugün sadece `wa_send_now.php` conversation
+history'ye yazıyor — OTP/sistem mesajları hariç, `git diff` ile doğrulandı), web+mobil konuşma
+ekranları, `contact_view.php` entegrasyonu. 7 açık teknik borç `ROADMAP.md`'ye eklendi (outbound
+provider_message_id, gelen medya indirme, çoklu-cari-aynı-telefon, konuşma arama, teslim/okunma
+senkronizasyonu, attachment desteği, gerçek-zamanlı güncelleme) — hiçbiri onay olmadan
+uygulanmayacak. Detay → `CHANGELOG.md`, `VERSIONING.md`.
+
+**Sıradaki iş**: SECURITY SPRINT-004 durum değerlendirmesi + FAZ-5B/SECURITY FINAL AUDIT/SECURITY
+SPRINT-005 geçiş planı (kullanıcı ile birlikte belirlenecek, henüz yeni geliştirme başlamadı).
 
 ✅ **SECURITY SPRINT-003 PASS** (2026-07-05) — `sifre_sifirla.php` brute-force + rate-limit
 sertleştirmesi, yerel QA'da 8/8 senaryo PASS. Detay → `CHANGELOG.md`, `KNOWN_BUGS.md` "Son

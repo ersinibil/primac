@@ -80,15 +80,31 @@ Kullanıcının primac.tr'de gerçek bir cihazdan bildirim izni verip test etmes
 erişimi olmadan kesin teşhis yapılamamasının nedenini gidermez ama BİR SONRAKİ arızada gerçek hata
 mesajını (VAPID mi, eklenti mi, ağ mı) sağlayacak.
 
-## WhatsApp — gelen mesajların takibi (2026-07-05, UX/STABILITY PATCH-002'de tespit edildi)
-Kullanıcı isteği: WhatsApp konuşmalarının (gönderilen+gelen, geçmiş, son mesaj, durum) sistem
-içinde web-WhatsApp benzeri görülebilmesi. Tespit: mevcut entegrasyon (`share_lib.php`, UltraMsg
-gateway) SADECE gönderim yapıyor — hiçbir webhook alıcı endpoint'i, hiçbir konuşma/mesaj geçmişi
-tablosu yok. Bu bir API kısıtı DEĞİL (UltraMsg gelen mesaj webhook'unu destekliyor) — sadece bu
-projede hiç uygulanmamış. Gerçekleştirmek için: (1) UltraMsg webhook URL'i alıp yeni bir alıcı
-endpoint (`wa_webhook.php` benzeri) yazmak, (2) yeni bir `wa_messages`/konuşma tablosu (migration),
-(3) bir liste+detay ekranı. Üçü de yeni mimari/yeni tablo = kullanıcı onayı olmadan
-BAŞLANMAYACAK, bu turda sadece tespit yapıldı.
+## WhatsApp Conversation/Inbound — MVP tamamlandı, açık teknik borç (2026-07-05)
+MVP (migration 041, `wa_webhook.php`, sender-scope mimari, web+mobil ekranlar) **PASS**, commit
+`dae3e62` — detay → `CHANGELOG.md`, `VERSIONING.md`. Kullanıcı onayı ile MVP kapsamı dışında
+bırakılan, ayrı kararlar gerektiren açık maddeler:
+1. **Outbound `provider_message_id` parse edilmiyor** — `wa_send()` UltraMsg'in yanıtını hiç
+   parse etmiyor, sadece true/false dönüyor. Giden mesaj için sağlayıcı id'si yakalanmıyor
+   (inbound tarafını etkilemiyor, sadece giden mesajların provider tarafında iz sürülmesini
+   kısıtlıyor).
+2. **Gelen medya dosyaları indirilmiyor/proxy'lenmiyor** — sadece tip+varsa metin/caption
+   kaydediliyor, dosyanın kendisi hiç çekilmiyor.
+3. **Aynı telefon numarasına sahip birden fazla cari** — eşleştirme ilk bulduğu carriye bağlanıyor
+   (deterministik ama keyfi), gerçek bir çözüm stratejisi (kullanıcıya seçtirme? en son işlem
+   gören cariyi mi baz alma?) net değil.
+4. **Konuşma arama** — `wa_conversations.php`/`mobile/wa_conversations.php` listesinde arama/filtre
+   yok, sadece kronolojik liste.
+5. **Mesaj teslim/okunma durumu senkronizasyonu** — UltraMsg'in `ack`/durum güncellemelerini
+   (iletildi/okundu vb.) yakalayıp `wa_messages.status`'a yansıtan bir mekanizma yok, sadece ilk
+   yazma anındaki durum tutuluyor.
+6. **Attachment desteği** (giden tarafta) — `wa_send_now.php` zaten dosya/medya gönderebiliyor
+   (`wa_upload_media()`), ama conversation ekranından doğrudan yeni bir ek göndermek için ayrı bir
+   compose kutusu yok (mevcut `wa_send_now.php`'ye yönlendiriliyor).
+7. **Gerçek zamanlı (websocket/polling) konuşma güncellemesi** — yeni bir inbound mesaj geldiğinde
+   ekran otomatik yenilenmiyor, kullanıcı sayfayı manuel yenilemeli.
+
+Hiçbiri kullanıcı onayı olmadan uygulanmayacak — bu liste görünürlük için.
 
 ## Finans Gider Türü sihirbazı — kategori raporu açık noktası (2026-07-04)
 "Ne kaydediyorsun?" sihirbazının context-aware Gider Türü'ü `category_id` yerine `payment_type`

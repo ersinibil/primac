@@ -41,6 +41,11 @@ netleştirildi — bkz. `ROADMAP.md` "Security Roadmap"):
 
 ## Current Development Version
 **v1.1.0-dev** (primac.tr) — ortam ayrımından SONRAKİ ilk geliştirme turu
++ **WhatsApp Conversation/Inbound MVP: PASS** (2026-07-05, commit `dae3e62`): migration
+  `041_whatsapp_conversations.sql` (`wa_conversations`+`wa_messages`), `wa_webhook.php` (inbound,
+  DB'de saklanan rastgele `?key=`), sender-scope allowlist mimarisi (bugün sadece
+  `wa_send_now.php` conversation history'ye yazıyor — OTP/sistem mesajları hariç), web+mobil
+  konuşma ekranları, `contact_view.php` entegrasyonu. Detay → `CHANGELOG.md`.
 + **UX/STABILITY PATCH-004 — Son İşlemler Route Resolver: PASS** (2026-07-05, commit `dff59d5`):
   kök neden `activity_logs.url`'in yazma anında sabit string olarak donduruluyup render anında
   hiç yeniden çözülmemesiydi (platforma göre yanlış route açılabiliyordu). Merkezi
