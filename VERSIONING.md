@@ -49,18 +49,20 @@ netleştirildi — bkz. `ROADMAP.md` "Security Roadmap"):
   kalmadı (57/57, fark sıfır). `index.php` login CSRF'i kullanıcı onayıyla bilinçli olarak
   **SECURITY SPRINT-005**'e (Login Hardening) devredildi — bkz. aşağı ve `ROADMAP.md` "Security
   Roadmap". Detay → `CHANGELOG.md` "SECURITY SPRINT-004 — FINAL AUDIT".
-- 🔄 **SECURITY SPRINT-005 — Login Hardening (devam ediyor).** **FAZ-1 — Session Fixation
-  Hardening: PASS** (2026-07-05, commit `b973e01`) — `index.php` login sonrası +
-  `boot.php` `remember_check()` remember-me otomatik girişi sonrası `session_regenerate_id(true)`.
-  Yerel `ots_sectest` QA'da normal login, remember-me (anonim oturum+remember cookie birlikte),
-  logout, `return_to`, çoklu-sekme senaryoları PASS, sıfır FAIL. Session fixation riski kapandı,
-  kalan CRITICAL risk yok. Detay → `CHANGELOG.md`.
+- 🔄 **SECURITY SPRINT-005 — Login Hardening (devam ediyor).**
+  **FAZ-1 — Session Fixation Hardening: PASS** (2026-07-05, commit `b973e01`) — `index.php` login
+  sonrası + `boot.php` `remember_check()` remember-me otomatik girişi sonrası
+  `session_regenerate_id(true)`. Session fixation riski kapandı.
+  **FAZ-2 — Login CSRF Hardening: PASS** (2026-07-05, commit `f20e50d`) — SADECE `index.php`
+  (boot.php'ye dokunulmadı), login formuna `csrf_field()` + POST'ta mevcut try/catch'e gömülü token
+  kontrolü (başarısızsa 403 DEĞİL, dost mesajla login ekranında kalır). Yerel `ots_sectest` QA'da
+  token'lı/token'sız/hatalı-token login, remember-me, `return_to`, logout — hepsi PASS, sıfır FAIL.
+  Login CSRF riski kapandı. Detay → `CHANGELOG.md`.
 
-  **Kalan önerilen fazlar (henüz başlanmadı, onay bekliyor)**: FAZ-2 — Login CSRF (`index.php`
-  companion-fix gerektiriyor), FAZ-3 — login brute-force/rate-limit (password-reset'teki gibi ayrı
-  bir mekanizma login'de yok), FAZ-4 — remember-me sertleştirme (token rotasyonu yok; `remember_set()`
-  cookie'sinde SameSite bayrağı yok), FAZ-5 — timing/enumeration inceliği (isteğe bağlı), FAZ-6 —
-  FINAL AUDIT.
+  **Kalan önerilen fazlar (henüz başlanmadı, onay bekliyor)**: FAZ-3 — login brute-force/rate-limit
+  (password-reset'teki gibi ayrı bir mekanizma login'de yok), FAZ-4 — remember-me sertleştirme
+  (token rotasyonu yok; `remember_set()` cookie'sinde SameSite bayrağı yok), FAZ-5 —
+  timing/enumeration inceliği (isteğe bağlı), FAZ-6 — FINAL AUDIT.
 
 ## Current Development Version
 **v1.1.0-dev** (primac.tr) — ortam ayrımından SONRAKİ ilk geliştirme turu

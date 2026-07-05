@@ -24,8 +24,10 @@ Devam Ediyor:
     `boot.php` `remember_check()` sonrası `session_regenerate_id(true)`. Yerel QA'da normal login,
     remember-me, logout, `return_to`, çoklu-sekme senaryoları PASS, sıfır FAIL. Detay →
     `CHANGELOG.md`.
-  - 🔜 **FAZ-2 — Login CSRF** (`index.php` companion-fix — `layout_top.php`'den geçmiyor, elle
-    `csrf_field()` gerektiriyor, en yüksek blast-radius: yanlış yapılırsa TÜM girişler kilitlenir).
+  - ✅ **FAZ-2 — Login CSRF Hardening: PASS** (commit `f20e50d`) — SADECE `index.php` (boot.php'ye
+    dokunulmadı), form'a `csrf_field()` + POST'ta mevcut try/catch'e gömülü token kontrolü
+    (başarısızsa 403 değil, dost mesajla login ekranında kalır). Yerel QA'da token'lı/token'sız/
+    hatalı-token login, remember-me, `return_to`, logout PASS, sıfır FAIL. Detay → `CHANGELOG.md`.
   - 🔜 **FAZ-3 — Login brute-force/rate-limit** (şu an `index.php`'de yok, sadece
     `sifre_sifirla.php`'de var — aynı `_rate_limit_hit()` deseni paylaşılabilir).
   - 🔜 **FAZ-4 — Remember-me sertleştirme** (token rotasyonu yok; `remember_set()`'in

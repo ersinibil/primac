@@ -3,6 +3,30 @@
 Bu dosya `memory/features.md`'nin (tam gerekçe/kod detayıyla) kök dizindeki kısa özetidir — hızlı
 taramak için. Detaylı "neden böyle yapıldı" analizleri için `memory/features.md`'ye bakın.
 
+## SECURITY SPRINT-005 FAZ-2 — Login CSRF Hardening: PASS (2026-07-05, commit `f20e50d`)
+Kapsam: SADECE `index.php` login formu CSRF'i. `boot.php`'ye dokunulmadı (mevcut `csrf_token()`/
+`csrf_field()`/`hash_equals` yeniden kullanıldı, yeni fonksiyon eklenmedi). Login formuna
+`csrf_field()` eklendi; POST işleyicisinin en başına, mevcut try/catch akışına gömülü bir token
+kontrolü eklendi (10 satır, tek dosya) — başarısızsa `csrf_verify()`'nin enforced-liste yolundaki
+gibi 403 sayfasına DÜŞMÜYOR, aynı `catch(Throwable $e){ $error=$e->getMessage(); }` mekanizmasıyla
+kullanıcı normal login ekranında "Güvenlik doğrulaması başarısız. Lütfen sayfayı yenileyip tekrar
+deneyin." mesajıyla kalıyor — en yüksek blast-radius dosya olduğu için bilinçli olarak enforced-liste
+yerine bu daha güvenli/nazik yöntem seçildi.
+
+Yerel `ots_sectest` + `php -S` + gerçek HTTP istekleriyle (cookie jar bazlı) test edildi:
+- Token'lı login: **PASS** (gerçek başarı, `dashboard.php`'ye redirect).
+- Token'sız login: **PASS** — HTTP 200 (403 DEĞİL), login gerçekleşmedi (dashboard'a erişim hâlâ
+  `/index.php`'ye redirect), aynı ekranda dost hata mesajı gösterildi.
+- Hatalı/bozuk token: **PASS** — aynı davranış (200, login yok, dost mesaj).
+- Remember-Me: **PASS** — bozulmadı, FAZ-1'in session-regenerate davranışı da hâlâ çalışıyor (en
+  katı senaryo: anonim oturum + remember cookie ile tekrar doğrulandı).
+- `return_to`: **PASS** — bozulmadı (`/contacts.php`'ye doğru redirect).
+- Logout: **PASS** — bozulmadı (remember cookie temizlendi, `/index.php`'ye redirect).
+- `php -l` temiz. Server log'da hata/uyarı yok. FAIL yok.
+
+**Sonuç**: Login CSRF riski kapandı. Kalan HIGH risk: login brute-force/rate-limit eksikliği.
+Sıradaki önerilen faz: **FAZ-3 — Login Rate Limit**. Kullanıcı onayı bekliyor, otomatik geçilmedi.
+
 ## SECURITY SPRINT-005 FAZ-1 — Session Fixation Hardening: PASS (2026-07-05, commit `b973e01`)
 Kapsam: SADECE session fixation riski. `index.php` başarılı login sonrası ve `boot.php`
 `remember_check()`'te remember-me ile başarılı otomatik giriş sonrası `session_regenerate_id(true)`
