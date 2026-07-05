@@ -8,12 +8,14 @@ hızlı giriş yapmak için var. Detay için ilgili dosyalara bakın (`CHANGELOG
 🔄 **SECURITY SPRINT-004 — DEVAM EDİYOR** (2026-07-05) — Merkezi CSRF Koruma Altyapısı. FAZ-1'den
 FAZ-4F'ye kadar tüm fazlar tamamlandı, **HIGH-RISK CSRF CHECKPOINT AUDIT: PASS**. **FAZ-5A — CRM
 grubu PASS** (commit `4708cd6`). **FAZ-5B — Stok/Ürün grubu PASS** (commit `ae8116a`). **FAZ-5C —
-İş/Görev grubu PASS** (commit `a68637a`). **FAZ-5D — Mesajlaşma/Talep grubu PASS**
-(`messages.php`, `notes.php`, `request_new.php`, `requests.php`, `profile.php`, commit `48d943f`,
-GitHub'a push edildi). **Toplam enforced basename: 49.** Sıradaki faz: **FAZ-5E — Satış/Satın
-Alma** (önerilen kapsam: `sales.php`, `purchase.php`), kullanıcı onayı bekliyor. `index.php`
-(login) için ayrı, dikkatli bir "Login Hardening" fazı öneriliyor (companion-fix gerektiriyor,
-genel FAZ-5 dizisine sokulmadı) — bkz. `ROADMAP.md` "Security Roadmap".
+İş/Görev grubu PASS** (commit `a68637a`). **FAZ-5D — Mesajlaşma/Talep grubu PASS** (commit
+`48d943f`). **FAZ-5E — Satış/Satın Alma grubu PASS** (`sales.php`, `purchase.php`, commit
+`b4b2c9a`, GitHub'a push edildi — gerçek satış/satın alma kaydı + stok/finans etkisi doğrulandı).
+**Toplam enforced basename: 51.** Sıradaki faz: **FAZ-5F — "Temizlik" grubu** (önerilen kapsam:
+`accounting_categories.php`, `check_note_view.php`, `report.php`, `ajax_quick_add.php`,
+`wa_settings.php`), kullanıcı onayı bekliyor. `index.php` (login) için ayrı, dikkatli bir "Login
+Hardening" fazı öneriliyor (companion-fix gerektiriyor, genel FAZ-5 dizisine sokulmadı) — bkz.
+`ROADMAP.md` "Security Roadmap".
 Detay → `CHANGELOG.md`, `VERSIONING.md` "Security Sprint Durumu", `ROADMAP.md` "Security Roadmap".
 
 **Bu turda ayrıca**: UX/STABILITY PATCH-003 (Takvim günlük filtre) incelendi — **kod değişikliği
@@ -34,8 +36,8 @@ provider_message_id, gelen medya indirme, çoklu-cari-aynı-telefon, konuşma ar
 senkronizasyonu, attachment desteği, gerçek-zamanlı güncelleme) — hiçbiri onay olmadan
 uygulanmayacak. Detay → `CHANGELOG.md`, `VERSIONING.md`.
 
-**Sıradaki iş**: SECURITY SPRINT-004 FAZ-5E (Satış/Satın Alma) — kullanıcı onayı bekliyor,
-FAZ-5E'ye otomatik geçilmeyecek. Ayrıca FAZ-5D'de bulunan yan bulgu: `requests.php`/
+**Sıradaki iş**: SECURITY SPRINT-004 FAZ-5F ("Temizlik" grubu) — kullanıcı onayı bekliyor,
+FAZ-5F'ye otomatik geçilmeyecek. Ayrıca FAZ-5D'de bulunan yan bulgu: `requests.php`/
 `mobile/requests.php`'de CSRF ile ilgisiz bir schema-drift hatası (`manager_note` vs
 `response_note` kolon uyuşmazlığı, talep güncellemesi sessizce başarısız oluyor) — ayrı bir
 bug-fix turu gerektiriyor, `ROADMAP.md`'ye eklendi.
@@ -44,11 +46,11 @@ bug-fix turu gerektiriyor, `ROADMAP.md`'ye eklendi.
 sertleştirmesi, yerel QA'da 8/8 senaryo PASS. Detay → `CHANGELOG.md`, `KNOWN_BUGS.md` "Son
 Çözülenler", `VERSIONING.md` "Security Sprint Durumu".
 
-**Devam Eden Sprint: SECURITY SPRINT-004 — Sıradaki Faz: FAZ-5E (Satış/Satın Alma, onay bekliyor)**
+**Devam Eden Sprint: SECURITY SPRINT-004 — Sıradaki Faz: FAZ-5F ("Temizlik" grubu, onay bekliyor)**
 FAZ-5A (CRM) PASS commit `4708cd6`, FAZ-5B (Stok/Ürün) PASS commit `ae8116a`, FAZ-5C (İş/Görev)
-PASS commit `a68637a`, FAZ-5D (Mesajlaşma/Talep) PASS commit `48d943f`. Toplam enforced basename:
-49. Tamamlanan fazlar (FAZ-1 → FAZ-4F, FAZ-5A, FAZ-5B, FAZ-5C, FAZ-5D) ve HIGH-RISK CHECKPOINT
-AUDIT detayı → `CHANGELOG.md`.
+PASS commit `a68637a`, FAZ-5D (Mesajlaşma/Talep) PASS commit `48d943f`, FAZ-5E (Satış/Satın Alma)
+PASS commit `b4b2c9a`. Toplam enforced basename: 51. Tamamlanan fazlar (FAZ-1 → FAZ-4F, FAZ-5A,
+FAZ-5B, FAZ-5C, FAZ-5D, FAZ-5E) ve HIGH-RISK CHECKPOINT AUDIT detayı → `CHANGELOG.md`.
 
 Ayrıca açık **Security Technical Debt** (bug değil, mimari/deployment notu — bkz. `ROADMAP.md`):
 rate-limit'in uzun vadede `security_rate_limits`/`security_events` tablosuna taşınması,
@@ -84,12 +86,11 @@ Production'a (acanstr.com/ots) henüz dokunulmadı — ayrı "DEPLOY MODE" komut
 2. **SYSTEM AUDIT** — büyük sprint sonrası standart denetim.
 3. **SECURITY SPRINT-004** — Merkezi CSRF Koruma Altyapısı, devam ediyor. FAZ-1→FAZ-4F + FAZ-5A
    (CRM, `4708cd6`) + FAZ-5B (Stok/Ürün, `ae8116a`) + FAZ-5C (İş/Görev, `a68637a`) + FAZ-5D
-   (Mesajlaşma/Talep, `48d943f`) tamamlandı, toplam 49 enforced basename. Sıradaki faz: FAZ-5E —
-   Satış/Satın Alma (kullanıcı onayı bekliyor); `index.php` (login) ayrı bir "Login Hardening"
-   fazı olarak değerlendirilmeli (gerekçe → `ROADMAP.md`). `KNOWN_BUGS.md`'de
-   hâlâ açık, henüz sprint numarasına atanmamış diğer bulgular: accounting.php XSS, users.php rol
-   yükseltme,
-   is_admin() bayatlığı, session fixation.
+   (Mesajlaşma/Talep, `48d943f`) + FAZ-5E (Satış/Satın Alma, `b4b2c9a`) tamamlandı, toplam 51
+   enforced basename. Sıradaki faz: FAZ-5F — "Temizlik" grubu (kullanıcı onayı bekliyor);
+   `index.php` (login) ayrı bir "Login Hardening" fazı olarak değerlendirilmeli (gerekçe →
+   `ROADMAP.md`). `KNOWN_BUGS.md`'de hâlâ açık, henüz sprint numarasına atanmamış diğer bulgular:
+   accounting.php XSS, users.php rol yükseltme, is_admin() bayatlığı, session fixation.
 
 **Production'a deploy YAPILMAYACAK** — ayrı, açık bir "DEPLOY MODE" komutu gerekir.
 

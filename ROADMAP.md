@@ -16,15 +16,14 @@ Devam Ediyor:
 - 🔄 **SECURITY SPRINT-004 — Merkezi CSRF Koruma Altyapısı.** FAZ-1 → FAZ-4F tamamlandı, **HIGH-RISK
   CSRF CHECKPOINT AUDIT: PASS** (son checkpoint commit: `a32893c`). **FAZ-5A — CRM grubu PASS**
   (commit `4708cd6`). **FAZ-5B — Stok/Ürün grubu PASS** (commit `ae8116a`). **FAZ-5C — İş/Görev
-  grubu PASS** (commit `a68637a`). **FAZ-5D — Mesajlaşma/Talep grubu PASS** (`messages.php`,
-  `notes.php`, `request_new.php`, `requests.php`, `profile.php`, commit `48d943f`, 2026-07-05).
-  **Toplam enforced basename: 49.** Detay → `CHANGELOG.md`, `VERSIONING.md` "Security Sprint
-  Durumu".
+  grubu PASS** (commit `a68637a`). **FAZ-5D — Mesajlaşma/Talep grubu PASS** (commit `48d943f`).
+  **FAZ-5E — Satış/Satın Alma grubu PASS** (`sales.php`, `purchase.php`, commit `b4b2c9a`,
+  2026-07-05 — gerçek satış/satın alma kaydı + stok/finans etkisi doğrulandı). **Toplam enforced
+  basename: 51.** Detay → `CHANGELOG.md`, `VERSIONING.md` "Security Sprint Durumu".
 
-  **Sıradaki faz: FAZ-5E — Satış/Satın Alma (önerilen kapsam, onay bekliyor)**: `sales.php`,
-  `purchase.php`. **Risk değerlendirmesi (kalan 8 basename)**:
-  - **ORTA risk**: `sales.php`, `purchase.php` — finansal tutarlı satış/satın alma kaydı oluşturan
-    formlar, CSRF ile sahte işlem kaydı riski taşıyor. FAZ-5E olarak önerilir.
+  **Sıradaki faz: FAZ-5F — "Temizlik" grubu (önerilen kapsam, onay bekliyor)**: `accounting_categories.php`,
+  `check_note_view.php`, `report.php`, `ajax_quick_add.php`, `wa_settings.php`. **Risk
+  değerlendirmesi (kalan 6 basename)**:
   - **DÜŞÜK-ORTA risk**: `check_note_view.php` (çek/senet detay, finansal enstrüman durumu
     değiştirebilir), `wa_settings.php` (admin-only ama gateway kimlik bilgilerini değiştirir),
     `ajax_quick_add.php` (zaten FAZ-2'de `X-CSRF-Token` header'ı ekli, sadece enforced listede

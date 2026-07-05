@@ -36,14 +36,14 @@ netleştirildi — bkz. `ROADMAP.md` "Security Roadmap"):
 - 🔄 **SECURITY SPRINT-004** (devam ediyor) — Merkezi CSRF Koruma Altyapısı. FAZ-1 → FAZ-4F
   tamamlandı, **HIGH-RISK CSRF CHECKPOINT AUDIT: PASS** (checkpoint commit `a32893c`). **FAZ-5A —
   CRM: PASS** (commit `4708cd6`). **FAZ-5B — Stok/Ürün: PASS** (commit `ae8116a`). **FAZ-5C — İş/
-  Görev: PASS** (commit `a68637a`). **FAZ-5D — Mesajlaşma/Talep: PASS** (`messages.php`,
-  `notes.php`, `request_new.php`, `requests.php`, `profile.php`, commit `48d943f`, yerel QA 14/14
-  senaryo PASS — iç mesajlaşma gönder/düzenle/sil, not, talep, profil+şifre). **Toplam enforced
-  basename: 49.** Sıradaki faz: **FAZ-5E — Satış/Satın Alma** (öneri: `sales.php`, `purchase.php`),
-  kullanıcı onayı bekliyor. `index.php` (login) İÇİN AYRI DEĞERLENDİRME öneriliyor — bkz.
-  `ROADMAP.md` "Security Roadmap" (login sayfası `layout_top.php`'den geçmiyor, meta/auto-inject
-  yok; enforced listeye eklemeden önce companion-fix gerektiriyor, yüksek blast-radius). Detay →
-  `CHANGELOG.md`, `ROADMAP.md` "Security Roadmap".
+  Görev: PASS** (commit `a68637a`). **FAZ-5D — Mesajlaşma/Talep: PASS** (commit `48d943f`). **FAZ-5E
+  — Satış/Satın Alma: PASS** (`sales.php`, `purchase.php`, commit `b4b2c9a`, yerel QA 4/4
+  dosya-örneği PASS — gerçek satış/satın alma kaydı + stok/finans etkisi doğrulandı). **Toplam
+  enforced basename: 51.** Sıradaki faz: **FAZ-5F — "Temizlik" grubu** (öneri:
+  `accounting_categories.php`, `check_note_view.php`, `report.php`, `ajax_quick_add.php`,
+  `wa_settings.php`), kullanıcı onayı bekliyor. `index.php` (login) İÇİN AYRI DEĞERLENDİRME
+  öneriliyor — bkz. `ROADMAP.md` "Security Roadmap". Detay → `CHANGELOG.md`, `ROADMAP.md` "Security
+  Roadmap".
 
 ## Current Development Version
 **v1.1.0-dev** (primac.tr) — ortam ayrımından SONRAKİ ilk geliştirme turu
@@ -62,16 +62,17 @@ netleştirildi — bkz. `ROADMAP.md` "Security Roadmap"):
   yapılamadı, kök neden primac.tr'nin muhtemelen `dd35352` (asıl düzeltme commit'i) öncesi `d7c593a`
   referans sürümünde kalmış olması (deploy açığı). Detay → `CHANGELOG.md`.
 + **SECURITY SPRINT-004 — DEVAM EDİYOR** (2026-07-05, checkpoint commit'ler `7934805`/`90dffa7`/
-  `a32893c`/`4708cd6`/`ae8116a`/`a68637a`/`48d943f`): Merkezi CSRF koruma altyapısı. FAZ-1 (boot.php
-  helper'ları + otomatik token enjeksiyonu) → FAZ-2 (AJAX `X-CSRF-Token` header) → FAZ-3A/3B/3C
-  (pilot, Bildirimler, Finans/Muhasebe) → FAZ-4A/4B/4C/4D/4E/4F (Finans işlem ekranları, Personel,
-  Kimlik/Sistem, Mali belge/Teklif, WhatsApp, İş/Görev) tamamlandı. **HIGH-RISK CSRF CHECKPOINT
-  AUDIT: PASS.** **FAZ-5A — CRM PASS** (commit `4708cd6`). **FAZ-5B — Stok/Ürün PASS** (commit
-  `ae8116a`). **FAZ-5C — İş/Görev PASS** (commit `a68637a`). **FAZ-5D — Mesajlaşma/Talep PASS**
-  (`messages.php`, `notes.php`, `request_new.php`, `requests.php`, `profile.php`, commit
-  `48d943f`, yerel `ots_sectest` QA'da 14/14 senaryo + GET regresyon PASS). **Toplam enforced
-  basename: 49.** Detay → `CHANGELOG.md`. Sıradaki faz: **FAZ-5E — Satış/Satın Alma** (öneri
-  listesi `ROADMAP.md`'de), kullanıcı onayı bekliyor.
+  `a32893c`/`4708cd6`/`ae8116a`/`a68637a`/`48d943f`/`b4b2c9a`): Merkezi CSRF koruma altyapısı.
+  FAZ-1 (boot.php helper'ları + otomatik token enjeksiyonu) → FAZ-2 (AJAX `X-CSRF-Token` header) →
+  FAZ-3A/3B/3C (pilot, Bildirimler, Finans/Muhasebe) → FAZ-4A/4B/4C/4D/4E/4F (Finans işlem
+  ekranları, Personel, Kimlik/Sistem, Mali belge/Teklif, WhatsApp, İş/Görev) tamamlandı.
+  **HIGH-RISK CSRF CHECKPOINT AUDIT: PASS.** **FAZ-5A — CRM PASS** (commit `4708cd6`). **FAZ-5B —
+  Stok/Ürün PASS** (commit `ae8116a`). **FAZ-5C — İş/Görev PASS** (commit `a68637a`). **FAZ-5D —
+  Mesajlaşma/Talep PASS** (commit `48d943f`). **FAZ-5E — Satış/Satın Alma PASS** (`sales.php`,
+  `purchase.php`, commit `b4b2c9a`, yerel `ots_sectest` QA'da 4/4 dosya-örneği + gerçek stok/finans
+  etkisi doğrulaması + GET regresyon PASS). **Toplam enforced basename: 51.** Detay →
+  `CHANGELOG.md`. Sıradaki faz: **FAZ-5F — "Temizlik" grubu** (öneri listesi `ROADMAP.md`'de),
+  kullanıcı onayı bekliyor.
 + **SECURITY SPRINT-003 — DEV QA PASS** (2026-07-05, henüz commit/push edilmedi): `sifre_sifirla.php`
 şifre sıfırlama brute-force sertleştirmesi — deneme sayacı+5-deneme iptali, IP bazlı rate-limit,
 hesap bazlı resend-throttle, TTL 30dk→10dk, başarılı reset sonrası tam session temizliği. Yerel

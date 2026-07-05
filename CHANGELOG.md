@@ -3,6 +3,16 @@
 Bu dosya `memory/features.md`'nin (tam gerekçe/kod detayıyla) kök dizindeki kısa özetidir — hızlı
 taramak için. Detaylı "neden böyle yapıldı" analizleri için `memory/features.md`'ye bakın.
 
+## SECURITY SPRINT-004 FAZ-5E — Satış/Satın Alma Modülü CSRF Enforcement: PASS (2026-07-05, commit `b4b2c9a`)
+Kapsam: `sales.php`, `purchase.php` (web+mobil) — `$__csrf_enforced_pages` listesine eklendi. Yerel
+`ots_sectest` QA'da her iki dosya için gerçek satış/satın alma kaydı oluşturuldu ve şu etkiler
+doğrulandı: satışta `stock_items.quantity` düşüyor + `finance_movements` 'in'/'sale' hareketi
+oluşuyor (KDV dahil tutar doğru); satın almada `stock_items.quantity` artıyor +
+`finance_movements` 'out'/'purchase' hareketi oluşuyor. Token'lı POST (4/4 dosya-örneği: web+mobil
+× sales/purchase) PASS, token'sız POST 403 PASS. GET regresyon taraması (10 ekran) 10/10 200,
+`php -l` 5/5 temiz, server log'da hiç hata/uyarı yok. FAIL yok. `requests.php`/`manager_note`
+schema-drift bulgusuna (FAZ-5D'de tespit edildi) bu fazda dokunulmadı.
+
 ## SECURITY SPRINT-004 FAZ-5D — Mesajlaşma/Talep Modülü CSRF Enforcement: PASS (2026-07-05, commit `48d943f`)
 Kapsam: `messages.php`, `notes.php`, `request_new.php`, `requests.php`, `profile.php` —
 `$__csrf_enforced_pages` listesine eklendi (`notes.php`'nin mobil karşılığı `mytasks.php`'ye
