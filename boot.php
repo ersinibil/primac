@@ -392,7 +392,8 @@ if($__page !== '' && isset($__pmap[$__page])){
 // (users.php, sil.php — basename eşleşmesi yukarıdaki page_module_map() ile aynı desen, bu yüzden
 // mobile/users.php'yi de otomatik kapsar; sil.php'nin mobil karşılığı yok). Sistem geneline HENÜZ
 // yayılmadı — bkz. ilerideki FAZ'lar.
-$__csrf_enforced_pages = ['users.php', 'sil.php', 'notifications.php', 'accounting.php', 'finance.php', 'finance_accounts.php', 'checks_notes.php', 'kasa.php', 'finance_new.php', 'finance_transfer.php', 'finance_account_view.php', 'payment.php', 'collection.php', 'transfer.php', 'account_view.php', 'movement_view.php', 'personnel_new.php', 'personnel_edit.php', 'personnel_view.php', 'sifre_sifirla.php', 'temizle_veri.php', 'trade_document_new.php', 'teklif.php', 'quote_approve.php', 'public_file.php', 'wa_send_now.php', 'job_view.php', 'task_view.php', 'work_view.php'];
+// FAZ-5A (CRM): contact_new.php, contact_view.php eklendi.
+$__csrf_enforced_pages = ['users.php', 'sil.php', 'notifications.php', 'accounting.php', 'finance.php', 'finance_accounts.php', 'checks_notes.php', 'kasa.php', 'finance_new.php', 'finance_transfer.php', 'finance_account_view.php', 'payment.php', 'collection.php', 'transfer.php', 'account_view.php', 'movement_view.php', 'personnel_new.php', 'personnel_edit.php', 'personnel_view.php', 'sifre_sifirla.php', 'temizle_veri.php', 'trade_document_new.php', 'teklif.php', 'quote_approve.php', 'public_file.php', 'wa_send_now.php', 'job_view.php', 'task_view.php', 'work_view.php', 'contact_new.php', 'contact_view.php'];
 if($_SERVER['REQUEST_METHOD'] === 'POST' && in_array($__page, $__csrf_enforced_pages, true)){
     csrf_verify();
 }
