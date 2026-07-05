@@ -41,6 +41,15 @@ netleştirildi — bkz. `ROADMAP.md` "Security Roadmap"):
 
 ## Current Development Version
 **v1.1.0-dev** (primac.tr) — ortam ayrımından SONRAKİ ilk geliştirme turu
++ **UX/STABILITY PATCH-004 — Son İşlemler Route Resolver: PASS** (2026-07-05, commit `dff59d5`):
+  kök neden `activity_logs.url`'in yazma anında sabit string olarak donduruluyup render anında
+  hiç yeniden çözülmemesiydi (platforma göre yanlış route açılabiliyordu). Merkezi
+  `activity_target_url()` resolver'ı ile çözüldü, silinmiş kayıtlarda güvenli fallback eklendi.
+  Bilinen kapsam dışı: Satış/Satın Alma detay ekranı yok (yeni özellik), Finans özel davranışları,
+  trade_document mobil parite açığı — detay → `CHANGELOG.md`, `ROADMAP.md`.
++ **UX/STABILITY PATCH-003 — Takvim Günlük Filtre**: kod değişikliği YOK — yerel QA'da reprodüksiyon
+  yapılamadı, kök neden primac.tr'nin muhtemelen `dd35352` (asıl düzeltme commit'i) öncesi `d7c593a`
+  referans sürümünde kalmış olması (deploy açığı). Detay → `CHANGELOG.md`.
 + **SECURITY SPRINT-004 — DEVAM EDİYOR** (2026-07-05, checkpoint commit'ler `7934805`/`90dffa7`/
   `a32893c`/`4708cd6`): Merkezi CSRF koruma altyapısı. FAZ-1 (boot.php helper'ları + otomatik token
   enjeksiyonu) → FAZ-2 (AJAX `X-CSRF-Token` header) → FAZ-3A/3B/3C (pilot, Bildirimler, Finans/

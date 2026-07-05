@@ -3,6 +3,50 @@
 Bu dosya `memory/features.md`'nin (tam gerekçe/kod detayıyla) kök dizindeki kısa özetidir — hızlı
 taramak için. Detaylı "neden böyle yapıldı" analizleri için `memory/features.md`'ye bakın.
 
+## UX/STABILITY PATCH-004 — Son İşlemler Route Resolver: PASS (2026-07-05, commit `dff59d5`)
+Kullanıcı bildirimi: "Son İşlemler" listesindeki kayıtlar yanlış sayfaya gidiyor, bazıları mobil
+route açıyor, bazıları çalışmıyor. **Kök neden**: `activity_logs.url` her `activity_log()` çağrısında
+YAZMA anında sabit bir string olarak donduruluyordu, render anında `entity_type`/`entity_id` hiç
+kullanılmıyordu — merkezi bir resolver yoktu. ~65 çağrı noktasından bazıları (ör.
+`mobile/personnel_new.php`) tek platforma kilitli mutlak url kaydediyordu; web ve mobil Son
+İşlemler ekranları bu stored url'i sorgusuz basıyordu (web'de mobil route, mobilde web route
+açılabiliyordu). Ayrıca silinmiş kayıtlara giden linkler hiç kontrol edilmiyordu.
+
+**Çözüm**: `activity_lib.php`'ye `activity_target_url($entityType,$entityId,$platform)` eklendi —
+render anında DB'den varlık kontrolü yapıp platforma göre doğru path'i üretiyor (`contact`, `job`/
+`job_file`, `task` (soft-delete farkında), `quote`, `product`/`stock`, `personnel`, `trade_document`
+kapsanıyor). `activity_render_list()` (web `activity.php` + `dashboard.php` widget'ı) ve
+`mobile/activity.php` artık bu resolver'ı kullanıyor, kapsamadığı türlerde eski stored-url
+davranışı korunuyor (geriye dönük kırılma yok). Silinmiş/soft-delete edilmiş hedeflerde artık link
+yerine "Kayıt artık mevcut değil" gösteriliyor.
+
+**Bilinen kapsam dışı alanlar** (stored-url davranışı bilinçli olarak DEĞİŞMEDİ):
+- **Satış/Satın Alma**: DB'de gerçek bir "satış/satın alma kaydı" kavramı yok (`entity_id` aslında
+  bir ürün id'si), tekil bir detay ekranı hiç yok — "satış detayına gitmeli" beklentisi **yeni bir
+  ekran gerektirir** (yeni özellik, kullanıcı onayı bekliyor, bkz. `ROADMAP.md`).
+- **Finans**: `entity_type='finance'` farklı çağrı noktalarında kasıtlı olarak farklı hedeflere
+  gidiyor (çoğu `finance.php` listesine, `mobile/collection.php` bilinçli olarak ilgili cariye) —
+  tek bir genel kural bunu bozardı, dokunulmadı.
+- **trade_document**: mobilde karşılığı (`trade_document_view.php`) hiç yok — mobil kullanıcı da
+  web'in mutlak URL'ine yönlendiriliyor (önceden de böyleydi, artık en azından her zaman doğru
+  belgeye gidiyor). Bkz. `ROADMAP.md` "Açık — kapsamı netleşmemiş".
+
+Yerel `ots_sectest` QA: personel çapraz-platform senaryosu (yeni + geçmiş kayıt, PASS), cari/iş/
+görev/teklif/ürün linkleri (PASS), silinmiş/soft-delete kayıt fallback (PASS), 3 ekranda regresyon
+yok. `php -l` 4/4 dosyada temiz.
+
+## UX/STABILITY PATCH-003 — Takvim Günlük Filtre: kod değişikliği YOK, deploy açığı tespit edildi (2026-07-05)
+Kullanıcı bildirimi: bugün/yarın için görev oluşturup takvimde bugüne tıklayınca hâlâ tüm günlerin
+görevleri listeleniyor. **Bulgu**: kod (JS yok, düz `<a href="takvim.php?...&g=$d">` linki + PHP'de
+`$byDay[$g]` filtresi) yerel `ots_sectest`'te gerçek görev verisiyle (bugün/yarın/boş gün, web+mobil,
+6/6 senaryo) doğru çalışıyor — reprodüksiyon YAPILAMADI. `git blame` ile asıl düzeltme (ay
+ızgarasının seçili olmayan günlerde madde başlığı basmayı bırakması) commit `dd35352` (2026-07-05).
+`VERSIONING.md` "Release Durumu" primac.tr'nin hâlâ `d7c593a` (2026-07-04, `dd35352`'den ÖNCE)
+referans sürümünde olduğunu gösteriyor — `d7c593a`'daki takvim kodu ay ızgarasında HER günün madde
+başlığını koşulsuz basıyor. **Sonuç: primac.tr muhtemelen 2026-07-05'ten bu yana yeniden
+yüklenmedi**, kullanıcı hâlâ eski/bozuk kodu test ediyor olabilir — bir "DEV PACKAGE MODE" turu ile
+doğrulanmalı. Kod tarafında değişiklik yapılmadı, commit yok.
+
 ## SECURITY SPRINT-004 — DEVAM EDİYOR (2026-07-05, FAZ-1 → FAZ-4F + HIGH-RISK CHECKPOINT AUDIT: PASS)
 Kapsam: Merkezi CSRF (Cross-Site Request Forgery) koruma altyapısı, aşamalı rollout stratejisiyle
 (Seçenek B: JS tabanlı otomatik token enjeksiyonu) uygulanıyor. **Sprint henüz TAMAMLANMADI** —

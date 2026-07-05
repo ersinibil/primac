@@ -216,6 +216,19 @@ BAŞLANMAYACAK, ayrı bir sprint/proje olarak ele alınacak.
   mobilde karşılığı yok (2026-07-03, commit `1ff6f1e` ile web tarafı eklendi ama mobil hâlâ eksik).
   Kapsam belirsiz: ayrı sayfa mı, yoksa mevcut `jobs.php`/`contacts.php` içine filtre olarak mı
   gömülecek — kullanıcıya danışılmadan seçilmeyecek.
+- **`trade_document_view.php` mobil parite açığı** (2026-07-05, UX/STABILITY PATCH-004'te tekrar
+  tespit edildi — Son İşlemler route resolver çalışması sırasında ortaya çıktı): web'de mali
+  belge/ticari belge detay ekranı var, mobilde hiç yok. Resolver mobil kullanıcıyı da web'in mutlak
+  URL'ine yönlendiriyor (önceden zaten böyleydi, artık en azından her zaman doğru belgeye gidiyor)
+  — ama gerçek mobil parite için ayrı bir `mobile/trade_document_view.php` yazılması gerekiyor,
+  kullanıcı onayı bekliyor.
+- **Satış/Satın Alma detay ekranı yok** (2026-07-05, UX/STABILITY PATCH-004'te tespit edildi): DB'de
+  gerçek bir "satış"/"satın alma" kaydı kavramı yok — mevcut `activity_logs` girişlerindeki
+  `entity_id` aslında ilk satır kaleminin ÜRÜN id'si, bir satış/satın alma işlemine ait tekil bir
+  detay sorgusu/sayfası hiçbir yerde tanımlı değil. Son İşlemler'den "satış detayına git" beklentisi
+  ancak yeni bir ekran + muhtemelen yeni bir sorgu modeliyle (finance_movements+stock_movements'ı
+  tek işlem etrafında gruplama) karşılanabilir — **yeni özellik**, kullanıcı onayı olmadan
+  BAŞLANMAYACAK.
 - **Native cihaz takvimi senkronizasyonu** (ICS/webcal export): Uygulamanın kendi Takvim sayfası
   (`takvim.php`/`mobile/calendar.php`) var ve çalışıyor, ama iOS/Android'in kendi Takvim uygulamasıyla
   gerçek senkron YOK. Kimlik doğrulamalı bir abonelik linki (webcal://…) gerektirir — ayrı, daha

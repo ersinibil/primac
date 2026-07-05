@@ -12,11 +12,17 @@ checkpoint commit: `4708cd6`. Sıradaki faz: **FAZ-5B — kapsamı netleşmemiş
 ana formları, Mesajlaşma/Talep, Satış/Satın Alma), kullanıcı onayı bekliyor.
 Detay → `CHANGELOG.md`, `VERSIONING.md` "Security Sprint Durumu", `ROADMAP.md` "Security Roadmap".
 
-**Bu turda ayrıca kuyruğa alındı (sırayla ele alınacak)**: UX/STABILITY PATCH-003 (Takvim günlük
-filtre — kullanıcı bildirimi: PATCH-002'de "PASS" denen düzeltme gerçek görev verisiyle hâlâ
-bozuk), UX/STABILITY PATCH-004 (Son İşlemler route/activity-target-resolver — çapraz-platform
-yönlendirme hâlâ tutarsız), ardından WhatsApp inbound/conversation entegrasyonu (ayrı, büyük mimari
-iş — kullanıcı "bunlardan sonra" dedi, henüz başlanmadı).
+**Bu turda ayrıca**: UX/STABILITY PATCH-003 (Takvim günlük filtre) incelendi — **kod değişikliği
+YOK**, primac.tr'nin muhtemelen `dd35352` (asıl düzeltme) öncesi `d7c593a` referans sürümünde
+kalmış olması (deploy açığı) kök neden olarak tespit edildi, doğrulanması için yeni bir "DEV
+PACKAGE MODE" turu gerekiyor. UX/STABILITY PATCH-004 (Son İşlemler route/activity-target-resolver)
+**PASS, commit `dff59d5`, GitHub'a push edildi** — merkezi `activity_target_url()` resolver'ı
+eklendi, çapraz-platform yönlendirme + silinmiş kayıt fallback düzeltildi. İki yeni açık borç
+`ROADMAP.md`'ye eklendi: Satış/Satın Alma detay ekranı yok (yeni özellik), `trade_document_view.php`
+mobil parite açığı. Detay → `CHANGELOG.md`, `VERSIONING.md`.
+
+**Sıradaki iş**: WhatsApp inbound/conversation entegrasyonu (ayrı, büyük mimari iş — kullanıcı
+"bunlardan sonra" dedi, henüz başlanmadı, kod değişikliği için ayrıca onay gerekecek).
 
 ✅ **SECURITY SPRINT-003 PASS** (2026-07-05) — `sifre_sifirla.php` brute-force + rate-limit
 sertleştirmesi, yerel QA'da 8/8 senaryo PASS. Detay → `CHANGELOG.md`, `KNOWN_BUGS.md` "Son
