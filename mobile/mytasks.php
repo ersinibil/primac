@@ -43,11 +43,15 @@ if($_SERVER['REQUEST_METHOD']==='POST' && (int)($_POST['note_id']??0)){
 }
 
 $f=$_GET['f']??'open';
+// REOPEN-001: takvimden bir not öğesine tıklanınca ?date=YYYY-MM-DD taşınır — sadece o günün
+// notları gösterilir. Hatalı/eksik formatta sessizce yok sayılır, normal davranışa düşer.
+$date=(!empty($_GET['date']) && preg_match('/^\d{4}-\d{2}-\d{2}$/',$_GET['date'])) ? $_GET['date'] : null;
 topx('İşlerim');
 ?>
 
 <div class="panel">
-  <b>📝 Notlarım</b> <small class="muted">(sadece sen görürsün)</small>
+  <b>📝 Notlarım<?=$date?' — '.htmlspecialchars(date('d.m.Y',strtotime($date))):''?></b> <small class="muted">(sadece sen görürsün)</small>
+  <?php if($date): ?> <a href="mytasks.php" style="color:#93c5fd;font-size:12px;text-decoration:none">✕ Tümü</a><?php endif; ?>
   <?php if(!empty($_SESSION['note_ok'])): ?><div class="ok" style="margin-top:8px"><?=htmlspecialchars($_SESSION['note_ok'])?></div><?php unset($_SESSION['note_ok']); endif; ?>
   <?php if(!empty($_SESSION['note_err'])): ?><div class="err" style="margin-top:8px"><?=htmlspecialchars($_SESSION['note_err'])?></div><?php unset($_SESSION['note_err']); endif; ?>
   <form method="post" style="margin-top:10px">
@@ -60,7 +64,7 @@ topx('İşlerim');
 </div>
 <?php
 try{
-  $myNotes=personal_notes_list($pdo,$me,'open');
+  $myNotes=personal_notes_list($pdo,$me,'open',$date);
   $myPhone=my_phone($pdo,$me);
   foreach($myNotes as $n){
     $waTxt="📝 Not: ".$n['title'].($n['note']?"\n".$n['note']:'').($n['due_date']?"\n📅 ".$n['due_date']:'');

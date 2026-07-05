@@ -67,9 +67,16 @@ function personal_note_create($pdo, $userId, $title, $note='', $dueDate=null){
     return $id;
 }
 
-function personal_notes_list($pdo, $userId, $status='open'){
+// REOPEN-001 (2026-07-06): opsiyonel $date (YYYY-MM-DD) — takvimden gelindiğinde SADECE o güne
+// ait notları döndürür. Verilmezse (mevcut TÜM çağrılar) davranış birebir aynı kalır.
+function personal_notes_list($pdo, $userId, $status='open', $date=null){
     if(!personal_notes_has_table($pdo)) return [];
     $w = $status==='done' ? "status='Tamamlandı'" : "status NOT IN ('Tamamlandı')";
+    if($date){
+        $s=$pdo->prepare("SELECT * FROM personal_notes WHERE user_id=? AND $w AND due_date=? ORDER BY id DESC LIMIT 100");
+        $s->execute([$userId,$date]);
+        return $s->fetchAll();
+    }
     $s=$pdo->prepare("SELECT * FROM personal_notes WHERE user_id=? AND $w ORDER BY (due_date IS NULL), due_date, id DESC LIMIT 100");
     $s->execute([$userId]);
     return $s->fetchAll();

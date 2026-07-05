@@ -26,12 +26,18 @@ if($_SERVER['REQUEST_METHOD']==='POST' && (int)($_POST['note_id']??0)){
 }
 
 $f=$_GET['f']??'open';
-$myNotes=personal_notes_list($pdo,$me,$f);
+// REOPEN-001: takvimden bir not öğesine tıklanınca ?date=YYYY-MM-DD taşınır — sadece o günün
+// notları gösterilir. Hatalı/eksik formatta sessizce yok sayılır, normal (tüm notlar) davranışa
+// düşer (sistemi bozmaz). Menüden gelen normal "Notlarım" erişiminde date hiç yok, davranış aynı.
+$date=(!empty($_GET['date']) && preg_match('/^\d{4}-\d{2}-\d{2}$/',$_GET['date'])) ? $_GET['date'] : null;
+$myNotes=personal_notes_list($pdo,$me,$f,$date);
 require_once __DIR__.'/share_lib.php';
 $myPhone=my_phone($pdo,$me);
 require_once __DIR__.'/layout_top.php';
 ?>
-<div class="panel-head"><h1>📝 Notlarım</h1></div>
+<div class="panel-head"><h1>📝 Notlarım<?=$date?' — '.h(date('d.m.Y',strtotime($date))):''?></h1>
+<?php if($date): ?><a class="btn secondary" href="notes.php">✕ Tüm Notlar</a><?php endif; ?>
+</div>
 <p class="muted">Bu alan sadece sana özel — personel göremez.</p>
 
 <?php if(!empty($_GET['ok'])): ?><div class="ok">Not eklendi, bildirim gönderildi.</div><?php endif; ?>

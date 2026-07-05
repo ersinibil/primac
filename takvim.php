@@ -19,7 +19,7 @@ try{
 // Kişisel notlar (sadece kendi user_id'n) — kullanıcı isteği: "takvime de işlensin".
 foreach(personal_notes_for_month($pdo,$__me,$ym) as $n){
     $d=(int)date('j',strtotime($n['due_date']));
-    $byDay[$d][]=['id'=>$n['id'],'status'=>'Not','_note'=>true,'title'=>$n['title']];
+    $byDay[$d][]=['id'=>$n['id'],'status'=>'Not','_note'=>true,'title'=>$n['title'],'due_date'=>$n['due_date']];
 }
 $mn=['01'=>'Ocak','02'=>'Şubat','03'=>'Mart','04'=>'Nisan','05'=>'Mayıs','06'=>'Haziran','07'=>'Temmuz','08'=>'Ağustos','09'=>'Eylül','10'=>'Ekim','11'=>'Kasım','12'=>'Aralık'];
 $today=(int)date('j'); $isThisMonth=($ym===date('Y-m'));
@@ -57,7 +57,9 @@ for($d=1;$d<=$daysIn;$d++){
         $itemStyle="display:block;font-size:11px;background:rgba(217,119,6,.15);border-left:3px solid $c;border-radius:4px;padding:2px 4px;margin-top:2px;color:#e7eefc;text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis";
         // Görev maddesi artık mytasks.php'ye gidiyor — 'tasks' yetkisi istemeyen kişisel görev
         // sayfası (bkz. mytasks.php), önceki "yetkisizse düz metin" geçici çözümüne gerek kalmadı.
-        $href=$isNote?'notes.php':($isTask?'task_view.php?id='.(int)$j['id']:'job_view.php?id='.(int)$j['id']);
+        // REOPEN-001: not linki artık kendi gününe (?date=) filtrelenmiş notes.php'ye gidiyor —
+        // önceden notes.php'ye tarih olmadan gidip TÜM açık notları gösteriyordu.
+        $href=$isNote?('notes.php?date='.($j['due_date']??'')):($isTask?'task_view.php?id='.(int)$j['id']:'job_view.php?id='.(int)$j['id']);
         echo "<a href='".h($href)."' style='$itemStyle'>".$icon.h($j['title'])."</a>";
       }
     }
@@ -77,7 +79,8 @@ while($cell%7!==0){ echo "<td></td>"; $cell++; }
 <?php else: foreach($byDay[$g] as $j):
   $isNote=!empty($j['_note']); $isTask=!empty($j['_task']);
   $icon=$isNote?'📝':($isTask?'🎯':'📋');
-  $href=$isNote?'notes.php':($isTask?'task_view.php?id='.(int)$j['id']:'job_view.php?id='.(int)$j['id']);
+  // REOPEN-001: not linki kendi gününe (?date=) filtrelenmiş notes.php'ye gidiyor.
+  $href=$isNote?('notes.php?date='.($j['due_date']??'')):($isTask?'task_view.php?id='.(int)$j['id']:'job_view.php?id='.(int)$j['id']);
 ?>
 <a href="<?=h($href)?>" style="display:flex;justify-content:space-between;align-items:center;padding:10px 4px;border-bottom:1px solid #eef2f6;text-decoration:none;color:inherit">
 <span><?=$icon?> <?=htmlspecialchars($j['title'])?></span>
