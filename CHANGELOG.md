@@ -3,6 +3,46 @@
 Bu dosya `memory/features.md`'nin (tam gerekçe/kod detayıyla) kök dizindeki kısa özetidir — hızlı
 taramak için. Detaylı "neden böyle yapıldı" analizleri için `memory/features.md`'ye bakın.
 
+## SECURITY SPRINT-005 FAZ-4 — Remember-Me Hardening: PASS (2026-07-05, commit `dc92a6e`)
+Kapsam: SADECE `boot.php` (`share_lib.php`'ye dokunulmadı, gerek kalmadı — remember-me fonksiyonları
+zaten `boot.php`'de). Yeni bir remember-me tablo mimarisi kurulmadı, tek-cihaz/tek-token davranışı
+korundu.
+
+**1. Token rotasyonu**: `remember_check()`'te otomatik giriş başarılı olduğunda artık `remember_set()`
+tekrar çağrılıyor (aynı fonksiyon normal login'de de kullanılıyor, kod tekrarı yok) — yeni token
+üretilip DB'deki hash güncelleniyor, cookie yeni token ile yenileniyor. Kullanılan token o istekten
+sonra GEÇERSİZ.
+
+**2. SameSite**: `acans_remember` cookie'sine `SameSite=Lax` eklendi. **Önemli bulgu**: PHP 7.2'nin
+setcookie() imzasının SameSite desteklemediği bilinen "path hack"i (`path` parametresine
+`;samesite=Lax` eklemek) yerel test ortamında (PHP 8.5) `setcookie(): "path" option cannot contain
+";"` **ValueError**'ına çarptı — DB güncelleniyor ama cookie hiç gönderilmiyordu, hata `try/catch`
+ile sessizce yutuluyordu (fail-open ama YANLIŞ). Bu yüzden ham `Set-Cookie` header'ı `header()` ile,
+native `setcookie()`'nin ürettiğiyle birebir aynı isim/değer/expiry/Max-Age/Path/HttpOnly/Secure'a ek
+olarak `SameSite=Lax` ile elle oluşturuldu — hem PHP 7.2 hem 8.x'te aynı şekilde çalıştığı
+doğrulandı. `remember_clear()`'ın silme çağrısı DEĞİŞTİRİLMEDİ (plain `/` path, SameSite gerekmiyor,
+aynı ValueError riskini taşımasın diye).
+
+Yerel `ots_sectest` + `php -S` + gerçek HTTP istekleriyle (cookie jar bazlı) test edildi:
+- Remember-Me ile giriş: **PASS** — cookie oluştu, `Set-Cookie` başlığında `SameSite=Lax` gerçekten
+  var (curl ile doğrulandı), DB'de hash kaydedildi.
+- Anonim oturum + remember cookie → otomatik giriş: **PASS** — dashboard açıldı, session id de
+  (FAZ-1) hâlâ regenerate oluyor.
+- Token rotasyonu: **PASS** — otomatik giriş sonrası cookie'deki token DEĞİŞTİ (orijinalden farklı).
+- Eski token tekrar kullanılamıyor: **PASS** — eski cookie ile erişim `/index.php`'ye redirect oldu.
+- Yeni (rotate edilmiş) token ile otomatik giriş: **PASS**.
+- Logout: **PASS** — remember cookie silindi (`deleted`/`Max-Age=0`) + DB `remember_token` NULL
+  oldu, eski cookie sonrasında işe yaramadı.
+- Normal login, Rate-Limit (FAZ-3), Login CSRF (FAZ-2): **PASS** — hiçbiri bozulmadı.
+- `php -l` temiz. Server log'da hata/uyarı/ValueError yok. FAIL yok.
+
+**Sonuç**: Remember-me statik token riski kapandı (artık her kullanımda rotate oluyor, çalıntı bir
+token tek kullanımlık). SameSite eklendi. Kalan Login Hardening riskleri: timing/enumeration
+(kullanıcı yokken `password_verify()` atlanması — LOW, isteğe bağlı). Sıradaki önerilen faz:
+**FAZ-5 — Timing/Enumeration** (isteğe bağlı, düşük öncelik) veya doğrudan **FAZ-6 — FINAL AUDIT**
+(FAZ-5 düşük öncelikli/isteğe bağlı olduğu için atlanabilir). Kullanıcı onayı bekliyor, otomatik
+geçilmedi.
+
 ## SECURITY SPRINT-005 FAZ-3 — Login Brute-Force/Rate-Limit: PASS (2026-07-05, commit `310882a`)
 Kapsam: `index.php` + `share_lib.php` (+ `.gitignore`'a 1 satır `login_ratelimit.json`). Yeni bir
 rate-limit sistemi YAZILMADI — `sifre_sifirla.php`'nin kanıtlanmış dosya-tabanlı/`flock`'lu/

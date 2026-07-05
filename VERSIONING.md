@@ -58,14 +58,18 @@ netleştirildi — bkz. `ROADMAP.md` "Security Roadmap"):
   kontrolü (başarısızsa 403 DEĞİL, dost mesajla login ekranında kalır). Login CSRF riski kapandı.
   **FAZ-3 — Login Brute-Force/Rate-Limit: PASS** (2026-07-05, commit `310882a`) — `index.php` +
   `share_lib.php` (`rate_limit_blocked()`/`rate_limit_hit()`/`rate_limit_clear()`, ayrı
-  `login_ratelimit.json`), IP+kullanıcı adı bazında 10 dakikada 8 başarısız deneme eşiği. Yerel
-  `ots_sectest` QA'da limit dolana kadar normal hata, limit sonrası doğru şifre bile engelleniyor,
-  pencere dolunca giriş serbest, başarılı girişte sayaç temizleniyor, Remember-Me/`return_to`/Logout
-  bozulmadı — hepsi PASS, sıfır FAIL. Login brute-force koruması kapandı. Detay → `CHANGELOG.md`.
+  `login_ratelimit.json`), IP+kullanıcı adı bazında 10 dakikada 8 başarısız deneme eşiği. Login
+  brute-force koruması kapandı.
+  **FAZ-4 — Remember-Me Hardening: PASS** (2026-07-05, commit `dc92a6e`) — SADECE `boot.php`. Token
+  rotasyonu (her otomatik girişte `remember_set()` yeniden çağrılıyor, eski token geçersiz oluyor) +
+  `acans_remember` cookie'sine `SameSite=Lax` (PHP 7.2/7.3+ "path hack"i modern PHP'de `setcookie()`
+  ValueError'ına çarptığı için ham `Set-Cookie` header'ı `header()` ile elle oluşturuldu — hem PHP
+  7.2 hem 8.x'te doğrulandı). Yerel `ots_sectest` QA'da rotasyon, eski-token-reddi, yeni-token-ile-
+  giriş, logout temizliği, normal login/rate-limit/CSRF regresyonu — hepsi PASS, sıfır FAIL. Statik
+  remember-me token riski kapandı. Detay → `CHANGELOG.md`.
 
-  **Kalan önerilen fazlar (henüz başlanmadı, onay bekliyor)**: FAZ-4 — remember-me sertleştirme
-  (token rotasyonu yok; `remember_set()` cookie'sinde SameSite bayrağı yok), FAZ-5 —
-  timing/enumeration inceliği (isteğe bağlı), FAZ-6 — FINAL AUDIT.
+  **Kalan önerilen fazlar (henüz başlanmadı, onay bekliyor)**: FAZ-5 — timing/enumeration inceliği
+  (isteğe bağlı, LOW öncelik), FAZ-6 — FINAL AUDIT.
 
 ## Current Development Version
 **v1.1.0-dev** (primac.tr) — ortam ayrımından SONRAKİ ilk geliştirme turu

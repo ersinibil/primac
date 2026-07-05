@@ -34,8 +34,12 @@ Devam Ediyor:
     `login_ratelimit.json`). IP+kullanıcı adı bazında 10 dk'da 8 başarısız deneme. Yerel QA'da limit
     dolana kadar/dolunca/pencere sonrası/başarı-sonrası-temizlik/Remember-Me/`return_to`/Logout —
     hepsi PASS, sıfır FAIL. Detay → `CHANGELOG.md`.
-  - 🔜 **FAZ-4 — Remember-me sertleştirme** (token rotasyonu yok; `remember_set()`'in
-    `setcookie('acans_remember', ...)` çağrısında SameSite bayrağı yok).
+  - ✅ **FAZ-4 — Remember-Me Hardening: PASS** (commit `dc92a6e`) — SADECE `boot.php`. Token
+    rotasyonu (her otomatik girişte `remember_set()` yeniden çağrılıyor, eski token geçersiz) +
+    `acans_remember`'a `SameSite=Lax` (PHP 7.2 "path hack"i modern PHP'de `setcookie()`
+    ValueError'ına çarptığı için ham `Set-Cookie` header'ı `header()` ile elle oluşturuldu, hem
+    PHP 7.2 hem 8.x doğrulandı). Yerel QA'da rotasyon/eski-token-reddi/yeni-token/logout/
+    normal-login/rate-limit/CSRF regresyonu — hepsi PASS, sıfır FAIL. Detay → `CHANGELOG.md`.
   - 🔜 **FAZ-5 — Timing/enumeration inceliği** (isteğe bağlı, LOW öncelik).
   - 🔜 **FAZ-6 — FINAL AUDIT**.
   Her faz kullanıcı onayı ile tek tek açılıyor, otomatik geçilmiyor.

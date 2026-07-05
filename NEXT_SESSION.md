@@ -51,10 +51,15 @@ CSRF riski kapandı.
 **SECURITY SPRINT-005 FAZ-3 — Login Brute-Force/Rate-Limit: PASS** (2026-07-05, commit `310882a`,
 GitHub'a push edildi) — `index.php` + `share_lib.php` (`rate_limit_blocked()`/`rate_limit_hit()`/
 `rate_limit_clear()`, ayrı `login_ratelimit.json`), IP+kullanıcı adı bazında 10 dk'da 8 başarısız
-deneme eşiği. Yerel QA'da tüm 10 test senaryosu + bonus (farklı kullanıcı aynı IP'den engellenmedi)
-PASS, sıfır FAIL. Login brute-force koruması kapandı.
-**Sıradaki iş**: FAZ-4 — Remember-Me Hardening (önerilen kapsam `ROADMAP.md`'de — kullanıcı onayı
-bekliyor, otomatik başlanmayacak). Ayrıca FAZ-5D'de bulunan yan bulgu:
+deneme eşiği. Login brute-force koruması kapandı.
+**SECURITY SPRINT-005 FAZ-4 — Remember-Me Hardening: PASS** (2026-07-05, commit `dc92a6e`, GitHub'a
+push edildi) — SADECE `boot.php`. Token rotasyonu (her otomatik girişte eski token geçersiz olur) +
+`acans_remember`'a `SameSite=Lax` (path-hack'in modern PHP'de `setcookie()` ValueError'ına çarptığı
+bulundu, ham `Set-Cookie` header'ı `header()` ile elle oluşturuldu — PHP 7.2+8.x'te doğrulandı).
+Yerel QA'da 11 test senaryosunun tamamı PASS, sıfır FAIL. Statik remember-me token riski kapandı.
+**Sıradaki iş**: FAZ-5 — Timing/Enumeration (isteğe bağlı) veya FAZ-6 — FINAL AUDIT (önerilen kapsam
+`ROADMAP.md`'de — kullanıcı onayı bekliyor, otomatik başlanmayacak). Ayrıca FAZ-5D'de bulunan yan
+bulgu:
 `requests.php`/`mobile/requests.php`'de CSRF ile ilgisiz bir schema-drift hatası (`manager_note` vs
 `response_note` kolon uyuşmazlığı, talep güncellemesi sessizce başarısız oluyor) — ayrı bir bug-fix
 turu gerektiriyor, `ROADMAP.md`'ye eklendi.
@@ -110,11 +115,11 @@ Production'a (acanstr.com/ots) henüz dokunulmadı — ayrı "DEPLOY MODE" komut
    57 enforced basename — proje genelinde `index.php` dışında POST-handling dosya kalmadı.
    **SECURITY SPRINT-005 — Login Hardening devam ediyor**: **FAZ-1 — Session Fixation Hardening
    PASS** (commit `b973e01`), **FAZ-2 — Login CSRF Hardening PASS** (commit `f20e50d`), **FAZ-3 —
-   Login Brute-Force/Rate-Limit PASS** (commit `310882a`). Sıradaki: FAZ-4 — remember-me
-   sertleştirme, FAZ-5 — timing/enumeration, FAZ-6 — FINAL AUDIT (hepsi önerilen kapsam
-   `ROADMAP.md`'de, onay bekliyor, otomatik geçilmiyor). `KNOWN_BUGS.md`'de hâlâ açık, henüz sprint
-   numarasına atanmamış diğer bulgular: accounting.php XSS, users.php rol yükseltme, is_admin()
-   bayatlığı.
+   Login Brute-Force/Rate-Limit PASS** (commit `310882a`), **FAZ-4 — Remember-Me Hardening PASS**
+   (commit `dc92a6e`). Sıradaki: FAZ-5 — timing/enumeration (isteğe bağlı) veya FAZ-6 — FINAL AUDIT
+   (önerilen kapsam `ROADMAP.md`'de, onay bekliyor, otomatik geçilmiyor). `KNOWN_BUGS.md`'de hâlâ
+   açık, henüz sprint numarasına atanmamış diğer bulgular: accounting.php XSS, users.php rol
+   yükseltme, is_admin() bayatlığı.
 
 **Production'a deploy YAPILMAYACAK** — ayrı, açık bir "DEPLOY MODE" komutu gerekir.
 
@@ -180,7 +185,8 @@ commit olarak eklenir, üzerine yazılmaz.
 ## Devam Eden Sprint
 **SECURITY SPRINT-005 — Login Hardening** devam ediyor. **FAZ-1 — Session Fixation Hardening: PASS**
 (commit `b973e01`), **FAZ-2 — Login CSRF Hardening: PASS** (commit `f20e50d`), **FAZ-3 — Login
-Brute-Force/Rate-Limit: PASS** (commit `310882a`). Sıradaki: FAZ-4 — Remember-Me Hardening (onay
+Brute-Force/Rate-Limit: PASS** (commit `310882a`), **FAZ-4 — Remember-Me Hardening: PASS** (commit
+`dc92a6e`). Sıradaki: FAZ-5 — Timing/Enumeration (isteğe bağlı) veya FAZ-6 — FINAL AUDIT (onay
 bekliyor, bkz. `ROADMAP.md` "Security Roadmap"). Ayrıca UX/STABILITY PATCH-002 tamamlandı, commit
 edildi, GitHub'a push edildi; DEV (primac.tr) deploy edildi, migration çalıştırıldı, DEV aktif
 (bkz. yukarı).
@@ -216,6 +222,14 @@ edildi, GitHub'a push edildi; DEV (primac.tr) deploy edildi, migration çalışt
 Detay ve sprint numaraları → `ROADMAP.md` "Security Roadmap".
 
 ## Dikkat Edilmesi Gereken Mimari Kararlar
+- **`setcookie()`'ye SameSite eklemek için "path hack" (path'e `;samesite=` eklemek) KULLANMA** —
+  yerel test ortamında (PHP 8.5) `setcookie(): "path" option cannot contain ";"` **ValueError**'ına
+  çarptığı bulundu (SECURITY SPRINT-005 FAZ-4, 2026-07-05). Proje PHP 7.2 hedefliyor ve bu hack o
+  sürümde muhtemelen çalışırdı, ama artık PHP 7.3+/8.x'te güvenilir DEĞİL — bir sonraki cookie
+  değişikliğinde (ör. PHPSESSID'e ek bayrak eklenirse) bu deseni TEKRARLAMA. Bunun yerine ham
+  `Set-Cookie` header'ı `header('Set-Cookie: ...', false)` ile elle oluştur (ikinci parametre
+  `false` — PHPSESSID gibi diğer Set-Cookie header'larını EZMEMESİ için şart). Örnek: `boot.php`
+  `remember_set()`.
 - **Tek geliştirme ortamı modeli**: DEV=primac.tr, PROD=acanstr.com/ots (SADECE "DEPLOY MODE"
   komutuyla dokunulur). Ayrı DB'ler.
 - **Yerel `config.php` PROD veritabanı bilgisi içerir** — yerel test SIRASINDA geçici olarak
