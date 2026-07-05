@@ -14,10 +14,11 @@ Tamamlandı:
 
 Devam Ediyor:
 - 🔄 **SECURITY SPRINT-004 — Merkezi CSRF Koruma Altyapısı.** FAZ-1 → FAZ-4F tamamlandı, **HIGH-RISK
-  CSRF CHECKPOINT AUDIT: PASS** (son checkpoint commit: `a32893c`). Detay → `CHANGELOG.md`,
-  `VERSIONING.md` "Security Sprint Durumu". Kalan orta/düşük risk grubu (CRM, Stok/Ürün, İş/Görev
-  ana formları, Mesajlaşma/Talep, Satış/Satın Alma) FAZ-5'te ele alınacak. **Sıradaki faz: FAZ-5A —
-  CRM grubu** (`contact_new.php`, `contact_view.php`).
+  CSRF CHECKPOINT AUDIT: PASS** (son checkpoint commit: `a32893c`). **FAZ-5A — CRM grubu PASS**
+  (`contact_new.php`, `contact_view.php`, commit `4708cd6`, 2026-07-05). Detay → `CHANGELOG.md`,
+  `VERSIONING.md` "Security Sprint Durumu". Kalan orta/düşük risk grubu (Stok/Ürün, İş/Görev ana
+  formları, Mesajlaşma/Talep, Satış/Satın Alma) FAZ-5B+'de ele alınacak, kapsam henüz netleşmedi —
+  kullanıcı onayı bekliyor.
 
 `KNOWN_BUGS.md`'de hâlâ açık, henüz bir sprint numarasına atanmamış diğer bulgular: accounting.php
 XSS, users.php rol yükseltme, `is_admin()` session bayatlığı, session fixation — bunlar SPRINT-004

@@ -6,28 +6,34 @@ hızlı giriş yapmak için var. Detay için ilgili dosyalara bakın (`CHANGELOG
 
 ## Son Durum
 🔄 **SECURITY SPRINT-004 — DEVAM EDİYOR** (2026-07-05) — Merkezi CSRF Koruma Altyapısı. FAZ-1'den
-FAZ-4F'ye kadar tüm fazlar tamamlandı, **HIGH-RISK CSRF CHECKPOINT AUDIT: PASS**. Son checkpoint
-commit: `a32893c`. Sıradaki faz: **FAZ-5A — CRM grubu** (`contact_new.php`, `contact_view.php`).
+FAZ-4F'ye kadar tüm fazlar tamamlandı, **HIGH-RISK CSRF CHECKPOINT AUDIT: PASS**. **FAZ-5A — CRM
+grubu PASS** (`contact_new.php`, `contact_view.php`, commit `4708cd6`, GitHub'a push edildi). Son
+checkpoint commit: `4708cd6`. Sıradaki faz: **FAZ-5B — kapsamı netleşmemiş** (Stok/Ürün, İş/Görev
+ana formları, Mesajlaşma/Talep, Satış/Satın Alma), kullanıcı onayı bekliyor.
 Detay → `CHANGELOG.md`, `VERSIONING.md` "Security Sprint Durumu", `ROADMAP.md` "Security Roadmap".
+
+**Bu turda ayrıca kuyruğa alındı (sırayla ele alınacak)**: UX/STABILITY PATCH-003 (Takvim günlük
+filtre — kullanıcı bildirimi: PATCH-002'de "PASS" denen düzeltme gerçek görev verisiyle hâlâ
+bozuk), UX/STABILITY PATCH-004 (Son İşlemler route/activity-target-resolver — çapraz-platform
+yönlendirme hâlâ tutarsız), ardından WhatsApp inbound/conversation entegrasyonu (ayrı, büyük mimari
+iş — kullanıcı "bunlardan sonra" dedi, henüz başlanmadı).
 
 ✅ **SECURITY SPRINT-003 PASS** (2026-07-05) — `sifre_sifirla.php` brute-force + rate-limit
 sertleştirmesi, yerel QA'da 8/8 senaryo PASS. Detay → `CHANGELOG.md`, `KNOWN_BUGS.md` "Son
 Çözülenler", `VERSIONING.md` "Security Sprint Durumu".
 
-**Devam Eden Sprint: SECURITY SPRINT-004 — Sıradaki Faz: FAZ-5A (CRM)**
-Kapsam: `contact_new.php`, `contact_view.php` CSRF enforced listeye eklenecek (orta risk grubu).
-Tamamlanan fazlar (FAZ-1 → FAZ-4F) ve HIGH-RISK CHECKPOINT AUDIT detayı → `CHANGELOG.md`.
+**Devam Eden Sprint: SECURITY SPRINT-004 — Sıradaki Faz: FAZ-5B (kapsam netleşmemiş)**
+FAZ-5A (CRM, `contact_new.php`/`contact_view.php`) PASS, commit `4708cd6`. Tamamlanan fazlar
+(FAZ-1 → FAZ-4F, FAZ-5A) ve HIGH-RISK CHECKPOINT AUDIT detayı → `CHANGELOG.md`.
 
 Ayrıca açık **Security Technical Debt** (bug değil, mimari/deployment notu — bkz. `ROADMAP.md`):
 rate-limit'in uzun vadede `security_rate_limits`/`security_events` tablosuna taşınması,
 `REMOTE_ADDR`'ın reverse proxy/Cloudflare/NGINX ortamında merkezi istemci-IP çözümüne geçirilmesi.
 
 ## Bir Sonraki Oturumun İlk Önceliği
-**UX / STABILITY PATCH-002, yerel DEV QA'da PASS aldı — ama henüz commit edilmedi, primac.tr'ye
-yüklenmedi, production'a dokunulmadı.** Çalışma dizininde 27 PHP dosyası + 3 doküman
-(CHANGELOG/KNOWN_BUGS/ROADMAP) hâlâ commit edilmemiş durumda (bkz. bu oturumun sonundaki `git
-status`). Bir sonraki oturum önce bu commit durumunu netleştirmeli (kullanıcı ile teyit edilmeden
-push/DEV paketi/production adımına geçilmeyecek).
+**UX / STABILITY PATCH-002**: Tamamlandı. Commit edildi. GitHub'a push edildi.
+**DEV (primac.tr)**: Deploy edildi. Migration çalıştırıldı. DEV aktif.
+Production'a (acanstr.com/ots) henüz dokunulmadı — ayrı "DEPLOY MODE" komutu bekliyor.
 
 ## Bu Oturumda Yapılanlar (2026-07-05)
 1. **UX REFINEMENT PATCH** — 4 madde (Ödeme/Gider kartları, çek/senet hatırlatma notu, Son İşlemler
@@ -52,11 +58,11 @@ push/DEV paketi/production adımına geçilmeyecek).
 1. **iPhone Safari gerçek cihaz testi** — Mobil Mesajlaşma (CONDITIONAL PASS) + PWA Push
    (SERVER-SIDE PASS) için tek eksik doğrulama. Test notları aşağıda.
 2. **SYSTEM AUDIT** — büyük sprint sonrası standart denetim.
-3. **SECURITY SPRINT-004** — Merkezi CSRF Koruma Altyapısı, devam ediyor. FAZ-1→FAZ-4F tamamlandı,
-   HIGH-RISK CSRF CHECKPOINT AUDIT PASS (checkpoint `a32893c`). Sıradaki faz: FAZ-5A — CRM
-   (`contact_new.php`, `contact_view.php`). `KNOWN_BUGS.md`'de hâlâ açık, henüz sprint numarasına
-   atanmamış diğer bulgular: accounting.php XSS, users.php rol yükseltme, is_admin() bayatlığı,
-   session fixation.
+3. **SECURITY SPRINT-004** — Merkezi CSRF Koruma Altyapısı, devam ediyor. FAZ-1→FAZ-4F + FAZ-5A
+   (CRM) tamamlandı (checkpoint `4708cd6`). Sıradaki faz: FAZ-5B — kapsamı netleşmemiş (Stok/Ürün,
+   İş/Görev ana formları, Mesajlaşma/Talep, Satış/Satın Alma). `KNOWN_BUGS.md`'de hâlâ açık, henüz
+   sprint numarasına atanmamış diğer bulgular: accounting.php XSS, users.php rol yükseltme,
+   is_admin() bayatlığı, session fixation.
 
 **Production'a deploy YAPILMAYACAK** — ayrı, açık bir "DEPLOY MODE" komutu gerekir.
 
@@ -95,8 +101,8 @@ commit olarak eklenir, üzerine yazılmaz.
 ## Devam Eden Sprint
 **SECURITY SPRINT-004 — Merkezi CSRF Koruma Altyapısı** (FAZ-1 → FAZ-4F tamamlandı, HIGH-RISK
 CSRF CHECKPOINT AUDIT PASS, checkpoint commit `a32893c`). Sıradaki faz: FAZ-5A — CRM
-(`contact_new.php`, `contact_view.php`). Ayrıca UX/STABILITY PATCH-002 DEV QA PASS ile kapandı,
-ama DEV paketi/production adımı henüz atılmadı (bkz. yukarı).
+(`contact_new.php`, `contact_view.php`). Ayrıca UX/STABILITY PATCH-002 tamamlandı, commit edildi,
+GitHub'a push edildi; DEV (primac.tr) deploy edildi, migration çalıştırıldı, DEV aktif (bkz. yukarı).
 
 ## Açık Kalan Hatalar
 (Tam liste → `KNOWN_BUGS.md`)

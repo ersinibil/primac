@@ -39,9 +39,20 @@ bu bir ara checkpoint kaydıdır.
   alınacak.
 
 Checkpoint commit'ler: `7934805` (SPRINT-003 kapanışı), `90dffa7` (FAZ-4A checkpoint), `a32893c`
-(HIGH-RISK CSRF rollout checkpoint). Production'a (acanstr.com/ots) dokunulmadı.
+(HIGH-RISK CSRF rollout checkpoint), `4708cd6` (FAZ-5A — CRM). Production'a (acanstr.com/ots)
+dokunulmadı.
 
-**Sıradaki faz: FAZ-5A — CRM grubu.** Kapsam: `contact_new.php`, `contact_view.php`.
+- **FAZ-5A — CRM grubu: PASS (2026-07-05, commit `4708cd6`)** — `contact_new.php`,
+  `contact_view.php` `$__csrf_enforced_pages` listesine eklendi (basename eşleşmesi
+  `mobile/contact_new.php`/`mobile/contact_view.php`'yi otomatik kapsıyor, ek kod gerekmedi).
+  Yerel `ots_sectest` + `php -S` + gerçek HTTP istekleriyle test edildi: token'lı POST (web+mobil,
+  `contact_new.php` kayıt oluşturma + `contact_view.php` `save_profile`/`save_contact` güncelleme)
+  başarılı, token'sız POST (4/4 senaryo) 403 döndü, GET/liste/detay ekranlarında regresyon yok.
+  FAIL yok. Test verisi ve test kullanıcısı izinleri temizlendi, `config.php` diff ile doğrulanarak
+  orijinaline geri yüklendi. GitHub'a push edildi (`4708cd6`).
+
+**Sıradaki faz: FAZ-5B — kapsamı henüz netleşmemiş** (kalan orta/düşük risk grubu: Stok/Ürün,
+İş/Görev ana formları, Mesajlaşma/Talep, Satış/Satın Alma) — kullanıcı onayı bekliyor.
 
 ## SECURITY SPRINT-003 — PASS (2026-07-05, yerel QA MODE ile doğrulandı)
 Kapsam: `sifre_sifirla.php` (şifre sıfırlama) brute-force + hedef seçimi kısıtsızlığı nedeniyle
