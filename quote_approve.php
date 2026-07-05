@@ -136,6 +136,7 @@ h1{font-size:20px}.muted{color:#94a3b8;font-size:14px}
     </p>
     <?php if($quote['status']!=='Kabul' && $quote['status']!=='Red'): ?>
     <form method="post">
+      <?=csrf_field()?>
       <div class="btn-group">
         <button class="btn" style="background:#16a34a" name="decision" value="Kabul">✅ Kabul Ediyorum</button>
         <button class="btn" style="background:#b91c1c" name="decision" value="Red">❌ Reddetme</button>

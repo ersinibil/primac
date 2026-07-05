@@ -298,6 +298,7 @@ hr{border:none;border-top:1px solid #f1f5f9;margin:18px 0}
 <?php endif; ?>
 
 <form method="post">
+<?=csrf_field()?>
 <input type="hidden" name="action" value="reset_pass">
 <label>Doğrulama Kodu (6 hane)</label>
 <input type="text" name="code" maxlength="6" inputmode="numeric" autocomplete="one-time-code" placeholder="123456" required autofocus>
@@ -309,6 +310,7 @@ hr{border:none;border-top:1px solid #f1f5f9;margin:18px 0}
 </form>
 <hr>
 <form method="post" style="text-align:center">
+<?=csrf_field()?>
 <input type="hidden" name="action" value="restart">
 <button type="submit" class="btn-link">&#8592; Başa dön / farklı hesap</button>
 </form>
@@ -318,6 +320,7 @@ hr{border:none;border-top:1px solid #f1f5f9;margin:18px 0}
 <div class="step">Adım 1 / 2</div>
 <p style="font-size:14px;color:#374151;margin:4px 0 0">Kayıtlı kullanıcı adınızı, e-postanızı veya telefon numaranızı girin.</p>
 <form method="post">
+<?=csrf_field()?>
 <input type="hidden" name="action" value="send_code">
 <label>Kullanıcı Adı / E-posta / Telefon</label>
 <input type="text" name="identity" placeholder="ersin, ersin@firma.com veya 05XX..." required autofocus autocomplete="username">

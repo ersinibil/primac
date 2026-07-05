@@ -58,6 +58,7 @@ textarea{width:100%;border:0;border-radius:12px;padding:12px;margin:8px 0;font-s
     </p>
     <?php if($cur!=='Onaylandı'): ?>
     <form method="post">
+      <?=csrf_field()?>
       <textarea name="note" rows="2" placeholder="Not (opsiyonel)"></textarea>
       <div style="display:flex;gap:10px">
         <button class="btn" style="background:#16a34a" name="decision" value="Onaylandı">✓ Onaylıyorum</button>
