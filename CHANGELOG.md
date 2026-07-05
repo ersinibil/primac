@@ -3,6 +3,15 @@
 Bu dosya `memory/features.md`'nin (tam gerekçe/kod detayıyla) kök dizindeki kısa özetidir — hızlı
 taramak için. Detaylı "neden böyle yapıldı" analizleri için `memory/features.md`'ye bakın.
 
+## SECURITY SPRINT-004 FAZ-5B — Stok/Ürün Modülü CSRF Enforcement: PASS (2026-07-05, commit `ae8116a`)
+Kapsam: `product_new.php`, `product_view.php`, `product_categories.php`, `product_taxonomy.php`,
+`stock_movement_new.php`, `brand_settings.php` — `$__csrf_enforced_pages` listesine eklendi
+(basename eşleşmesi aynı-isimli `mobile/` karşılıklarını otomatik kapsıyor, ek kod gerekmedi).
+Yerel `ots_sectest` QA'da 6 dosyanın tamamı için web+mobil token'lı POST (gerçek kayıt/güncelleme
+başarılı) ve token'sız POST (403) — **12/12 PASS**. GET regresyon taraması (10 ekran) 10/10 200,
+`php -l` 13/13 temiz. FAIL yok. Test verisi temizlendi, `config.php` diff ile doğrulanarak
+orijinaline geri yüklendi.
+
 ## WhatsApp Conversation/Inbound MVP — PASS (2026-07-05, commit `dae3e62`)
 Kullanıcı bildirimi: OTS'den WhatsApp mesajı gönderiliyor ama karşı tarafın cevabı sistemde hiç
 görünmüyor, kalıcı konuşma geçmişi yok. **Analiz**: provider **UltraMsg**; `wa_send()`/
