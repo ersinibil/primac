@@ -37,13 +37,16 @@ netleştirildi — bkz. `ROADMAP.md` "Security Roadmap"):
   tamamlandı, **HIGH-RISK CSRF CHECKPOINT AUDIT: PASS** (checkpoint commit `a32893c`). **FAZ-5A —
   CRM: PASS** (commit `4708cd6`). **FAZ-5B — Stok/Ürün: PASS** (commit `ae8116a`). **FAZ-5C — İş/
   Görev: PASS** (commit `a68637a`). **FAZ-5D — Mesajlaşma/Talep: PASS** (commit `48d943f`). **FAZ-5E
-  — Satış/Satın Alma: PASS** (`sales.php`, `purchase.php`, commit `b4b2c9a`, yerel QA 4/4
-  dosya-örneği PASS — gerçek satış/satın alma kaydı + stok/finans etkisi doğrulandı). **Toplam
-  enforced basename: 51.** Sıradaki faz: **FAZ-5F — "Temizlik" grubu** (öneri:
-  `accounting_categories.php`, `check_note_view.php`, `report.php`, `ajax_quick_add.php`,
-  `wa_settings.php`), kullanıcı onayı bekliyor. `index.php` (login) İÇİN AYRI DEĞERLENDİRME
-  öneriliyor — bkz. `ROADMAP.md` "Security Roadmap". Detay → `CHANGELOG.md`, `ROADMAP.md` "Security
-  Roadmap".
+  — Satış/Satın Alma: PASS** (commit `b4b2c9a`). **FAZ-5F — "Temizlik" grubu: PASS**
+  (`accounting_categories.php`, `check_note_view.php`, `report.php`, `ajax_quick_add.php`,
+  `wa_settings.php`, commit `7077a6d`, yerel QA PASS — muhasebe kategorisi, çek/senet düzenleme
+  (finansal veriler bozulmadı), rapor CSV+mesaj, inline hızlı ekleme (`X-CSRF-Token`), WhatsApp
+  ayarları). **Toplam enforced basename: 57.**
+
+  **Proje genelinde `REQUEST_METHOD===POST` içeren TÜM dosyalar taranarak enforced liste ile
+  karşılaştırıldı — `index.php` (login) DIŞINDA hiçbir POST-handling dosya kalmadı.** SECURITY
+  FINAL AUDIT için kalan tek iş: `index.php` login formu (ayrı "Login Hardening" fazı — bkz. aşağı
+  ve `ROADMAP.md` "Security Roadmap"). Detay → `CHANGELOG.md`, `ROADMAP.md` "Security Roadmap".
 
 ## Current Development Version
 **v1.1.0-dev** (primac.tr) — ortam ayrımından SONRAKİ ilk geliştirme turu
@@ -62,17 +65,19 @@ netleştirildi — bkz. `ROADMAP.md` "Security Roadmap"):
   yapılamadı, kök neden primac.tr'nin muhtemelen `dd35352` (asıl düzeltme commit'i) öncesi `d7c593a`
   referans sürümünde kalmış olması (deploy açığı). Detay → `CHANGELOG.md`.
 + **SECURITY SPRINT-004 — DEVAM EDİYOR** (2026-07-05, checkpoint commit'ler `7934805`/`90dffa7`/
-  `a32893c`/`4708cd6`/`ae8116a`/`a68637a`/`48d943f`/`b4b2c9a`): Merkezi CSRF koruma altyapısı.
-  FAZ-1 (boot.php helper'ları + otomatik token enjeksiyonu) → FAZ-2 (AJAX `X-CSRF-Token` header) →
-  FAZ-3A/3B/3C (pilot, Bildirimler, Finans/Muhasebe) → FAZ-4A/4B/4C/4D/4E/4F (Finans işlem
-  ekranları, Personel, Kimlik/Sistem, Mali belge/Teklif, WhatsApp, İş/Görev) tamamlandı.
-  **HIGH-RISK CSRF CHECKPOINT AUDIT: PASS.** **FAZ-5A — CRM PASS** (commit `4708cd6`). **FAZ-5B —
-  Stok/Ürün PASS** (commit `ae8116a`). **FAZ-5C — İş/Görev PASS** (commit `a68637a`). **FAZ-5D —
-  Mesajlaşma/Talep PASS** (commit `48d943f`). **FAZ-5E — Satış/Satın Alma PASS** (`sales.php`,
-  `purchase.php`, commit `b4b2c9a`, yerel `ots_sectest` QA'da 4/4 dosya-örneği + gerçek stok/finans
-  etkisi doğrulaması + GET regresyon PASS). **Toplam enforced basename: 51.** Detay →
-  `CHANGELOG.md`. Sıradaki faz: **FAZ-5F — "Temizlik" grubu** (öneri listesi `ROADMAP.md`'de),
-  kullanıcı onayı bekliyor.
+  `a32893c`/`4708cd6`/`ae8116a`/`a68637a`/`48d943f`/`b4b2c9a`/`7077a6d`): Merkezi CSRF koruma
+  altyapısı. FAZ-1 (boot.php helper'ları + otomatik token enjeksiyonu) → FAZ-2 (AJAX
+  `X-CSRF-Token` header) → FAZ-3A/3B/3C (pilot, Bildirimler, Finans/Muhasebe) →
+  FAZ-4A/4B/4C/4D/4E/4F (Finans işlem ekranları, Personel, Kimlik/Sistem, Mali belge/Teklif,
+  WhatsApp, İş/Görev) tamamlandı. **HIGH-RISK CSRF CHECKPOINT AUDIT: PASS.** **FAZ-5A — CRM PASS**
+  (commit `4708cd6`). **FAZ-5B — Stok/Ürün PASS** (commit `ae8116a`). **FAZ-5C — İş/Görev PASS**
+  (commit `a68637a`). **FAZ-5D — Mesajlaşma/Talep PASS** (commit `48d943f`). **FAZ-5E — Satış/
+  Satın Alma PASS** (commit `b4b2c9a`). **FAZ-5F — "Temizlik" grubu PASS** (`accounting_categories.php`,
+  `check_note_view.php`, `report.php`, `ajax_quick_add.php`, `wa_settings.php`, commit `7077a6d`,
+  yerel `ots_sectest` QA'da tüm senaryolar + GET regresyon PASS). **Toplam enforced basename: 57 —
+  proje genelinde `index.php` DIŞINDA hiçbir POST-handling dosya enforced liste dışında kalmadı**
+  (tam proje taraması ile doğrulandı). Detay → `CHANGELOG.md`. Sıradaki adım: **`index.php` Login
+  Hardening fazı** (ayrı, dikkatli — bkz. `ROADMAP.md`), kullanıcı onayı bekliyor.
 + **SECURITY SPRINT-003 — DEV QA PASS** (2026-07-05, henüz commit/push edilmedi): `sifre_sifirla.php`
 şifre sıfırlama brute-force sertleştirmesi — deneme sayacı+5-deneme iptali, IP bazlı rate-limit,
 hesap bazlı resend-throttle, TTL 30dk→10dk, başarılı reset sonrası tam session temizliği. Yerel

@@ -17,20 +17,16 @@ Devam Ediyor:
   CSRF CHECKPOINT AUDIT: PASS** (son checkpoint commit: `a32893c`). **FAZ-5A — CRM grubu PASS**
   (commit `4708cd6`). **FAZ-5B — Stok/Ürün grubu PASS** (commit `ae8116a`). **FAZ-5C — İş/Görev
   grubu PASS** (commit `a68637a`). **FAZ-5D — Mesajlaşma/Talep grubu PASS** (commit `48d943f`).
-  **FAZ-5E — Satış/Satın Alma grubu PASS** (`sales.php`, `purchase.php`, commit `b4b2c9a`,
-  2026-07-05 — gerçek satış/satın alma kaydı + stok/finans etkisi doğrulandı). **Toplam enforced
-  basename: 51.** Detay → `CHANGELOG.md`, `VERSIONING.md` "Security Sprint Durumu".
+  **FAZ-5E — Satış/Satın Alma grubu PASS** (commit `b4b2c9a`). **FAZ-5F — "Temizlik" grubu PASS**
+  (`accounting_categories.php`, `check_note_view.php`, `report.php`, `ajax_quick_add.php`,
+  `wa_settings.php`, commit `7077a6d`, 2026-07-05). **Toplam enforced basename: 57.** Detay →
+  `CHANGELOG.md`, `VERSIONING.md` "Security Sprint Durumu".
 
-  **Sıradaki faz: FAZ-5F — "Temizlik" grubu (önerilen kapsam, onay bekliyor)**: `accounting_categories.php`,
-  `check_note_view.php`, `report.php`, `ajax_quick_add.php`, `wa_settings.php`. **Risk
-  değerlendirmesi (kalan 6 basename)**:
-  - **DÜŞÜK-ORTA risk**: `check_note_view.php` (çek/senet detay, finansal enstrüman durumu
-    değiştirebilir), `wa_settings.php` (admin-only ama gateway kimlik bilgilerini değiştirir),
-    `ajax_quick_add.php` (zaten FAZ-2'de `X-CSRF-Token` header'ı ekli, sadece enforced listede
-    değil — düşük ek risk).
-  - **DÜŞÜK risk**: `accounting_categories.php` (sadece kategori adı yönetimi), `report.php`
-    (POST muhtemelen sadece PDF üretimi/paylaşım tetikliyor, kalıcı veri değişikliği sınırlı —
-    doğrulanmalı).
+  **FAZ-5F sonunda proje genelinde tam tarama yapıldı** (`grep -rl "REQUEST_METHOD.*POST"` tüm
+  `.php` dosyalarında) — enforced liste ile karşılaştırıldığında **`index.php` (login) DIŞINDA
+  hiçbir POST-handling dosya kalmadı.** Bu, FAZ-5 dizisinin (5A→5F) fiilen tamamlandığı ve
+  SECURITY FINAL AUDIT'e kalan tek gerçek işin `index.php` olduğu anlamına geliyor.
+
   - **ÖZEL DURUM — `index.php` (login formu)**: **Enforced listeye HENÜZ eklenmesi önerilmiyor.**
     Gerekçe: (1) `index.php` `layout_top.php`'den geçmiyor, kendi bağımsız `<head>`'i var — CSRF
     meta tag/auto-inject JS'i YOK, bu yüzden basit bir array-ekleme yeterli değil,

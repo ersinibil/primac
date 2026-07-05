@@ -9,13 +9,17 @@ hızlı giriş yapmak için var. Detay için ilgili dosyalara bakın (`CHANGELOG
 FAZ-4F'ye kadar tüm fazlar tamamlandı, **HIGH-RISK CSRF CHECKPOINT AUDIT: PASS**. **FAZ-5A — CRM
 grubu PASS** (commit `4708cd6`). **FAZ-5B — Stok/Ürün grubu PASS** (commit `ae8116a`). **FAZ-5C —
 İş/Görev grubu PASS** (commit `a68637a`). **FAZ-5D — Mesajlaşma/Talep grubu PASS** (commit
-`48d943f`). **FAZ-5E — Satış/Satın Alma grubu PASS** (`sales.php`, `purchase.php`, commit
-`b4b2c9a`, GitHub'a push edildi — gerçek satış/satın alma kaydı + stok/finans etkisi doğrulandı).
-**Toplam enforced basename: 51.** Sıradaki faz: **FAZ-5F — "Temizlik" grubu** (önerilen kapsam:
-`accounting_categories.php`, `check_note_view.php`, `report.php`, `ajax_quick_add.php`,
-`wa_settings.php`), kullanıcı onayı bekliyor. `index.php` (login) için ayrı, dikkatli bir "Login
-Hardening" fazı öneriliyor (companion-fix gerektiriyor, genel FAZ-5 dizisine sokulmadı) — bkz.
-`ROADMAP.md` "Security Roadmap".
+`48d943f`). **FAZ-5E — Satış/Satın Alma grubu PASS** (commit `b4b2c9a`). **FAZ-5F — "Temizlik"
+grubu PASS** (`accounting_categories.php`, `check_note_view.php`, `report.php`,
+`ajax_quick_add.php`, `wa_settings.php`, commit `7077a6d`, GitHub'a push edildi).
+**Toplam enforced basename: 57.**
+
+**FAZ-5 dizisi (5A→5F) fiilen TAMAMLANDI** — proje genelinde tam POST-dosya taraması yapıldı,
+`index.php` (login) DIŞINDA hiçbir POST-handling dosya enforced liste dışında kalmadı. **SECURITY
+FINAL AUDIT'e kalan tek gerçek iş: `index.php` Login Hardening** (companion-fix gerektiriyor —
+`layout_top.php`'den geçmiyor, CSRF meta/auto-inject yok; TÜM kullanıcıların girişini kilitleme
+riski taşıyan en yüksek blast-radius dosya; `KNOWN_BUGS.md`'deki "session fixation" ile birlikte
+ayrı, dikkatli bir fazda ele alınmalı) — bkz. `ROADMAP.md` "Security Roadmap".
 Detay → `CHANGELOG.md`, `VERSIONING.md` "Security Sprint Durumu", `ROADMAP.md` "Security Roadmap".
 
 **Bu turda ayrıca**: UX/STABILITY PATCH-003 (Takvim günlük filtre) incelendi — **kod değişikliği
@@ -36,21 +40,23 @@ provider_message_id, gelen medya indirme, çoklu-cari-aynı-telefon, konuşma ar
 senkronizasyonu, attachment desteği, gerçek-zamanlı güncelleme) — hiçbiri onay olmadan
 uygulanmayacak. Detay → `CHANGELOG.md`, `VERSIONING.md`.
 
-**Sıradaki iş**: SECURITY SPRINT-004 FAZ-5F ("Temizlik" grubu) — kullanıcı onayı bekliyor,
-FAZ-5F'ye otomatik geçilmeyecek. Ayrıca FAZ-5D'de bulunan yan bulgu: `requests.php`/
-`mobile/requests.php`'de CSRF ile ilgisiz bir schema-drift hatası (`manager_note` vs
-`response_note` kolon uyuşmazlığı, talep güncellemesi sessizce başarısız oluyor) — ayrı bir
-bug-fix turu gerektiriyor, `ROADMAP.md`'ye eklendi.
+**Sıradaki iş**: SECURITY SPRINT-004 — `index.php` Login Hardening fazı (kullanıcı onayı bekliyor,
+otomatik geçilmeyecek) VEYA doğrudan SECURITY FINAL AUDIT (login hariç). Ayrıca FAZ-5D'de bulunan
+yan bulgu: `requests.php`/`mobile/requests.php`'de CSRF ile ilgisiz bir schema-drift hatası
+(`manager_note` vs `response_note` kolon uyuşmazlığı, talep güncellemesi sessizce başarısız oluyor)
+— ayrı bir bug-fix turu gerektiriyor, `ROADMAP.md`'ye eklendi.
 
 ✅ **SECURITY SPRINT-003 PASS** (2026-07-05) — `sifre_sifirla.php` brute-force + rate-limit
 sertleştirmesi, yerel QA'da 8/8 senaryo PASS. Detay → `CHANGELOG.md`, `KNOWN_BUGS.md` "Son
 Çözülenler", `VERSIONING.md` "Security Sprint Durumu".
 
-**Devam Eden Sprint: SECURITY SPRINT-004 — Sıradaki Faz: FAZ-5F ("Temizlik" grubu, onay bekliyor)**
+**Devam Eden Sprint: SECURITY SPRINT-004 — Sıradaki: `index.php` Login Hardening, onay bekliyor**
 FAZ-5A (CRM) PASS commit `4708cd6`, FAZ-5B (Stok/Ürün) PASS commit `ae8116a`, FAZ-5C (İş/Görev)
 PASS commit `a68637a`, FAZ-5D (Mesajlaşma/Talep) PASS commit `48d943f`, FAZ-5E (Satış/Satın Alma)
-PASS commit `b4b2c9a`. Toplam enforced basename: 51. Tamamlanan fazlar (FAZ-1 → FAZ-4F, FAZ-5A,
-FAZ-5B, FAZ-5C, FAZ-5D, FAZ-5E) ve HIGH-RISK CHECKPOINT AUDIT detayı → `CHANGELOG.md`.
+PASS commit `b4b2c9a`, FAZ-5F ("Temizlik" grubu) PASS commit `7077a6d`. Toplam enforced basename:
+57 — `index.php` DIŞINDA proje genelinde enforced olmayan POST dosyası kalmadı (tam tarama ile
+doğrulandı). Tamamlanan fazlar (FAZ-1 → FAZ-4F, FAZ-5A→5F) ve HIGH-RISK CHECKPOINT AUDIT detayı →
+`CHANGELOG.md`.
 
 Ayrıca açık **Security Technical Debt** (bug değil, mimari/deployment notu — bkz. `ROADMAP.md`):
 rate-limit'in uzun vadede `security_rate_limits`/`security_events` tablosuna taşınması,
@@ -84,13 +90,14 @@ Production'a (acanstr.com/ots) henüz dokunulmadı — ayrı "DEPLOY MODE" komut
 1. **iPhone Safari gerçek cihaz testi** — Mobil Mesajlaşma (CONDITIONAL PASS) + PWA Push
    (SERVER-SIDE PASS) için tek eksik doğrulama. Test notları aşağıda.
 2. **SYSTEM AUDIT** — büyük sprint sonrası standart denetim.
-3. **SECURITY SPRINT-004** — Merkezi CSRF Koruma Altyapısı, devam ediyor. FAZ-1→FAZ-4F + FAZ-5A
-   (CRM, `4708cd6`) + FAZ-5B (Stok/Ürün, `ae8116a`) + FAZ-5C (İş/Görev, `a68637a`) + FAZ-5D
-   (Mesajlaşma/Talep, `48d943f`) + FAZ-5E (Satış/Satın Alma, `b4b2c9a`) tamamlandı, toplam 51
-   enforced basename. Sıradaki faz: FAZ-5F — "Temizlik" grubu (kullanıcı onayı bekliyor);
+3. **SECURITY SPRINT-004** — Merkezi CSRF Koruma Altyapısı. FAZ-1→FAZ-4F + FAZ-5A→5F (CRM
+   `4708cd6`, Stok/Ürün `ae8116a`, İş/Görev `a68637a`, Mesajlaşma/Talep `48d943f`, Satış/Satın Alma
+   `b4b2c9a`, Temizlik `7077a6d`) tamamlandı, toplam 57 enforced basename — **proje genelinde
+   `index.php` dışında POST-handling dosya kalmadı** (tam tarama ile doğrulandı). Sıradaki:
    `index.php` (login) ayrı bir "Login Hardening" fazı olarak değerlendirilmeli (gerekçe →
-   `ROADMAP.md`). `KNOWN_BUGS.md`'de hâlâ açık, henüz sprint numarasına atanmamış diğer bulgular:
-   accounting.php XSS, users.php rol yükseltme, is_admin() bayatlığı, session fixation.
+   `ROADMAP.md`), sonrasında SECURITY FINAL AUDIT ile sprint kapanabilir. `KNOWN_BUGS.md`'de hâlâ
+   açık, henüz sprint numarasına atanmamış diğer bulgular: accounting.php XSS, users.php rol
+   yükseltme, is_admin() bayatlığı, session fixation.
 
 **Production'a deploy YAPILMAYACAK** — ayrı, açık bir "DEPLOY MODE" komutu gerekir.
 

@@ -3,6 +3,22 @@
 Bu dosya `memory/features.md`'nin (tam gerekçe/kod detayıyla) kök dizindeki kısa özetidir — hızlı
 taramak için. Detaylı "neden böyle yapıldı" analizleri için `memory/features.md`'ye bakın.
 
+## SECURITY SPRINT-004 FAZ-5F — "Temizlik" Grubu CSRF Enforcement: PASS (2026-07-05, commit `7077a6d`)
+Kapsam: `accounting_categories.php` (web+mobil), `check_note_view.php` (**mobil-only**),
+`report.php` (web GET-only, mobil `send_msg` POST var), `ajax_quick_add.php` (**web-only** ama
+web+mobil `sales.php`/`purchase.php`/`checks_notes.php` formlarından ortak AJAX çağrısıyla
+kullanılıyor), `wa_settings.php` — `$__csrf_enforced_pages` listesine eklendi.
+
+Yerel `ots_sectest` QA'da: muhasebe kategorisi ekleme (web+mobil), çek/senet düzenleme
+(`mobile/check_note_view.php` — tutar/durum alanları bozulmadan sadece not güncellendi, finansal
+enstrüman davranışı korundu), rapor CSV+iç mesaj gönderimi (mobil `send_msg`, gerçek dosya ekli
+mesaj oluştu), inline hızlı cari/ürün ekleme (`ajax_quick_add.php` — gerçek `X-CSRF-Token` header'ı
+ile, `sales.php`'nin JS'inin kullandığı BİREBİR format, hem `t=contact` hem `t=product` PASS),
+WhatsApp ayarları kaydetme (admin-only davranışı korunuyor, kod dokunulmadı) — tamamı token'lı POST
+başarılı + token'sız POST 403. GET regresyon taraması (14 ekran) 14/14 200, `php -l` 9/9 temiz,
+server log'da hiç hata/uyarı yok. FAIL yok. `index.php` ve `requests.php`/`manager_note`
+schema-drift bulgusuna bu fazda dokunulmadı.
+
 ## SECURITY SPRINT-004 FAZ-5E — Satış/Satın Alma Modülü CSRF Enforcement: PASS (2026-07-05, commit `b4b2c9a`)
 Kapsam: `sales.php`, `purchase.php` (web+mobil) — `$__csrf_enforced_pages` listesine eklendi. Yerel
 `ots_sectest` QA'da her iki dosya için gerçek satış/satın alma kaydı oluşturuldu ve şu etkiler
