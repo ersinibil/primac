@@ -3,6 +3,36 @@
 Bu dosya `memory/features.md`'nin (tam gerekçe/kod detayıyla) kök dizindeki kısa özetidir — hızlı
 taramak için. Detaylı "neden böyle yapıldı" analizleri için `memory/features.md`'ye bakın.
 
+## REOPEN-001 — Calendar Daily Filter: Teknik Test PASS, USER TEST BEKLİYOR (2026-07-06, commit `0ecdf80`)
+**Kök neden** (3 turluk kök neden analizi + kullanıcının kendi üretim ekran görüntüsüyle
+kesinleştirildi): `takvim.php`/`mobile/calendar.php`'nin GÜN FİLTRESİ (`$byDay[$g]`) her zaman
+doğru çalışıyordu — hem grid hem detay panel gerçek veriyle test edilip doğrulanmıştı. Asıl sorun:
+takvimdeki **not (📝) türü** öğelerin linki, hiçbir tarih bilgisi taşımadan düz `notes.php`
+(web) / `mytasks.php` (mobil) sayfasına gidiyordu — bu sayfalar `personal_notes_list()` ile
+kullanıcının TÜM açık notlarını (tarihe göre artan sırada, filtresiz) gösteriyor. Kullanıcı 6
+Temmuz'un bir notuna tıklayınca "6 Temmuz'un notu" değil, "tüm açık hatırlatmalarım" ekranına
+düşüyordu — bu da "6, 7, 8 Temmuz sırayla geliyor, gün filtresi çalışmıyor" izlenimini birebir
+açıklıyor. Takvimin kendi ızgara/panel mantığına HİÇ dokunulmadı, çünkü zaten doğruydu.
+
+**Çözüm**: `notes.php` + `mobile/mytasks.php` + `personal_notes_list()` (`notes_lib.php`) opsiyonel
+`date`/`?date=YYYY-MM-DD` parametresi destekler hale getirildi (parametre verilmezse — sol
+menüden normal erişimde olduğu gibi — davranış birebir eskisiyle aynı). `takvim.php` ve
+`mobile/calendar.php`'deki not linklerine kendi günlerinin tarihi eklendi. Sadece 5 dosya, 30
+satır eklendi — POST/not-ekleme-düzenleme-silme akışlarına HİÇ dokunulmadı (mevcut "Notlarım genel
+liste" davranışı bilinçli olarak korundu).
+
+**Teknik test** (yerel `ots_sectest`, gerçek HTTP, 6/7/31 Temmuz'a test notları): sol menüden
+Notlarım (date yok) → tüm notlar (PASS); takvimden 6 Temmuz notuna → sadece 6 Temmuz (PASS, 7 ve 31
+görünmüyor); takvimden 31 Temmuz notuna → sadece 31 Temmuz (PASS); aynı senaryolar mobilde
+(`mobile/calendar.php`→`mobile/mytasks.php?date=`) PASS; hatalı/SQL-injection/XSS denemeli `date`
+parametreleri → sistem bozulmadı, güvenli şekilde ya tüm listeye düştü ya boş sonuç gösterdi (PASS);
+not ekleme POST akışı regresyonsuz (PASS); GET regresyon taraması 7/7 200; `php -l` 5/5 temiz;
+server log'da hata yok. FAIL yok.
+
+**Durum: USER TEST BEKLİYOR.** Teknik test PASS oldu ama bu iş, kullanıcı gerçek üretim sisteminde
+(primac.tr) test edip onay vermeden **CLOSED sayılmayacak** — REOPEN durum makinesi gereği
+(bkz. `memory/feedback_evolution_not_revolution.md`). Onay gelmeden REOPEN-002'ye geçilmeyecek.
+
 ## SECURITY SPRINT-005 — FINAL AUDIT: PASS — Sprint Resmen Kapandı (2026-07-05)
 Kapsam: Login Hardening — `index.php` login formu + `boot.php`'deki oturum/remember-me altyapısı.
 4 faz, **sıfır FAIL**, sadece `index.php`/`boot.php`/`share_lib.php`/`.gitignore` değişti (başka

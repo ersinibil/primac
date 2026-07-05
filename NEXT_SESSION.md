@@ -19,9 +19,19 @@ remember-me token'ları rotasyonlu + `SameSite=Lax`. Detay → `CHANGELOG.md` "S
 FINAL AUDIT", `VERSIONING.md` "Security Sprint Durumu", `ROADMAP.md` "Security Roadmap".
 
 **Aktif gündem — REOPEN Backlog** (bkz. aşağı "REOPEN Listesi", öncelik sırası sabit): güvenlik
-sprintleri bitti, artık yeni ürün geliştirmesine geçilmeyecek, önce şu üç iş sırayla ele alınacak:
+sprintleri bitti, artık yeni ürün geliştirmesine geçilmeyecek, üç iş sırayla ele alınıyor:
 **REOPEN-001 (Takvim Günlük Filtre) → REOPEN-002 (Son İşlemler Route Resolver) → REOPEN-003
-(WhatsApp Conversation)**. Hiçbiri henüz başlanmadı — kullanıcı onayı bekliyor.
+(WhatsApp Conversation)**.
+
+**REOPEN-001 — Teknik test PASS, USER TEST BEKLİYOR** (2026-07-06, commit `0ecdf80`, GitHub'a push
+edildi) — kök neden 3 turluk analiz + kullanıcının kendi üretim ekran görüntüsüyle kesinleşti:
+takvimin GÜN FİLTRESİ (`$byDay[$g]`) hep doğruydu, asıl sorun not (📝) öğelerinin linkinin tarih
+taşımadan düz `notes.php`/`mytasks.php`'ye (kullanıcının TÜM açık notları, filtresiz) gitmesiydi.
+Çözüm: `notes.php`/`mobile/mytasks.php`/`personal_notes_list()` opsiyonel `?date=` desteği
+kazandı, takvimin not linklerine kendi günleri eklendi — mevcut "Notlarım genel liste" davranışı
+(date verilmezse) HİÇ değişmedi. Yerel QA'da tüm senaryolar (web+mobil, hatalı date dahil) PASS,
+sıfır FAIL. **CLOSED değil** — kullanıcı primac.tr'de gerçek testle onaylamadan REOPEN-002'ye
+geçilmeyecek. Detay → `CHANGELOG.md` "REOPEN-001".
 
 **Bu oturumda ayrıca tamamlanan işler** (detay → `CHANGELOG.md`/`VERSIONING.md`): UX/STABILITY
 PATCH-003 (Takvim filtre — kod değişikliği yok, deploy açığı bulundu, sonradan REOPEN-001 olarak
@@ -91,10 +101,13 @@ Production'a (acanstr.com/ots) henüz dokunulmadı — ayrı "DEPLOY MODE" komut
 Kullanıcı gerçek kullanım testinde 3 önceki "PASS" bulguyu FAILED/REOPEN olarak işaretlemişti; hem
 SECURITY SPRINT-004 hem SPRINT-005 artık TAMAMLANDI, bu yüzden bu üç iş **şimdi aktif gündem** —
 sırayla, sıfırdan yeni kabul kriterleriyle ele alınacak:
-- **REOPEN-001 — Takvim Günlük Filtre**: seçilen gün dışındaki günlerin not/görevleri de görünmeye
-  devam ediyor (PATCH-003'ün "kod değişikliği yok, deploy açığı" bulgusu kullanıcı testinde
-  doğrulanmadı — gerçek kök neden hâlâ açık).
-  * Root-cause taraması bu oturumda TAMAMLANMADI (kullanıcı SPRINT-005 önceliğini koyunca durduruldu) — bir sonraki oturumda `takvim.php` gün-tıklama JS/PHP filtre mantığından başlanmalı.
+- ✅ **REOPEN-001 — Takvim Günlük Filtre: Teknik test PASS, USER TEST BEKLİYOR** (2026-07-06,
+  commit `0ecdf80`). Kök neden 3 turluk analiz + kullanıcının üretim ekran görüntüsüyle kesinleşti:
+  takvimin `$byDay[$g]` filtresi hep doğruydu; sorun not (📝) linklerinin tarih taşımadan
+  `notes.php`/`mytasks.php`'nin TÜM açık notlarını (filtresiz) göstermesiydi. `notes.php` +
+  `mobile/mytasks.php` + `personal_notes_list()`'e opsiyonel `?date=` desteği eklendi, mevcut genel
+  liste davranışı korundu. Yerel QA'da tüm senaryolar PASS. **CLOSED değil** — primac.tr'de gerçek
+  kullanıcı testi/onayı bekliyor. Detay → `CHANGELOG.md` "REOPEN-001".
 - **REOPEN-002 — Son İşlemler Route Resolver**: satış/satın alma kayıtları hâlâ ilgisiz bir "yeni
   kayıt" formuna (`sales.php`/`purchase.php`) yönleniyor. **Kısmi kök neden bu oturumda bulundu**
   (kod değiştirilmedi): `activity_target_url()`'nin `$map` dizisinde `'sale'`/`'purchase'`
