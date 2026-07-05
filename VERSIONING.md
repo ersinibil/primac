@@ -22,8 +22,26 @@ PRIMAC-GUNCELLEME) simetrik tazelenmişti. Bu yüzden aşağıdaki v1.0.0/v1.1.0
 İÇİNE dahil edilmiyor — sadece kronolojik referans noktası. Sunucuda (acanstr.com/ots) bu commit'in
 gerçekten çalışır durumda olduğu ayrıca doğrulanmamıştır (bkz. `memory/deploy.md`).
 
+## Security Sprint Durumu
+Repository geçmişini esas alan, geriye dönük tutarlı hale getirilmiş sayım (2026-07-05'te
+netleştirildi — bkz. `ROADMAP.md` "Security Roadmap"):
+- ✅ **SECURITY SPRINT-001** — `mobile/personnel_view.php` keyfi şifre sıfırlama açığı (2026-07-04,
+  `d511fad`). **PASS** (primac.tr'de smoke test edildi).
+- ✅ **SECURITY SPRINT-002** — `mobile/task_view.php` IDOR (`task_status` güncellemesinde sahiplik
+  kontrolü eksikliği). *Retroaktif belgeleme (2026-07-05): orijinali 2026-07-04'te genel dev
+  sprint numaralandırmasıyla ("SPRINT-003", `5fb2c43`) kapatılmıştı — SECURITY SPRINT
+  numaralandırmasına bu tarihte dahil edildi, uydurma tarih/detay eklenmedi.* **PASS**.
+- ✅ **SECURITY SPRINT-003** — `sifre_sifirla.php` brute-force + rate-limit sertleştirmesi
+  (2026-07-05). Yerel QA'da 8/8 senaryo **PASS**. Detay → `CHANGELOG.md`.
+- ⏳ **SECURITY SPRINT-004** (planlanan) — Merkezi CSRF Koruma Altyapısı. Detay → `ROADMAP.md`
+  "Security Roadmap", `NEXT_SESSION.md`.
+
 ## Current Development Version
 **v1.1.0-dev** (primac.tr) — ortam ayrımından SONRAKİ ilk geliştirme turu
++ **SECURITY SPRINT-003 — DEV QA PASS** (2026-07-05, henüz commit/push edilmedi): `sifre_sifirla.php`
+şifre sıfırlama brute-force sertleştirmesi — deneme sayacı+5-deneme iptali, IP bazlı rate-limit,
+hesap bazlı resend-throttle, TTL 30dk→10dk, başarılı reset sonrası tam session temizliği. Yerel
+`ots_sectest` QA'da 8/8 senaryo PASS. Detay → `CHANGELOG.md`.
 + **UX / STABILITY PATCH-002 — DEV QA PASS** (2026-07-05, henüz commit/push edilmedi, primac.tr'ye
 henüz yüklenmedi): Son İşlemler routing (11 çapraz-platform link), Teklif liste/detay CRUD
 tutarsızlığı, Çek/Senet F5 çift kayıt (PRG eklendi), Takvim günlük filtre — hepsi yerel `ots_sectest`

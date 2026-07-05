@@ -9,6 +9,9 @@ vendor/
 # Kullanıcı yüklemeleri
 uploads/
 
+# Çalışma zamanı durumu (kod değil)
+reset_ratelimit.json
+
 # Paketler / loglar / sistem
 *.zip
 *.log

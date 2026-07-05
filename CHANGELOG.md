@@ -3,6 +3,29 @@
 Bu dosya `memory/features.md`'nin (tam gerekçe/kod detayıyla) kök dizindeki kısa özetidir — hızlı
 taramak için. Detaylı "neden böyle yapıldı" analizleri için `memory/features.md`'ye bakın.
 
+## SECURITY SPRINT-003 — PASS (2026-07-05, yerel QA MODE ile doğrulandı)
+Kapsam: `sifre_sifirla.php` (şifre sıfırlama) brute-force + hedef seçimi kısıtsızlığı nedeniyle
+hesap ele geçirme riski. Sadece bu dosya ve yardımcı fonksiyonları değişti — login/session
+mimarisine (`boot.php`, `index.php`) dokunulmadı, yeni özellik eklenmedi.
+
+- Yanlış deneme sayacı (`$_SESSION['reset_attempts']`).
+- 5 başarısız denemede reset token/kod tamamen iptal ediliyor (`reset_token`/`reset_expires` NULL).
+- IP bazlı rate-limit (`send_code` 8/15dk, `reset_pass` 15/15dk) — dosya tabanlı, session'a bağlı
+  değil (`reset_ratelimit.json`, git'e girmiyor).
+- Aynı kullanıcıya kısa sürede (60 sn) tekrar kod gönderimi engellendi — yeni kolon gerekmeden
+  var olan `reset_expires`'tan geriye hesaplanıyor.
+- Reset token süresi 30 dk → 10 dk.
+- Başarılı reset sonrası `reset_uid`/`reset_show_code`/`reset_attempts` tamamen temizleniyor.
+- Enumeration koruması korundu — var/yok kullanıcı mesajı hâlâ birebir aynı, rate-limit/throttle
+  mesajları da hesap varlığını sızdırmıyor.
+
+Yerel `ots_sectest` MariaDB + `php -S` + gerçek HTTP istekleriyle 8 senaryo test edildi (geçerli
+kullanıcı kod gönderimi, var olmayan kullanıcı mesaj eşitliği, 5 yanlış denemede iptal, iptal
+sonrası doğru kodun da reddi, süresi dolmuş kod reddi, başarılı reset sonrası eski kodun tekrar
+kullanılamaması, IP/hesap bazlı rate-limit, login akışının bozulmadığı) — **FAIL yok.**
+`config.php` test sonunda diff ile birebir doğrulanarak geri yüklendi. Commit/push yapılmadı,
+production'a dokunulmadı.
+
 ## UX / STABILITY PATCH-002 — DEV QA PASS (2026-07-05, yerel QA MODE ile doğrulandı)
 Yerel `ots_sectest` MariaDB + `php -S` + gerçek HTTP istekleriyle (admin ve `edit_delete` yetkili
 admin-olmayan test kullanıcısı) 7 maddenin tamamı tek tek test edildi. Sonuç:

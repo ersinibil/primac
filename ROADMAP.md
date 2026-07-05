@@ -1,5 +1,38 @@
 # ROADMAP.md — Açık Maddeler ve Bekleyen Kararlar
 
+## Security Roadmap (2026-07-05'te netleştirildi)
+Repository geçmişini esas alan sayım — tam gerekçe/QA detayı → `VERSIONING.md` "Security Sprint
+Durumu", `CHANGELOG.md`, `KNOWN_BUGS.md` "Son Çözülenler".
+
+Tamamlandı:
+- ✅ **SECURITY SPRINT-001** — `mobile/personnel_view.php` keyfi şifre sıfırlama açığı (2026-07-04).
+- ✅ **SECURITY SPRINT-002** — `mobile/task_view.php` IDOR. *Retroaktif belgeleme (2026-07-05):
+  orijinali 2026-07-04'te genel dev sprint numaralandırmasıyla ("SPRINT-003", `5fb2c43`)
+  kapatılmıştı, SECURITY SPRINT numaralandırmasına bu tarihte dahil edildi.*
+- ✅ **SECURITY SPRINT-003** — `sifre_sifirla.php` brute-force + rate-limit sertleştirmesi
+  (2026-07-05, yerel QA'da 8/8 PASS).
+
+Sıradaki:
+- ⏳ **SECURITY SPRINT-004 — Merkezi CSRF Koruma Altyapısı.** Kapsam (detay → `NEXT_SESSION.md`):
+  merkezi CSRF helper, `boot.php` entegrasyonu, token üretimi/doğrulama, form helper, AJAX desteği,
+  tüm kritik POST endpointlerinin CSRF korumasına alınması.
+
+`KNOWN_BUGS.md`'de hâlâ açık, henüz bir sprint numarasına atanmamış diğer bulgular: accounting.php
+XSS, users.php rol yükseltme, `is_admin()` session bayatlığı, session fixation — bunlar SPRINT-004
+kapsamına girip girmeyeceği kullanıcı onayı ile netleşecek.
+
+## Security Technical Debt (2026-07-05, SECURITY SPRINT-003 sonrası not — bug değil, mimari/altyapı notu)
+1. **Rate-limit mekanizması şu an JSON dosya tabanlı** (`reset_ratelimit.json`, SECURITY SPRINT-003).
+   Bu sprintte KABUL EDİLDİ, değiştirilmedi. Uzun vadede merkezi bir `security_rate_limits` veya
+   `security_events` veritabanı tablosuna taşınmalı — amaç: merkezi kayıt, çoklu sunucu desteği,
+   cluster uyumluluğu, performans, güvenlik loglarının tek yerde tutulması. Kullanıcı onayı olmadan
+   bu turda uygulanmayacak.
+2. **`REMOTE_ADDR` kullanımı reverse proxy/Cloudflare/NGINX ortamlarında güvenilir olmayabilir** —
+   bu bir yazılım hatası DEĞİL, deployment mimarisine bağlı bir durum (bkz. `KNOWN_BUGS.md`'ye
+   bilerek eklenmedi). primac.tr/acanstr.com önüne bir reverse proxy/CDN katmanı eklenirse
+   (`X-Forwarded-For` vb.) merkezi bir istemci-IP çözüm fonksiyonuna geçilmesi gerekecek —
+   deployment mimarisi netleştiğinde ele alınacak.
+
 ## Sıradaki sıra (2026-07-05'te kullanıcı tarafından netleştirildi)
 UX/STABILITY PATCH-002 DEV QA PASS aldı (bkz. `CHANGELOG.md`). Production'a deploy YAPILMAYACAK —
 ayrı "DEPLOY MODE" komutu gerekir. Bir sonraki oturumun sırası:
@@ -7,8 +40,7 @@ ayrı "DEPLOY MODE" komutu gerekir. Bir sonraki oturumun sırası:
    arka plan teslimatı (SERVER-SIDE PASS) için tek eksik doğrulama bu — aşağıdaki iki maddeye bakın.
 2. **SYSTEM AUDIT** — büyük sprint sonrası standart denetim (bkz. `PROJECT_RULES.md` "Sürekli Kalite
    Denetimi Standardı").
-3. **SECURITY SPRINT-003** — `KNOWN_BUGS.md`'deki açık güvenlik bulguları (brute-force,
-   accounting.php XSS, users.php rol yükseltme, is_admin() bayatlığı, session fixation vb.).
+3. **SECURITY SPRINT-004** — Merkezi CSRF Koruma Altyapısı (bkz. yukarı "Security Roadmap").
 
 ## WhatsApp gelen mesaj takibi — ayrı WHATSAPP INTEGRATION SPRINT (2026-07-05)
 Bu, UX/STABILITY PATCH-002 kapsamında bilinçli olarak dışarıda bırakıldı ve kendi başına bir sprint

@@ -4,21 +4,20 @@ Bu dosya `memory/bugs.md`'nin kök dizindeki hızlı-erişim özetidir. Tam geç
 tarih + kök neden analizi) için `memory/bugs.md`'ye bakın — burada sadece **şu an açık** olanlar
 ve en yakın zamanda çözülenlerin kısa özeti tutulur.
 
-## Açık — SYSTEM AUDIT MODE bulguları (2026-07-04, read-only denetim, henüz düzeltilmedi)
+## Açık — SYSTEM AUDIT MODE bulguları (2026-07-04, read-only denetim)
 
-1. **YÜKSEK — `sifre_sifirla.php` brute-force koruması yok** — 6 haneli kod (`random_int(100000,999999)`),
-   30 dakika geçerli, deneme sayısı sınırı/lockout yok.
-2. **ORTA-YÜKSEK — `accounting.php` yansıyan XSS** — satır 8, 111-130: `$_GET['tab']` escape
+1. **ORTA-YÜKSEK — `accounting.php` yansıyan XSS** — satır 8, 111-130: `$_GET['tab']` escape
    edilmeden href'e basılıyor (`h()`/`htmlspecialchars()` eksik). Mobilde bu parametre kullanılmıyor.
-3. **ORTA — `users.php` rol yükseltme** — satır 41-51: `users` modül yetkisi olan admin-olmayan
+2. **ORTA — `users.php` rol yükseltme** — satır 41-51: `users` modül yetkisi olan admin-olmayan
    biri kendini/başkasını `admin` rolüne yükseltebilir, `uid===1` dışında kısıtlama yok.
-4. **ORTA — `is_admin()` session'da bayatlıyor** — `boot.php:124-127`, `user_can()` gibi DB'den
+3. **ORTA — `is_admin()` session'da bayatlıyor** — `boot.php:124-127`, `user_can()` gibi DB'den
    taze okumuyor; rolü alınan bir admin aktif oturumu boyunca admin yetkisiyle işlem yapabilir.
-5. **ORTA — Login'de session fixation koruması yok** — `index.php:12-40`, başarılı girişte
+4. **ORTA — Login'de session fixation koruması yok** — `index.php:12-40`, başarılı girişte
    `session_regenerate_id(true)` çağrılmıyor.
-6. **DÜŞÜK — `cron.php:7`'de yeni sabit anahtar** (`acans-cron-2026`) — `acans-migrate-2026`'dan
+5. **DÜŞÜK — `cron.php:7`'de yeni sabit anahtar** (`acans-cron-2026`) — `acans-migrate-2026`'dan
    farklı, daha önce raporlanmamış.
-7. **BİLGİ — Proje genelinde CSRF token mekanizması yok.**
+6. **BİLGİ — Proje genelinde CSRF token mekanizması yok.** → **SECURITY SPRINT-004** olarak
+   planlandı (bkz. `ROADMAP.md` "Security Roadmap").
 
 Tam denetim raporu (mimari/performans/UX/veri modeli dahil) → System Audit Artifact (2026-07-04),
 öncelik sırası → `ROADMAP.md` "SYSTEM AUDIT — Teknik Borç ve Öncelikler" bölümü.
@@ -49,6 +48,13 @@ Tam denetim raporu (mimari/performans/UX/veri modeli dahil) → System Audit Art
 
 ## Son Çözülenler (detay → `memory/bugs.md`)
 
+- **DÜZELTİLDİ — `sifre_sifirla.php` brute-force koruması yoktu (SECURITY SPRINT-003, 2026-07-05)** —
+  6 haneli kod (`random_int(100000,999999)`), önceden 30 dk geçerli, deneme sayısı sınırı/lockout
+  yoktu. Eklendi: yanlış deneme sayacı (5 denemede token tam iptal), IP bazlı rate-limit
+  (`send_code`/`reset_pass` ayrı ayrı), aynı hesaba 60 sn içinde tekrar kod gönderimi engeli, TTL
+  30dk→10dk, başarılı reset sonrası tam session temizliği. Enumeration koruması korundu. Yerel
+  `ots_sectest` QA'da 8/8 senaryo PASS (detay → `CHANGELOG.md`). Login/session mimarisine
+  dokunulmadı, commit/push yapılmadı, production'a dokunulmadı.
 - **Takvimde aynı çek/senet iki kez görünüyordu (UX/STABILITY PATCH-002, 2026-07-05)** —
   `checks_notes.php` (web) `save_cn` işleminde PRG (redirect) yoktu, sayfa yenilenince form
   yeniden POST edilip ikinci bir çek/senet kaydı + ikinci bir otomatik hatırlatma görevi

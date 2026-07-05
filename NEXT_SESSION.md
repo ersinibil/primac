@@ -4,6 +4,25 @@ Bu dosya bir "yapılacaklar listesi" değil, bir sonraki oturuma "neredeydik, ne
 hızlı giriş yapmak için var. Detay için ilgili dosyalara bakın (`CHANGELOG.md`, `ROADMAP.md`,
 `KNOWN_BUGS.md`, `VERSIONING.md`, `memory/*.md`).
 
+## Son Durum
+✅ **SECURITY SPRINT-003 PASS** (2026-07-05) — `sifre_sifirla.php` brute-force + rate-limit
+sertleştirmesi, yerel QA'da 8/8 senaryo PASS. Commit/push yapılmadı, production'a dokunulmadı.
+Detay → `CHANGELOG.md`, `KNOWN_BUGS.md` "Son Çözülenler", `VERSIONING.md` "Security Sprint Durumu".
+
+**Sonraki Sprint: SECURITY SPRINT-004 — Merkezi CSRF Koruma Sistemi**
+Hedefler:
+- Merkezi CSRF helper (`boot.php` veya ayrı bir `csrf_lib.php`)
+- `boot.php` entegrasyonu
+- Token üretimi
+- Token doğrulama
+- Form helper (her POST formuna hidden input basan yardımcı fonksiyon)
+- AJAX desteği (`messages.php`/`job_view.php` gibi `fetch()` tabanlı uç noktalar için)
+- Tüm kritik POST endpointlerinin CSRF korumasına alınması
+
+Ayrıca açık **Security Technical Debt** (bug değil, mimari/deployment notu — bkz. `ROADMAP.md`):
+rate-limit'in uzun vadede `security_rate_limits`/`security_events` tablosuna taşınması,
+`REMOTE_ADDR`'ın reverse proxy/Cloudflare/NGINX ortamında merkezi istemci-IP çözümüne geçirilmesi.
+
 ## Bir Sonraki Oturumun İlk Önceliği
 **UX / STABILITY PATCH-002, yerel DEV QA'da PASS aldı — ama henüz commit edilmedi, primac.tr'ye
 yüklenmedi, production'a dokunulmadı.** Çalışma dizininde 27 PHP dosyası + 3 doküman
@@ -34,8 +53,9 @@ push/DEV paketi/production adımına geçilmeyecek).
 1. **iPhone Safari gerçek cihaz testi** — Mobil Mesajlaşma (CONDITIONAL PASS) + PWA Push
    (SERVER-SIDE PASS) için tek eksik doğrulama. Test notları aşağıda.
 2. **SYSTEM AUDIT** — büyük sprint sonrası standart denetim.
-3. **SECURITY SPRINT-003** — `KNOWN_BUGS.md`'deki açık SYSTEM AUDIT bulguları (brute-force,
-   accounting.php XSS, users.php rol yükseltme, is_admin() bayatlığı, session fixation).
+3. **SECURITY SPRINT-004** — Merkezi CSRF Koruma Altyapısı (SECURITY SPRINT-003 tamamlandı, PASS —
+   bkz. yukarı "Son Durum"). `KNOWN_BUGS.md`'de hâlâ açık, henüz sprint numarasına atanmamış diğer
+   bulgular: accounting.php XSS, users.php rol yükseltme, is_admin() bayatlığı, session fixation.
 
 **Production'a deploy YAPILMAYACAK** — ayrı, açık bir "DEPLOY MODE" komutu gerekir.
 

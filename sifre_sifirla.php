@@ -14,6 +14,12 @@ $step = 1;          // 1=kimlik gir, 2=kod+şifre
 $err  = '';
 $ok   = '';
 
+// SECURITY SPRINT-003 (2026-07-05): brute-force + hedef seçimi kısıtsızlığı sertleştirmesi.
+define('RESET_TOKEN_TTL',     10*60); // kod geçerlilik süresi (önceden 30 dk idi)
+define('RESET_MAX_ATTEMPTS',  5);     // yanlış kod denemesi üst sınırı → aşılınca token iptal
+define('RESET_RESEND_WINDOW', 60);    // aynı hesaba tekrar kod gönderiminde min. bekleme (sn)
+define('RESET_RL_FILE',       __DIR__.'/reset_ratelimit.json');
+
 // ---- Yardımcı ---------------------------------------------------------------
 
 function _find_user($pdo, $identity){
@@ -33,7 +39,7 @@ function _generate_code(){
 }
 
 function _save_token($pdo, $userId, $token){
-    $expires = date('Y-m-d H:i:s', time() + 30*60); // 30 dakika
+    $expires = date('Y-m-d H:i:s', time() + RESET_TOKEN_TTL);
     $pdo->prepare("UPDATE app_users SET reset_token=?, reset_expires=? WHERE id=?")
         ->execute([$token, $expires, $userId]);
 }
@@ -43,10 +49,54 @@ function _clear_token($pdo, $userId){
         ->execute([$userId]);
 }
 
+// Aynı hesaba RESET_RESEND_WINDOW saniyeden kısa sürede tekrar kod üretilmesini engeller.
+// reset_expires zaten (üretim anı + TTL) olduğundan ayrı bir "son gönderim" kolonu gerekmez:
+// kalan süre (TTL - RESEND_WINDOW)'dan fazlaysa kod RESEND_WINDOW saniyeden kısa süre önce üretilmiş demektir.
+function _recently_sent($user){
+    if(empty($user['reset_token']) || empty($user['reset_expires'])) return false;
+    $remaining = strtotime($user['reset_expires']) - time();
+    return $remaining > (RESET_TOKEN_TTL - RESET_RESEND_WINDOW);
+}
+
+// Basit dosya tabanlı IP rate-limit (session'a bağlı değil — saldırgan session/cookie
+// temizlese de aynı IP'den kısa sürede çok sayıda istek atamaz). Dosya yoksa/yazılamazsa
+// "fail-open" davranır (yerel/geliştirme ortamını kilitlemesin diye), ama durumu loglar.
+function _rate_limit_hit($action, $ip, $maxHits, $windowSeconds){
+    $fp = @fopen(RESET_RL_FILE, 'c+');
+    if(!$fp){ error_log('sifre_sifirla: rate-limit dosyası açılamadı, kontrol atlandı'); return false; }
+    if(!flock($fp, LOCK_EX)){ fclose($fp); return false; }
+
+    $now  = time();
+    $size = filesize(RESET_RL_FILE);
+    $raw  = $size > 0 ? fread($fp, $size) : '';
+    $data = $raw ? json_decode($raw, true) : [];
+    if(!is_array($data)) $data = [];
+    $bucket = isset($data[$action][$ip]) && is_array($data[$action][$ip]) ? $data[$action][$ip] : [];
+
+    $hits = [];
+    foreach($bucket as $ts){
+        if(($now - (int)$ts) < $windowSeconds) $hits[] = (int)$ts;
+    }
+
+    $blocked = count($hits) >= $maxHits;
+    if(!$blocked) $hits[] = $now;
+
+    $data[$action][$ip] = $hits;
+    ftruncate($fp, 0);
+    rewind($fp);
+    fwrite($fp, json_encode($data));
+    fflush($fp);
+    flock($fp, LOCK_UN);
+    fclose($fp);
+
+    return $blocked;
+}
+
 // ---- POST işlemleri ---------------------------------------------------------
 
 if($_SERVER['REQUEST_METHOD']==='POST'){
-    $action = $_POST['action'] ?? '';
+    $action  = $_POST['action'] ?? '';
+    $__ip    = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
 
     // --- Adım 1: kimlik gönder ---
     if($action === 'send_code'){
@@ -56,39 +106,49 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 
         if($identity === ''){
             $err = 'Lütfen kullanıcı adı, e-posta veya telefon girin.';
+        } elseif(_rate_limit_hit('send_code', $__ip, 8, 900)){
+            // IP bazlı: 15 dakikada 8 istek üstü — hesap var/yok bilgisi vermeden genel hata.
+            $err = 'Çok fazla istek yapıldı. Lütfen birkaç dakika sonra tekrar deneyin.';
         } else {
             try{
                 $u = _find_user($pdo, $identity);
                 if($u){
-                    $code = _generate_code();
-                    _save_token($pdo, $u['id'], $code);
-
-                    $msg  = 'OTS - Şifre sıfırlama kodunuz: '.$code.' (30 dakika geçerli)';
-                    $sent = false;
-
-                    // WhatsApp
-                    if(!empty($u['phone'])){
-                        $sent = wa_send($u['phone'], $msg);
-                    }
-                    // E-posta (mail_link varsa basit mailto — gerçek SMTP için ek lib gerekir)
-                    // Burada mail() ile gönderim denenebilir; başarısızsa sessiz geç
-                    if(!$sent && !empty($u['email'])){
-                        $sent = @mail(
-                            $u['email'],
-                            'OTS Şifre Sıfırlama',
-                            $msg,
-                            'From: noreply@'.($_SERVER['HTTP_HOST'] ?? 'ots')
-                        );
-                    }
-
-                    // WA ve mail ayarlı değilse kod session'a koy; yönetici uyarısı göster
-                    if(!$sent){
-                        // Session üzerinden güvenli taşı (sayfa değiştikçe temizlenir)
-                        $_SESSION['reset_show_code'] = $code;
-                        $_SESSION['reset_uid']       = $u['id'];
-                    } else {
+                    if(_recently_sent($u)){
+                        // Az önce kod üretildi — YENİ kod üretme/gönderme (spam+brute-force önleme),
+                        // ama kullanıcı zaten sahip olduğu kodu girebilsin diye adım 2'ye geçmeye devam et.
                         $_SESSION['reset_uid'] = $u['id'];
-                        unset($_SESSION['reset_show_code']);
+                    } else {
+                        $code = _generate_code();
+                        _save_token($pdo, $u['id'], $code);
+
+                        $msg  = 'OTS - Şifre sıfırlama kodunuz: '.$code.' ('.(RESET_TOKEN_TTL/60).' dakika geçerli)';
+                        $sent = false;
+
+                        // WhatsApp
+                        if(!empty($u['phone'])){
+                            $sent = wa_send($u['phone'], $msg);
+                        }
+                        // E-posta (mail_link varsa basit mailto — gerçek SMTP için ek lib gerekir)
+                        // Burada mail() ile gönderim denenebilir; başarısızsa sessiz geç
+                        if(!$sent && !empty($u['email'])){
+                            $sent = @mail(
+                                $u['email'],
+                                'OTS Şifre Sıfırlama',
+                                $msg,
+                                'From: noreply@'.($_SERVER['HTTP_HOST'] ?? 'ots')
+                            );
+                        }
+
+                        // WA ve mail ayarlı değilse kod session'a koy; yönetici uyarısı göster
+                        if(!$sent){
+                            // Session üzerinden güvenli taşı (sayfa değiştikçe temizlenir)
+                            $_SESSION['reset_show_code'] = $code;
+                            $_SESSION['reset_uid']       = $u['id'];
+                        } else {
+                            $_SESSION['reset_uid'] = $u['id'];
+                            unset($_SESSION['reset_show_code']);
+                        }
+                        $_SESSION['reset_attempts'] = 0;
                     }
                 }
                 $ok   = $sent_msg;
@@ -107,6 +167,10 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         $pass2 = $_POST['new_password2'] ?? '';
 
         try{
+            if(_rate_limit_hit('reset_pass', $__ip, 15, 900)){
+                throw new Exception('Çok fazla istek yapıldı. Lütfen birkaç dakika sonra tekrar deneyin.');
+            }
+
             $uid = (int)($_SESSION['reset_uid'] ?? 0);
             if(!$uid) throw new Exception('Oturum süresi doldu. Baştan başlayın.');
             if($code === '') throw new Exception('Kod boş bırakılamaz.');
@@ -121,7 +185,17 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 throw new Exception('Geçersiz istek. Baştan başlayın.');
             }
             if(!hash_equals((string)$row['reset_token'], $code)){
-                throw new Exception('Kod hatalı.');
+                // Yanlış kod: deneme sayacını artır, sınıra ulaşınca token'ı tamamen iptal et.
+                $attempts = (int)($_SESSION['reset_attempts'] ?? 0) + 1;
+                $_SESSION['reset_attempts'] = $attempts;
+                if($attempts >= RESET_MAX_ATTEMPTS){
+                    _clear_token($pdo, $uid);
+                    unset($_SESSION['reset_uid'], $_SESSION['reset_show_code'], $_SESSION['reset_attempts']);
+                    $step = 1;
+                    throw new Exception('Çok fazla yanlış deneme yapıldı. Güvenlik nedeniyle kod iptal edildi, lütfen yeni kod isteyin.');
+                }
+                $kalan = RESET_MAX_ATTEMPTS - $attempts;
+                throw new Exception('Kod hatalı. Kalan deneme hakkı: '.$kalan.'.');
             }
             if(strtotime($row['reset_expires']) < time()){
                 _clear_token($pdo, $uid);
@@ -132,7 +206,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 ->execute([password_hash($pass1, PASSWORD_DEFAULT), $uid]);
 
             _clear_token($pdo, $uid);
-            unset($_SESSION['reset_uid'], $_SESSION['reset_show_code']);
+            unset($_SESSION['reset_uid'], $_SESSION['reset_show_code'], $_SESSION['reset_attempts']);
 
             $ok   = 'Şifreniz başarıyla güncellendi. Giriş yapabilirsiniz.';
             $step = 3; // tamamlandı
@@ -143,7 +217,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 
     // --- "Başa dön" linki ---
     elseif($action === 'restart'){
-        unset($_SESSION['reset_uid'], $_SESSION['reset_show_code']);
+        unset($_SESSION['reset_uid'], $_SESSION['reset_show_code'], $_SESSION['reset_attempts']);
         $step = 1;
     }
 }
