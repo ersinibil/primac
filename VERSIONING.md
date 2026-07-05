@@ -33,11 +33,19 @@ netleştirildi — bkz. `ROADMAP.md` "Security Roadmap"):
   numaralandırmasına bu tarihte dahil edildi, uydurma tarih/detay eklenmedi.* **PASS**.
 - ✅ **SECURITY SPRINT-003** — `sifre_sifirla.php` brute-force + rate-limit sertleştirmesi
   (2026-07-05). Yerel QA'da 8/8 senaryo **PASS**. Detay → `CHANGELOG.md`.
-- ⏳ **SECURITY SPRINT-004** (planlanan) — Merkezi CSRF Koruma Altyapısı. Detay → `ROADMAP.md`
-  "Security Roadmap", `NEXT_SESSION.md`.
+- 🔄 **SECURITY SPRINT-004** (devam ediyor) — Merkezi CSRF Koruma Altyapısı. FAZ-1 → FAZ-4F
+  tamamlandı, **HIGH-RISK CSRF CHECKPOINT AUDIT: PASS** (checkpoint commit `a32893c`). Sıradaki
+  faz: **FAZ-5A — CRM** (`contact_new.php`, `contact_view.php`). Detay → `CHANGELOG.md`,
+  `ROADMAP.md` "Security Roadmap".
 
 ## Current Development Version
 **v1.1.0-dev** (primac.tr) — ortam ayrımından SONRAKİ ilk geliştirme turu
++ **SECURITY SPRINT-004 — DEVAM EDİYOR** (2026-07-05, checkpoint commit'ler `7934805`/`90dffa7`/
+  `a32893c`): Merkezi CSRF koruma altyapısı. FAZ-1 (boot.php helper'ları + otomatik token
+  enjeksiyonu) → FAZ-2 (AJAX `X-CSRF-Token` header) → FAZ-3A/3B/3C (pilot, Bildirimler, Finans/
+  Muhasebe) → FAZ-4A/4B/4C/4D/4E/4F (Finans işlem ekranları, Personel, Kimlik/Sistem, Mali belge/
+  Teklif, WhatsApp, İş/Görev) tamamlandı. **HIGH-RISK CSRF CHECKPOINT AUDIT: PASS.** Detay →
+  `CHANGELOG.md`. Sıradaki faz: **FAZ-5A — CRM** (`contact_new.php`, `contact_view.php`).
 + **SECURITY SPRINT-003 — DEV QA PASS** (2026-07-05, henüz commit/push edilmedi): `sifre_sifirla.php`
 şifre sıfırlama brute-force sertleştirmesi — deneme sayacı+5-deneme iptali, IP bazlı rate-limit,
 hesap bazlı resend-throttle, TTL 30dk→10dk, başarılı reset sonrası tam session temizliği. Yerel

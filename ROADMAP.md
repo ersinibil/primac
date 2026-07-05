@@ -12,10 +12,12 @@ Tamamlandı:
 - ✅ **SECURITY SPRINT-003** — `sifre_sifirla.php` brute-force + rate-limit sertleştirmesi
   (2026-07-05, yerel QA'da 8/8 PASS).
 
-Sıradaki:
-- ⏳ **SECURITY SPRINT-004 — Merkezi CSRF Koruma Altyapısı.** Kapsam (detay → `NEXT_SESSION.md`):
-  merkezi CSRF helper, `boot.php` entegrasyonu, token üretimi/doğrulama, form helper, AJAX desteği,
-  tüm kritik POST endpointlerinin CSRF korumasına alınması.
+Devam Ediyor:
+- 🔄 **SECURITY SPRINT-004 — Merkezi CSRF Koruma Altyapısı.** FAZ-1 → FAZ-4F tamamlandı, **HIGH-RISK
+  CSRF CHECKPOINT AUDIT: PASS** (son checkpoint commit: `a32893c`). Detay → `CHANGELOG.md`,
+  `VERSIONING.md` "Security Sprint Durumu". Kalan orta/düşük risk grubu (CRM, Stok/Ürün, İş/Görev
+  ana formları, Mesajlaşma/Talep, Satış/Satın Alma) FAZ-5'te ele alınacak. **Sıradaki faz: FAZ-5A —
+  CRM grubu** (`contact_new.php`, `contact_view.php`).
 
 `KNOWN_BUGS.md`'de hâlâ açık, henüz bir sprint numarasına atanmamış diğer bulgular: accounting.php
 XSS, users.php rol yükseltme, `is_admin()` session bayatlığı, session fixation — bunlar SPRINT-004
@@ -40,7 +42,8 @@ ayrı "DEPLOY MODE" komutu gerekir. Bir sonraki oturumun sırası:
    arka plan teslimatı (SERVER-SIDE PASS) için tek eksik doğrulama bu — aşağıdaki iki maddeye bakın.
 2. **SYSTEM AUDIT** — büyük sprint sonrası standart denetim (bkz. `PROJECT_RULES.md` "Sürekli Kalite
    Denetimi Standardı").
-3. **SECURITY SPRINT-004** — Merkezi CSRF Koruma Altyapısı (bkz. yukarı "Security Roadmap").
+3. **SECURITY SPRINT-004** — Merkezi CSRF Koruma Altyapısı, devam ediyor. HIGH-RISK rollout PASS
+   (checkpoint `a32893c`), sıradaki faz FAZ-5A (CRM) (bkz. yukarı "Security Roadmap").
 
 ## WhatsApp gelen mesaj takibi — ayrı WHATSAPP INTEGRATION SPRINT (2026-07-05)
 Bu, UX/STABILITY PATCH-002 kapsamında bilinçli olarak dışarıda bırakıldı ve kendi başına bir sprint

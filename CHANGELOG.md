@@ -3,6 +3,46 @@
 Bu dosya `memory/features.md`'nin (tam gerekçe/kod detayıyla) kök dizindeki kısa özetidir — hızlı
 taramak için. Detaylı "neden böyle yapıldı" analizleri için `memory/features.md`'ye bakın.
 
+## SECURITY SPRINT-004 — DEVAM EDİYOR (2026-07-05, FAZ-1 → FAZ-4F + HIGH-RISK CHECKPOINT AUDIT: PASS)
+Kapsam: Merkezi CSRF (Cross-Site Request Forgery) koruma altyapısı, aşamalı rollout stratejisiyle
+(Seçenek B: JS tabanlı otomatik token enjeksiyonu) uygulanıyor. **Sprint henüz TAMAMLANMADI** —
+bu bir ara checkpoint kaydıdır.
+
+- **Altyapı (FAZ-1)**: `boot.php`'ye `csrf_token()`/`csrf_field()`/`csrf_verify()` eklendi (session
+  başına bir token, `hash_equals` ile doğrulama, 403 + sabit Türkçe mesaj: "Güvenlik doğrulaması
+  başarısız. Lütfen sayfayı yenileyip tekrar deneyin."). `layout_top.php` (web) ve
+  `mobile/common.php` (mobil) her sayfaya meta+auto-inject JS ekliyor — mevcut formlara elle
+  dokunmadan `csrf_token` hidden input'u otomatik ekleniyor.
+- **AJAX desteği (FAZ-2)**: Tüm `fetch(...POST...)` çağrılarına `X-CSRF-Token` header eklendi;
+  FormData/JSON `Content-Type` davranışı bozulmadı.
+- **Aşamalı enforcement (FAZ-3A → FAZ-4F)**: Sırasıyla pilot (`users.php`, `sil.php`) → Bildirimler
+  (`notifications.php`, GET-tabanlı sil/clear POST'a çevrildi) → Finans/Muhasebe (`accounting.php`,
+  `finance.php`, `finance_accounts.php`, `checks_notes.php`, `kasa.php`) → Finans işlem ekranları
+  (`finance_new.php`, `finance_transfer.php`, `finance_account_view.php`, `payment.php`,
+  `collection.php`, `transfer.php`, `account_view.php`, `movement_view.php`) → Personel
+  (`personnel_new.php`, `personnel_edit.php`, `personnel_view.php`) → Kimlik/Sistem
+  (`sifre_sifirla.php`, `temizle_veri.php`) → Mali belge/Teklif (`trade_document_new.php`,
+  `teklif.php`, `quote_approve.php`, `public_file.php`) → WhatsApp (`wa_send_now.php`) → İş/Görev
+  (`job_view.php`, `task_view.php`, `work_view.php`). Toplam **29 enforced basename** (bazıları
+  web+mobil aynı isimli dosyayı otomatik kapsıyor, ör. `users.php` → `mobile/users.php`).
+- **Companion fix'ler** (token üretemeyen, girişsiz/bağımsız `<head>`'li sayfalara minimal
+  `csrf_field()` eklenmesi — UI/davranış değişikliği yok): `sifre_sifirla.php` (3 form),
+  `quote_approve.php`, `public_file.php`, `mobile/notification_view.php` (GET sil linki POST
+  forma çevrildi).
+- **IDOR/yetki modeline dokunulmadı**: `job_view.php`/`task_view.php` bilinçli olarak
+  `page_module_map()` dışında kalmaya devam ediyor (bildirimden açma tasarımı) — bu konu ayrı
+  **SECURITY SPRINT-009 / Privilege Escalation** veya Authorization Audit kapsamında ele alınacak.
+- **HIGH-RISK CSRF CHECKPOINT AUDIT: PASS** — enforced liste tutarlı, token üretemeyen sayfa
+  kalmadı, AJAX header'ları eksiksiz, geniş GET smoke testinde regresyon yok, orijinal yüksek-risk
+  sınıflandırmasının tamamı artık enforced. Kalan **orta/düşük risk grubu** (CRM, Stok/Ürün,
+  İş/Görev ana formları, Mesajlaşma/Talep, Satış/Satın Alma) henüz kapsam dışı — FAZ-5'te ele
+  alınacak.
+
+Checkpoint commit'ler: `7934805` (SPRINT-003 kapanışı), `90dffa7` (FAZ-4A checkpoint), `a32893c`
+(HIGH-RISK CSRF rollout checkpoint). Production'a (acanstr.com/ots) dokunulmadı.
+
+**Sıradaki faz: FAZ-5A — CRM grubu.** Kapsam: `contact_new.php`, `contact_view.php`.
+
 ## SECURITY SPRINT-003 — PASS (2026-07-05, yerel QA MODE ile doğrulandı)
 Kapsam: `sifre_sifirla.php` (şifre sıfırlama) brute-force + hedef seçimi kısıtsızlığı nedeniyle
 hesap ele geçirme riski. Sadece bu dosya ve yardımcı fonksiyonları değişti — login/session

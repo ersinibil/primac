@@ -5,19 +5,18 @@ hızlı giriş yapmak için var. Detay için ilgili dosyalara bakın (`CHANGELOG
 `KNOWN_BUGS.md`, `VERSIONING.md`, `memory/*.md`).
 
 ## Son Durum
-✅ **SECURITY SPRINT-003 PASS** (2026-07-05) — `sifre_sifirla.php` brute-force + rate-limit
-sertleştirmesi, yerel QA'da 8/8 senaryo PASS. Commit/push yapılmadı, production'a dokunulmadı.
-Detay → `CHANGELOG.md`, `KNOWN_BUGS.md` "Son Çözülenler", `VERSIONING.md` "Security Sprint Durumu".
+🔄 **SECURITY SPRINT-004 — DEVAM EDİYOR** (2026-07-05) — Merkezi CSRF Koruma Altyapısı. FAZ-1'den
+FAZ-4F'ye kadar tüm fazlar tamamlandı, **HIGH-RISK CSRF CHECKPOINT AUDIT: PASS**. Son checkpoint
+commit: `a32893c`. Sıradaki faz: **FAZ-5A — CRM grubu** (`contact_new.php`, `contact_view.php`).
+Detay → `CHANGELOG.md`, `VERSIONING.md` "Security Sprint Durumu", `ROADMAP.md` "Security Roadmap".
 
-**Sonraki Sprint: SECURITY SPRINT-004 — Merkezi CSRF Koruma Sistemi**
-Hedefler:
-- Merkezi CSRF helper (`boot.php` veya ayrı bir `csrf_lib.php`)
-- `boot.php` entegrasyonu
-- Token üretimi
-- Token doğrulama
-- Form helper (her POST formuna hidden input basan yardımcı fonksiyon)
-- AJAX desteği (`messages.php`/`job_view.php` gibi `fetch()` tabanlı uç noktalar için)
-- Tüm kritik POST endpointlerinin CSRF korumasına alınması
+✅ **SECURITY SPRINT-003 PASS** (2026-07-05) — `sifre_sifirla.php` brute-force + rate-limit
+sertleştirmesi, yerel QA'da 8/8 senaryo PASS. Detay → `CHANGELOG.md`, `KNOWN_BUGS.md` "Son
+Çözülenler", `VERSIONING.md` "Security Sprint Durumu".
+
+**Devam Eden Sprint: SECURITY SPRINT-004 — Sıradaki Faz: FAZ-5A (CRM)**
+Kapsam: `contact_new.php`, `contact_view.php` CSRF enforced listeye eklenecek (orta risk grubu).
+Tamamlanan fazlar (FAZ-1 → FAZ-4F) ve HIGH-RISK CHECKPOINT AUDIT detayı → `CHANGELOG.md`.
 
 Ayrıca açık **Security Technical Debt** (bug değil, mimari/deployment notu — bkz. `ROADMAP.md`):
 rate-limit'in uzun vadede `security_rate_limits`/`security_events` tablosuna taşınması,
@@ -53,9 +52,11 @@ push/DEV paketi/production adımına geçilmeyecek).
 1. **iPhone Safari gerçek cihaz testi** — Mobil Mesajlaşma (CONDITIONAL PASS) + PWA Push
    (SERVER-SIDE PASS) için tek eksik doğrulama. Test notları aşağıda.
 2. **SYSTEM AUDIT** — büyük sprint sonrası standart denetim.
-3. **SECURITY SPRINT-004** — Merkezi CSRF Koruma Altyapısı (SECURITY SPRINT-003 tamamlandı, PASS —
-   bkz. yukarı "Son Durum"). `KNOWN_BUGS.md`'de hâlâ açık, henüz sprint numarasına atanmamış diğer
-   bulgular: accounting.php XSS, users.php rol yükseltme, is_admin() bayatlığı, session fixation.
+3. **SECURITY SPRINT-004** — Merkezi CSRF Koruma Altyapısı, devam ediyor. FAZ-1→FAZ-4F tamamlandı,
+   HIGH-RISK CSRF CHECKPOINT AUDIT PASS (checkpoint `a32893c`). Sıradaki faz: FAZ-5A — CRM
+   (`contact_new.php`, `contact_view.php`). `KNOWN_BUGS.md`'de hâlâ açık, henüz sprint numarasına
+   atanmamış diğer bulgular: accounting.php XSS, users.php rol yükseltme, is_admin() bayatlığı,
+   session fixation.
 
 **Production'a deploy YAPILMAYACAK** — ayrı, açık bir "DEPLOY MODE" komutu gerekir.
 
@@ -92,8 +93,10 @@ veya push_lib.php/config.php) için ayrı, küçük bir düzeltme turu açılır
 commit olarak eklenir, üzerine yazılmaz.
 
 ## Devam Eden Sprint
-Yok (kod tarafında) — UX/STABILITY PATCH-002 DEV QA PASS ile kapandı, ama commit/push/DEV paketi
-adımı henüz atılmadı (bkz. yukarı). Bir sonraki oturum "Sıradaki sıra" listesiyle devam edecek.
+**SECURITY SPRINT-004 — Merkezi CSRF Koruma Altyapısı** (FAZ-1 → FAZ-4F tamamlandı, HIGH-RISK
+CSRF CHECKPOINT AUDIT PASS, checkpoint commit `a32893c`). Sıradaki faz: FAZ-5A — CRM
+(`contact_new.php`, `contact_view.php`). Ayrıca UX/STABILITY PATCH-002 DEV QA PASS ile kapandı,
+ama DEV paketi/production adımı henüz atılmadı (bkz. yukarı).
 
 ## Açık Kalan Hatalar
 (Tam liste → `KNOWN_BUGS.md`)
