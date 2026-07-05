@@ -55,12 +55,15 @@ netleştirildi — bkz. `ROADMAP.md` "Security Roadmap"):
   `session_regenerate_id(true)`. Session fixation riski kapandı.
   **FAZ-2 — Login CSRF Hardening: PASS** (2026-07-05, commit `f20e50d`) — SADECE `index.php`
   (boot.php'ye dokunulmadı), login formuna `csrf_field()` + POST'ta mevcut try/catch'e gömülü token
-  kontrolü (başarısızsa 403 DEĞİL, dost mesajla login ekranında kalır). Yerel `ots_sectest` QA'da
-  token'lı/token'sız/hatalı-token login, remember-me, `return_to`, logout — hepsi PASS, sıfır FAIL.
-  Login CSRF riski kapandı. Detay → `CHANGELOG.md`.
+  kontrolü (başarısızsa 403 DEĞİL, dost mesajla login ekranında kalır). Login CSRF riski kapandı.
+  **FAZ-3 — Login Brute-Force/Rate-Limit: PASS** (2026-07-05, commit `310882a`) — `index.php` +
+  `share_lib.php` (`rate_limit_blocked()`/`rate_limit_hit()`/`rate_limit_clear()`, ayrı
+  `login_ratelimit.json`), IP+kullanıcı adı bazında 10 dakikada 8 başarısız deneme eşiği. Yerel
+  `ots_sectest` QA'da limit dolana kadar normal hata, limit sonrası doğru şifre bile engelleniyor,
+  pencere dolunca giriş serbest, başarılı girişte sayaç temizleniyor, Remember-Me/`return_to`/Logout
+  bozulmadı — hepsi PASS, sıfır FAIL. Login brute-force koruması kapandı. Detay → `CHANGELOG.md`.
 
-  **Kalan önerilen fazlar (henüz başlanmadı, onay bekliyor)**: FAZ-3 — login brute-force/rate-limit
-  (password-reset'teki gibi ayrı bir mekanizma login'de yok), FAZ-4 — remember-me sertleştirme
+  **Kalan önerilen fazlar (henüz başlanmadı, onay bekliyor)**: FAZ-4 — remember-me sertleştirme
   (token rotasyonu yok; `remember_set()` cookie'sinde SameSite bayrağı yok), FAZ-5 —
   timing/enumeration inceliği (isteğe bağlı), FAZ-6 — FINAL AUDIT.
 

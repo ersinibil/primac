@@ -46,10 +46,14 @@ otomatik girişi sonrası `session_regenerate_id(true)`. Session fixation riski 
 CRITICAL risk yok.
 **SECURITY SPRINT-005 FAZ-2 — Login CSRF Hardening: PASS** (2026-07-05, commit `f20e50d`, GitHub'a
 push edildi) — SADECE `index.php` (boot.php'ye dokunulmadı), form'a `csrf_field()` + POST'ta mevcut
-try/catch'e gömülü token kontrolü (başarısızsa 403 değil, dost mesajla login ekranında kalır). Yerel
-`ots_sectest` QA'da token'lı/token'sız/hatalı-token login, remember-me, `return_to`, logout — hepsi
-PASS, sıfır FAIL. Login CSRF riski kapandı.
-**Sıradaki iş**: FAZ-3 — Login Rate Limit (önerilen kapsam `ROADMAP.md`'de — kullanıcı onayı
+try/catch'e gömülü token kontrolü (başarısızsa 403 değil, dost mesajla login ekranında kalır). Login
+CSRF riski kapandı.
+**SECURITY SPRINT-005 FAZ-3 — Login Brute-Force/Rate-Limit: PASS** (2026-07-05, commit `310882a`,
+GitHub'a push edildi) — `index.php` + `share_lib.php` (`rate_limit_blocked()`/`rate_limit_hit()`/
+`rate_limit_clear()`, ayrı `login_ratelimit.json`), IP+kullanıcı adı bazında 10 dk'da 8 başarısız
+deneme eşiği. Yerel QA'da tüm 10 test senaryosu + bonus (farklı kullanıcı aynı IP'den engellenmedi)
+PASS, sıfır FAIL. Login brute-force koruması kapandı.
+**Sıradaki iş**: FAZ-4 — Remember-Me Hardening (önerilen kapsam `ROADMAP.md`'de — kullanıcı onayı
 bekliyor, otomatik başlanmayacak). Ayrıca FAZ-5D'de bulunan yan bulgu:
 `requests.php`/`mobile/requests.php`'de CSRF ile ilgisiz bir schema-drift hatası (`manager_note` vs
 `response_note` kolon uyuşmazlığı, talep güncellemesi sessizce başarısız oluyor) — ayrı bir bug-fix
@@ -105,11 +109,12 @@ Production'a (acanstr.com/ots) henüz dokunulmadı — ayrı "DEPLOY MODE" komut
    `a68637a`, Mesajlaşma/Talep `48d943f`, Satış/Satın Alma `b4b2c9a`, Temizlik `7077a6d`), toplam
    57 enforced basename — proje genelinde `index.php` dışında POST-handling dosya kalmadı.
    **SECURITY SPRINT-005 — Login Hardening devam ediyor**: **FAZ-1 — Session Fixation Hardening
-   PASS** (commit `b973e01`), **FAZ-2 — Login CSRF Hardening PASS** (commit `f20e50d`). Sıradaki:
-   FAZ-3 — brute-force/rate-limit, FAZ-4 — remember-me sertleştirme, FAZ-5 — timing/enumeration,
-   FAZ-6 — FINAL AUDIT (hepsi önerilen kapsam `ROADMAP.md`'de, onay bekliyor, otomatik geçilmiyor).
-   `KNOWN_BUGS.md`'de hâlâ açık, henüz sprint numarasına atanmamış diğer bulgular: accounting.php
-   XSS, users.php rol yükseltme, is_admin() bayatlığı.
+   PASS** (commit `b973e01`), **FAZ-2 — Login CSRF Hardening PASS** (commit `f20e50d`), **FAZ-3 —
+   Login Brute-Force/Rate-Limit PASS** (commit `310882a`). Sıradaki: FAZ-4 — remember-me
+   sertleştirme, FAZ-5 — timing/enumeration, FAZ-6 — FINAL AUDIT (hepsi önerilen kapsam
+   `ROADMAP.md`'de, onay bekliyor, otomatik geçilmiyor). `KNOWN_BUGS.md`'de hâlâ açık, henüz sprint
+   numarasına atanmamış diğer bulgular: accounting.php XSS, users.php rol yükseltme, is_admin()
+   bayatlığı.
 
 **Production'a deploy YAPILMAYACAK** — ayrı, açık bir "DEPLOY MODE" komutu gerekir.
 
@@ -174,10 +179,11 @@ commit olarak eklenir, üzerine yazılmaz.
 
 ## Devam Eden Sprint
 **SECURITY SPRINT-005 — Login Hardening** devam ediyor. **FAZ-1 — Session Fixation Hardening: PASS**
-(commit `b973e01`), **FAZ-2 — Login CSRF Hardening: PASS** (commit `f20e50d`). Sıradaki: FAZ-3 —
-Login Rate Limit (onay bekliyor, bkz. `ROADMAP.md` "Security Roadmap"). Ayrıca UX/STABILITY
-PATCH-002 tamamlandı, commit edildi, GitHub'a push edildi; DEV (primac.tr) deploy edildi, migration
-çalıştırıldı, DEV aktif (bkz. yukarı).
+(commit `b973e01`), **FAZ-2 — Login CSRF Hardening: PASS** (commit `f20e50d`), **FAZ-3 — Login
+Brute-Force/Rate-Limit: PASS** (commit `310882a`). Sıradaki: FAZ-4 — Remember-Me Hardening (onay
+bekliyor, bkz. `ROADMAP.md` "Security Roadmap"). Ayrıca UX/STABILITY PATCH-002 tamamlandı, commit
+edildi, GitHub'a push edildi; DEV (primac.tr) deploy edildi, migration çalıştırıldı, DEV aktif
+(bkz. yukarı).
 
 ## Açık Kalan Hatalar
 (Tam liste → `KNOWN_BUGS.md`)

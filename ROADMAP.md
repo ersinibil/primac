@@ -28,8 +28,12 @@ Devam Ediyor:
     dokunulmadı), form'a `csrf_field()` + POST'ta mevcut try/catch'e gömülü token kontrolü
     (başarısızsa 403 değil, dost mesajla login ekranında kalır). Yerel QA'da token'lı/token'sız/
     hatalı-token login, remember-me, `return_to`, logout PASS, sıfır FAIL. Detay → `CHANGELOG.md`.
-  - 🔜 **FAZ-3 — Login brute-force/rate-limit** (şu an `index.php`'de yok, sadece
-    `sifre_sifirla.php`'de var — aynı `_rate_limit_hit()` deseni paylaşılabilir).
+  - ✅ **FAZ-3 — Login Brute-Force/Rate-Limit: PASS** (commit `310882a`) — `index.php` +
+    `share_lib.php` (yeni sistem YAZILMADI, `sifre_sifirla.php`'nin deseni check/hit/clear'a
+    ayrılarak genelleştirildi: `rate_limit_blocked()`/`rate_limit_hit()`/`rate_limit_clear()`, ayrı
+    `login_ratelimit.json`). IP+kullanıcı adı bazında 10 dk'da 8 başarısız deneme. Yerel QA'da limit
+    dolana kadar/dolunca/pencere sonrası/başarı-sonrası-temizlik/Remember-Me/`return_to`/Logout —
+    hepsi PASS, sıfır FAIL. Detay → `CHANGELOG.md`.
   - 🔜 **FAZ-4 — Remember-me sertleştirme** (token rotasyonu yok; `remember_set()`'in
     `setcookie('acans_remember', ...)` çağrısında SameSite bayrağı yok).
   - 🔜 **FAZ-5 — Timing/enumeration inceliği** (isteğe bağlı, LOW öncelik).

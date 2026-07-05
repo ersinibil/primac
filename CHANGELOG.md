@@ -3,6 +3,35 @@
 Bu dosya `memory/features.md`'nin (tam gerekçe/kod detayıyla) kök dizindeki kısa özetidir — hızlı
 taramak için. Detaylı "neden böyle yapıldı" analizleri için `memory/features.md`'ye bakın.
 
+## SECURITY SPRINT-005 FAZ-3 — Login Brute-Force/Rate-Limit: PASS (2026-07-05, commit `310882a`)
+Kapsam: `index.php` + `share_lib.php` (+ `.gitignore`'a 1 satır `login_ratelimit.json`). Yeni bir
+rate-limit sistemi YAZILMADI — `sifre_sifirla.php`'nin kanıtlanmış dosya-tabanlı/`flock`'lu/
+fail-open deseni `share_lib.php`'ye `rate_limit_blocked()`/`rate_limit_hit()`/`rate_limit_clear()`
+olarak genelleştirildi (check/hit/clear'a ayrıldı çünkü login SADECE başarısız denemeleri saymalı,
+başarılıda temizlemeli — `sifre_sifirla.php`'nin "her istek sayılır" modelinden farklı). Ayrı
+`login_ratelimit.json` dosyası kullanılıyor — `reset_ratelimit.json` ile ASLA karışmaz.
+Bucket anahtarı **IP+kullanıcı adı** (`$ip.'|'.strtolower($username)`) — eşik 10 dakikada 8
+başarısız deneme.
+
+Yerel `ots_sectest` + `php -S` + gerçek HTTP istekleriyle test edildi:
+- Tek doğru giriş: **PASS**.
+- Art arda 8 yanlış şifre denemesi: **PASS** — hepsi normal "Kullanıcı adı veya şifre hatalı" mesajı,
+  henüz engellenmedi.
+- 9. deneme (limit dolu): **PASS** — "Çok fazla başarısız giriş denemesi..." mesajı.
+- Limit süresince DOĞRU şifre bile: **PASS** — engellendi (kimlik doğrulamaya hiç geçilmedi,
+  hit sayısı artmadı).
+- Pencere süresi dolunca (timestamp'ler simüle edilerek): **PASS** — doğru şifreyle giriş başarılı.
+- Başarılı giriş sonrası sayaç temizlendi: **PASS** — dosyada bucket key silindi.
+- Remember-Me, `return_to`, Logout: **PASS** — hiçbiri bozulmadı (FAZ-1/FAZ-2 ile birlikte
+  regresyonsuz çalışıyor).
+- Bonus: aynı IP'den FARKLI kullanıcı adı engellenmedi (per-account anahtar doğrulandı, blanket
+  IP kilidi yok).
+- `php -l` 2/2 temiz. Server log'da hata yok. FAIL yok.
+
+**Sonuç**: Login brute-force koruması tamamlandı. Kalan riskler: remember-me token rotasyonu yok +
+`acans_remember` cookie'sinde SameSite bayrağı yok (MEDIUM, FAZ-4 kapsamı). Sıradaki önerilen faz:
+**FAZ-4 — Remember-Me Hardening**. Kullanıcı onayı bekliyor, otomatik geçilmedi.
+
 ## SECURITY SPRINT-005 FAZ-2 — Login CSRF Hardening: PASS (2026-07-05, commit `f20e50d`)
 Kapsam: SADECE `index.php` login formu CSRF'i. `boot.php`'ye dokunulmadı (mevcut `csrf_token()`/
 `csrf_field()`/`hash_equals` yeniden kullanıldı, yeni fonksiyon eklenmedi). Login formuna
