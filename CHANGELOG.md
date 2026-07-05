@@ -3,6 +3,36 @@
 Bu dosya `memory/features.md`'nin (tam gerekçe/kod detayıyla) kök dizindeki kısa özetidir — hızlı
 taramak için. Detaylı "neden böyle yapıldı" analizleri için `memory/features.md`'ye bakın.
 
+## SECURITY SPRINT-005 — FINAL AUDIT: PASS — Sprint Resmen Kapandı (2026-07-05)
+Kapsam: Login Hardening — `index.php` login formu + `boot.php`'deki oturum/remember-me altyapısı.
+4 faz, **sıfır FAIL**, sadece `index.php`/`boot.php`/`share_lib.php`/`.gitignore` değişti (başka
+hiçbir modüle dokunulmadı):
+
+- **FAZ-1 — Session Fixation Hardening: PASS** (`b973e01`) — `index.php` login sonrası +
+  `boot.php` `remember_check()` sonrası `session_regenerate_id(true)`.
+- **FAZ-2 — Login CSRF Hardening: PASS** (`f20e50d`) — SADECE `index.php`, form'a `csrf_field()` +
+  mevcut try/catch'e gömülü token kontrolü (403 yerine dost mesajla login ekranında kalma).
+- **FAZ-3 — Login Brute-Force/Rate-Limit: PASS** (`310882a`) — `index.php` + `share_lib.php`
+  (`rate_limit_blocked()`/`rate_limit_hit()`/`rate_limit_clear()`, ayrı `login_ratelimit.json`),
+  IP+kullanıcı adı bazında 10 dk'da 8 başarısız deneme.
+- **FAZ-4 — Remember-Me Hardening: PASS** (`dc92a6e`) — SADECE `boot.php`, token rotasyonu (her
+  otomatik girişte eski token geçersiz) + `acans_remember`'a `SameSite=Lax` (path-hack'in modern
+  PHP'de `setcookie()` ValueError'ına çarptığı bulundu, ham `Set-Cookie` header'ı `header()` ile
+  elle oluşturuldu — hem PHP 7.2 hem 8.x'te doğrulandı).
+- **FAZ-5 — Timing/Enumeration: bilinçli olarak UYGULANMADI** (kullanıcı kararı, 2026-07-05) — LOW
+  risk, ürün güvenliği açısından kritik değil, gereksiz regresyon riski istenmedi.
+
+**FINAL AUDIT** (2026-07-05, kod değiştirilmeden, yerel `ots_sectest` + gerçek HTTP ile bağımsız
+yeniden doğrulama): Session Fixation, Login CSRF, Brute-Force/Rate-Limit, Remember-Me Rotation,
+Remember-Me SameSite, session davranışı, logout, `return_to`, genel remember-me — **10/10 PASS**,
+regresyon YOK (6 GET ekranı 200/200, `php -l` 3/3 temiz, server log'da hata/uyarı yok). FAZ-2/3/4'ün
+aynı dosyalar üzerindeki üst üste binen değişiklikleri birbirini bozmadı.
+
+**Sonuç: PASS.** Login formu artık CSRF korumalı ve hız sınırlı; oturum kimliği kimlik doğrulama
+sonrası her zaman yenileniyor; remember-me token'ları tek kullanımlık (rotasyonlu) ve
+`SameSite=Lax` ile korunuyor. Detay → `VERSIONING.md` "Security Sprint Durumu", `ROADMAP.md`
+"Security Roadmap".
+
 ## SECURITY SPRINT-005 FAZ-4 — Remember-Me Hardening: PASS (2026-07-05, commit `dc92a6e`)
 Kapsam: SADECE `boot.php` (`share_lib.php`'ye dokunulmadı, gerek kalmadı — remember-me fonksiyonları
 zaten `boot.php`'de). Yeni bir remember-me tablo mimarisi kurulmadı, tek-cihaz/tek-token davranışı

@@ -49,7 +49,7 @@ netleştirildi — bkz. `ROADMAP.md` "Security Roadmap"):
   kalmadı (57/57, fark sıfır). `index.php` login CSRF'i kullanıcı onayıyla bilinçli olarak
   **SECURITY SPRINT-005**'e (Login Hardening) devredildi — bkz. aşağı ve `ROADMAP.md` "Security
   Roadmap". Detay → `CHANGELOG.md` "SECURITY SPRINT-004 — FINAL AUDIT".
-- 🔄 **SECURITY SPRINT-005 — Login Hardening (devam ediyor).**
+- ✅ **SECURITY SPRINT-005 — Login Hardening — TAMAMLANDI (FINAL AUDIT: PASS, 2026-07-05).**
   **FAZ-1 — Session Fixation Hardening: PASS** (2026-07-05, commit `b973e01`) — `index.php` login
   sonrası + `boot.php` `remember_check()` remember-me otomatik girişi sonrası
   `session_regenerate_id(true)`. Session fixation riski kapandı.
@@ -67,9 +67,14 @@ netleştirildi — bkz. `ROADMAP.md` "Security Roadmap"):
   7.2 hem 8.x'te doğrulandı). Yerel `ots_sectest` QA'da rotasyon, eski-token-reddi, yeni-token-ile-
   giriş, logout temizliği, normal login/rate-limit/CSRF regresyonu — hepsi PASS, sıfır FAIL. Statik
   remember-me token riski kapandı. Detay → `CHANGELOG.md`.
+  **FAZ-5 — Timing/Enumeration: bilinçli olarak UYGULANMADI** (kullanıcı kararı, 2026-07-05 — LOW
+  risk, kritik değil, gereksiz regresyon riski istenmedi).
 
-  **Kalan önerilen fazlar (henüz başlanmadı, onay bekliyor)**: FAZ-5 — timing/enumeration inceliği
-  (isteğe bağlı, LOW öncelik), FAZ-6 — FINAL AUDIT.
+  **FINAL AUDIT: PASS** (2026-07-05, kod değiştirilmeden bağımsız yeniden doğrulama) — 10/10 madde
+  PASS (Session Fixation, Login CSRF, Rate Limit, Remember-Me Rotation, Remember-Me SameSite,
+  session davranışı, logout, `return_to`, genel remember-me, regresyon taraması), sıfır FAIL, sıfır
+  regresyon. FAZ-2/3/4'ün aynı dosyalar üzerindeki üst üste binen değişiklikleri birbirini bozmadı.
+  Detay → `CHANGELOG.md` "SECURITY SPRINT-005 — FINAL AUDIT".
 
 ## Current Development Version
 **v1.1.0-dev** (primac.tr) — ortam ayrımından SONRAKİ ilk geliştirme turu

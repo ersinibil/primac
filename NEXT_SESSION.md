@@ -6,63 +6,32 @@ hızlı giriş yapmak için var. Detay için ilgili dosyalara bakın (`CHANGELOG
 
 ## Son Durum
 ✅ **SECURITY SPRINT-004 — TAMAMLANDI (FINAL AUDIT: PASS, 2026-07-05)** — Merkezi CSRF Koruma
-Altyapısı. FAZ-1'den FAZ-4F'ye kadar tüm fazlar tamamlandı, **HIGH-RISK CSRF CHECKPOINT AUDIT:
-PASS**. **FAZ-5A — CRM grubu PASS** (commit `4708cd6`). **FAZ-5B — Stok/Ürün grubu PASS** (commit
-`ae8116a`). **FAZ-5C — İş/Görev grubu PASS** (commit `a68637a`). **FAZ-5D — Mesajlaşma/Talep grubu
-PASS** (commit `48d943f`). **FAZ-5E — Satış/Satın Alma grubu PASS** (commit `b4b2c9a`). **FAZ-5F —
-"Temizlik" grubu PASS** (`accounting_categories.php`, `check_note_view.php`, `report.php`,
-`ajax_quick_add.php`, `wa_settings.php`, commit `7077a6d`, GitHub'a push edildi).
-**Toplam enforced basename: 57. 15 commit, 15 modül/işlevsel grup, sıfır FAIL, sıfır regresyon.**
+Altyapısı, 57 enforced basename, 15 commit, sıfır FAIL. `index.php` (login) kullanıcı onayıyla
+SECURITY SPRINT-005'e taşınmıştı. Detay → `CHANGELOG.md` "SECURITY SPRINT-004 — FINAL AUDIT".
 
-**FINAL AUDIT'te proje genelinde tam POST-dosya taraması tekrarlandı** — `index.php` (login)
-DIŞINDA hiçbir POST-handling dosya enforced liste dışında kalmadı (57/57, fark sıfır). `index.php`
-kullanıcı onayıyla (2026-07-05) bilinçli olarak **SECURITY SPRINT-005 — Login Hardening**'e
-taşındı (login CSRF + session fixation + session rotation + cookie hardening + remember-me
-incelemesi + login brute-force/rate-limit, TEK fazda birlikte — kullanıcı onayı bekliyor, henüz
-başlanmadı). Detay → `CHANGELOG.md` "SECURITY SPRINT-004 — FINAL AUDIT", `VERSIONING.md` "Security
-Sprint Durumu", `ROADMAP.md` "Security Roadmap".
+✅ **SECURITY SPRINT-005 — Login Hardening — TAMAMLANDI (FINAL AUDIT: PASS, 2026-07-05)** — 4 faz,
+sıfır FAIL: **FAZ-1 Session Fixation** (`b973e01`), **FAZ-2 Login CSRF** (`f20e50d`), **FAZ-3
+Brute-Force/Rate-Limit** (`310882a`), **FAZ-4 Remember-Me Hardening** (`dc92a6e`). FAZ-5
+(Timing/Enumeration) kullanıcı kararıyla bilinçli olarak uygulanmadı (LOW risk). FINAL AUDIT'te
+10/10 madde kod değiştirilmeden bağımsız yeniden doğrulandı, sıfır regresyon. `index.php` artık
+CSRF korumalı + hız sınırlı; oturum kimliği kimlik doğrulama sonrası her zaman yenileniyor;
+remember-me token'ları rotasyonlu + `SameSite=Lax`. Detay → `CHANGELOG.md` "SECURITY SPRINT-005 —
+FINAL AUDIT", `VERSIONING.md` "Security Sprint Durumu", `ROADMAP.md` "Security Roadmap".
 
-**Bu turda ayrıca**: UX/STABILITY PATCH-003 (Takvim günlük filtre) incelendi — **kod değişikliği
-YOK**, primac.tr'nin muhtemelen `dd35352` (asıl düzeltme) öncesi `d7c593a` referans sürümünde
-kalmış olması (deploy açığı) kök neden olarak tespit edildi, doğrulanması için yeni bir "DEV
-PACKAGE MODE" turu gerekiyor. UX/STABILITY PATCH-004 (Son İşlemler route/activity-target-resolver)
-**PASS, commit `dff59d5`, GitHub'a push edildi** — merkezi `activity_target_url()` resolver'ı
-eklendi, çapraz-platform yönlendirme + silinmiş kayıt fallback düzeltildi. İki yeni açık borç
-`ROADMAP.md`'ye eklendi: Satış/Satın Alma detay ekranı yok (yeni özellik), `trade_document_view.php`
-mobil parite açığı. Detay → `CHANGELOG.md`, `VERSIONING.md`.
+**Aktif gündem — REOPEN Backlog** (bkz. aşağı "REOPEN Listesi", öncelik sırası sabit): güvenlik
+sprintleri bitti, artık yeni ürün geliştirmesine geçilmeyecek, önce şu üç iş sırayla ele alınacak:
+**REOPEN-001 (Takvim Günlük Filtre) → REOPEN-002 (Son İşlemler Route Resolver) → REOPEN-003
+(WhatsApp Conversation)**. Hiçbiri henüz başlanmadı — kullanıcı onayı bekliyor.
 
-**WhatsApp Conversation/Inbound MVP: PASS** (2026-07-05, commit `dae3e62`, GitHub'a push edildi) —
-migration `041_whatsapp_conversations.sql`, inbound webhook `wa_webhook.php` (DB'de saklanan
-rastgele `?key=`), sender-scope allowlist mimarisi (bugün sadece `wa_send_now.php` conversation
-history'ye yazıyor — OTP/sistem mesajları hariç, `git diff` ile doğrulandı), web+mobil konuşma
-ekranları, `contact_view.php` entegrasyonu. 7 açık teknik borç `ROADMAP.md`'ye eklendi (outbound
-provider_message_id, gelen medya indirme, çoklu-cari-aynı-telefon, konuşma arama, teslim/okunma
-senkronizasyonu, attachment desteği, gerçek-zamanlı güncelleme) — hiçbiri onay olmadan
-uygulanmayacak. Detay → `CHANGELOG.md`, `VERSIONING.md`.
+**Bu oturumda ayrıca tamamlanan işler** (detay → `CHANGELOG.md`/`VERSIONING.md`): UX/STABILITY
+PATCH-003 (Takvim filtre — kod değişikliği yok, deploy açığı bulundu, sonradan REOPEN-001 olarak
+yeniden açıldı), UX/STABILITY PATCH-004 (Son İşlemler resolver, commit `dff59d5` — sonradan
+REOPEN-002 olarak yeniden açıldı), WhatsApp Conversation/Inbound MVP (commit `dae3e62` — sonradan
+REOPEN-003 olarak yeniden açıldı, 7 teknik borç maddesi `ROADMAP.md`'de).
 
-**SECURITY SPRINT-005 FAZ-1 — Session Fixation Hardening: PASS** (2026-07-05, commit `b973e01`,
-GitHub'a push edildi) — `index.php` login sonrası + `boot.php` `remember_check()` remember-me
-otomatik girişi sonrası `session_regenerate_id(true)`. Session fixation riski kapandı, kalan
-CRITICAL risk yok.
-**SECURITY SPRINT-005 FAZ-2 — Login CSRF Hardening: PASS** (2026-07-05, commit `f20e50d`, GitHub'a
-push edildi) — SADECE `index.php` (boot.php'ye dokunulmadı), form'a `csrf_field()` + POST'ta mevcut
-try/catch'e gömülü token kontrolü (başarısızsa 403 değil, dost mesajla login ekranında kalır). Login
-CSRF riski kapandı.
-**SECURITY SPRINT-005 FAZ-3 — Login Brute-Force/Rate-Limit: PASS** (2026-07-05, commit `310882a`,
-GitHub'a push edildi) — `index.php` + `share_lib.php` (`rate_limit_blocked()`/`rate_limit_hit()`/
-`rate_limit_clear()`, ayrı `login_ratelimit.json`), IP+kullanıcı adı bazında 10 dk'da 8 başarısız
-deneme eşiği. Login brute-force koruması kapandı.
-**SECURITY SPRINT-005 FAZ-4 — Remember-Me Hardening: PASS** (2026-07-05, commit `dc92a6e`, GitHub'a
-push edildi) — SADECE `boot.php`. Token rotasyonu (her otomatik girişte eski token geçersiz olur) +
-`acans_remember`'a `SameSite=Lax` (path-hack'in modern PHP'de `setcookie()` ValueError'ına çarptığı
-bulundu, ham `Set-Cookie` header'ı `header()` ile elle oluşturuldu — PHP 7.2+8.x'te doğrulandı).
-Yerel QA'da 11 test senaryosunun tamamı PASS, sıfır FAIL. Statik remember-me token riski kapandı.
-**Sıradaki iş**: FAZ-5 — Timing/Enumeration (isteğe bağlı) veya FAZ-6 — FINAL AUDIT (önerilen kapsam
-`ROADMAP.md`'de — kullanıcı onayı bekliyor, otomatik başlanmayacak). Ayrıca FAZ-5D'de bulunan yan
-bulgu:
-`requests.php`/`mobile/requests.php`'de CSRF ile ilgisiz bir schema-drift hatası (`manager_note` vs
-`response_note` kolon uyuşmazlığı, talep güncellemesi sessizce başarısız oluyor) — ayrı bir bug-fix
-turu gerektiriyor, `ROADMAP.md`'ye eklendi.
+**Açık, CSRF ile ilgisiz yan bulgu**: `requests.php`/`mobile/requests.php`'de schema-drift hatası
+(`manager_note` vs `response_note` kolon uyuşmazlığı, talep güncellemesi sessizce başarısız oluyor)
+— ayrı bir bug-fix turu gerektiriyor, `ROADMAP.md`'ye eklendi.
 
 ✅ **SECURITY SPRINT-003 PASS** (2026-07-05) — `sifre_sifirla.php` brute-force + rate-limit
 sertleştirmesi, yerel QA'da 8/8 senaryo PASS. Detay → `CHANGELOG.md`, `KNOWN_BUGS.md` "Son
@@ -74,8 +43,8 @@ FAZ-5B (Stok/Ürün) PASS commit `ae8116a`, FAZ-5C (İş/Görev) PASS commit `a6
 ("Temizlik" grubu) PASS commit `7077a6d`. Toplam enforced basename: 57 — `index.php` DIŞINDA proje
 genelinde enforced olmayan POST dosyası kalmadı (FINAL AUDIT'te tam tarama tekrarlandı, sonuç
 aynı). Tamamlanan fazlar (FAZ-1 → FAZ-4F, FAZ-5A→5F), HIGH-RISK CHECKPOINT AUDIT ve FINAL AUDIT
-detayı → `CHANGELOG.md`. **Sıradaki: SECURITY SPRINT-005 — Login Hardening (önerilen kapsam hazır,
-onay bekliyor).**
+detayı → `CHANGELOG.md`. **SECURITY SPRINT-005 — Login Hardening de TAMAMLANDI** (bkz. yukarı "Son
+Durum"). **Sıradaki: REOPEN Backlog** (REOPEN-001 → REOPEN-002 → REOPEN-003, bkz. "REOPEN Listesi").
 
 Ayrıca açık **Security Technical Debt** (bug değil, mimari/deployment notu — bkz. `ROADMAP.md`):
 rate-limit'in uzun vadede `security_rate_limits`/`security_events` tablosuna taşınması,
@@ -109,24 +78,19 @@ Production'a (acanstr.com/ots) henüz dokunulmadı — ayrı "DEPLOY MODE" komut
 1. **iPhone Safari gerçek cihaz testi** — Mobil Mesajlaşma (CONDITIONAL PASS) + PWA Push
    (SERVER-SIDE PASS) için tek eksik doğrulama. Test notları aşağıda.
 2. **SYSTEM AUDIT** — büyük sprint sonrası standart denetim.
-3. ~~**SECURITY SPRINT-004**~~ — **TAMAMLANDI (FINAL AUDIT: PASS, 2026-07-05)**. Merkezi CSRF
-   Koruma Altyapısı, FAZ-1→FAZ-4F + FAZ-5A→5F (CRM `4708cd6`, Stok/Ürün `ae8116a`, İş/Görev
-   `a68637a`, Mesajlaşma/Talep `48d943f`, Satış/Satın Alma `b4b2c9a`, Temizlik `7077a6d`), toplam
-   57 enforced basename — proje genelinde `index.php` dışında POST-handling dosya kalmadı.
-   **SECURITY SPRINT-005 — Login Hardening devam ediyor**: **FAZ-1 — Session Fixation Hardening
-   PASS** (commit `b973e01`), **FAZ-2 — Login CSRF Hardening PASS** (commit `f20e50d`), **FAZ-3 —
-   Login Brute-Force/Rate-Limit PASS** (commit `310882a`), **FAZ-4 — Remember-Me Hardening PASS**
-   (commit `dc92a6e`). Sıradaki: FAZ-5 — timing/enumeration (isteğe bağlı) veya FAZ-6 — FINAL AUDIT
-   (önerilen kapsam `ROADMAP.md`'de, onay bekliyor, otomatik geçilmiyor). `KNOWN_BUGS.md`'de hâlâ
-   açık, henüz sprint numarasına atanmamış diğer bulgular: accounting.php XSS, users.php rol
-   yükseltme, is_admin() bayatlığı.
+3. ~~**SECURITY SPRINT-004**~~ ve ~~**SECURITY SPRINT-005**~~ — **İKİSİ DE TAMAMLANDI** (FINAL
+   AUDIT: PASS, sırasıyla 2026-07-05). SPRINT-004: Merkezi CSRF Koruma Altyapısı, 57 enforced
+   basename. SPRINT-005: Login Hardening, 4 faz (`b973e01`/`f20e50d`/`310882a`/`dc92a6e`), FAZ-5
+   bilinçli atlandı. Detay → `CHANGELOG.md`. `KNOWN_BUGS.md`'de hâlâ açık, henüz sprint numarasına
+   atanmamış diğer bulgular: accounting.php XSS, users.php rol yükseltme, is_admin() bayatlığı —
+   şimdilik ele alınmayacak (aktif gündem REOPEN backlog'u, aşağıya bakın).
 
 **Production'a deploy YAPILMAYACAK** — ayrı, açık bir "DEPLOY MODE" komutu gerekir.
 
-## REOPEN Listesi — SECURITY SPRINT-005 tamamlanmadan başlanmayacak (2026-07-05'te netleştirildi)
-Kullanıcı gerçek kullanım testinde 3 önceki "PASS" bulguyu FAILED/REOPEN olarak işaretledi — bu
-üçü SECURITY SPRINT-005 bitene kadar **dokunulmayacak**, sonra sıfırdan yeni kabul kriterleriyle
-tekrar açılacak:
+## REOPEN Listesi — ŞİMDİ AKTİF GÜNDEM (SECURITY SPRINT-005 2026-07-06'da resmen kapandı)
+Kullanıcı gerçek kullanım testinde 3 önceki "PASS" bulguyu FAILED/REOPEN olarak işaretlemişti; hem
+SECURITY SPRINT-004 hem SPRINT-005 artık TAMAMLANDI, bu yüzden bu üç iş **şimdi aktif gündem** —
+sırayla, sıfırdan yeni kabul kriterleriyle ele alınacak:
 - **REOPEN-001 — Takvim Günlük Filtre**: seçilen gün dışındaki günlerin not/görevleri de görünmeye
   devam ediyor (PATCH-003'ün "kod değişikliği yok, deploy açığı" bulgusu kullanıcı testinde
   doğrulanmadı — gerçek kök neden hâlâ açık).
@@ -144,11 +108,12 @@ tekrar açılacak:
   gelen cevaplar ekranda görünmüyor (webhook/DB/sorgu zincirinin neresinde koptuğu bu oturumda analiz
   EDİLMEDİ — kullanıcı SPRINT-005 önceliğini koyunca durduruldu).
 
-**Öncelik sırası (kullanıcı tarafından netleştirildi, 2026-07-05)**: SECURITY SPRINT-005 → REOPEN-001
-→ REOPEN-002 → REOPEN-003 → Dashboard 2.0 → Calendar 2.0 → CRM 2.0 → Purchase & Sales 2.0 → UX
-Polish → Performance → Mobile Experience → System Audit → Release Candidate. Detay ve çalışma
-felsefesi ("Evolution not Revolution", REOPEN durum makinesi: OPEN→IN PROGRESS→USER TEST→PASS/REOPEN)
-→ `memory/feedback_evolution_not_revolution.md`.
+**Öncelik sırası (kullanıcı tarafından netleştirildi, 2026-07-05, değişmedi)**: ~~SECURITY
+SPRINT-005~~ (tamamlandı) → **REOPEN-001 (sıradaki iş)** → REOPEN-002 → REOPEN-003 → Dashboard 2.0
+→ Calendar 2.0 → CRM 2.0 → Purchase & Sales 2.0 → UX Polish → Performance → Mobile Experience →
+System Audit → Release Candidate. Bu üç REOPEN işi tamamlanmadan yeni ürün geliştirmesine
+geçilmeyecek. Detay ve çalışma felsefesi ("Evolution not Revolution", REOPEN durum makinesi:
+OPEN→IN PROGRESS→USER TEST→PASS/REOPEN) → `memory/feedback_evolution_not_revolution.md`.
 
 ## iOS Safari Gerçek Cihaz Test Notları (bir sonraki oturumun 1. maddesi)
 Bu iki madde SADECE gerçek bir iPhone + Safari ile doğrulanabilir, yerel ortamda (curl/php -S)
@@ -183,13 +148,10 @@ veya push_lib.php/config.php) için ayrı, küçük bir düzeltme turu açılır
 commit olarak eklenir, üzerine yazılmaz.
 
 ## Devam Eden Sprint
-**SECURITY SPRINT-005 — Login Hardening** devam ediyor. **FAZ-1 — Session Fixation Hardening: PASS**
-(commit `b973e01`), **FAZ-2 — Login CSRF Hardening: PASS** (commit `f20e50d`), **FAZ-3 — Login
-Brute-Force/Rate-Limit: PASS** (commit `310882a`), **FAZ-4 — Remember-Me Hardening: PASS** (commit
-`dc92a6e`). Sıradaki: FAZ-5 — Timing/Enumeration (isteğe bağlı) veya FAZ-6 — FINAL AUDIT (onay
-bekliyor, bkz. `ROADMAP.md` "Security Roadmap"). Ayrıca UX/STABILITY PATCH-002 tamamlandı, commit
-edildi, GitHub'a push edildi; DEV (primac.tr) deploy edildi, migration çalıştırıldı, DEV aktif
-(bkz. yukarı).
+Şu an devam eden bir güvenlik sprint'i yok — **SECURITY SPRINT-004 ve SPRINT-005 ikisi de
+TAMAMLANDI** (bkz. yukarı "Son Durum"). Aktif gündem: **REOPEN Backlog** (REOPEN-001 → REOPEN-002 →
+REOPEN-003, bkz. "REOPEN Listesi"). Ayrıca UX/STABILITY PATCH-002 tamamlandı, commit edildi,
+GitHub'a push edildi; DEV (primac.tr) deploy edildi, migration çalıştırıldı, DEV aktif (bkz. yukarı).
 
 ## Açık Kalan Hatalar
 (Tam liste → `KNOWN_BUGS.md`)

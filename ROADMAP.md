@@ -15,11 +15,18 @@ Tamamlandı:
   2026-07-05).** 57 enforced basename, 15 commit, 15 modül/işlevsel grup, sıfır FAIL, sıfır
   regresyon. `index.php` (login) kullanıcı onayıyla SECURITY SPRINT-005'e taşındı. Detay →
   `CHANGELOG.md` "SECURITY SPRINT-004 — FINAL AUDIT".
+- ✅ **SECURITY SPRINT-005 — Login Hardening — TAMAMLANDI (FINAL AUDIT: PASS, 2026-07-05).** 4 faz
+  (Session Fixation, Login CSRF, Brute-Force/Rate-Limit, Remember-Me Hardening), sıfır FAIL; FAZ-5
+  (Timing/Enumeration) kullanıcı kararıyla bilinçli olarak uygulanmadı (LOW risk). FINAL AUDIT'te
+  10/10 madde bağımsız olarak yeniden doğrulandı, regresyon yok. Detay → `CHANGELOG.md`
+  "SECURITY SPRINT-005 — FINAL AUDIT".
 
 Devam Ediyor:
-- 🔄 **SECURITY SPRINT-005 — Login Hardening.** Kapsam sonradan (2026-07-05) kademeli fazlara
-  bölündü (tek fazda toplu yapma kararından vazgeçildi — session fixation'ın izole, düşük
-  blast-radius bir değişiklik olduğu görülünce önce o kapatıldı):
+- (yok — hem SPRINT-004 hem SPRINT-005 tamamlandı. Aktif gündem artık REOPEN backlog'u — bkz.
+  `NEXT_SESSION.md` "REOPEN Listesi": REOPEN-001 Calendar → REOPEN-002 Recent Activity →
+  REOPEN-003 WhatsApp. Bu üçü tamamlanmadan yeni ürün geliştirmesine geçilmeyecek.)
+
+Arşiv (tamamlanmış fazların detayı, referans için korunuyor):
   - ✅ **FAZ-1 — Session Fixation Hardening: PASS** (commit `b973e01`) — `index.php` login sonrası +
     `boot.php` `remember_check()` sonrası `session_regenerate_id(true)`. Yerel QA'da normal login,
     remember-me, logout, `return_to`, çoklu-sekme senaryoları PASS, sıfır FAIL. Detay →
@@ -40,9 +47,10 @@ Devam Ediyor:
     ValueError'ına çarptığı için ham `Set-Cookie` header'ı `header()` ile elle oluşturuldu, hem
     PHP 7.2 hem 8.x doğrulandı). Yerel QA'da rotasyon/eski-token-reddi/yeni-token/logout/
     normal-login/rate-limit/CSRF regresyonu — hepsi PASS, sıfır FAIL. Detay → `CHANGELOG.md`.
-  - 🔜 **FAZ-5 — Timing/enumeration inceliği** (isteğe bağlı, LOW öncelik).
-  - 🔜 **FAZ-6 — FINAL AUDIT**.
-  Her faz kullanıcı onayı ile tek tek açılıyor, otomatik geçilmiyor.
+  - ⬜ **FAZ-5 — Timing/enumeration inceliği** — kullanıcı kararıyla bilinçli olarak
+    UYGULANMADI (LOW risk, kritik değil, gereksiz regresyon riski istenmedi, 2026-07-05).
+  - ✅ **FAZ-6 — FINAL AUDIT: PASS** (2026-07-05, kod değiştirilmeden) — 10/10 madde bağımsız
+    yeniden doğrulandı, sıfır FAIL, sıfır regresyon. Detay → `CHANGELOG.md`.
 
 ## Arşiv — SECURITY SPRINT-004 faz detayı (tamamlandı, referans için korunuyor)
 FAZ-1 → FAZ-4F tamamlandı, **HIGH-RISK CSRF CHECKPOINT AUDIT: PASS** (checkpoint commit `a32893c`).
