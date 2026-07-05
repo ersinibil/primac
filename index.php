@@ -10,6 +10,15 @@ if(!empty($_SESSION['user'])){
 
 if($_SERVER['REQUEST_METHOD']==='POST'){
     try{
+        // SECURITY SPRINT-005 FAZ-2: login CSRF koruması. layout_top.php'den geçmediği için
+        // otomatik enforced-liste/csrf_verify() (403 sayfası) YERİNE, mevcut try/catch akışına
+        // gömülü bu kontrol kullanılıyor — başarısızsa kullanıcı normal login ekranında,
+        // dost bir hata mesajıyla kalıyor (aşağıdaki catch bloğu zaten bunu yapıyor).
+        $csrfToken = $_POST['csrf_token'] ?? '';
+        if(empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], (string)$csrfToken)){
+            throw new Exception('Güvenlik doğrulaması başarısız. Lütfen sayfayı yenileyip tekrar deneyin.');
+        }
+
         $username=trim($_POST['username'] ?? '');
         $password=$_POST['password'] ?? '';
 
@@ -80,6 +89,7 @@ button{width:100%;border:0;border-radius:14px;background:#111827;color:white;pad
 <div class="muted">Online Takip ve Yönetim Sistemi</div>
 <?php if($error): ?><div class="alert"><?=h($error)?></div><?php endif; ?>
 <form method="post">
+<?=csrf_field()?>
 <label>Kullanıcı Adı</label>
 <input name="username" required autofocus placeholder="ersin">
 <label>Şifre</label>
