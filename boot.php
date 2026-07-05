@@ -343,7 +343,18 @@ function remember_set($userId){
         remember_install();
         $token=bin2hex(random_bytes(32));
         db()->prepare("UPDATE app_users SET remember_token=? WHERE id=?")->execute([hash('sha256',$token),$userId]);
-        setcookie('acans_remember', $userId.':'.$token, time()+60*60*24*30, '/', '', !empty($_SERVER['HTTPS']), true);
+        // SECURITY SPRINT-005 FAZ-4: SameSite=Lax eklendi. PHP 7.2'nin setcookie() imzası SameSite
+        // desteklemiyor; yaygın "path hack"i (path'e ';samesite=' eklemek) PHP 7.3+'ta setcookie()'nin
+        // path içinde ';' gibi karakterleri ValueError ile reddetmesiyle artık güvenilir değil — bu
+        // yüzden ham Set-Cookie header'ı, native setcookie()'nin ürettiğiyle birebir aynı
+        // isim/değer/expiry/Max-Age/Path/HttpOnly/Secure'a ek olarak SameSite=Lax ile elle
+        // oluşturuluyor. Hem PHP 7.2 hem 8.x'te aynı şekilde çalışır (doğrulandı).
+        $__exp = time()+60*60*24*30;
+        $__secure = !empty($_SERVER['HTTPS']) ? '; Secure' : '';
+        header('Set-Cookie: acans_remember='.urlencode($userId.':'.$token)
+            .'; Expires='.gmdate('D, d-M-Y H:i:s', $__exp).' GMT'
+            .'; Max-Age='.(60*60*24*30)
+            .'; Path=/; HttpOnly'.$__secure.'; SameSite=Lax', false);
     }catch(Throwable $e){}
 }
 function remember_clear(){
@@ -366,6 +377,10 @@ function remember_check(){
             // SECURITY SPRINT-005 FAZ-1: remember-me ile otomatik girişte de kimlik doğrulandıktan
             // hemen sonra session id yenilenir (session fixation koruması).
             session_regenerate_id(true);
+            // SECURITY SPRINT-005 FAZ-4: token rotasyonu — bu istekte kullanılan remember-me token
+            // ARTIK GEÇERSİZ; remember_set() yeni bir token üretip DB+cookie'yi günceller (aynı
+            // fonksiyon normal login'de de kullanılıyor, kod tekrarı yok).
+            remember_set($u['id']);
         }
     }catch(Throwable $e){}
 }
