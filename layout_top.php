@@ -20,6 +20,19 @@ $cur = basename($_SERVER['SCRIPT_NAME']);
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title><?=htmlspecialchars(app_config()['app_name'] ?? 'OTS')?> — Online Takip Sistemi</title>
+<meta name="csrf-token" content="<?=h(csrf_token())?>">
+<script>
+window.CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]').content;
+document.addEventListener('DOMContentLoaded', function(){
+  document.querySelectorAll('form').forEach(function(f){
+    if(f.method.toLowerCase()!=='post') return;
+    if(f.querySelector('input[name="csrf_token"]')) return;
+    var i=document.createElement('input');
+    i.type='hidden'; i.name='csrf_token'; i.value=window.CSRF_TOKEN;
+    f.appendChild(i);
+  });
+});
+</script>
 <?php
 // Favicon — masaüstü web tarafında hiç <link rel="icon"> yoktu (mobil PWA'da vardı, bkz.
 // mobile/common.php icon.php), tarayıcı sekmesinde marka görünmüyordu — kullanıcı bildirimi:

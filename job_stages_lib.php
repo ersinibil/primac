@@ -80,7 +80,7 @@ function stages_script(){
   return '<script>(function(){var c=document.getElementById("acStages");if(!c||c._b)return;c._b=1;'
     .'function flash(m){var x=document.createElement("div");x.textContent=m;x.style.cssText="position:fixed;left:50%;top:14px;transform:translateX(-50%);background:#16a34a;color:#fff;padding:10px 16px;border-radius:10px;z-index:99999;font-weight:700;box-shadow:0 6px 18px rgba(0,0,0,.35)";document.body.appendChild(x);setTimeout(function(){x.remove();},2600);}'
     .'c.addEventListener("submit",function(e){var f=e.target;if(!f||f.tagName!=="FORM")return;e.preventDefault();var fd=new FormData(f);var sb=e.submitter||f.querySelector("button[name]");if(sb&&sb.name)fd.append(sb.name,sb.value);fd.append("stage_ajax","1");'
-    .'c.style.opacity=".5";fetch(location.href,{method:"POST",body:fd,credentials:"same-origin"}).then(function(r){return r.json();}).then(function(d){c.style.opacity="1";if(d&&d.stages!=null)c.innerHTML=d.stages;if(d&&d.flash)flash(d.flash);}).catch(function(){location.reload();});});})();</script>';
+    .'c.style.opacity=".5";fetch(location.href,{method:"POST",headers:{"X-CSRF-Token":window.CSRF_TOKEN},body:fd,credentials:"same-origin"}).then(function(r){return r.json();}).then(function(d){c.style.opacity="1";if(d&&d.stages!=null)c.innerHTML=d.stages;if(d&&d.flash)flash(d.flash);}).catch(function(){location.reload();});});})();</script>';
 }
 
 // AJAX yanıtı — job_view'lerin EN BAŞINDA çağrılır; stage_ajax POST'unu yakalar ve sadece şeridi döner

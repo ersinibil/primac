@@ -223,7 +223,7 @@ function quickAddProductRow(btn){
     var fd = new FormData();
     fd.append('t', 'product');
     fd.append('name', name);
-    fetch('../ajax_quick_add.php', {method: 'POST', body: fd})
+    fetch('../ajax_quick_add.php', {method: 'POST', headers: {'X-CSRF-Token': window.CSRF_TOKEN}, body: fd})
         .then(r => r.json())
         .then(data => {
             if(data.ok){
@@ -278,7 +278,7 @@ function quickContactMob(name, type) {
     fd.append('t', 'contact');
     fd.append('name', name);
     fd.append('contact_type', type || 'Tedarikçi');
-    fetch('../ajax_quick_add.php', {method: 'POST', body: fd})
+    fetch('../ajax_quick_add.php', {method: 'POST', headers: {'X-CSRF-Token': window.CSRF_TOKEN}, body: fd})
         .then(r => r.json())
         .then(data => {
             if (data.ok) {

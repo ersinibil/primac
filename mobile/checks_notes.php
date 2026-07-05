@@ -131,7 +131,7 @@ function quickContactCheckMob(name) {
     fd.append('t', 'contact');
     fd.append('name', name);
     fd.append('contact_type', 'Müşteri');
-    fetch('../ajax_quick_add.php', {method: 'POST', body: fd})
+    fetch('../ajax_quick_add.php', {method: 'POST', headers: {'X-CSRF-Token': window.CSRF_TOKEN}, body: fd})
         .then(r => r.json())
         .then(data => {
             if (data.ok) {

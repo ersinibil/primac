@@ -251,7 +251,7 @@ try{
       var b=this;b.disabled=true;b.textContent='⏳ Yükleniyor...';var failed=0;
       function sendWithRetry(it,tries,cb){
         var fd=new FormData();fd.append('file',it.b,it.n||'foto.jpg');
-        fetch(location.href,{method:'POST',body:fd,credentials:'same-origin'}).then(function(r){return r.text();})
+        fetch(location.href,{method:'POST',headers:{'X-CSRF-Token':window.CSRF_TOKEN},body:fd,credentials:'same-origin'}).then(function(r){return r.text();})
           .then(function(){cb(true);}).catch(function(){ if(tries>1){setTimeout(function(){sendWithRetry(it,tries-1,cb);},600);} else cb(false); });
       }
       function run(i){

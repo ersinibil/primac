@@ -291,14 +291,14 @@ function editMsgT(id){
 function saveEditT(){
   var txt=document.getElementById('editTextT').value.trim(); if(!txt)return;
   var fd=new FormData(); fd.append('edit_msg',_editIdT); fd.append('edit_text',txt); fd.append('thread',THREADID); fd.append('ajax','1');
-  fetch('messages.php?thread='+THREADID,{method:'POST',body:fd,credentials:'same-origin'})
+  fetch('messages.php?thread='+THREADID,{method:'POST',headers:{'X-CSRF-Token':window.CSRF_TOKEN},body:fd,credentials:'same-origin'})
     .then(function(r){return r.json();}).then(function(d){
       if(d&&d.ok){ var sp=document.getElementById('msgtxt'+_editIdT); if(sp)sp.innerHTML=txt.replace(/\n/g,'<br>'); document.getElementById('editModalT').style.display='none'; }
       else alert(d&&d.error?d.error:'Düzenlenemedi.');
     }).catch(function(){ alert('Bağlantı hatası.'); });
 }
 function delMsgT(id){ if(!confirm('Bu mesaj silinsin mi?'))return; var fd=new FormData();fd.append('del_msg',id);fd.append('ajax','1');
-  fetch('messages.php?thread='+THREADID,{method:'POST',body:fd,credentials:'same-origin'})
+  fetch('messages.php?thread='+THREADID,{method:'POST',headers:{'X-CSRF-Token':window.CSRF_TOKEN},body:fd,credentials:'same-origin'})
     .then(function(r){return r.json();}).then(function(d){ if(d&&d.ok){ var b=document.getElementById('msg'+id); if(b)b.remove(); } else alert(d&&d.error?d.error:'Silinemedi.'); }); }
 document.getElementById('msgform').addEventListener('submit',function(e){ e.preventDefault();
   var ta=document.querySelector('.composer textarea'); var msg=ta?ta.value.trim():''; if(!msg&&!pendItems.length)return;
@@ -306,7 +306,7 @@ document.getElementById('msgform').addEventListener('submit',function(e){ e.prev
   var queue=[]; if(pendItems.length){ pendItems.forEach(function(it,idx){ queue.push({msg:(idx===0?msg:''),file:it}); }); } else { queue.push({msg:msg,file:null}); }
   var failed=0, failMsgs=[];
   function one(q,tries,cb){ var fd=new FormData(); fd.append('thread',THREADID); fd.append('message',q.msg); fd.append('ajax','1'); if(q.file)fd.append('attach',q.file.blob,q.file.name||'foto.jpg');
-    fetch('messages.php?thread='+THREADID,{method:'POST',body:fd,credentials:'same-origin'}).then(function(r){return r.json();})
+    fetch('messages.php?thread='+THREADID,{method:'POST',headers:{'X-CSRF-Token':window.CSRF_TOKEN},body:fd,credentials:'same-origin'}).then(function(r){return r.json();})
       .then(function(d){ if(d&&d.ok)cb(true); else if(tries>1)setTimeout(function(){one(q,tries-1,cb);},600); else cb(false,(d&&d.error)||'bağlantı hatası'); })
       .catch(function(){ if(tries>1)setTimeout(function(){one(q,tries-1,cb);},600); else cb(false,'bağlantı/yükleme hatası'); }); }
   function run(i){ if(i>=queue.length){ if(failed>0){ b.disabled=false; b.textContent='Gönder'; lbl.textContent='⚠️ '+failed+'/'+queue.length+' gitmedi: '+failMsgs.join(' · '); } else { window.location.href='messages.php?thread='+THREADID; } return; }
@@ -394,7 +394,7 @@ function editMsg(id){
 function saveEdit(){
   var txt=document.getElementById('editText').value.trim(); if(!txt)return;
   var fd=new FormData(); fd.append('edit_msg',_editId); fd.append('edit_text',txt); fd.append('with',WITHID); fd.append('ajax','1');
-  fetch('messages.php?with='+WITHID,{method:'POST',body:fd,credentials:'same-origin'})
+  fetch('messages.php?with='+WITHID,{method:'POST',headers:{'X-CSRF-Token':window.CSRF_TOKEN},body:fd,credentials:'same-origin'})
     .then(function(r){return r.json();}).then(function(d){
       if(d&&d.ok){ var sp=document.getElementById('msgtxt'+_editId); if(sp)sp.innerHTML=txt.replace(/\n/g,'<br>'); document.getElementById('editModal').style.display='none'; }
       else alert(d&&d.error?d.error:'Düzenlenemedi.');
@@ -403,13 +403,13 @@ function saveEdit(){
 function delMsg(id){
   if(!confirm('Bu mesaj silinsin mi?')) return;
   var fd=new FormData(); fd.append('del_msg',id); fd.append('with',WITHID); fd.append('ajax','1');
-  fetch('messages.php?with='+WITHID,{method:'POST',body:fd,credentials:'same-origin'})
+  fetch('messages.php?with='+WITHID,{method:'POST',headers:{'X-CSRF-Token':window.CSRF_TOKEN},body:fd,credentials:'same-origin'})
     .then(function(r){return r.json();}).then(function(d){ if(d&&d.ok){ var b=document.getElementById('msg'+id); if(b)b.remove(); } else alert(d&&d.error?d.error:'Silinemedi.'); });
 }
 function delConv(uid){
   if(!confirm('Bu kişiyle tüm sohbet silinsin mi? Geri alınamaz.')) return;
   var fd=new FormData(); fd.append('del_conv',uid); fd.append('ajax','1');
-  fetch('messages.php',{method:'POST',body:fd,credentials:'same-origin'})
+  fetch('messages.php',{method:'POST',headers:{'X-CSRF-Token':window.CSRF_TOKEN},body:fd,credentials:'same-origin'})
     .then(function(){ location.href='messages.php'; });
 }
 /* Durum: yazıyor… > çevrimiçi > son görülme (poll'dan gelir) */
@@ -559,7 +559,7 @@ document.getElementById('msgform').addEventListener('submit',function(e){
   function sendWithRetry(q,tries,cb){
     var fd=new FormData(); fd.append('to',TOID); fd.append('message',q.msg); fd.append('ajax','1');
     if(q.file) fd.append('attach',q.file.blob,q.file.name||'foto.jpg');
-    fetch('messages.php?with='+TOID,{method:'POST',body:fd,credentials:'same-origin'})
+    fetch('messages.php?with='+TOID,{method:'POST',headers:{'X-CSRF-Token':window.CSRF_TOKEN},body:fd,credentials:'same-origin'})
       .then(function(r){ return r.json(); })
       .then(function(d){ if(d&&d.ok){ cb(true); } else if(tries>1){ setTimeout(function(){sendWithRetry(q,tries-1,cb);},600); } else cb(false,(d&&d.error)||'bağlantı hatası'); })
       .catch(function(){ if(tries>1){ setTimeout(function(){sendWithRetry(q,tries-1,cb);},600); } else cb(false,'bağlantı/yükleme hatası'); });
@@ -637,7 +637,7 @@ document.getElementById('msgform').addEventListener('submit',function(e){
 function delConvList(uid){
   if(!confirm('Bu kişiyle tüm sohbet silinsin mi? Geri alınamaz.')) return;
   var fd=new FormData(); fd.append('del_conv',uid); fd.append('ajax','1');
-  fetch('messages.php',{method:'POST',body:fd,credentials:'same-origin'}).then(function(){ location.reload(); });
+  fetch('messages.php',{method:'POST',headers:{'X-CSRF-Token':window.CSRF_TOKEN},body:fd,credentials:'same-origin'}).then(function(){ location.reload(); });
 }
 </script>
 <?php endif; ?>

@@ -543,7 +543,7 @@ function editMsgT(id){
 function saveEditT(){
   var txt=document.getElementById('editTextT').value.trim(); if(!txt)return;
   var fd=new FormData(); fd.append('edit_msg',_editIdT); fd.append('edit_text',txt); fd.append('thread',_THREAD); fd.append('ajax','1');
-  fetch('messages.php?thread='+_THREAD,{method:'POST',body:fd,credentials:'same-origin'})
+  fetch('messages.php?thread='+_THREAD,{method:'POST',headers:{'X-CSRF-Token':window.CSRF_TOKEN},body:fd,credentials:'same-origin'})
     .then(function(r){return r.json();}).then(function(d){
       if(d&&d.ok){ var sp=document.getElementById('msgtxt'+_editIdT); if(sp)sp.innerHTML=txt.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>'); document.getElementById('editModalT').style.display='none'; }
       else alert(d&&d.error?d.error:'Düzenlenemedi.');
@@ -552,7 +552,7 @@ function saveEditT(){
 function delMsgT(id){
   if(!confirm('Bu mesaj silinsin mi?')) return;
   var fd=new FormData(); fd.append('del_msg',id); fd.append('thread',_THREAD); fd.append('ajax','1');
-  fetch('messages.php?thread='+_THREAD,{method:'POST',body:fd,credentials:'same-origin'})
+  fetch('messages.php?thread='+_THREAD,{method:'POST',headers:{'X-CSRF-Token':window.CSRF_TOKEN},body:fd,credentials:'same-origin'})
     .then(function(r){return r.json();}).then(function(d){
       if(d&&d.ok){ var b=document.getElementById('msg'+id); if(b)b.remove(); }
       else alert(d&&d.error?d.error:'Silinemedi.');
@@ -655,7 +655,7 @@ function editMsg(id){
 function saveEdit(){
   var txt=document.getElementById('editText').value.trim(); if(!txt)return;
   var fd=new FormData(); fd.append('edit_msg',_editId); fd.append('edit_text',txt); fd.append('with',_WITH); fd.append('ajax','1');
-  fetch('messages.php?u='+_WITH,{method:'POST',body:fd,credentials:'same-origin'})
+  fetch('messages.php?u='+_WITH,{method:'POST',headers:{'X-CSRF-Token':window.CSRF_TOKEN},body:fd,credentials:'same-origin'})
     .then(function(r){return r.json();}).then(function(d){
       if(d&&d.ok){ var sp=document.getElementById('msgtxt'+_editId); if(sp)sp.innerHTML=txt.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>'); document.getElementById('editModal').style.display='none'; }
       else alert(d&&d.error?d.error:'Düzenlenemedi.');
@@ -664,7 +664,7 @@ function saveEdit(){
 function delMsg(id){
   if(!confirm('Bu mesaj silinsin mi?')) return;
   var fd=new FormData(); fd.append('del_msg',id); fd.append('with',_WITH); fd.append('ajax','1');
-  fetch('messages.php?u='+_WITH,{method:'POST',body:fd,credentials:'same-origin'})
+  fetch('messages.php?u='+_WITH,{method:'POST',headers:{'X-CSRF-Token':window.CSRF_TOKEN},body:fd,credentials:'same-origin'})
     .then(function(r){return r.json();}).then(function(d){
       if(d&&d.ok){ var b=document.getElementById('msg'+id); if(b)b.remove(); }
       else alert(d&&d.error?d.error:'Silinemedi.');

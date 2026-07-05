@@ -36,6 +36,33 @@ if (empty($_SESSION['force_web'])
 
 function h($v){ return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
 
+// SECURITY SPRINT-004 (2026-07-05) — FAZ-1: merkezi CSRF altyapısı. Bu fazda sadece tanımlanıyor,
+// henüz hiçbir sayfada ZORUNLU kontrol açılmadı (csrf_verify() hiçbir yerden çağrılmıyor).
+function csrf_token(){
+    if(empty($_SESSION['csrf_token'])){
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+    return $_SESSION['csrf_token'];
+}
+
+function csrf_field(){
+    return '<input type="hidden" name="csrf_token" value="'.h(csrf_token()).'">';
+}
+
+// $_POST['csrf_token'] (klasik form) VEYA X-CSRF-Token header'ı (fetch/AJAX) kabul edilir.
+function csrf_verify(){
+    $token = $_POST['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    $valid = !empty($_SESSION['csrf_token']) && hash_equals($_SESSION['csrf_token'], (string)$token);
+    if(!$valid){
+        http_response_code(403);
+        echo "<!doctype html><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>"
+            ."<div style='font-family:-apple-system,Arial,sans-serif;max-width:480px;margin:60px auto;text-align:center;padding:24px'>"
+            ."<div style='font-size:46px'>🔒</div>"
+            ."<h1 style='font-size:19px;margin:10px 0'>Güvenlik doğrulaması başarısız. Lütfen sayfayı yenileyip tekrar deneyin.</h1></div>";
+        exit;
+    }
+}
+
 function app_config(){
     $file = __DIR__ . '/config.php';
     if(!file_exists($file)){
@@ -359,5 +386,14 @@ $__page = basename($_SERVER['SCRIPT_NAME'] ?? ($_SERVER['PHP_SELF'] ?? ''));
 $__pmap = page_module_map();
 if($__page !== '' && isset($__pmap[$__page])){
     require_permission($__pmap[$__page]);
+}
+
+// SECURITY SPRINT-004 FAZ-3A (2026-07-05): CSRF zorunlu kontrolü SADECE pilot grupta açıldı
+// (users.php, sil.php — basename eşleşmesi yukarıdaki page_module_map() ile aynı desen, bu yüzden
+// mobile/users.php'yi de otomatik kapsar; sil.php'nin mobil karşılığı yok). Sistem geneline HENÜZ
+// yayılmadı — bkz. ilerideki FAZ'lar.
+$__csrf_enforced_pages = ['users.php', 'sil.php', 'notifications.php', 'accounting.php', 'finance.php', 'finance_accounts.php', 'checks_notes.php', 'kasa.php', 'finance_new.php', 'finance_transfer.php', 'finance_account_view.php', 'payment.php', 'collection.php', 'transfer.php', 'account_view.php', 'movement_view.php'];
+if($_SERVER['REQUEST_METHOD'] === 'POST' && in_array($__page, $__csrf_enforced_pages, true)){
+    csrf_verify();
 }
 ?>

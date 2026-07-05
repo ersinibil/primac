@@ -374,7 +374,7 @@ function quickAddProductRow(btn){
     fd.append('t', 'product');
     fd.append('name', name);
     fd.append('unit', unit);
-    fetch('ajax_quick_add.php', {method: 'POST', body: fd})
+    fetch('ajax_quick_add.php', {method: 'POST', headers: {'X-CSRF-Token': window.CSRF_TOKEN}, body: fd})
         .then(r => r.json())
         .then(data => {
             if(data.ok){
@@ -432,7 +432,7 @@ function quickAddContact(name, type) {
     fd.append('name', name);
     fd.append('contact_type', type || 'Müşteri');
 
-    fetch('ajax_quick_add.php', {method: 'POST', body: fd})
+    fetch('ajax_quick_add.php', {method: 'POST', headers: {'X-CSRF-Token': window.CSRF_TOKEN}, body: fd})
         .then(r => r.json())
         .then(data => {
             if (data.ok) {

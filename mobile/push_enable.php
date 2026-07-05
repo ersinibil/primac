@@ -57,7 +57,7 @@ function enablePush(){
     if(!sub) return;
     L('   subscribe OK ✅ endpoint: '+sub.endpoint.substring(0,40)+'...');
     L('5) Sunucuya kaydediliyor...');
-    return fetch('../push_subscribe.php',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(sub)}).then(function(r){return r.json();});
+    return fetch('../push_subscribe.php',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRF-Token':window.CSRF_TOKEN},body:JSON.stringify(sub)}).then(function(r){return r.json();});
   }).then(function(res){
     if(res&&res.ok){ L('✅✅ TAMAM! Abonelik kaydedildi. Artık push gelir.'); setSimple('Bildirimler aktif. Bu cihaz bildirim almaya hazır.'); if(navigator.vibrate)navigator.vibrate([120,60,120]); }
     else if(res){ L('❌ Kayıt hatası: '+(res.error||JSON.stringify(res))); setSimple('Bildirimler şu anda etkinleştirilemedi. Lütfen tekrar deneyin.'); }

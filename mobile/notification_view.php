@@ -34,6 +34,6 @@ topx('Bildirim Detayı');
 </div>
 <div class="panel" style="display:flex;flex-direction:column;gap:8px">
   <a class="btn dark" style="text-align:center" href="<?=htmlspecialchars($go)?>">İlgili Modüle Git</a>
-  <a class="btn" style="text-align:center;background:#7f1d1d;color:#fff" href="notifications.php?del=<?=(int)$n['id']?>" onclick="return confirm('Bu bildirim silinsin mi?')">Sil</a>
+  <form method="post" action="notifications.php" onsubmit="return confirm('Bu bildirim silinsin mi?')"><?=csrf_field()?><input type="hidden" name="del" value="<?=(int)$n['id']?>"><button type="submit" class="btn" style="width:100%;text-align:center;background:#7f1d1d;color:#fff">Sil</button></form>
 </div>
 <?php botx(); ?>

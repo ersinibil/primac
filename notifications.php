@@ -10,9 +10,10 @@ $ME=(int)(current_user()['id'] ?? 0);
 // sahibinin kendi görünümünü etkiler: kişisel bildirim sahiplik kontrollü fiziksel silinir, genel
 // (target_user_id=NULL) bildirim asla fiziksel silinmez, sadece BU kullanıcı için gizlenir
 // (bkz. notifications_lib.php).
-if(isset($_GET['del'])){ notif_dismiss($pdo,$ME,(int)$_GET['del']); header('Location: notifications.php'); exit; }
-if(isset($_GET['clear'])){ notif_dismiss_all_read($pdo,$ME); header('Location: notifications.php'); exit; }
-if(isset($_GET['clearall'])){ notif_dismiss_all($pdo,$ME); header('Location: notifications.php'); exit; }
+// SECURITY SPRINT-004 FAZ-3B (2026-07-05): GET ile veri değiştirme kapatıldı, POST+CSRF'e taşındı.
+if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['del'])){ notif_dismiss($pdo,$ME,(int)$_POST['del']); header('Location: notifications.php'); exit; }
+if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['clear'])){ notif_dismiss_all_read($pdo,$ME); header('Location: notifications.php'); exit; }
+if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['clearall'])){ notif_dismiss_all($pdo,$ME); header('Location: notifications.php'); exit; }
 
 if(isset($_GET['read'])){
     $id=(int)$_GET['read'];
@@ -55,8 +56,8 @@ try{
 <h1>Bildirim Merkezi</h1>
 <div style="display:flex;gap:8px;flex-wrap:wrap">
 <a class="btn secondary" href="notifications.php?all_read=1">Tümünü Okundu Yap</a>
-<a class="btn secondary" href="notifications.php?clear=1">Okunanları Sil</a>
-<a class="btn secondary" href="notifications.php?clearall=1" onclick="return confirm('Tüm bildirimlerin görünümden kaldırılmasını istediğine emin misin?')">Tümünü Sil</a>
+<form method="post" style="display:inline"><?=csrf_field()?><input type="hidden" name="clear" value="1"><button type="submit" class="btn secondary">Okunanları Sil</button></form>
+<form method="post" style="display:inline" onsubmit="return confirm('Tüm bildirimlerin görünümden kaldırılmasını istediğine emin misin?')"><?=csrf_field()?><input type="hidden" name="clearall" value="1"><button type="submit" class="btn secondary">Tümünü Sil</button></form>
 </div>
 </div>
 
@@ -82,7 +83,7 @@ $readUrl='notifications.php?read='.$n['id'].'&go='.urlencode($go);
         </div>
         <div style="display:flex;gap:6px">
             <a class="btn small" href="<?=h($readUrl)?>">Aç</a>
-            <a class="btn small secondary" href="notifications.php?del=<?=(int)$n['id']?>" title="Sil">🗑️</a>
+            <form method="post" style="display:inline"><?=csrf_field()?><input type="hidden" name="del" value="<?=(int)$n['id']?>"><button type="submit" class="btn small secondary" title="Sil">🗑️</button></form>
         </div>
     </div>
     <p><?=nl2br(h($n['message']))?></p>

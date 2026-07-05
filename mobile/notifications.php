@@ -6,17 +6,18 @@ $pdo=db();
 // kişisel bildirim fiziksel silinir (sahiplik kontrollü), genel (target_user_id=NULL) bildirim
 // hiçbir zaman fiziksel silinmez, sadece BU kullanıcı için gizlenir (bkz. notifications_lib.php,
 // Sprint-001 — eskiden 'clear'/'clearall' TÜM kullanıcıların bildirimlerini siliyordu).
-if(isset($_GET['del'])){ notif_dismiss($pdo,$ME,(int)$_GET['del']); header('Location: notifications.php'); exit; }
-if(isset($_GET['clear'])){ notif_dismiss_all_read($pdo,$ME); header('Location: notifications.php'); exit; }
-if(isset($_GET['clearall'])){ notif_dismiss_all($pdo,$ME); header('Location: notifications.php'); exit; }
+// SECURITY SPRINT-004 FAZ-3B (2026-07-05): GET ile veri değiştirme kapatıldı, POST+CSRF'e taşındı.
+if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['del'])){ notif_dismiss($pdo,$ME,(int)$_POST['del']); header('Location: notifications.php'); exit; }
+if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['clear'])){ notif_dismiss_all_read($pdo,$ME); header('Location: notifications.php'); exit; }
+if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['clearall'])){ notif_dismiss_all($pdo,$ME); header('Location: notifications.php'); exit; }
 // Görüntülenince okundu yap (sadece bana ait + genel — genel olan artık SADECE benim için okundu sayılır)
 notif_mark_all_read($pdo,$ME);
 
 topx('Bildirimler');
 ?>
 <div class="panel" style="display:flex;gap:8px;padding:10px">
-  <a class="btn" style="flex:1;background:#334155;color:#fff" href="notifications.php?clear=1">Okunanları Sil</a>
-  <a class="btn" style="flex:1;background:#7f1d1d;color:#fff" href="notifications.php?clearall=1" onclick="return confirm('Tüm bildirimler silinsin mi?')">Tümünü Sil</a>
+  <form method="post" style="flex:1"><?=csrf_field()?><input type="hidden" name="clear" value="1"><button type="submit" class="btn" style="width:100%;background:#334155;color:#fff">Okunanları Sil</button></form>
+  <form method="post" style="flex:1" onsubmit="return confirm('Tüm bildirimler silinsin mi?')"><?=csrf_field()?><input type="hidden" name="clearall" value="1"><button type="submit" class="btn" style="width:100%;background:#7f1d1d;color:#fff">Tümünü Sil</button></form>
 </div>
 <?php
 try{

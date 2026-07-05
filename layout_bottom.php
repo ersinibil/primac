@@ -16,7 +16,7 @@
         return reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64ToU8(cfg.key)});
       }).then(function(sub){
         if(!sub) return;
-        fetch('push_subscribe.php',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(sub)});
+        fetch('push_subscribe.php',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRF-Token':window.CSRF_TOKEN},body:JSON.stringify(sub)});
       }).catch(function(){});
     }).catch(function(){});
   }
