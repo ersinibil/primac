@@ -363,6 +363,9 @@ function remember_check(){
         $s->execute([(int)$uid]); $u=$s->fetch();
         if($u && !empty($u['remember_token']) && hash_equals($u['remember_token'], hash('sha256',$token))){
             set_session_user($u);
+            // SECURITY SPRINT-005 FAZ-1: remember-me ile otomatik girişte de kimlik doğrulandıktan
+            // hemen sonra session id yenilenir (session fixation koruması).
+            session_regenerate_id(true);
         }
     }catch(Throwable $e){}
 }

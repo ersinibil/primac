@@ -33,6 +33,9 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             'permissions'=>$perms,
             'is_admin'=>$u['role']==='admin'
         ];
+        // SECURITY SPRINT-005 FAZ-1: kimlik doğrulandıktan hemen sonra session id yenilenir
+        // (session fixation koruması) — session verisi korunur, sadece id değişir.
+        session_regenerate_id(true);
 
         $pdo->prepare("UPDATE app_users SET last_login=NOW() WHERE id=?")->execute([$u['id']]);
         // "Beni hatırla" — oturum atsa bile çerezle otomatik giriş (bildirim için tekrar şifre sormaz)
