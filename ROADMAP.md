@@ -15,19 +15,17 @@ Tamamlandı:
 Devam Ediyor:
 - 🔄 **SECURITY SPRINT-004 — Merkezi CSRF Koruma Altyapısı.** FAZ-1 → FAZ-4F tamamlandı, **HIGH-RISK
   CSRF CHECKPOINT AUDIT: PASS** (son checkpoint commit: `a32893c`). **FAZ-5A — CRM grubu PASS**
-  (commit `4708cd6`). **FAZ-5B — Stok/Ürün grubu PASS** (`product_new.php`, `product_view.php`,
-  `product_categories.php`, `product_taxonomy.php`, `stock_movement_new.php`, `brand_settings.php`,
-  commit `ae8116a`, 2026-07-05). **Toplam enforced basename: 36.** Detay → `CHANGELOG.md`,
-  `VERSIONING.md` "Security Sprint Durumu".
+  (commit `4708cd6`). **FAZ-5B — Stok/Ürün grubu PASS** (commit `ae8116a`). **FAZ-5C — İş/Görev
+  grubu PASS** (`job_new.php`, `jobs.php`, `task_new.php`, `tasks.php`, `mytask_new.php`,
+  `mytasks.php`, `uretim_new.php`, `group_new.php`, commit `a68637a`, 2026-07-05). **Toplam
+  enforced basename: 44.** Detay → `CHANGELOG.md`, `VERSIONING.md` "Security Sprint Durumu".
 
-  **Sıradaki faz: FAZ-5C — İş/Görev ana formları (önerilen kapsam, onay bekliyor)**:
-  `job_new.php`, `jobs.php`, `task_new.php`, `tasks.php`, `mytask_new.php`, `mytasks.php`,
-  `uretim_new.php`, `group_new.php`. Bu grup sonrası kalan: FAZ-5D (Mesajlaşma/Talep —
-  `messages.php`, `notes.php`, `request_new.php`, `requests.php`, `profile.php`), FAZ-5E (Satış/
-  Satın Alma — `sales.php`, `purchase.php`), ve ayrı bir "temizlik" fazı (`accounting_categories.php`,
-  `check_note_view.php`, `report.php`, `ajax_quick_add.php`, `wa_settings.php`, + `index.php` login
-  formu için özel bir karar). Hepsi tamamlanınca **SECURITY FINAL AUDIT** (tüm POST endpoint'leri
-  = enforced liste, sıfır fark) ile sprint kapanabilir.
+  **Sıradaki faz: FAZ-5D — Mesajlaşma/Talep (önerilen kapsam, onay bekliyor)**: `messages.php`,
+  `notes.php`, `request_new.php`, `requests.php`, `profile.php`. Bu grup sonrası kalan: FAZ-5E
+  (Satış/Satın Alma — `sales.php`, `purchase.php`), ve ayrı bir "temizlik" fazı
+  (`accounting_categories.php`, `check_note_view.php`, `report.php`, `ajax_quick_add.php`,
+  `wa_settings.php`, + `index.php` login formu için özel bir karar). Hepsi tamamlanınca **SECURITY
+  FINAL AUDIT** (tüm POST endpoint'leri = enforced liste, sıfır fark) ile sprint kapanabilir.
 
 `KNOWN_BUGS.md`'de hâlâ açık, henüz bir sprint numarasına atanmamış diğer bulgular: accounting.php
 XSS, users.php rol yükseltme, `is_admin()` session bayatlığı, session fixation — bunlar SPRINT-004

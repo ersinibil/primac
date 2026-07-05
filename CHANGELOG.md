@@ -3,6 +3,19 @@
 Bu dosya `memory/features.md`'nin (tam gerekçe/kod detayıyla) kök dizindeki kısa özetidir — hızlı
 taramak için. Detaylı "neden böyle yapıldı" analizleri için `memory/features.md`'ye bakın.
 
+## SECURITY SPRINT-004 FAZ-5C — İş/Görev Modülü CSRF Enforcement: PASS (2026-07-05, commit `a68637a`)
+Kapsam: `job_new.php`, `jobs.php`, `task_new.php`, `tasks.php`, `mytask_new.php`, `mytasks.php`
+(web+mobil) + `uretim_new.php`, `group_new.php` (**mobil-only**, web karşılığı hiç yok) —
+`$__csrf_enforced_pages` listesine eklendi. Yerel `ots_sectest` QA'da 8 dosyanın tamamı (14
+dosya-örneği: 6×web+mobil + 2×mobil-only) için token'lı POST (gerçek iş/görev/üretim emri/grup
+sohbeti oluşturma + durum güncelleme başarılı, admin hesabının personel bağlantısı olmadığı için
+`mytask_new.php`/`mytasks.php` testleri personel-bağlı test kullanıcısı `omer` ile tekrarlandı) ve
+token'sız POST (403) — **14/14 PASS**. GET regresyon taraması (16 ekran) 16/16 200, `php -l` 15/15
+temiz. FAIL yok. Test verisi temizlendi, `config.php` diff ile doğrulanarak orijinaline geri
+yüklendi (yerel `ots_sectest`'teki `omer` test kullanıcısının şifresi, orijinal hash'i bu oturumda
+hiç kayıt altına alınmadığı için `altyonetici` ile aynı standart QA test şifresine ayarlı kaldı —
+sadece yerel sandbox DB, production'ı etkilemiyor).
+
 ## SECURITY SPRINT-004 FAZ-5B — Stok/Ürün Modülü CSRF Enforcement: PASS (2026-07-05, commit `ae8116a`)
 Kapsam: `product_new.php`, `product_view.php`, `product_categories.php`, `product_taxonomy.php`,
 `stock_movement_new.php`, `brand_settings.php` — `$__csrf_enforced_pages` listesine eklendi
