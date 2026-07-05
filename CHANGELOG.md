@@ -3,6 +3,21 @@
 Bu dosya `memory/features.md`'nin (tam gerekçe/kod detayıyla) kök dizindeki kısa özetidir — hızlı
 taramak için. Detaylı "neden böyle yapıldı" analizleri için `memory/features.md`'ye bakın.
 
+## SECURITY SPRINT-004 FAZ-5D — Mesajlaşma/Talep Modülü CSRF Enforcement: PASS (2026-07-05, commit `48d943f`)
+Kapsam: `messages.php`, `notes.php`, `request_new.php`, `requests.php`, `profile.php` —
+`$__csrf_enforced_pages` listesine eklendi (`notes.php`'nin mobil karşılığı `mytasks.php`'ye
+gömülü, FAZ-5C'de zaten enforced idi, ek işlem gerekmedi). Yerel `ots_sectest` QA'da iç mesajlaşma
+(gönder/düzenle/sil — hepsi gerçek DB kaydı ile doğrulandı), kişisel not ekleme/güncelleme, talep
+oluşturma/durum güncelleme, profil+şifre güncelleme — web+mobil token'lı POST (gerçek başarı) ve
+token'sız POST (403) **PASS**. GET regresyon taraması (14 ekran) 14/14 200, `php -l` 10/10 temiz.
+FAIL yok.
+
+**Yan bulgu (CSRF ile ilgisiz, dokunulmadı)**: `requests.php`/`mobile/requests.php`'de önceden var
+olan bir schema-drift hatası bulundu — kod `manager_note` kolonuna yazıyor ama gerçek tablo kolonu
+`response_note`; talep durumu/not güncellemesi sessizce başarısız oluyor, hata hiç ekrana
+basılmıyor (`$error` set ediliyor ama render edilmiyor). Bu fazın kapsamı dışında bırakıldı, ayrı
+bir bug-fix turu gerektiriyor — bkz. `ROADMAP.md`.
+
 ## SECURITY SPRINT-004 FAZ-5C — İş/Görev Modülü CSRF Enforcement: PASS (2026-07-05, commit `a68637a`)
 Kapsam: `job_new.php`, `jobs.php`, `task_new.php`, `tasks.php`, `mytask_new.php`, `mytasks.php`
 (web+mobil) + `uretim_new.php`, `group_new.php` (**mobil-only**, web karşılığı hiç yok) —

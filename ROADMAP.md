@@ -16,16 +16,44 @@ Devam Ediyor:
 - 🔄 **SECURITY SPRINT-004 — Merkezi CSRF Koruma Altyapısı.** FAZ-1 → FAZ-4F tamamlandı, **HIGH-RISK
   CSRF CHECKPOINT AUDIT: PASS** (son checkpoint commit: `a32893c`). **FAZ-5A — CRM grubu PASS**
   (commit `4708cd6`). **FAZ-5B — Stok/Ürün grubu PASS** (commit `ae8116a`). **FAZ-5C — İş/Görev
-  grubu PASS** (`job_new.php`, `jobs.php`, `task_new.php`, `tasks.php`, `mytask_new.php`,
-  `mytasks.php`, `uretim_new.php`, `group_new.php`, commit `a68637a`, 2026-07-05). **Toplam
-  enforced basename: 44.** Detay → `CHANGELOG.md`, `VERSIONING.md` "Security Sprint Durumu".
+  grubu PASS** (commit `a68637a`). **FAZ-5D — Mesajlaşma/Talep grubu PASS** (`messages.php`,
+  `notes.php`, `request_new.php`, `requests.php`, `profile.php`, commit `48d943f`, 2026-07-05).
+  **Toplam enforced basename: 49.** Detay → `CHANGELOG.md`, `VERSIONING.md` "Security Sprint
+  Durumu".
 
-  **Sıradaki faz: FAZ-5D — Mesajlaşma/Talep (önerilen kapsam, onay bekliyor)**: `messages.php`,
-  `notes.php`, `request_new.php`, `requests.php`, `profile.php`. Bu grup sonrası kalan: FAZ-5E
-  (Satış/Satın Alma — `sales.php`, `purchase.php`), ve ayrı bir "temizlik" fazı
-  (`accounting_categories.php`, `check_note_view.php`, `report.php`, `ajax_quick_add.php`,
-  `wa_settings.php`, + `index.php` login formu için özel bir karar). Hepsi tamamlanınca **SECURITY
-  FINAL AUDIT** (tüm POST endpoint'leri = enforced liste, sıfır fark) ile sprint kapanabilir.
+  **Sıradaki faz: FAZ-5E — Satış/Satın Alma (önerilen kapsam, onay bekliyor)**: `sales.php`,
+  `purchase.php`. **Risk değerlendirmesi (kalan 8 basename)**:
+  - **ORTA risk**: `sales.php`, `purchase.php` — finansal tutarlı satış/satın alma kaydı oluşturan
+    formlar, CSRF ile sahte işlem kaydı riski taşıyor. FAZ-5E olarak önerilir.
+  - **DÜŞÜK-ORTA risk**: `check_note_view.php` (çek/senet detay, finansal enstrüman durumu
+    değiştirebilir), `wa_settings.php` (admin-only ama gateway kimlik bilgilerini değiştirir),
+    `ajax_quick_add.php` (zaten FAZ-2'de `X-CSRF-Token` header'ı ekli, sadece enforced listede
+    değil — düşük ek risk).
+  - **DÜŞÜK risk**: `accounting_categories.php` (sadece kategori adı yönetimi), `report.php`
+    (POST muhtemelen sadece PDF üretimi/paylaşım tetikliyor, kalıcı veri değişikliği sınırlı —
+    doğrulanmalı).
+  - **ÖZEL DURUM — `index.php` (login formu)**: **Enforced listeye HENÜZ eklenmesi önerilmiyor.**
+    Gerekçe: (1) `index.php` `layout_top.php`'den geçmiyor, kendi bağımsız `<head>`'i var — CSRF
+    meta tag/auto-inject JS'i YOK, bu yüzden basit bir array-ekleme yeterli değil,
+    `sifre_sifirla.php`'deki gibi elle `csrf_field()` companion-fix'i gerektirir. (2) Klasik CSRF
+    kimliği doğrulanmış bir kurbanın oturumunu hedefler — login POST'u TANIM GEREĞİ kimlik
+    doğrulama ÖNCESİ çalışır, bu yüzden etki farklı ve daha dar bir sınıf ("login CSRF" — kurbanın
+    saldırganın hesabına habersizce giriş yapması, veri değişikliği değil) — klasik CSRF'ten daha
+    düşük öncelikli. (3) Yanlış yapılırsa TÜM kullanıcıların girişini kilitleme riski (en yüksek
+    blast-radius dosya) — companion-fix + ekstra dikkatli QA gerektirir. Öneri: index.php'yi genel
+    FAZ-5 dizisine sokmak yerine, `KNOWN_BUGS.md`'deki "session fixation" bulgusuyla birlikte ayrı,
+    küçük bir "Login Hardening" fazında (SECURITY FINAL AUDIT öncesi) ele almak.
+
+  Hepsi tamamlanınca **SECURITY FINAL AUDIT** (tüm POST endpoint'leri = enforced liste, sıfır fark)
+  ile sprint kapanabilir.
+
+## FAZ-5D'de bulunan yan bulgu — `requests.php` schema drift (CSRF ile ilgisiz, 2026-07-05)
+`requests.php`/`mobile/requests.php`'de talep durumu/not güncelleme kodu `manager_note` kolonuna
+yazıyor ama `management_requests` tablosundaki gerçek kolon adı `response_note` — güncelleme PDO
+exception fırlatıp try/catch ile sessizce yutuluyor, `$error` set ediliyor ama HİÇBİR YERDE render
+edilmiyor (kullanıcı hiçbir hata görmüyor, durum/not güncellenmemiş olarak kalıyor, sanki
+güncellenmiş gibi sayfa yeniden yükleniyor). FAZ-5D kapsamında (CSRF enforcement) DOKUNULMADI —
+ayrı bir bug-fix turu gerektiriyor, kullanıcı onayı bekliyor.
 
 `KNOWN_BUGS.md`'de hâlâ açık, henüz bir sprint numarasına atanmamış diğer bulgular: accounting.php
 XSS, users.php rol yükseltme, `is_admin()` session bayatlığı, session fixation — bunlar SPRINT-004
