@@ -3,7 +3,7 @@
 Bu dosya `memory/features.md`'nin (tam gerekçe/kod detayıyla) kök dizindeki kısa özetidir — hızlı
 taramak için. Detaylı "neden böyle yapıldı" analizleri için `memory/features.md`'ye bakın.
 
-## REOPEN-001 — Calendar Daily Filter: Teknik Test PASS, USER TEST BEKLİYOR (2026-07-06, commit `0ecdf80`)
+## REOPEN-001 — Calendar Daily Filter: CLOSED (2026-07-06, commit `0ecdf80`, kullanıcı testinde PASS)
 **Kök neden** (3 turluk kök neden analizi + kullanıcının kendi üretim ekran görüntüsüyle
 kesinleştirildi): `takvim.php`/`mobile/calendar.php`'nin GÜN FİLTRESİ (`$byDay[$g]`) her zaman
 doğru çalışıyordu — hem grid hem detay panel gerçek veriyle test edilip doğrulanmıştı. Asıl sorun:
@@ -29,9 +29,10 @@ parametreleri → sistem bozulmadı, güvenli şekilde ya tüm listeye düştü 
 not ekleme POST akışı regresyonsuz (PASS); GET regresyon taraması 7/7 200; `php -l` 5/5 temiz;
 server log'da hata yok. FAIL yok.
 
-**Durum: USER TEST BEKLİYOR.** Teknik test PASS oldu ama bu iş, kullanıcı gerçek üretim sisteminde
-(primac.tr) test edip onay vermeden **CLOSED sayılmayacak** — REOPEN durum makinesi gereği
-(bkz. `memory/feedback_evolution_not_revolution.md`). Onay gelmeden REOPEN-002'ye geçilmeyecek.
+**Durum: CLOSED** (2026-07-06) — kullanıcı primac.tr'de gerçek sistemde test etti, **USER TEST:
+PASS** onayı verdi. REOPEN durum makinesi tamamlandı: OPEN → IN PROGRESS → USER TEST → **PASS**
+(bkz. `memory/feedback_evolution_not_revolution.md`). Sıradaki: **REOPEN-002 — Recent Activity
+Route Resolver**.
 
 ## SECURITY SPRINT-005 — FINAL AUDIT: PASS — Sprint Resmen Kapandı (2026-07-05)
 Kapsam: Login Hardening — `index.php` login formu + `boot.php`'deki oturum/remember-me altyapısı.

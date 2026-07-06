@@ -20,18 +20,17 @@ FINAL AUDIT", `VERSIONING.md` "Security Sprint Durumu", `ROADMAP.md` "Security R
 
 **Aktif gündem — REOPEN Backlog** (bkz. aşağı "REOPEN Listesi", öncelik sırası sabit): güvenlik
 sprintleri bitti, artık yeni ürün geliştirmesine geçilmeyecek, üç iş sırayla ele alınıyor:
-**REOPEN-001 (Takvim Günlük Filtre) → REOPEN-002 (Son İşlemler Route Resolver) → REOPEN-003
-(WhatsApp Conversation)**.
+~~REOPEN-001 (Takvim Günlük Filtre)~~ **CLOSED** → **REOPEN-002 (Son İşlemler Route Resolver,
+sıradaki iş)** → REOPEN-003 (WhatsApp Conversation).
 
-**REOPEN-001 — Teknik test PASS, USER TEST BEKLİYOR** (2026-07-06, commit `0ecdf80`, GitHub'a push
-edildi) — kök neden 3 turluk analiz + kullanıcının kendi üretim ekran görüntüsüyle kesinleşti:
-takvimin GÜN FİLTRESİ (`$byDay[$g]`) hep doğruydu, asıl sorun not (📝) öğelerinin linkinin tarih
-taşımadan düz `notes.php`/`mytasks.php`'ye (kullanıcının TÜM açık notları, filtresiz) gitmesiydi.
-Çözüm: `notes.php`/`mobile/mytasks.php`/`personal_notes_list()` opsiyonel `?date=` desteği
-kazandı, takvimin not linklerine kendi günleri eklendi — mevcut "Notlarım genel liste" davranışı
-(date verilmezse) HİÇ değişmedi. Yerel QA'da tüm senaryolar (web+mobil, hatalı date dahil) PASS,
-sıfır FAIL. **CLOSED değil** — kullanıcı primac.tr'de gerçek testle onaylamadan REOPEN-002'ye
-geçilmeyecek. Detay → `CHANGELOG.md` "REOPEN-001".
+**REOPEN-001 — CLOSED** (2026-07-06, commit `0ecdf80`, kullanıcı primac.tr'de gerçek testle
+onayladı — **USER TEST: PASS**) — kök neden 3 turluk analiz + kullanıcının kendi üretim ekran
+görüntüsüyle kesinleşti: takvimin GÜN FİLTRESİ (`$byDay[$g]`) hep doğruydu, asıl sorun not (📝)
+öğelerinin linkinin tarih taşımadan düz `notes.php`/`mytasks.php`'ye (kullanıcının TÜM açık
+notları, filtresiz) gitmesiydi. Çözüm: `notes.php`/`mobile/mytasks.php`/`personal_notes_list()`
+opsiyonel `?date=` desteği kazandı, takvimin not linklerine kendi günleri eklendi — mevcut
+"Notlarım genel liste" davranışı (date verilmezse) HİÇ değişmedi. Detay → `CHANGELOG.md`
+"REOPEN-001".
 
 **Bu oturumda ayrıca tamamlanan işler** (detay → `CHANGELOG.md`/`VERSIONING.md`): UX/STABILITY
 PATCH-003 (Takvim filtre — kod değişikliği yok, deploy açığı bulundu, sonradan REOPEN-001 olarak
@@ -54,7 +53,8 @@ FAZ-5B (Stok/Ürün) PASS commit `ae8116a`, FAZ-5C (İş/Görev) PASS commit `a6
 genelinde enforced olmayan POST dosyası kalmadı (FINAL AUDIT'te tam tarama tekrarlandı, sonuç
 aynı). Tamamlanan fazlar (FAZ-1 → FAZ-4F, FAZ-5A→5F), HIGH-RISK CHECKPOINT AUDIT ve FINAL AUDIT
 detayı → `CHANGELOG.md`. **SECURITY SPRINT-005 — Login Hardening de TAMAMLANDI** (bkz. yukarı "Son
-Durum"). **Sıradaki: REOPEN Backlog** (REOPEN-001 → REOPEN-002 → REOPEN-003, bkz. "REOPEN Listesi").
+Durum"). **Sıradaki: REOPEN Backlog** (~~REOPEN-001~~ CLOSED → **REOPEN-002 (sıradaki)** →
+REOPEN-003, bkz. "REOPEN Listesi").
 
 Ayrıca açık **Security Technical Debt** (bug değil, mimari/deployment notu — bkz. `ROADMAP.md`):
 rate-limit'in uzun vadede `security_rate_limits`/`security_events` tablosuna taşınması,
@@ -101,13 +101,12 @@ Production'a (acanstr.com/ots) henüz dokunulmadı — ayrı "DEPLOY MODE" komut
 Kullanıcı gerçek kullanım testinde 3 önceki "PASS" bulguyu FAILED/REOPEN olarak işaretlemişti; hem
 SECURITY SPRINT-004 hem SPRINT-005 artık TAMAMLANDI, bu yüzden bu üç iş **şimdi aktif gündem** —
 sırayla, sıfırdan yeni kabul kriterleriyle ele alınacak:
-- ✅ **REOPEN-001 — Takvim Günlük Filtre: Teknik test PASS, USER TEST BEKLİYOR** (2026-07-06,
-  commit `0ecdf80`). Kök neden 3 turluk analiz + kullanıcının üretim ekran görüntüsüyle kesinleşti:
-  takvimin `$byDay[$g]` filtresi hep doğruydu; sorun not (📝) linklerinin tarih taşımadan
+- ✅ **REOPEN-001 — Takvim Günlük Filtre: CLOSED** (2026-07-06, commit `0ecdf80`, **USER TEST:
+  PASS**). Kök neden 3 turluk analiz + kullanıcının üretim ekran görüntüsüyle kesinleşti: takvimin
+  `$byDay[$g]` filtresi hep doğruydu; sorun not (📝) linklerinin tarih taşımadan
   `notes.php`/`mytasks.php`'nin TÜM açık notlarını (filtresiz) göstermesiydi. `notes.php` +
   `mobile/mytasks.php` + `personal_notes_list()`'e opsiyonel `?date=` desteği eklendi, mevcut genel
-  liste davranışı korundu. Yerel QA'da tüm senaryolar PASS. **CLOSED değil** — primac.tr'de gerçek
-  kullanıcı testi/onayı bekliyor. Detay → `CHANGELOG.md` "REOPEN-001".
+  liste davranışı korundu. Detay → `CHANGELOG.md` "REOPEN-001".
 - **REOPEN-002 — Son İşlemler Route Resolver**: satış/satın alma kayıtları hâlâ ilgisiz bir "yeni
   kayıt" formuna (`sales.php`/`purchase.php`) yönleniyor. **Kısmi kök neden bu oturumda bulundu**
   (kod değiştirilmedi): `activity_target_url()`'nin `$map` dizisinde `'sale'`/`'purchase'`
@@ -122,7 +121,7 @@ sırayla, sıfırdan yeni kabul kriterleriyle ele alınacak:
   EDİLMEDİ — kullanıcı SPRINT-005 önceliğini koyunca durduruldu).
 
 **Öncelik sırası (kullanıcı tarafından netleştirildi, 2026-07-05, değişmedi)**: ~~SECURITY
-SPRINT-005~~ (tamamlandı) → **REOPEN-001 (sıradaki iş)** → REOPEN-002 → REOPEN-003 → Dashboard 2.0
+SPRINT-005~~ (tamamlandı) → ~~REOPEN-001~~ (CLOSED) → **REOPEN-002 (sıradaki iş)** → REOPEN-003 → Dashboard 2.0
 → Calendar 2.0 → CRM 2.0 → Purchase & Sales 2.0 → UX Polish → Performance → Mobile Experience →
 System Audit → Release Candidate. Bu üç REOPEN işi tamamlanmadan yeni ürün geliştirmesine
 geçilmeyecek. Detay ve çalışma felsefesi ("Evolution not Revolution", REOPEN durum makinesi:
@@ -162,8 +161,8 @@ commit olarak eklenir, üzerine yazılmaz.
 
 ## Devam Eden Sprint
 Şu an devam eden bir güvenlik sprint'i yok — **SECURITY SPRINT-004 ve SPRINT-005 ikisi de
-TAMAMLANDI** (bkz. yukarı "Son Durum"). Aktif gündem: **REOPEN Backlog** (REOPEN-001 → REOPEN-002 →
-REOPEN-003, bkz. "REOPEN Listesi"). Ayrıca UX/STABILITY PATCH-002 tamamlandı, commit edildi,
+TAMAMLANDI** (bkz. yukarı "Son Durum"). Aktif gündem: **REOPEN Backlog** (~~REOPEN-001~~ CLOSED →
+**REOPEN-002 (şimdi)** → REOPEN-003, bkz. "REOPEN Listesi"). Ayrıca UX/STABILITY PATCH-002 tamamlandı, commit edildi,
 GitHub'a push edildi; DEV (primac.tr) deploy edildi, migration çalıştırıldı, DEV aktif (bkz. yukarı).
 
 ## Açık Kalan Hatalar
