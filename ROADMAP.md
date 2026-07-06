@@ -132,29 +132,29 @@ Kullanıcının primac.tr'de gerçek bir cihazdan bildirim izni verip test etmes
 erişimi olmadan kesin teşhis yapılamamasının nedenini gidermez ama BİR SONRAKİ arızada gerçek hata
 mesajını (VAPID mi, eklenti mi, ağ mı) sağlayacak.
 
-## WhatsApp Conversation/Inbound — MVP tamamlandı, açık teknik borç (2026-07-05)
-MVP (migration 041, `wa_webhook.php`, sender-scope mimari, web+mobil ekranlar) **PASS**, commit
-`dae3e62` — detay → `CHANGELOG.md`, `VERSIONING.md`. Kullanıcı onayı ile MVP kapsamı dışında
-bırakılan, ayrı kararlar gerektiren açık maddeler:
+## WhatsApp 2.0 backlog — REOPEN-003 sonrası açık maddeler (2026-07-07)
+REOPEN-003 (bkz. `CHANGELOG.md`) ile eski MVP'nin listesindeki **arama** ve **gerçek zamanlı
+güncelleme (polling)** maddeleri çözüldü, **compose kutusu** conversation ekranına taşındı (ama
+ek/dosya gönderme kısmı hâlâ pasif — aşağıdaki madde 4). `provider_message_id` DEDUP de bu turda
+eklendi (webhook mükerrer POST koruması — outbound tarafını değil, sadece inbound'u etkiler).
+Kalan açık maddeler, kullanıcının "WhatsApp 2.0" olarak adlandırdığı ayrı bir backlog'a taşındı,
+hiçbiri onay olmadan uygulanmayacak:
 1. **Outbound `provider_message_id` parse edilmiyor** — `wa_send()` UltraMsg'in yanıtını hiç
-   parse etmiyor, sadece true/false dönüyor. Giden mesaj için sağlayıcı id'si yakalanmıyor
-   (inbound tarafını etkilemiyor, sadece giden mesajların provider tarafında iz sürülmesini
-   kısıtlıyor).
+   parse etmiyor, sadece true/false dönüyor. Giden mesaj için sağlayıcı id'si yakalanmıyor.
 2. **Gelen medya dosyaları indirilmiyor/proxy'lenmiyor** — sadece tip+varsa metin/caption
    kaydediliyor, dosyanın kendisi hiç çekilmiyor.
-3. **Aynı telefon numarasına sahip birden fazla cari** — eşleştirme ilk bulduğu carriye bağlanıyor
+3. **Aynı telefon numarasına sahip birden fazla cari** — eşleştirme ilk bulduğu cariye bağlanıyor
    (deterministik ama keyfi), gerçek bir çözüm stratejisi (kullanıcıya seçtirme? en son işlem
    gören cariyi mi baz alma?) net değil.
-4. **Konuşma arama** — `wa_conversations.php`/`mobile/wa_conversations.php` listesinde arama/filtre
-   yok, sadece kronolojik liste.
-5. **Mesaj teslim/okunma durumu senkronizasyonu** — UltraMsg'in `ack`/durum güncellemelerini
-   (iletildi/okundu vb.) yakalayıp `wa_messages.status`'a yansıtan bir mekanizma yok, sadece ilk
-   yazma anındaki durum tutuluyor.
-6. **Attachment desteği** (giden tarafta) — `wa_send_now.php` zaten dosya/medya gönderebiliyor
-   (`wa_upload_media()`), ama conversation ekranından doğrudan yeni bir ek göndermek için ayrı bir
-   compose kutusu yok (mevcut `wa_send_now.php`'ye yönlendiriliyor).
-7. **Gerçek zamanlı (websocket/polling) konuşma güncellemesi** — yeni bir inbound mesaj geldiğinde
-   ekran otomatik yenilenmiyor, kullanıcı sayfayı manuel yenilemeli.
+4. **Mesaj teslim/okunma durumu senkronizasyonu (ack/çift tik)** — UltraMsg'in durum
+   güncellemelerini yakalayıp `wa_messages.status`'a yansıtan bir mekanizma yok.
+5. **Conversation ekranından ek/dosya gönderme** — 😀/📎 alanlarının yeri hazırlandı ama bilinçli
+   olarak `disabled` (REOPEN-003 kararı); aktif etmek ayrı bir onay gerektirir.
+6. **`fromMe` mesajların OTS dışından (telefon uygulamasından) gönderilirse görünmemesi** —
+   webhook `fromMe=true` olan olayları bilinçli atlıyor (kendi gönderdiklerimizin yankısı olduğu
+   varsayımıyla), ama personel müşteriye doğrudan telefon uygulamasından yazarsa bu hiç loglanmaz.
+7. **Erişim izni `users` (admin) permission'ına bağlı** — bir cariyle ilgilenen temsilci, admin
+   değilse conversation'ı göremiyor; CRM-odaklı bir izin modeli (temsilci bazlı) ayrı bir karar.
 
 Hiçbiri kullanıcı onayı olmadan uygulanmayacak — bu liste görünürlük için.
 

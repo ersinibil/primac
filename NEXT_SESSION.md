@@ -21,7 +21,22 @@ FINAL AUDIT", `VERSIONING.md` "Security Sprint Durumu", `ROADMAP.md` "Security R
 **Aktif gündem — REOPEN Backlog** (bkz. aşağı "REOPEN Listesi", öncelik sırası sabit): güvenlik
 sprintleri bitti, artık yeni ürün geliştirmesine geçilmeyecek, üç iş sırayla ele alınıyor:
 ~~REOPEN-001 (Takvim Günlük Filtre)~~ **CLOSED** → ~~REOPEN-002 (Son İşlemler Route Resolver)~~
-**CLOSED** → **REOPEN-003 (WhatsApp Conversation) — sıradaki iş, henüz başlanmadı**.
+**CLOSED** → **REOPEN-003 (WhatsApp Conversation) — teknik test 13/13 PASS, USER TEST bekleniyor**.
+
+**REOPEN-003 — USER TEST bekleniyor** (2026-07-07, commit `9726e14`, teknik test 13/13 PASS) —
+"PRODUCT REOPEN" olarak ele alındı (basit bugfix değil): `wa_conversation_view.php` artık gerçek
+bir WhatsApp Conversation deneyimi — tek ekranda okuma+yazma, AJAX gönderim (sayfa yenilenmeden
+balon eklenir), 3 saniyelik polling (yeni gelen mesaj otomatik görünür), masaüstünde iki-kolon
+shell (sol: konuşma listesi+arama, sağ: aktif konuşma — gerçek SPA değil, GET navigasyonu
+korunarak, sunucu tarafında render edilen paylaşılan `wa_conversation_list_html()` ile), başlıkta
+Firma/Yetkili/Cari tipi bilgisi. `wa_send_now.php` artık SADECE "Toplu WhatsApp Gönderimi" —
+1:1 mesajlaşma tamamen conversation ekranından yürüyor. `wa_webhook.php`'ye `provider_message_id`
+dedup kontrolü eklendi (aynı webhook olayı iki kez POST edilirse mükerrer kayıt açılmıyor).
+Bilinçli olarak bu turun DIŞINDA bırakılanlar (WhatsApp 2.0 backlog'una not edildi, bkz.
+`ROADMAP.md`): `fromMe` dış kaynak mesajları, aynı telefonun çoklu cariyle eşleşmesi, erişim
+izni modeli, ack/çift-tik senkronizasyonu, medya indirme. Detay → `CHANGELOG.md` "REOPEN-003".
+**Durum: USER TEST** — kullanıcının primac.tr'de gerçek görsel/tıklama testi (özellikle masaüstü
+iki-panel yerleşimi, balon animasyonu, polling) bekleniyor, CLOSED değil.
 
 **REOPEN-001 — CLOSED** (2026-07-06, commit `0ecdf80`, kullanıcı primac.tr'de gerçek testle
 onayladı — **USER TEST: PASS**) — kök neden 3 turluk analiz + kullanıcının kendi üretim ekran

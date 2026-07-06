@@ -3,6 +3,57 @@
 Bu dosya `memory/features.md`'nin (tam gerekçe/kod detayıyla) kök dizindeki kısa özetidir — hızlı
 taramak için. Detaylı "neden böyle yapıldı" analizleri için `memory/features.md`'ye bakın.
 
+## REOPEN-003 — WhatsApp Conversation Deneyimi: USER TEST bekleniyor (2026-07-07, commit `9726e14`, teknik test 13/13 PASS)
+**Kapsam kararı**: kullanıcı bunu "basit bir bugfix değil, PRODUCT REOPEN" olarak tanımladı — amaç
+sadece çalışan bir mesaj sistemi değil, gerçek bir WhatsApp Conversation deneyimi. Önce tam bir
+mimari analiz yapıldı (mevcut şema, gerçek kullanıcı akışı, ürün eksikleri, önerilen mimari/ekran
+yapısı, metin wireframe), sonra 7 maddelik bir mimari onay alındı, ancak uygulamaya geçmeden önce
+kullanıcı bir revizyon turu daha istedi (iki panel netleştirmesi, `wa_send_now.php`'nin akıbeti,
+dedup'un bu turda dahil edilmesi) — bu ikinci onay üzerine uygulandı.
+
+**Değişenler**:
+- `wa_conversation_view.php` (web) + `mobile/wa_conversation_view.php`: artık tek ekranda hem
+  okuma hem yazma. `?id=` (mevcut konuşma) yanında `?phone=` de kabul ediyor — henüz konuşma
+  yoksa boş thread+compose gösteriliyor, satır ilk mesaj gönderilene kadar DB'ye yazılmıyor.
+  Gönderim AJAX (`ajax_send=1` POST, JSON döner) — sayfa yenilenmeden yeni balon eklenir, scroll
+  en alta iner, kutu temizlenir. 3 saniyelik polling (`?poll=1&after=`) yeni mesajları otomatik
+  ekliyor ve görüntülenen konuşmadaki yeni gelen mesajları anında okundu işaretliyor. Başlıkta
+  artık sadece telefon değil, Firma/Cari adı + Yetkili (`contacts.authorized_person`) + Cari tipi
+  gösteriliyor. 😀/📎 alanlarının yeri hazırlandı ama bilinçli olarak `disabled` — henüz aktif değil.
+- Web tarafında **iki-kolon shell**: `wa_conversations.php` ve `wa_conversation_view.php` aynı
+  CSS shell'i paylaşıyor (sol: arama+konuşma listesi sunucu tarafında render edilir, aktif
+  konuşma vurgulanır; sağ: aktif konuşma). Gerçek SPA/client-side routing YOK — konuşma seçimi
+  hâlâ normal GET navigasyonu, sadece görsel olarak iki panel hissi veriliyor (OTS'nin mevcut
+  sayfa mimarisine sadık kalınarak). Liste render mantığı kopyalanmadı — yeni paylaşılan
+  `wa_conversation_list_html()` (`share_lib.php`) her iki dosyada da kullanılıyor (activity_lib.php
+  emsaliyle aynı desen). Mobilde tek kolon korunuyor (mobil zaten tek-sütun akışta).
+- `wa_conversations.php`/mobil: arama kutusu eklendi (`?q=`, isim/telefon üzerinde LIKE).
+- `wa_send_now.php`/mobil: **tekil (1:1) mod tamamen kaldırıldı** — sayfa artık SADECE "Toplu
+  WhatsApp Gönderimi". 1:1 mesajlaşma tamamen `wa_conversation_view.php` üzerinden yürüyor.
+  Yeni gönderim kaynağı `'wa_conversation'` `wa_log_enabled_sources()` allowlist'ine eklendi
+  (bulk gönderim hâlâ `'wa_send_now'` kaynağını kullanıyor — ayrım korunuyor).
+- `wa_webhook.php`/`share_lib.php`: **`provider_message_id` dedup** — `wa_message_log()` artık
+  INSERT'ten önce aynı `provider_message_id`'nin zaten kayıtlı olup olmadığını kontrol ediyor.
+  Webhook sağlayıcılarının (UltraMsg dahil) aynı olayı ağ/timeout nedeniyle birden fazla POST
+  etmesi artık mükerrer satır açmıyor.
+- `contact_view.php`/mobil: "💬 WhatsApp" butonu artık konuşma yoksa da `wa_conversation_view.php
+  ?phone=X`'e gidiyor (`wa_send_now.php`'ye değil).
+- `boot.php`: `$__csrf_enforced_pages`'e `wa_conversation_view.php` eklendi (artık POST/AJAX
+  alıyor) — tek satır, hem web hem mobil karşılığını basename eşleşmesiyle otomatik kapsıyor.
+
+**Bilinçli olarak bu turun DIŞINDA bırakılanlar** (WhatsApp 2.0 backlog, bkz. `ROADMAP.md`):
+`fromMe` mesajların OTS dışından (telefon uygulamasından) gönderilirse görünmemesi, aynı telefonun
+birden fazla cariyle eşleşmesi stratejisi, erişim izninin `users`e (admin) bağlı olması,
+ack/teslim-oldu senkronizasyonu, gelen medya dosyalarının indirilmemesi.
+
+**Teknik test**: lokal `ots_sectest`'te gerçek AJAX gönderim + simüle webhook inbound + dedup +
+polling + arama + CSRF enforcement + regresyon (dashboard.php/sales.php) test edildi, 13/13 PASS
+(bkz. `NEXT_SESSION.md`). Masaüstü iki-panel yerleşiminin GÖRSEL doğrulaması (dar/geniş ekran,
+balon animasyonu) tarayıcıda yapılamadı — bu kullanıcı testinde doğrulanacak.
+
+**Durum: USER TEST** — kullanıcı primac.tr'de gerçek görsel/tıklama testiyle onaylamadan CLOSED
+sayılmayacak (REOPEN state machine).
+
 ## REOPEN-002 — Recent Activity Route Resolver: CLOSED (2026-07-06, commit `2924071`, USER TEST: PASS)
 **Kök neden**: `activity_lib.php`'deki `activity_target_url()`'nin eşleme haritası `sale`/
 `purchase` entity type'larını kapsamıyordu → `null` dönüyordu → çağıran (`activity_row_html()`)
