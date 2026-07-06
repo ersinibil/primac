@@ -20,8 +20,8 @@ FINAL AUDIT", `VERSIONING.md` "Security Sprint Durumu", `ROADMAP.md` "Security R
 
 **Aktif gündem — REOPEN Backlog** (bkz. aşağı "REOPEN Listesi", öncelik sırası sabit): güvenlik
 sprintleri bitti, artık yeni ürün geliştirmesine geçilmeyecek, üç iş sırayla ele alınıyor:
-~~REOPEN-001 (Takvim Günlük Filtre)~~ **CLOSED** → **REOPEN-002 (Son İşlemler Route Resolver,
-sıradaki iş)** → REOPEN-003 (WhatsApp Conversation).
+~~REOPEN-001 (Takvim Günlük Filtre)~~ **CLOSED** → ~~REOPEN-002 (Son İşlemler Route Resolver)~~
+**CLOSED** → **REOPEN-003 (WhatsApp Conversation) — sıradaki iş, henüz başlanmadı**.
 
 **REOPEN-001 — CLOSED** (2026-07-06, commit `0ecdf80`, kullanıcı primac.tr'de gerçek testle
 onayladı — **USER TEST: PASS**) — kök neden 3 turluk analiz + kullanıcının kendi üretim ekran
@@ -31,6 +31,33 @@ notları, filtresiz) gitmesiydi. Çözüm: `notes.php`/`mobile/mytasks.php`/`per
 opsiyonel `?date=` desteği kazandı, takvimin not linklerine kendi günleri eklendi — mevcut
 "Notlarım genel liste" davranışı (date verilmezse) HİÇ değişmedi. Detay → `CHANGELOG.md`
 "REOPEN-001".
+
+**REOPEN-002 — CLOSED** (2026-07-06, commit `2924071`, kullanıcı primac.tr'de gerçek deploy
+sonrası testle onayladı — **USER TEST: PASS**) — kök neden: `activity_target_url()`'nin haritası
+`sale`/`purchase` türlerini kapsamıyordu, `null` dönüyordu, çağıran KOŞULSUZ write-time stored
+url'e düşüyordu — bu türlerde stored url her zaman boş "yeni kayıt" formuydu (`sales.php`/
+`purchase.php`), gerçek işlem detayına değil. Analiz sırasında aynı kökten iki ayrı bulgu daha
+çıktı: bazı `finance` kayıtları eski/yerel geliştirme host'una (`http://localhost:8099/...`)
+donmuş stored url taşıyordu, ve `mobile/activity.php` paylaşılan `activity_row_html()`'i hiç
+kullanmıyordu — kendi kopya çözümleme mantığını taşıyordu. Kullanıcı dar kapsamı (sadece sale/
+purchase) reddetti, kontrollü geniş kapsam onayladı. **Çözüm**: `activity_target_url()` →
+`activity_resolve()` olarak yeniden yazıldı, artık 4 durum döndürüyor (`ok`/`missing`/
+`no_detail`/`unsafe_stored_url`); yeni `activity_safe_stored_url()` fonksiyonu stored url
+fallback'ini SADECE host güncel domain ile eşleşiyorsa, portsuzsa, platforma yanlış klasöre
+(`mobile/`) gitmiyorsa VE karşı platformda aynı isimli dosya gerçekten varsa izin veriyor —
+aksi halde pasif "Kayıt detayına güvenli şekilde ulaşılamıyor" gösteriliyor. sale/purchase için
+ayrıca özel `no_detail` durumu var (asla `sales.php`/`purchase.php`'ye link verilmiyor). `mobile/
+activity.php` artık `activity_render_list($rows,'mobile')` çağırıyor (kopya kod kaldırıldı),
+`mobile/common.php`'ye eksik `.activity-item`/`.activity-icon`/`.activity-body` CSS sınıfları
+dark-theme token'larıyla eklendi.
+
+**Önemli deploy dersi**: ilk kullanıcı testi PARTIAL FAIL verdi — kod DEĞİL, primac.tr'ye deploy
+adımı (Masaüstü `guncelleme.zip` tazeleme + sunucuda `guncelle.php` çalıştırma) atlanmıştı, `git
+push` tek başına yeterli değil. Zip tazelenip kullanıcı yükleyip çalıştırdıktan sonra gerçek test
+PASS verdi. Bundan sonra "Push" adımı ikisini de kapsamalı — bkz. `CHANGELOG.md` "REOPEN-002" ve
+`memory/deploy.md`. Kullanıcı ayrıca gerçek bir satın alma/satış detay ekranı istedi — bu **Purchase
+& Sales 2.0**'a ertelendi (bkz. `ROADMAP.md` "Bilinçli olarak ERTELENMİŞ"). Detay → `CHANGELOG.md`
+"REOPEN-002".
 
 **Bu oturumda ayrıca tamamlanan işler** (detay → `CHANGELOG.md`/`VERSIONING.md`): UX/STABILITY
 PATCH-003 (Takvim filtre — kod değişikliği yok, deploy açığı bulundu, sonradan REOPEN-001 olarak

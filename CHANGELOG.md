@@ -3,6 +3,66 @@
 Bu dosya `memory/features.md`'nin (tam gerekçe/kod detayıyla) kök dizindeki kısa özetidir — hızlı
 taramak için. Detaylı "neden böyle yapıldı" analizleri için `memory/features.md`'ye bakın.
 
+## REOPEN-002 — Recent Activity Route Resolver: CLOSED (2026-07-06, commit `2924071`, USER TEST: PASS)
+**Kök neden**: `activity_lib.php`'deki `activity_target_url()`'nin eşleme haritası `sale`/
+`purchase` entity type'larını kapsamıyordu → `null` dönüyordu → çağıran (`activity_row_html()`)
+KOŞULSUZ write-time'da donmuş stored `url` kolonuna düşüyordu. sale/purchase için bu stored url
+her zaman boş "yeni kayıt" formuydu (`sales.php`/`purchase.php`), gerçek işlem detayına değil —
+kullanıcının ekran görüntüsünde gösterdiği "Arb Reklam · kapı isimliği" tıklanınca boş satın alma
+formuna gitme sorunu buydu. Analiz sırasında aynı kontrolsüz-fallback kökünden iki ayrı bulgu
+daha çıktı: (1) bazı `finance` kayıtları eski/yerel geliştirme host'una donmuş stored url
+taşıyordu (`http://localhost:8099/finance.php`), (2) `mobile/activity.php` paylaşılan
+`activity_row_html()`/`activity_render_list()` fonksiyonlarını hiç kullanmıyordu — kendi bağımsız
+kopya çözümleme mantığını taşıyordu (web'de düzeltilse mobilde düzelmezdi).
+
+**Mimari karar**: kullanıcı dar kapsamı (sadece sale/purchase) reddetti, "bu kontrolsüz
+stored-url fallback'in kendisi sorun" diyerek kontrollü geniş kapsam onayladı.
+
+**Çözüm**:
+- `activity_target_url()` → `activity_resolve($r,$platform)` olarak yeniden yazıldı, artık tek
+  bir URL yerine durum döndürüyor: `ok` (güvenli hedef var), `missing` (kayıt silinmiş), `no_detail`
+  (sale/purchase — per-kayıt detay ekranı hiç yok, stored url asla kullanılmaz), `unsafe_stored_url`
+  (haritasız tür + stored url güvenlik kontrolünden geçemedi).
+- Yeni `activity_safe_stored_url($url,$platform)`: stored url fallback'i SADECE şu durumlarda
+  izin veriyor — host güncel `base_url()` domain'iyle eşleşiyor, URL'de port yok, web ekranında
+  `mobile/` klasörüne gitmiyor, ve bare (önek'siz) dosya adı karşı platformun klasöründe
+  gerçekten var (`is_file()` ile kontrol). Bu tek fonksiyon hem sale/purchase-dışı `finance`/
+  `category`/`brand`/`unit`/`system`/`admin` gibi haritasız türleri, hem eski-host hem de
+  çapraz-platform senaryolarını kapsıyor — özel tür bazlı kod eklemeden.
+  Deployment note: 'finance' tipi için gerçekten mobile-only bir hedef (mobile/finance.php)
+  yok; bu satırlar artık mobilde pasif gösteriliyor (kırık link yerine), web'de bare
+  'finance.php' hâlâ çalışıyor.
+- `activity_row_html()` 4 durumu da işliyor — `no_detail`/`unsafe_stored_url` için "Bu işlem için
+  detay ekranı henüz yok" / "Kayıt detayına güvenli şekilde ulaşılamıyor" pasif (tıklanamaz) satır.
+- `mobile/activity.php` artık kendi kopya mantığı yerine `activity_render_list($rows,'mobile')`
+  çağırıyor (Seçenek A — mimari onaylandı); `mobile/common.php`'ye eksik `.activity-item`/
+  `.activity-icon`/`.activity-body`/`.activity-list` CSS sınıfları mevcut dark-theme
+  token'larıyla (`var(--c-muted)`, `var(--radius-*)`, `rgba(255,255,255,.1)`) eklendi.
+- Sadece 3 dosya değişti: `activity_lib.php`, `mobile/activity.php`, `mobile/common.php`. Yeni
+  tablo/DB değişikliği yok, UI redesign yok, mapped türlerin (contact/job/task/quote/product/
+  stock/personnel/trade_document) davranışı BİREBİR aynı kaldı (regresyon testiyle doğrulandı).
+
+**Teknik test**: lokal `ots_sectest`'te gerçek satın alma/satış submit edilip `activity_logs`
+satırı → `activity.php`/`dashboard.php`/`mobile/activity.php` render çıktısı birebir doğrulandı,
+11 maddelik test planının tamamı PASS (bkz. `NEXT_SESSION.md`).
+
+**Deploy notu (önemli ders)**: ilk kullanıcı testi PARTIAL FAIL sonucu verdi — "Arb Reklam" veresiye
+satın alması hâlâ boş bir forma gidiyordu. Kök neden kodda DEĞİLDİ: `git push` yapılmıştı ama
+primac.tr'nin gerçek deploy mekanizması (`~/Desktop/PRIMAC-GUNCELLEME/guncelleme.zip` + sunucuda
+`guncelle.php` çalıştırma) bu turda atlanmıştı — zip 2026-07-05 21:41 tarihliydi, REOPEN-001'i bile
+içermiyordu. Zip `git archive HEAD`+`vendor/` ile tazelenip (MD5 ile repo'yla eşleştiği doğrulandı),
+kullanıcı cPanel'den yükleyip `guncelle.php`'yi çalıştırdıktan SONRA gerçek test PASS verdi: "Arb
+Reklam" kaydı artık pasif, tıklanamaz, "Bu işlem için detay ekranı henüz yok" notuyla gösteriliyor.
+**Ders**: "Push" adımı bundan sonra SADECE `git push` değil, DEV için Masaüstü zip'inin de
+tazelenip kullanıcıya "yükle+guncelle.php çalıştır" hatırlatmasının yapılması demek — bkz.
+`memory/deploy.md`.
+
+Kullanıcı ayrıca bu test sırasında satın alma/satış için GERÇEK bir detay ekranı istediğini belirtti
+— bu, REOPEN-002'nin (routing güvenliği) kapsamı dışında, bilinçli olarak **Purchase & Sales 2.0**'a
+ertelendi (bkz. `ROADMAP.md` "Bilinçli olarak ERTELENMİŞ").
+
+**Durum: CLOSED** — kullanıcı primac.tr'de gerçek deploy sonrası tıklama testiyle onayladı.
+
 ## REOPEN-001 — Calendar Daily Filter: CLOSED (2026-07-06, commit `0ecdf80`, kullanıcı testinde PASS)
 **Kök neden** (3 turluk kök neden analizi + kullanıcının kendi üretim ekran görüntüsüyle
 kesinleştirildi): `takvim.php`/`mobile/calendar.php`'nin GÜN FİLTRESİ (`$byDay[$g]`) her zaman
