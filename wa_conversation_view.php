@@ -130,8 +130,6 @@ $lastMsgId = $messages ? (int)end($messages)['id'] : 0;
 .wa-compose textarea{flex:1;resize:none;margin:0;max-height:110px}
 .wa-compose button.icon{border:1px solid #e5e7eb;background:#f8fafc;border-radius:10px;width:40px;height:40px;font-size:17px;cursor:not-allowed;opacity:.5;flex:0 0 auto}
 @media(max-width:900px){.wa-shell{flex-direction:column}.wa-list-col{width:100%;max-height:220px;border-right:0}}
-#waDebugBox{position:fixed;top:70px;right:10px;z-index:9999;background:#111827;color:#22c55e;font-family:monospace;font-size:11px;padding:10px 12px;border-radius:8px;max-width:260px;opacity:.94;line-height:1.6;box-shadow:0 4px 14px rgba(0,0,0,.3)}
-#waDebugBox b{color:#fff}
 </style>
 
 <div class="panel-head">
@@ -141,19 +139,6 @@ $lastMsgId = $messages ? (int)end($messages)['id'] : 0;
 <a class="btn secondary" href="wa_conversations.php">Tüm Konuşmalar</a>
 </div>
 </div>
-
-<?php if(DEBUG_WA && function_exists('is_admin') && is_admin()): ?>
-<div id="waDebugBox">
-<b>WA DEBUG</b><br>
-Conversation ID: <?=(int)($conv['id'] ?? 0)?><br>
-Phone: <?=h($conv['phone'] ?? '')?><br>
-Message Count: <?=count($messages)?><br>
-Polling Active: <span id="waDbgPoll">-</span><br>
-Last Poll: <span id="waDbgLastPoll">-</span><br>
-Last Ajax: <span id="waDbgLastAjax">-</span><br>
-CSRF OK: <?=!empty($_SESSION['csrf_token']) ? 'evet' : 'hayır'?>
-</div>
-<?php endif; ?>
 
 <section class="panel" style="padding:0">
 <div class="wa-shell">
@@ -227,12 +212,6 @@ CSRF OK: <?=!empty($_SESSION['csrf_token']) ? 'evet' : 'hayır'?>
     scrollBottom();
   }
 
-  // --- GEÇİCİ TEŞHİS: sağ üst debug kutusu varsa (admin + DEBUG_WA) canlı güncellenir, yoksa no-op ---
-  var dbgPoll = document.getElementById('waDbgPoll');
-  var dbgLastPoll = document.getElementById('waDbgLastPoll');
-  var dbgLastAjax = document.getElementById('waDbgLastAjax');
-  function nowStr(){ return new Date().toLocaleTimeString('tr-TR'); }
-
   function doSend(){
     var text = textEl.value.trim();
     if(!text || !phone) return;
@@ -247,7 +226,6 @@ CSRF OK: <?=!empty($_SESSION['csrf_token']) ? 'evet' : 'hayır'?>
         body: fd
     }).then(function(r){ return r.json(); }).then(function(data){
         sendBtn.disabled = false;
-        if(dbgLastAjax) dbgLastAjax.textContent = nowStr() + ' (' + (data.ok?'OK':'FAIL') + ')';
         if(data.ok){
             appendMessage(data.message);
             textEl.value = '';
@@ -256,7 +234,6 @@ CSRF OK: <?=!empty($_SESSION['csrf_token']) ? 'evet' : 'hayır'?>
         }
     }).catch(function(){
         sendBtn.disabled = false;
-        if(dbgLastAjax) dbgLastAjax.textContent = nowStr() + ' (NETWORK ERROR)';
         alert('Bağlantı hatası — sayfayı yenileyip tekrar deneyin.');
     });
   }
@@ -266,21 +243,15 @@ CSRF OK: <?=!empty($_SESSION['csrf_token']) ? 'evet' : 'hayır'?>
   });
 
   if(convId){
-    if(dbgPoll) dbgPoll.textContent = 'Aktif (3sn)';
     setInterval(function(){
         fetch(window.location.pathname + '?id=' + convId + '&poll=1&after=' + lastId, {credentials:'same-origin'})
             .then(function(r){ return r.json(); })
             .then(function(data){
-                if(dbgLastPoll) dbgLastPoll.textContent = nowStr() + ' (' + (data.ok?(data.messages?data.messages.length:0)+' yeni':'FAIL') + ')';
                 if(data.ok && data.messages && data.messages.length){
                     data.messages.forEach(appendMessage);
                 }
-            }).catch(function(){
-                if(dbgLastPoll) dbgLastPoll.textContent = nowStr() + ' (NETWORK ERROR)';
-            });
+            }).catch(function(){});
     }, 3000);
-  } else if(dbgPoll){
-    dbgPoll.textContent = 'Pasif (henüz konuşma yok)';
   }
 })();
 </script>
