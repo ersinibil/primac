@@ -71,16 +71,30 @@ function activity_time_ago($date){
     return date('d.m.Y H:i',$ts);
 }
 
-// UX/STABILITY PATCH-004 — merkezi "activity target resolver". Önceden her activity_log() çağrısı
-// kendi $url string'ini write-time'da donduruyordu (bazıları base_url().'mobile/...' gibi TEK
-// platforma kilitli) — Son İşlemler bu stored url'i hiç sorgulamadan basıyordu, bu yüzden web'de
-// açılan bir kayıt mobile route'a, mobilde açılan bir kayıt web route'a gidebiliyordu. Bu fonksiyon
-// entity_type+entity_id+platform'a göre RENDER ANINDA doğru hedefi üretir; eski/stored url sadece bu
-// haritanın kapsamadığı türler için (ör. 'admin' silme denetimi, satış/satın alma — bunların per-kayıt
-// bir detay ekranı hiç yok) fallback olarak kullanılmaya devam eder.
-// Dönüş: string (çözülmüş URL) | false (kayıt silinmiş/artık yok) | null (bu tür resolver kapsamında
-// değil — çağıran stored url'e düşmeli).
-function activity_target_url($entityType,$entityId,$platform='web'){
+// UX/STABILITY PATCH-004 — merkezi "activity target resolver" (REOPEN-002 ile 2026-07-06'da
+// sertleştirildi). Önceden her activity_log() çağrısı kendi $url string'ini write-time'da
+// donduruyordu, ve harita kapsamayan HER tür kontrolsüzce bu stored url'e düşüyordu — bu yüzden
+// sale/purchase kayıtları "yeni kayıt" formuna, bazı finans kayıtları eski/localhost url'lere,
+// bazı kayıtlar yanlış platformun klasörüne (mobile/... web'de, ya da tersi) gidebiliyordu.
+// activity_resolve() artık tek bir durum döndürür:
+//   'ok'                → gerçek/güvenli bir hedef var, $result['url'] tıklanabilir.
+//   'missing'           → eşlenmiş tür ama kayıt DB'de artık yok (silinmiş) — pasif.
+//   'no_detail'         → bu tür (sale/purchase) için per-kayıt detay ekranı hiç yok; stored url
+//                          her zaman "yeni kayıt" formu olduğundan ASLA kullanılmaz — pasif.
+//   'unsafe_stored_url' → tür haritada yok (veya entity_id yok) VE stored url
+//                          activity_safe_stored_url()'den geçemedi — pasif.
+// Haritada olmayan bir tür için stored url SADECE activity_safe_stored_url() onayladığında 'ok'
+// olarak kullanılır — kontrolsüz körü körüne fallback yok.
+function activity_resolve($r,$platform='web'){
+    $entityType=$r['entity_type'] ?? '';
+    $entityId=$r['entity_id'] ?? null;
+    $storedUrl=$r['url'] ?? '';
+
+    // sale/purchase: entity_id write-time'da bir stok kalemi id'si olarak kaydediliyor — "satış/alış
+    // kaydı" diye ayrı bir varlık/detay ekranı hiç yok, stored url her zaman boş "yeni kayıt" formu.
+    static $noDetailTypes=['sale'=>true,'purchase'=>true];
+    if(isset($noDetailTypes[$entityType])) return ['status'=>'no_detail'];
+
     static $map=null;
     if($map===null){
         $map=[
@@ -98,36 +112,78 @@ function activity_target_url($entityType,$entityId,$platform='web'){
             'trade_document' => ['table'=>'trade_documents', 'web'=>'trade_document_view.php?id=%d', 'mobile'=>'trade_document_view.php?id=%d','absolute'=>true],
         ];
     }
-    if(empty($map[$entityType]) || empty($entityId)) return null;
-    $cfg=$map[$entityType]; $entityId=(int)$entityId;
-    try{
-        $sql="SELECT 1 FROM {$cfg['table']} WHERE id=?";
-        if(!empty($cfg['softDelete'])) $sql.=" AND {$cfg['softDelete']} IS NULL";
-        $st=db()->prepare($sql); $st->execute([$entityId]);
-        if(!$st->fetchColumn()) return false;
-    }catch(Throwable $e){ return null; }
-    $tpl=($platform==='mobile')?$cfg['mobile']:$cfg['web'];
-    $path=sprintf($tpl,$entityId);
-    return !empty($cfg['absolute']) ? base_url().$path : $path;
+
+    if(!empty($map[$entityType]) && !empty($entityId)){
+        $cfg=$map[$entityType]; $eid=(int)$entityId; $exists=null;
+        try{
+            $sql="SELECT 1 FROM {$cfg['table']} WHERE id=?";
+            if(!empty($cfg['softDelete'])) $sql.=" AND {$cfg['softDelete']} IS NULL";
+            $st=db()->prepare($sql); $st->execute([$eid]);
+            $exists=(bool)$st->fetchColumn();
+        }catch(Throwable $e){ $exists=null; }
+        if($exists===false) return ['status'=>'missing'];
+        if($exists===true){
+            $tpl=($platform==='mobile')?$cfg['mobile']:$cfg['web'];
+            $path=sprintf($tpl,$eid);
+            return ['status'=>'ok','url'=> !empty($cfg['absolute']) ? base_url().$path : $path];
+        }
+        // $exists===null: sorgu hatası — haritalı tür ama doğrulanamadı, aşağıdaki güvenli
+        // stored-url kontrolüne düş (körü körüne DEĞİL, hâlâ activity_safe_stored_url süzgecinden).
+    }
+
+    if(activity_safe_stored_url($storedUrl,$platform)) return ['status'=>'ok','url'=>$storedUrl];
+    return ['status'=>'unsafe_stored_url'];
 }
 
-// Bir Son İşlemler satırını resolver + stored-url fallback ile tek bir <a>/<div> bloğuna çevirir
-// (web ve mobil render'ı aynı mantığı paylaşsın diye ortak fonksiyona çıkarıldı).
+// Write-time'da donmuş bir stored url'in RENDER ANINDAKİ platformda güvenle kullanılıp
+// kullanılamayacağını kontrol eder. Reddedilme sebepleri: eski/yerel geliştirme host'u (localhost,
+// 127.0.0.1, farklı port), web ekranında mobile/ klasörüne giden bir yol, ya da bir platformda sadece
+// diğer platformun klasöründe var olan bir dosyaya giden bare (mobile/ önekisiz) bir yol.
+function activity_safe_stored_url($url,$platform){
+    $url=trim((string)$url);
+    if($url==='' || $url==='#') return false;
+    if(preg_match('#^https?://#i',$url)){
+        $host=parse_url($url,PHP_URL_HOST);
+        $port=parse_url($url,PHP_URL_PORT);
+        if(!$host) return false;
+        if(preg_match('/^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/i',$host)) return false;
+        $curHost=parse_url(base_url(),PHP_URL_HOST);
+        if($curHost && strcasecmp($host,$curHost)!==0) return false;
+        if($port) return false;
+        $path=ltrim((string)parse_url($url,PHP_URL_PATH),'/');
+    }else{
+        $path=ltrim($url,'/');
+    }
+    $file=strtok($path,'?');
+    if($platform==='web' && strpos($path,'mobile/')===0) return false;
+    if($platform==='mobile' && strpos($path,'mobile/')!==0){
+        if($file!=='' && !is_file(__DIR__.'/mobile/'.$file)) return false;
+    }
+    if($platform==='web' && strpos($path,'mobile/')!==0){
+        if($file!=='' && !is_file(__DIR__.'/'.$file)) return false;
+    }
+    return true;
+}
+
+// Bir Son İşlemler satırını resolver + güvenli-fallback ile tek bir <a>/<div> bloğuna çevirir (web
+// ve mobil render'ı aynı mantığı paylaşsın diye ortak fonksiyona çıkarıldı).
 function activity_row_html($r,$platform='web'){
-    $resolved=activity_target_url($r['entity_type'] ?? '', $r['entity_id'] ?? null, $platform);
+    $res=activity_resolve($r,$platform);
     $icon=h($r['icon'] ?: '•'); $title=h($r['title']); $desc=$r['description']?"<p>".h($r['description'])."</p>":'';
     $meta=h($r['user_name'] ?: 'Sistem')." · ".h($r['module'])." · ".h(activity_time_ago($r['created_at']));
-    if($resolved===false){
-        return "<div class='activity-item' style='opacity:.55;cursor:default'>"
+    if($res['status']==='ok'){
+        return "<a class='activity-item' href='".h($res['url'])."'>"
             ."<div class='activity-icon'>$icon</div>"
             ."<div class='activity-body'><div><b>$title</b></div>$desc"
-            ."<small>$meta · <i>Kayıt artık mevcut değil</i></small></div></div>";
+            ."<small>$meta</small></div></a>";
     }
-    $url=$resolved ?? ($r['url'] ?: '#');
-    return "<a class='activity-item' href='".h($url)."'>"
+    $note = $res['status']==='missing' ? 'Kayıt artık mevcut değil'
+        : ($res['status']==='no_detail' ? 'Bu işlem için detay ekranı henüz yok'
+        : 'Kayıt detayına güvenli şekilde ulaşılamıyor');
+    return "<div class='activity-item' style='opacity:.55;cursor:default'>"
         ."<div class='activity-icon'>$icon</div>"
         ."<div class='activity-body'><div><b>$title</b></div>$desc"
-        ."<small>$meta</small></div></a>";
+        ."<small>$meta · <i>$note</i></small></div></div>";
 }
 
 function activity_render_list($rows,$platform='web'){
