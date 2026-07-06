@@ -98,8 +98,8 @@
   card('Mesajlar','İç yazışma','💬','messages.php','teal');
   card('Bildirimler','Tüm bildirimler','🔔','notifications.php','yellow');
   if(user_can('users')) {
-    card('WhatsApp Gönder','Anlık mesaj gönder','📤','wa_send_now.php','green');
-    card('WhatsApp Konuşmaları','Gelen/giden geçmiş','💬','wa_conversations.php','teal');
+    card('WhatsApp Konuşmaları','Gelen/giden geçmiş, 1:1 yazış','💬','wa_conversations.php','teal');
+    card('Toplu WhatsApp Gönderimi','Birden fazla kişiye mesaj','📤','wa_send_now.php','green');
   }
   ?>
 </div>

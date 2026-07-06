@@ -5,12 +5,19 @@ require_once __DIR__.'/../share_lib.php';
 wa_install();
 
 $pdo=db();
-$rows=$pdo->query("SELECT c.*, ct.name contact_name FROM wa_conversations c
-    LEFT JOIN contacts ct ON ct.id=c.contact_id
-    ORDER BY c.last_message_at DESC")->fetchAll();
+$q=trim($_GET['q'] ?? '');
+$sql="SELECT c.*, ct.name contact_name FROM wa_conversations c LEFT JOIN contacts ct ON ct.id=c.contact_id";
+$params=[];
+if($q!==''){ $sql.=" WHERE ct.name LIKE ? OR c.phone LIKE ?"; $params=['%'.$q.'%','%'.$q.'%']; }
+$sql.=" ORDER BY c.last_message_at DESC";
+$st=$pdo->prepare($sql); $st->execute($params);
+$rows=$st->fetchAll();
 
 topx('WhatsApp Konuşmaları');
 ?>
+<form method="get" style="margin-bottom:10px">
+<input type="text" name="q" placeholder="İsim veya telefon ara…" value="<?=htmlspecialchars($q)?>" onchange="this.form.submit()">
+</form>
 <?php if(!$rows): ?>
 <div class="panel muted">Henüz WhatsApp konuşması yok.</div>
 <?php else: foreach($rows as $r): $preview=mb_substr((string)($r['last_message_preview']??''),0,60); ?>

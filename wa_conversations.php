@@ -6,34 +6,46 @@ require_once __DIR__.'/share_lib.php';
 wa_install();
 
 $pdo=db();
-$rows=$pdo->query("SELECT c.*, ct.name contact_name FROM wa_conversations c
-    LEFT JOIN contacts ct ON ct.id=c.contact_id
-    ORDER BY c.last_message_at DESC")->fetchAll();
+$q=trim($_GET['q'] ?? '');
+$sql="SELECT c.*, ct.name contact_name FROM wa_conversations c LEFT JOIN contacts ct ON ct.id=c.contact_id";
+$params=[];
+if($q!==''){
+    $sql.=" WHERE ct.name LIKE ? OR c.phone LIKE ?";
+    $params=['%'.$q.'%','%'.$q.'%'];
+}
+$sql.=" ORDER BY c.last_message_at DESC";
+$st=$pdo->prepare($sql); $st->execute($params);
+$rows=$st->fetchAll();
 
 require_once __DIR__.'/layout_top.php';
 ?>
+<style>
+.wa-shell{display:flex;border:1px solid #eef2f6;border-radius:16px;overflow:hidden;min-height:60vh}
+.wa-list-col{width:320px;flex:0 0 auto;border-right:1px solid #eef2f6;overflow-y:auto;max-height:75vh;background:#fff}
+.wa-list-search{padding:10px;border-bottom:1px solid #eef2f6;position:sticky;top:0;background:#fff}
+.wa-list-search input{margin:0}
+.wa-list-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px;border-bottom:1px solid #eef2f6;text-decoration:none;color:inherit}
+.wa-list-item:hover{background:#f8fafc}
+.wa-list-item.active{background:#eef4ff}
+.wa-badge{background:#dc2626;color:#fff;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:800}
+.wa-thread-col{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;color:#94a3b8;padding:40px}
+@media(max-width:900px){.wa-shell{flex-direction:column}.wa-list-col{width:100%;max-height:none;border-right:0}.wa-thread-col{display:none}}
+</style>
+
 <div class="panel-head">
 <h1>💬 WhatsApp Konuşmaları</h1>
-<a class="btn secondary" href="wa_send_now.php">📤 Yeni Mesaj</a>
 </div>
 
-<section class="panel">
-<?php if(!$rows): ?>
-<p class="muted">Henüz WhatsApp konuşması yok.</p>
-<?php else: foreach($rows as $r): $preview=mb_substr((string)($r['last_message_preview']??''),0,70); ?>
-<a href="wa_conversation_view.php?id=<?=(int)$r['id']?>" style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 4px;border-bottom:1px solid #eef2f6;text-decoration:none;color:inherit">
-<div style="min-width:0">
-<b><?=h($r['contact_name'] ?: $r['phone'])?></b><br>
-<span class="muted" style="font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;max-width:340px">
-<?=($r['last_direction']==='outbound'?'Siz: ':'')?><?=h($preview)?>
-</span>
+<section class="panel" style="padding:0">
+<div class="wa-shell">
+  <div class="wa-list-col">
+    <form class="wa-list-search" method="get">
+      <input type="text" name="q" placeholder="İsim veya telefon ara…" value="<?=h($q)?>" onchange="this.form.submit()">
+    </form>
+    <?=wa_conversation_list_html($rows)?>
+  </div>
+  <div class="wa-thread-col"><span>Bir konuşma seçin</span></div>
 </div>
-<div style="text-align:right;white-space:nowrap">
-<?php if((int)$r['unread_count']>0): ?><span style="background:#dc2626;color:#fff;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:800"><?=(int)$r['unread_count']?></span><br><?php endif; ?>
-<small class="muted"><?=h($r['last_message_at']?date('d.m H:i',strtotime($r['last_message_at'])):'')?></small>
-</div>
-</a>
-<?php endforeach; endif; ?>
 </section>
 
 <?php require_once __DIR__.'/layout_bottom.php'; ?>

@@ -211,8 +211,8 @@ input,select,textarea{font-size:16px}
                 <a href="messages.php" <?=($cur==='messages.php'?'class="active"':'')?>><span>💬</span> İç Mesajlar</a>
                 <a href="notifications.php" <?=($cur==='notifications.php'?'class="active"':'')?>><span>🔔</span> Bildirimler</a>
                 <?php if(user_can('users')): ?>
-                <a href="wa_send_now.php" <?=($cur==='wa_send_now.php'?'class="active"':'')?>><span>📤</span> WhatsApp Mesaj Gönder</a>
                 <a href="wa_conversations.php" <?=(in_array($cur,['wa_conversations.php','wa_conversation_view.php'])?'class="active"':'')?>><span>💬</span> WhatsApp Konuşmaları</a>
+                <a href="wa_send_now.php" <?=($cur==='wa_send_now.php'?'class="active"':'')?>><span>📤</span> WhatsApp Toplu Gönderim</a>
                 <?php endif; ?>
             </div>
         </details>

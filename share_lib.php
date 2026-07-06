@@ -151,13 +151,14 @@ function wa_send_media($phone,$mediaUrl,$type,$caption=''){
 
 // --- WhatsApp Konuşma Geçmişi (2026-07-05, kullanıcı isteği) ---
 // "Sender scope" allowlist: HANGİ modüllerin gönderdiği mesajların conversation history'ye
-// yazılacağını tek yerden kontrol eder. Bugün sadece 'wa_send_now' (manuel/müşteri iletişimi
-// ekranı, web+mobil) etkin — sifre_sifirla.php (OTP), users.php (giriş bilgisi),
-// daily_reminder_lib.php (otomatik rapor) gibi sistem mesajları BİLİNÇLİ OLARAK dışarıda: bunlar
-// hassas/tek kullanımlık içerik, kalıcı ve ekrandan görülebilir bir geçmişte durmamalı. İleride
-// başka bir modülü dahil etmek için TEK satır: aşağıdaki diziye kaynak adını eklemek yeterli.
+// yazılacağını tek yerden kontrol eder. Etkin olanlar: 'wa_send_now' (toplu/broadcast gönderim
+// ekranı, web+mobil) ve 'wa_conversation' (wa_conversation_view.php'nin inline 1:1 compose kutusu,
+// REOPEN-003) — sifre_sifirla.php (OTP), users.php (giriş bilgisi), daily_reminder_lib.php
+// (otomatik rapor) gibi sistem mesajları BİLİNÇLİ OLARAK dışarıda: bunlar hassas/tek kullanımlık
+// içerik, kalıcı ve ekrandan görülebilir bir geçmişte durmamalı. İleride başka bir modülü dahil
+// etmek için TEK satır: aşağıdaki diziye kaynak adını eklemek yeterli.
 function wa_log_enabled_sources(){
-    return ['wa_send_now'];
+    return ['wa_send_now','wa_conversation'];
 }
 
 // Migration 041 ile aynı şema — activity_lib.php::activity_install() ile aynı desen (kod, tablo
@@ -237,7 +238,17 @@ function wa_conversation_touch($phone,$direction,$preview){
 
 // Tek bir mesajı wa_messages'a yazar + ilgili konuşmayı günceller. $source, wa_log_enabled_sources()
 // allowlist'i ile eşleşmeli (çağıran zaten bu kontrolü wa_send_logged() üzerinden yapıyor).
+// $providerMsgId doluysa ÖNCE mükerrer kontrolü yapılır — webhook sağlayıcıları (UltraMsg dahil)
+// aynı olayı ağ/timeout nedeniyle birden fazla POST edebilir; aynı provider_message_id'ye sahip
+// bir satır zaten varsa tekrar INSERT edilmez (REOPEN-003, 2026-07-07).
 function wa_message_log($phone,$direction,$body,$source=null,$mediaUrl=null,$mediaType=null,$providerMsgId=null,$status=null){
+    if($providerMsgId){
+        try{
+            $dup=db()->prepare("SELECT 1 FROM wa_messages WHERE provider_message_id=? LIMIT 1");
+            $dup->execute([$providerMsgId]);
+            if($dup->fetchColumn()) return false;
+        }catch(Throwable $e){}
+    }
     $convId=wa_conversation_touch($phone,$direction,$body!==''?$body:($mediaUrl?'📎 Medya':''));
     if(!$convId) return false;
     try{
@@ -246,6 +257,26 @@ function wa_message_log($phone,$direction,$body,$source=null,$mediaUrl=null,$med
             ->execute([$convId,$direction,$source,$body,$mediaUrl,$mediaType,$providerMsgId,$status,$direction==='outbound'?1:0]);
         return true;
     }catch(Throwable $e){ return false; }
+}
+
+// Konuşma listesini tek bir HTML bloğuna çevirir — web'de iki-kolon shell'in sol panelinde hem
+// wa_conversations.php hem wa_conversation_view.php tarafından ORTAK kullanılır (REOPEN-003,
+// 2026-07-07) — kopya kod olmasın diye tek fonksiyona çıkarıldı (bkz. activity_lib.php'deki aynı desen).
+function wa_conversation_list_html($rows, $activeId=0){
+    if(!$rows) return "<p class='muted' style='padding:14px'>Henüz WhatsApp konuşması yok.</p>";
+    $h = '';
+    foreach($rows as $r){
+        $preview = mb_substr((string)($r['last_message_preview']??''),0,60);
+        $active = ((int)$r['id']===(int)$activeId) ? ' active' : '';
+        $h .= "<a class='wa-list-item$active' href='wa_conversation_view.php?id=".(int)$r['id']."'>";
+        $h .= "<div style='min-width:0'><b>".h($r['contact_name'] ?: $r['phone'])."</b><br>";
+        $h .= "<span class='muted' style='font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block'>";
+        $h .= ($r['last_direction']==='outbound'?'Siz: ':'').h($preview)."</span></div>";
+        $h .= "<div style='text-align:right;white-space:nowrap'>";
+        if((int)$r['unread_count']>0) $h .= "<span class='wa-badge'>".(int)$r['unread_count']."</span><br>";
+        $h .= "<small class='muted'>".h($r['last_message_at']?date('d.m H:i',strtotime($r['last_message_at'])):'')."</small></div></a>";
+    }
+    return $h;
 }
 
 // wa_send()/wa_send_media() sarmalayıcısı — GÖNDERME davranışı birebir aynı, TEK fark $source

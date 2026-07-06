@@ -127,7 +127,7 @@ try{
   <?php if($waConvId): ?>
   <a class="card green" href="wa_conversation_view.php?id=<?=(int)$waConvId?>"><span>📲</span><b>WhatsApp</b><small>Konuşma geçmişi</small></a>
   <?php elseif(!empty($c['phone'])): ?>
-  <a class="card green" href="wa_send_now.php?phone=<?=urlencode($c['phone'])?>"><span>📲</span><b>WhatsApp</b><small>Mesaj gönder</small></a>
+  <a class="card green" href="wa_conversation_view.php?phone=<?=urlencode($c['phone'])?>"><span>📲</span><b>WhatsApp</b><small>Mesaj gönder</small></a>
   <?php endif; ?>
 </div>
 

@@ -150,7 +150,7 @@ $balance=(float)$c['opening_balance'] + $in - $out;
 <a class="btn secondary" href="finance_new.php?direction=out&contact_id=<?=$id?>">+ Ödeme</a>
 <a class="btn" href="report.php?modul=cari_detay&ref=<?=$id?>">📊 Cari Raporu</a>
 <?php if($waConvId): ?><a class="btn secondary" href="wa_conversation_view.php?id=<?=(int)$waConvId?>">💬 WhatsApp</a>
-<?php elseif(!empty($c['phone'])): ?><a class="btn secondary" href="wa_send_now.php?phone=<?=urlencode($c['phone'])?>">💬 WhatsApp</a>
+<?php elseif(!empty($c['phone'])): ?><a class="btn secondary" href="wa_conversation_view.php?phone=<?=urlencode($c['phone'])?>">💬 WhatsApp</a>
 <?php endif; ?>
 <a class="btn secondary" href="contacts.php">Cari Listesi</a>
 <?php if(is_admin() || user_can('contacts')): ?>
