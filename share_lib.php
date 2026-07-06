@@ -2,6 +2,34 @@
 // ACANS OTS — Ortak paylaşım (WhatsApp + Mail) — mobil+web
 // wa.me sadece METİN taşır (PDF eki için rapor PDF paylaşımı kullanılır).
 
+// ============================================================================
+// GEÇİCİ TEŞHİS MODU — REOPEN-003 inbound kök neden analizi (2026-07-07).
+// Kök neden bulununca bu blok + tüm wa_debug_log() çağrıları TAMAMEN kaldırılacak.
+// DEBUG_WA=false olduğunda wa_debug_log() no-op'tur, hiçbir davranış değişmez.
+// ============================================================================
+define('DEBUG_WA', true);
+function wa_debug_log($label, $data=null){
+    if(!DEBUG_WA) return;
+    $line = '['.date('Y-m-d H:i:s').'] '.$label;
+    if($data!==null){
+        $text = is_string($data)?$data:json_encode($data, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_PARTIAL_OUTPUT_ON_ERROR);
+        $line .= ' :: '.wa_debug_redact($text);
+    }
+    try{ file_put_contents(__DIR__.'/wa_debug.log', $line."\n", FILE_APPEND|LOCK_EX); }catch(Throwable $e){}
+}
+
+// wa_debug_log()'a giden HER metni maskeler — UltraMsg token'ı, webhook key'i ve yaygın hassas
+// header'lar (Authorization/Cookie/X-Api-Key) hiçbir zaman ham olarak wa_debug.log'a yazılmaz
+// (kullanıcı talebi, 2026-07-07 — geçici teşhis modu için zorunlu güvenlik kuralı).
+function wa_debug_redact($text){
+    try{
+        $secrets = array_filter([get_setting('wa_token',''), get_setting('wa_webhook_key','')], function($s){ return $s!==null && strlen((string)$s)>=4; });
+        foreach($secrets as $s){ $text = str_replace($s, '***MASKED***', $text); }
+    }catch(Throwable $e){}
+    $text = preg_replace('/("(?:Authorization|Cookie|X-Api-Key)"\s*:\s*)"[^"]*"/i', '$1"***MASKED***"', $text);
+    return $text;
+}
+
 // ---------------------------------------------------------------------------
 // Uygulama ayar deposu (app_settings tablosu)
 // ---------------------------------------------------------------------------
@@ -86,6 +114,7 @@ function wa_send($phone,$text){
             if($token) $d['token']=$token;
             $payload=http_build_query($d);
         }
+        wa_debug_log('WA_SEND REQUEST', ['url'=>$url,'provider'=>$provider,'phone_raw'=>$phone,'phone_normalized'=>$p,'body'=>$text]);
         $ch=curl_init($url);
         curl_setopt_array($ch,[
             CURLOPT_POST=>true,
@@ -96,9 +125,12 @@ function wa_send($phone,$text){
             CURLOPT_HTTPHEADER=>['Content-Type: application/x-www-form-urlencoded'],
         ]);
         $r=curl_exec($ch);
+        $httpCode=curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlErr=curl_error($ch);
         curl_close($ch);
+        wa_debug_log('WA_SEND RESPONSE', ['http_code'=>$httpCode,'response'=>$r,'curl_error'=>$curlErr,'treated_as_sent'=>$r!==false]);
         return $r!==false;
-    }catch(Throwable $e){ return false; }
+    }catch(Throwable $e){ wa_debug_log('WA_SEND EXCEPTION', $e->getMessage()); return false; }
 }
 // Medya (görsel/video/ses/belge) gönderimi — sadece UltraMsg'in ayrı medya uç noktalarını (image/
 // video/audio/document) destekler; genel/custom gateway'lerde medya şeması bilinmediği için mesaj
@@ -134,6 +166,7 @@ function wa_send_media($phone,$mediaUrl,$type,$caption=''){
     if($ep==='document') $d['filename']=basename(parse_url($mediaUrl,PHP_URL_PATH) ?: 'dosya');
 
     try{
+        wa_debug_log('WA_SEND_MEDIA REQUEST', ['url'=>$url,'phone_raw'=>$phone,'phone_normalized'=>$p,'type'=>$type,'media_url'=>$mediaUrl]);
         $ch=curl_init($url);
         curl_setopt_array($ch,[
             CURLOPT_POST=>true,
@@ -144,9 +177,11 @@ function wa_send_media($phone,$mediaUrl,$type,$caption=''){
             CURLOPT_HTTPHEADER=>['Content-Type: application/x-www-form-urlencoded'],
         ]);
         $r=curl_exec($ch);
+        $httpCode=curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
+        wa_debug_log('WA_SEND_MEDIA RESPONSE', ['http_code'=>$httpCode,'response'=>$r,'treated_as_sent'=>$r!==false]);
         return $r!==false;
-    }catch(Throwable $e){ return false; }
+    }catch(Throwable $e){ wa_debug_log('WA_SEND_MEDIA EXCEPTION', $e->getMessage()); return false; }
 }
 
 // --- WhatsApp Konuşma Geçmişi (2026-07-05, kullanıcı isteği) ---
@@ -215,7 +250,7 @@ function wa_match_contact_by_phone($normalizedPhone){
 // $direction='inbound' ise unread_count arttırılır (webhook'tan çağrılır); 'outbound' okunmuş sayılır.
 function wa_conversation_touch($phone,$direction,$preview){
     $p=_wa_normalize_phone($phone);
-    if(!$p) return null;
+    if(!$p){ wa_debug_log('CONVERSATION TOUCH FAILED', 'SEBEP: telefon normalize edilemedi ('.$phone.')'); return null; }
     $pdo=db();
     $contactId=wa_match_contact_by_phone($p);
     $preview=mb_substr((string)$preview,0,255);
@@ -224,16 +259,21 @@ function wa_conversation_touch($phone,$direction,$preview){
         $s=$pdo->prepare("SELECT id FROM wa_conversations WHERE phone=?"); $s->execute([$p]);
         $convId=$s->fetchColumn();
         if($convId){
+            wa_debug_log('CONVERSATION FOUND', ['id'=>$convId,'phone'=>$p,'direction'=>$direction]);
             $inc = $direction==='inbound' ? ",unread_count=unread_count+1" : ",unread_count=0";
             $pdo->prepare("UPDATE wa_conversations SET contact_id=?, last_message_at=NOW(), last_message_preview=?, last_direction=?$inc WHERE id=?")
                 ->execute([$contactId,$preview,$direction,$convId]);
+            if($direction==='inbound') wa_debug_log('UNREAD UPDATED', ['conversation_id'=>$convId]);
             return (int)$convId;
         }
+        wa_debug_log('CONVERSATION NOT FOUND, CREATING', ['phone'=>$p,'direction'=>$direction]);
         $unread = $direction==='inbound' ? 1 : 0;
         $pdo->prepare("INSERT INTO wa_conversations(phone,contact_id,last_message_at,last_message_preview,last_direction,unread_count) VALUES(?,?,NOW(),?,?,?)")
             ->execute([$p,$contactId,$preview,$direction,$unread]);
-        return (int)$pdo->lastInsertId();
-    }catch(Throwable $e){ return null; }
+        $newId=(int)$pdo->lastInsertId();
+        wa_debug_log('CONVERSATION CREATED', ['id'=>$newId,'phone'=>$p]);
+        return $newId;
+    }catch(Throwable $e){ wa_debug_log('CONVERSATION TOUCH EXCEPTION', $e->getMessage()); return null; }
 }
 
 // Tek bir mesajı wa_messages'a yazar + ilgili konuşmayı günceller. $source, wa_log_enabled_sources()
@@ -242,21 +282,26 @@ function wa_conversation_touch($phone,$direction,$preview){
 // aynı olayı ağ/timeout nedeniyle birden fazla POST edebilir; aynı provider_message_id'ye sahip
 // bir satır zaten varsa tekrar INSERT edilmez (REOPEN-003, 2026-07-07).
 function wa_message_log($phone,$direction,$body,$source=null,$mediaUrl=null,$mediaType=null,$providerMsgId=null,$status=null){
+    wa_debug_log('MESSAGE LOG CALLED', ['phone'=>$phone,'direction'=>$direction,'source'=>$source,'provider_message_id'=>$providerMsgId]);
     if($providerMsgId){
         try{
             $dup=db()->prepare("SELECT 1 FROM wa_messages WHERE provider_message_id=? LIMIT 1");
             $dup->execute([$providerMsgId]);
-            if($dup->fetchColumn()) return false;
+            if($dup->fetchColumn()){
+                wa_debug_log('MESSAGE DEDUP SKIPPED', ['provider_message_id'=>$providerMsgId]);
+                return false;
+            }
         }catch(Throwable $e){}
     }
     $convId=wa_conversation_touch($phone,$direction,$body!==''?$body:($mediaUrl?'📎 Medya':''));
-    if(!$convId) return false;
+    if(!$convId){ wa_debug_log('MESSAGE LOG FAILED', 'SEBEP: conversation_id alınamadı'); return false; }
     try{
         db()->prepare("INSERT INTO wa_messages(conversation_id,direction,source,body,media_url,media_type,provider_message_id,status,is_read)
             VALUES(?,?,?,?,?,?,?,?,?)")
             ->execute([$convId,$direction,$source,$body,$mediaUrl,$mediaType,$providerMsgId,$status,$direction==='outbound'?1:0]);
+        wa_debug_log('MESSAGE INSERTED', ['conversation_id'=>$convId,'direction'=>$direction]);
         return true;
-    }catch(Throwable $e){ return false; }
+    }catch(Throwable $e){ wa_debug_log('MESSAGE INSERT EXCEPTION', $e->getMessage()); return false; }
 }
 
 // Konuşma listesini tek bir HTML bloğuna çevirir — web'de iki-kolon shell'in sol panelinde hem
@@ -277,6 +322,29 @@ function wa_conversation_list_html($rows, $activeId=0){
         $h .= "<small class='muted'>".h($r['last_message_at']?date('d.m H:i',strtotime($r['last_message_at'])):'')."</small></div></a>";
     }
     return $h;
+}
+
+// "Yeni Konuşma" seçici — WhatsApp Konuşmaları ekranında henüz konuşması olmayan bir kişiyle
+// başlamak için (personel/cari listesinden seç ya da telefon yaz) — web'de wa_conversations.php
+// VE wa_conversation_view.php ORTAK kullanır (aynı sol panel shell'i paylaştıkları için).
+// wa_send_now.php'nin eski tekil modunun kaldırılmasıyla ortaya çıkan boşluğu kapatır (REOPEN-003).
+function wa_new_conversation_picker_html($pdo){
+    $personnel=$pdo->query("SELECT name,phone FROM personnel WHERE COALESCE(active,1)=1 AND phone<>'' ORDER BY name")->fetchAll();
+    $contacts=$pdo->query("SELECT name,phone FROM contacts WHERE phone<>'' ORDER BY name")->fetchAll();
+    ob_start(); ?>
+<div class="wa-list-search" style="border-bottom:1px solid #eef2f6">
+  <select onchange="if(this.value) window.location='wa_conversation_view.php?phone='+encodeURIComponent(this.value)">
+    <option value="">➕ Yeni Konuşma — kişi seç…</option>
+    <?php if($personnel): ?><optgroup label="Personel"><?php foreach($personnel as $p): ?><option value="<?=h($p['phone'])?>"><?=h($p['name'])?> — <?=h($p['phone'])?></option><?php endforeach; ?></optgroup><?php endif; ?>
+    <?php if($contacts): ?><optgroup label="Cari"><?php foreach($contacts as $c): ?><option value="<?=h($c['phone'])?>"><?=h($c['name'])?> — <?=h($c['phone'])?></option><?php endforeach; ?></optgroup><?php endif; ?>
+  </select>
+</div>
+<form class="wa-list-search" method="get" action="wa_conversation_view.php" style="display:flex;gap:6px">
+  <input type="text" name="phone" placeholder="veya telefon yazın…" style="flex:1;margin:0">
+  <button type="submit" class="btn secondary small">Git</button>
+</form>
+<?php
+    return ob_get_clean();
 }
 
 // wa_send()/wa_send_media() sarmalayıcısı — GÖNDERME davranışı birebir aynı, TEK fark $source

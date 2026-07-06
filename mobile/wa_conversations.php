@@ -13,8 +13,22 @@ $sql.=" ORDER BY c.last_message_at DESC";
 $st=$pdo->prepare($sql); $st->execute($params);
 $rows=$st->fetchAll();
 
+$personnel=$pdo->query("SELECT name,phone FROM personnel WHERE COALESCE(active,1)=1 AND phone<>'' ORDER BY name")->fetchAll();
+$contactsAll=$pdo->query("SELECT name,phone FROM contacts WHERE phone<>'' ORDER BY name")->fetchAll();
+
 topx('WhatsApp Konuşmaları');
 ?>
+<div class="panel">
+<select onchange="if(this.value) window.location='wa_conversation_view.php?phone='+encodeURIComponent(this.value)">
+    <option value="">➕ Yeni Konuşma — kişi seç…</option>
+    <?php if($personnel): ?><optgroup label="Personel"><?php foreach($personnel as $p): ?><option value="<?=htmlspecialchars($p['phone'])?>"><?=htmlspecialchars($p['name'])?> — <?=htmlspecialchars($p['phone'])?></option><?php endforeach; ?></optgroup><?php endif; ?>
+    <?php if($contactsAll): ?><optgroup label="Cari"><?php foreach($contactsAll as $c): ?><option value="<?=htmlspecialchars($c['phone'])?>"><?=htmlspecialchars($c['name'])?> — <?=htmlspecialchars($c['phone'])?></option><?php endforeach; ?></optgroup><?php endif; ?>
+</select>
+<form method="get" action="wa_conversation_view.php" style="display:flex;gap:6px;margin-top:8px">
+<input type="text" name="phone" placeholder="veya telefon yazın…" style="flex:1;margin:0">
+<button type="submit" class="btn" style="width:auto;padding:10px 14px">Git</button>
+</form>
+</div>
 <form method="get" style="margin-bottom:10px">
 <input type="text" name="q" placeholder="İsim veya telefon ara…" value="<?=htmlspecialchars($q)?>" onchange="this.form.submit()">
 </form>

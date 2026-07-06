@@ -39,6 +39,7 @@ require_once __DIR__.'/layout_top.php';
 <section class="panel" style="padding:0">
 <div class="wa-shell">
   <div class="wa-list-col">
+    <?=wa_new_conversation_picker_html($pdo)?>
     <form class="wa-list-search" method="get">
       <input type="text" name="q" placeholder="İsim veya telefon ara…" value="<?=h($q)?>" onchange="this.form.submit()">
     </form>
