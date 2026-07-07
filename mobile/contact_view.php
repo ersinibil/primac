@@ -20,13 +20,12 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['toggle_active'])){
     header('Location: contact_view.php?id='.$id); exit;
 }
 
-// Silme (topx öncesi) - sadece admin
+// Silme (topx öncesi) - sadece admin. Bağlı finans/iş/belge/teklif/whatsapp kaydı varsa kalıcı
+// silmez, pasife alır (contacts_lib.php::contact_delete_or_deactivate() — sil.php ile ortak).
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['delete_contact'])){
     if(is_admin()){
-        try{
-            $pdo->prepare("DELETE FROM contact_representatives WHERE contact_id=?")->execute([$id]);
-            $pdo->prepare("DELETE FROM contacts WHERE id=?")->execute([$id]);
-        }catch(Throwable $e){}
+        require_once __DIR__.'/../contacts_lib.php';
+        try{ contact_delete_or_deactivate($pdo,$id); }catch(Throwable $e){}
         header('Location: contacts.php'); exit;
     }
 }

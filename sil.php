@@ -92,6 +92,18 @@ if($t==='accounting'){
     redirect($back.'?deleted=1');
 }
 
+// Cari silme: bağlı finans/iş/belge/teklif/whatsapp kaydı varsa kalıcı silmez, pasife alır
+// (contacts_lib.php::contact_delete_or_deactivate() — sil.php + mobile/contact_view.php ortak).
+if($t==='contact'){
+    require_once __DIR__.'/contacts_lib.php';
+    try{
+        $res=contact_delete_or_deactivate($pdo,$id);
+        if(!$res['ok']) exit('Silinemedi: '.htmlspecialchars($res['msg']));
+        try{ if(function_exists('activity_log')) activity_log('Silme',$res['msg'],$table.' #'.$id,'','admin',null,$back,$res['deactivated']?'⏸':'🗑'); }catch(Throwable $e){}
+    }catch(Throwable $e){ exit('Silinemedi: '.htmlspecialchars($e->getMessage())); }
+    redirect($back.($res['deactivated']?'?deactivated=1':'?deleted=1'));
+}
+
 // Ürün kategorisi silme: kulllanımda mı kontrol et, kullanılıyorsa pasife al, değilse kalıcı sil.
 if($t==='product_category'){
     try{
