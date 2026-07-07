@@ -2,6 +2,46 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
+## Görev Detayı — "Çek / Senet Bilgileri" Kartı: CLOSED (2026-07-07)
+Kullanıcı isteği: takvimdeki Çek/Senet Vadesi görev kartının UX'i yetersizdi — tür/numara/cari/
+banka/tutar/vade/durum tek bakışta görünmüyordu, ekran "finans ekranının küçük bir özeti gibi"
+davranmalıydı. Görev sistemine/takvime/route resolver'a dokunulmadan, mevcut görev kartının
+hemen altına salt-okunur bir özet kart eklendi.
+
+- **İlişki**: `checks_notes.task_id → tasks.id` (migration 027'den beri var olan TEK yönlü bağ;
+  `tasks` tablosunda tersi bir referans yok, başlık/açıklama parsing'i kullanılmadı). Yeni
+  `checks_notes_get_by_task($pdo,$taskId)` (`checks_notes_lib.php`) — mevcut `checks_notes_get()`
+  ile birebir aynı desen, sadece `WHERE cn.task_id=?`.
+- **Güvenlik gate'i (kritik karar)**: `task_view.php`/`mobile/task_view.php`, `job_view.php` ile
+  aynı desende BİLİNÇLİ olarak `page_module_map()` dışında/korumasız (personel bildirimden kendi
+  görevini açabilsin diye). `checks_notes_lib.php`'deki 2026-07-02 tarihli önceki bir güvenlik
+  denetimi notu tam olarak bu yüzden cari/banka/tutar gibi hassas alanların görev açıklamasına
+  YAZILMAMASI gerektiğini söylüyor ('tasks' yetkisi olup 'finance' yetkisi olmayan biri de bu
+  ekranı açabiliyor). Yeni kart bu kısıtı ihlal ETMEDEN eklendi: `$canSeeFinance =
+  user_can('finance')` + `$cn = $canSeeFinance ? checks_notes_get_by_task(...) : null` — finans
+  yetkisi olmayan kullanıcıda sorgu bile çalışmıyor, kart hiç render edilmiyor (mevcut
+  `$canEdit`/`$canReassign` yerel yetki değişkeni deseniyle birebir tutarlı bir "reusable" desen).
+- **Alanlar**: tür, çek/senet no, cari (contact_id join), banka, tutar, vade, portföy durumu
+  (`checks_notes_statuses($direction)` — yön-duyarlı etiket, sabit metin KULLANILMADI), açıklama
+  (`cn.notes`), "Finans Kaydına Git" (finance_movement_id NULL ise mevcut "⚠️ Finans hareketi
+  oluşturulamadı" konvansiyonu tekrar kullanıldı, yeni bir şey icat edilmedi).
+- **"Finans Kaydına Git" hedefi — bilinçli platform asimetrisi**: mobilde zaten var olan
+  `check_note_view.php?id=` kullanıldı (değişiklik yok). Webde tekil bir çek/senet görüntüleme
+  sayfası hiç yoktu (sadece `checks_notes.php` listesi + satır-içi gizli düzenleme) — kullanıcı
+  onayıyla yeni bir detay sayfası AÇILMADI, bunun yerine `checks_notes.php`'ye küçük/additive bir
+  `?open=<id>` desteği eklendi (satırın düzenleme alanını otomatik açar, sayfayı o satıra
+  kaydırır, kısaca sarı highlight yapar). Kod tekrarını önlemek için durum-renk eşleme mantığı
+  `checks_notes_lib.php`'ye `checks_notes_status_tone()` olarak taşındı (hem `checks_notes.php`
+  hem `task_view.php` kullanıyor, ots-code-reviewer bulgusu üzerine).
+- Migration YOK — hiçbir yeni tablo/kolon gerekmedi, `checks_notes` (024/026/027/033/034) zaten
+  tüm alanlara sahipti.
+- Teknik inceleme: Ece (ots-code-reviewer) ve Selin (ots-security-auditor) ile paralel — ikisi de
+  PASS (Ece'nin bulduğu tek küçük kod-tekrarı bulgusu anında düzeltildi).
+- **CLOSED (2026-07-07, commit `b3e0def`, USER TEST: PASS)** — primac.tr'de (DEV) test edildi:
+  finans yetkili kullanıcıda kart görünüyor, "Finans Kaydına Git" doğru kaydı açıp highlight
+  ediyor, normal görev detayları etkilenmedi, mobil görünüm sorunsuz, genel kullanımda hata
+  görülmedi. `acanstr.com/ots` (PROD) bu turda DOKUNULMADI — ayrı "DEPLOY MODE" komutu bekliyor.
+
 ## "İşlerim" — Düzenle/Detay/Sil (soft delete) + yorum/dosya/geçmiş (2026-07-04)
 Kullanıcı isteği: task kartlarına Düzenle/Detay/Sil eklenmesi (web+mobil). Yeni ortak
 `tasks_lib.php` (web+mobil paylaşımlı iş mantığı, CLAUDE.md kural 5):

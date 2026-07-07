@@ -3,6 +3,18 @@
 Bu dosya `memory/features.md`'nin (tam gerekçe/kod detayıyla) kök dizindeki kısa özetidir — hızlı
 taramak için. Detaylı "neden böyle yapıldı" analizleri için `memory/features.md`'ye bakın.
 
+## Görev Detayı — "Çek / Senet Bilgileri" Kartı: CLOSED (2026-07-07, commit `b3e0def`, USER TEST: PASS — DEV/primac.tr)
+Takvimdeki Çek/Senet Vadesi görevinin görev kartına, SADECE `finance` yetkisi olan kullanıcıya
+görünen salt-okunur bir özet kart eklendi (tür/no/cari/banka/tutar/vade/portföy durumu/açıklama/
+Finans Kaydına Git). İlişki tek kaynaklı: `checks_notes.task_id → tasks.id` (yeni
+`checks_notes_get_by_task()`, parsing/tahmin yok). Güvenlik: `task_view.php`/`mobile/task_view.php`
+bilinçli olarak korumasız (job_view.php deseni) olduğu için kart `user_can('finance')` ile
+gate'lendi — 2026-07-02 tarihli önceki bir güvenlik denetiminin kapattığı sızıntı yeniden
+açılmadı. Web'de tekil bir çek/senet görüntüleme sayfası olmadığı için yeni sayfa AÇILMADI, bunun
+yerine `checks_notes.php`'ye küçük bir `?open=<id>` (scroll+highlight+auto-expand) desteği
+eklendi. Migration YOK. Görev/takvim/route resolver sistemine dokunulmadı. Ece (kod inceleme) ve
+Selin (güvenlik) ile teknik doğrulama PASS. Detay → `memory/features.md`.
+
 ## REOPEN-003 — WhatsApp Conversation Deneyimi: CLOSED (2026-07-07, commit `9726e14`, USER TEST: FUNCTIONAL PASS)
 **Kapsam kararı**: kullanıcı bunu "basit bir bugfix değil, PRODUCT REOPEN" olarak tanımladı — amaç
 sadece çalışan bir mesaj sistemi değil, gerçek bir WhatsApp Conversation deneyimi. Önce tam bir

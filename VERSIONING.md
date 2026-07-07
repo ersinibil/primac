@@ -78,6 +78,13 @@ netleştirildi — bkz. `ROADMAP.md` "Security Roadmap"):
 
 ## Current Development Version
 **v1.1.0-dev** (primac.tr) — ortam ayrımından SONRAKİ ilk geliştirme turu
++ **Görev Detayı — "Çek / Senet Bilgileri" Kartı: PASS** (2026-07-07, commit `b3e0def`, USER
+  TEST: PASS): takvimdeki Çek/Senet Vadesi görev kartına SADECE `finance` yetkili kullanıcıya
+  görünen salt-okunur özet kart eklendi (`checks_notes.task_id → tasks.id` ilişkisi, yeni
+  `checks_notes_get_by_task()`). `task_view.php`/`mobile/task_view.php` bilinçli korumasız
+  olduğu için `user_can('finance')` gate'i eklendi (2026-07-02 güvenlik denetimi ile aynı
+  gerekçe). Web'de `checks_notes.php?open=<id>` küçük/additive scroll+highlight desteği. Migration
+  YOK. Detay → `CHANGELOG.md`, `memory/features.md`.
 + **WhatsApp Conversation/Inbound MVP: PASS** (2026-07-05, commit `dae3e62`): migration
   `041_whatsapp_conversations.sql` (`wa_conversations`+`wa_messages`), `wa_webhook.php` (inbound,
   DB'de saklanan rastgele `?key=`), sender-scope allowlist mimarisi (bugün sadece
@@ -249,6 +256,7 @@ içindi) — push de yapılmadı.
 ## Dağıtım Geçmişi (Deployment History)
 | Tarih | Hedef | Commit/Not | Kaynak |
 |---|---|---|---|
+| 2026-07-07 | DEV (primac.tr) | `b3e0def` — Görev Detayı: "Çek / Senet Bilgileri" Kartı, migration yok | Bu oturum — `guncelleme.zip` yenilendi (MD5 `6d913748650a4da9080b2fa627bb250e`), primac.tr'de kullanıcı testi PASS |
 | 2026-07-04 | DEV (primac.tr) | `d7c593a` — SECURITY SPRINT-001 + UI/UX SPRINT-003 + SPRINT CLOSE ek düzeltmeleri, migration 040 | Bu oturum — Doğrula→Migration→Smoke Test PASS, kullanıcı onayı |
 | 2026-07-03 | DEV+PROD (ortak, ayrım öncesi) | `bb8a710` — mytasks.php web, mesajlaşma/bildirim düzeltmesi, migration 038 | `memory/deploy.md` — zip MD5 ile doğrulandı |
 | 2026-07-02 | ACANS + PRIMAC (elle phpMyAdmin) | `26bffcb` — gider kategorisi + marka adı + yetki canlı yenileme, migration 022/023 | `memory/deploy.md` "schema_migrations tuzağı" kaydı |
