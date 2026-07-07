@@ -26,6 +26,9 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['toggle_active'])){
 }
 
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['save_profile'])){
+    if(!can_edit_delete()){
+        $error='Bu işlem için yetkiniz yok.';
+    } else {
     try{
         $stmt=$pdo->prepare("UPDATE contacts SET
             name=?, type=?, authorized_person=?,
@@ -82,6 +85,7 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['save_profile'])){
     }catch(Throwable $e){
         $error=$e->getMessage();
     }
+    }
 }
 
 $stmt=$pdo->prepare("SELECT * FROM contacts WHERE id=?");
@@ -95,6 +99,10 @@ if(!$c){
     require __DIR__.'/layout_bottom.php';
     exit;
 }
+
+// View/Edit ayrımı: sayfa varsayılan olarak salt-okunur açılır, düzenleme formu SADECE
+// mevcut kaydı değiştirme yetkisi olana (task_view.php/checks_notes.php ile aynı desen) gösterilir.
+$canEdit = can_edit_delete();
 
 try{
     $personnel=$pdo->query("SELECT * FROM personnel ORDER BY active DESC, name")->fetchAll();
@@ -192,8 +200,30 @@ $balance=(float)$c['opening_balance'] + $in - $out;
 <?php endif; ?>
 
 <section class="panel">
-<h2>Cari Profil</h2>
-<form method="post" class="form-grid">
+<div class="panel-head"><h2>Cari Profil</h2></div>
+
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:12px 0;font-size:14px">
+  <div><span class="muted">Firma / Cari Adı</span><br><?=h($c['name'])?></div>
+  <div><span class="muted">Cari Tipi</span><br><?=h($c['type'])?></div>
+  <div><span class="muted">Yetkili Kişi</span><br><?=h($c['authorized_person'] ?: '-')?></div>
+  <div><span class="muted">Telefon</span><br><?=h($c['phone'] ?: '-')?></div>
+  <div><span class="muted">2. Telefon</span><br><?=h($c['phone2'] ?: '-')?></div>
+  <div><span class="muted">E-posta</span><br><?=h($c['email'] ?: '-')?></div>
+  <div><span class="muted">Web Sitesi</span><br><?=h($c['website'] ?: '-')?></div>
+  <div><span class="muted">Vergi Dairesi</span><br><?=h($c['tax_office'] ?: '-')?></div>
+  <div><span class="muted">Vergi / TC No</span><br><?=h($c['tax_number'] ?: '-')?></div>
+  <div><span class="muted">İl / İlçe</span><br><?=h(trim(($c['city'] ?: '').' / '.($c['district'] ?: ''), ' /') ?: '-')?></div>
+  <div><span class="muted">Posta Kodu</span><br><?=h($c['postal_code'] ?: '-')?></div>
+  <div><span class="muted">IBAN</span><br><?=h($c['iban'] ?: '-')?></div>
+  <div><span class="muted">Açılış Bakiyesi</span><br><?=money($c['opening_balance'])?></div>
+</div>
+<?php if(!empty($c['address'])): ?><div style="margin-top:6px"><span class="muted">Adres</span><br><?=nl2br(h($c['address']))?></div><?php endif; ?>
+<?php if(!empty($c['notes'])): ?><div style="margin-top:8px"><span class="muted">Notlar</span><br><?=nl2br(h($c['notes']))?></div><?php endif; ?>
+
+<?php if($canEdit): ?>
+<details style="margin-top:16px">
+<summary style="cursor:pointer;font-weight:800">✏️ Düzenle</summary>
+<form method="post" class="form-grid" style="margin-top:12px">
 
 <input type="hidden" name="save_profile" value="1">
 
@@ -301,6 +331,8 @@ $balance=(float)$c['opening_balance'] + $in - $out;
 <button class="btn">Profili Kaydet</button>
 
 </form>
+</details>
+<?php endif; ?>
 </section>
 
 <section class="panel">
@@ -332,6 +364,7 @@ try{
 </table>
 </section>
 
+<?php if(user_can('finance')): ?>
 <section class="panel">
 <div class="panel-head"><h2>Finans Hareketleri</h2><a class="btn small secondary" href="finance.php?contact_id=<?=$id?>">Tümü</a></div>
 <table>
@@ -360,5 +393,6 @@ try{
 </tbody>
 </table>
 </section>
+<?php endif; ?>
 
 <?php require_once __DIR__.'/layout_bottom.php'; ?>
