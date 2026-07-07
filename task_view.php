@@ -6,6 +6,7 @@
 require_once __DIR__.'/boot.php';
 require_login();
 require_once __DIR__.'/tasks_lib.php';
+require_once __DIR__.'/checks_notes_lib.php';
 $pdo=db();
 $me=(int)($_SESSION['user']['id']??0);
 $pid=task_my_personnel_id($pdo,$me);
@@ -19,6 +20,13 @@ if(!$task){ require_once __DIR__.'/layout_top.php'; echo '<div class="alert">Gö
 $canEdit = task_can_edit($task,$me,$pid);
 $canDelete = task_can_delete($task,$me,$pid);
 $canReassign = task_can_reassign($task,$me);
+
+// Çek/Senet Bilgileri kartı SADECE 'finance' yetkisi olana gösterilir (2026-07-02 güvenlik
+// denetimi ile aynı gerekçe: task_view.php bilinçli olarak page_module_map() dışında/korumasız —
+// personel kendine atanan/genel görevi bildirimden açabilsin diye. 'tasks' yetkisi olup 'finance'
+// yetkisi olmayan biri bu ekrandan cari/banka/tutar görmemeli).
+$canSeeFinance = user_can('finance');
+$cn = $canSeeFinance ? checks_notes_get_by_task($pdo,$id) : null;
 
 // POST — layout_top.php (header/redirect) ÖNCESİ tamamlanmalı (PRG deseni, mobil ile aynı kural).
 if($_SERVER['REQUEST_METHOD']==='POST'){
@@ -74,6 +82,34 @@ $gec = !empty($task['due_date']) && $task['due_date']<date('Y-m-d') && !in_array
     <a class="btn ghost" href="mytasks.php">← İşlerim</a>
   </div>
 </section>
+
+<?php if($canSeeFinance && $cn):
+  $cnTypeOpts=checks_notes_types();
+  $cnStatusOpts=checks_notes_statuses($cn['direction'] ?? 'alinan');
+  $cnStatusTone=checks_notes_status_tone($cn['status']);
+  $cnIcon = $cn['type']==='senet' ? '📝' : '🧾';
+?>
+<section class="panel">
+  <h3><?=$cnIcon?> Çek / Senet Bilgileri</h3>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:12px 0;font-size:14px">
+    <div><span class="muted">Tür</span><br><?=h($cnTypeOpts[$cn['type']] ?? $cn['type'])?></div>
+    <div><span class="muted">Çek/Senet No</span><br><?=h($cn['number'] ?: '-')?></div>
+    <div><span class="muted">Cari</span><br><?=h($cn['contact_name'] ?: 'Cari seçilmedi')?></div>
+    <div><span class="muted">Banka</span><br><?=h($cn['bank_name'] ?: '-')?></div>
+    <div><span class="muted">Tutar</span><br><?=money($cn['amount'])?></div>
+    <div><span class="muted">Vade</span><br><?=h($cn['due_date'] ?: 'Vadesiz')?></div>
+    <div><span class="muted">Portföy Durumu</span><br><?=badge($cnStatusOpts[$cn['status']] ?? $cn['status'], $cnStatusTone)?></div>
+  </div>
+  <?php if($cn['notes']): ?><p class="muted"><?=nl2br(h($cn['notes']))?></p><?php endif; ?>
+  <div class="actions">
+    <?php if(!empty($cn['finance_movement_id'])): ?>
+      <a class="btn ghost" href="checks_notes.php?open=<?=(int)$cn['id']?>">💰 Finans Kaydına Git</a>
+    <?php else: ?>
+      <span class="muted">⚠️ Finans hareketi oluşturulamadı</span>
+    <?php endif; ?>
+  </div>
+</section>
+<?php endif; ?>
 
 <?php if($canEdit): ?>
 <section class="panel">

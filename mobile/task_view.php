@@ -3,6 +3,7 @@
 // sadece burada, liste ekranında (mytasks.php/tasks.php) DEĞİL). Web paritesi: task_view.php.
 require_once 'common.php';
 require_once __DIR__.'/../tasks_lib.php';
+require_once __DIR__.'/../checks_notes_lib.php';
 $pdo=db();
 $me=(int)($_SESSION['user']['id']??0);
 $pid=task_my_personnel_id($pdo,$me);
@@ -15,6 +16,11 @@ if(!$task){ topx('Hata'); echo '<div class="err">Görev bulunamadı.</div>'; bot
 $canEdit = task_can_edit($task,$me,$pid);
 $canDelete = task_can_delete($task,$me,$pid);
 $canReassign = task_can_reassign($task,$me);
+
+// Çek/Senet Bilgileri kartı SADECE 'finance' yetkisi olana gösterilir — web task_view.php ile
+// aynı gerekçe (2026-07-02 güvenlik denetimi): mobil task_view.php de bilinçli korumasız.
+$canSeeFinance = user_can('finance');
+$cn = $canSeeFinance ? checks_notes_get_by_task($pdo,$id) : null;
 
 // POST: durum değiştir / düzenle / sil / yorum / dosya — hepsi topx() ÖNCESİ (PRG deseni).
 if($_SERVER['REQUEST_METHOD']==='POST'){
@@ -71,6 +77,32 @@ $geç = !empty($task['due_date']) && $task['due_date']<date('Y-m-d') && !in_arra
     <?php endif; ?>
   </div>
 </div>
+
+<?php if($canSeeFinance && $cn):
+  $cnTypeOpts=checks_notes_types();
+  $cnStatusOpts=checks_notes_statuses($cn['direction'] ?? 'alinan');
+  $cnIcon = $cn['type']==='senet' ? '📝' : '🧾';
+  $cnOverdue = $cn['status']==='portfoyde' && $cn['due_date'] && $cn['due_date']<date('Y-m-d');
+?>
+<div class="panel" style="padding:12px">
+  <h3 style="margin:0 0 6px"><?=$cnIcon?> Çek / Senet Bilgileri</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0;font-size:13px">
+    <div><span class="muted">Tür</span><br><?=htmlspecialchars($cnTypeOpts[$cn['type']] ?? $cn['type'])?></div>
+    <div><span class="muted">Çek/Senet No</span><br><?=htmlspecialchars($cn['number'] ?: '-')?></div>
+    <div><span class="muted">Cari</span><br><?=htmlspecialchars($cn['contact_name'] ?: 'Cari seçilmedi')?></div>
+    <div><span class="muted">Banka</span><br><?=htmlspecialchars($cn['bank_name'] ?: '-')?></div>
+    <div><span class="muted">Tutar</span><br><?=mm($cn['amount'])?></div>
+    <div><span class="muted">Vade</span><br><span style="color:<?=($cnOverdue?'#f87171':'inherit')?>"><?=htmlspecialchars($cn['due_date'] ?: 'Vadesiz').($cnOverdue?' ⚠️':'')?></span></div>
+    <div class="full" style="grid-column:1/-1"><span class="muted">Portföy Durumu</span><br><?=htmlspecialchars($cnStatusOpts[$cn['status']] ?? $cn['status'])?></div>
+  </div>
+  <?php if($cn['notes']): ?><p class="muted" style="margin-top:0"><?=nl2br(htmlspecialchars($cn['notes']))?></p><?php endif; ?>
+  <?php if(!empty($cn['finance_movement_id'])): ?>
+    <a class="btn" href="check_note_view.php?id=<?=(int)$cn['id']?>" style="display:block;text-align:center;background:#334155;color:#fff;margin-top:8px">💰 Finans Kaydına Git</a>
+  <?php else: ?>
+    <p class="muted" style="margin-top:8px">⚠️ Finans hareketi oluşturulamadı</p>
+  <?php endif; ?>
+</div>
+<?php endif; ?>
 
 <?php if($canEdit): ?>
 <details class="panel" style="padding:12px">

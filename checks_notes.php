@@ -176,8 +176,8 @@ foreach($rows as $r){
     $overdue = $r['status']==='portfoyde' && $r['due_date'] && $r['due_date']<$today;
     $upcoming = $r['status']==='portfoyde' && $r['due_date'] && $r['due_date']>=$today && $r['due_date']<=$soon;
     $rowStyle = $overdue ? "background:#fef2f2" : ($upcoming ? "background:#fffbeb" : "");
-    $statusTone = ['portfoyde'=>'blue','tahsil_edildi'=>'green','ciro_edildi'=>'purple','karsiliksiz'=>'red','iptal'=>'gray'][$r['status']] ?? 'gray';
-    echo "<tr style='$rowStyle'>";
+    $statusTone = checks_notes_status_tone($r['status']);
+    echo "<tr id='cn-row-".$rid."' style='$rowStyle'>";
     echo "<td>".badge($dirOpts[$rDir] ?? $rDir, $rDir==='verilen'?'orange':'blue')."</td>";
     echo "<td>".h($typeOpts[$r['type']] ?? $r['type'])."</td>";
     echo "<td>".h($r['number'] ?: '-')."</td>";
@@ -288,5 +288,28 @@ function quickAddContactCheck(name, type) {
         .catch(e => alert('Bağlantı hatası: ' + e));
 }
 </script>
+
+<?php
+// Görev detay ekranındaki "Finans Kaydına Git" linki buraya ?open=<checks_notes.id> ile gelir.
+// Küçük/additive: sadece ilgili satırı bulup açıyor/kaydırıyor/kısaca vurguluyor, listeyi
+// veya mevcut düzenleme akışını değiştirmiyor.
+$openId=(int)($_GET['open'] ?? 0);
+if($openId>0):
+?>
+<script>
+(function(){
+  var row=document.getElementById('cn-row-<?=$openId?>');
+  var editRow=document.getElementById('edit-cn-<?=$openId?>');
+  if(editRow) editRow.style.display='table-row';
+  if(row){
+    row.scrollIntoView({behavior:'smooth',block:'center'});
+    var orig=row.style.backgroundColor;
+    row.style.transition='background-color .3s';
+    row.style.backgroundColor='#fef08a';
+    setTimeout(function(){ row.style.backgroundColor=orig; },2000);
+  }
+})();
+</script>
+<?php endif; ?>
 
 <?php require_once __DIR__.'/layout_bottom.php'; ?>

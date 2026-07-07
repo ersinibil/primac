@@ -55,6 +55,22 @@ function checks_notes_get($pdo, $id){
     return $r ?: null;
 }
 
+// Görev detay ekranındaki "Çek / Senet Bilgileri" kartı için: bir tasks.id'den, o görevi
+// otomatik oluşturan çek/senet kaydını bulur (checks_notes.task_id → tasks.id, TEK güvenilir
+// bağ — bkz. migration 027). Görev çek/senet kaynaklı değilse null döner.
+function checks_notes_get_by_task($pdo, $taskId){
+    $s=$pdo->prepare("SELECT cn.*, c.name contact_name FROM checks_notes cn LEFT JOIN contacts c ON c.id=cn.contact_id WHERE cn.task_id=?");
+    $s->execute([(int)$taskId]);
+    $r=$s->fetch();
+    return $r ?: null;
+}
+
+// Portföy durumuna göre badge rengi — checks_notes.php (liste) ve task_view.php (Çek/Senet
+// Bilgileri kartı) ortak kullanır.
+function checks_notes_status_tone($status){
+    return ['portfoyde'=>'blue','tahsil_edildi'=>'green','ciro_edildi'=>'purple','karsiliksiz'=>'red','iptal'=>'gray'][$status] ?? 'gray';
+}
+
 // $_FILES['attachment'] varsa yükler, uploads/check_files altına taşır ve kök-göreli yolu döner.
 // Dosya seçilmediyse null döner (mevcut ek korunur). Gerçek bir yükleme hatası olursa Exception fırlatır.
 function checks_notes_handle_upload(){
