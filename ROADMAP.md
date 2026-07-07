@@ -158,6 +158,24 @@ hiçbiri onay olmadan uygulanmayacak:
 
 Hiçbiri kullanıcı onayı olmadan uygulanmayacak — bu liste görünürlük için.
 
+## WHATSAPP UX 2.0 — REOPEN-003 kapanışında ayrılan cila/UX backlog'u (2026-07-07)
+REOPEN-003 "ana işlev" açısından **CLOSED** (bkz. `CHANGELOG.md` — production'da FUNCTIONAL PASS
+aldı: iki panel, konuşma listesi/detayı, compose, AJAX, polling, gelen mesaj, CSRF, Toplu
+Gönderim ayrımı). Ama kullanıcı bunun UX olarak tam bitmiş sayılmayacağını belirtti — yukarıdaki
+"WhatsApp 2.0 backlog" (mimari/fonksiyonel açık maddeler) ile KARIŞTIRILMAMASI için ayrı bir
+başlık: bunlar salt görsel/cila maddeleri, hiçbiri onay olmadan uygulanmayacak:
+1. Sol konuşma listesinde telefon yerine mümkünse cari/firma adı öncelikli gösterilsin.
+2. Bilinmeyen numaralarda "Bilinmeyen Numara" etiketi kullanılsın.
+3. Sağ başlıkta aynı telefon iki kez görünmesin (şu an hem üstte hem `contact_name ?: phone`
+   satırının altında phone tekrar ediyor).
+4. Başlıkta Firma / Yetkili / Telefon bilgisi daha düzgün (görsel olarak) gösterilsin.
+5. Yeni Konuşma alanı (dropdown + manuel telefon formu) sadeleştirilsin.
+6. Mesaj balonları daha kompakt ve WhatsApp hissine yakın hale getirilsin.
+7. 😀 ve 📎 pasif ikonları daha düzgün gösterilsin (şu an sadece `disabled`+soluk).
+8. İleride: dosya gönderme, emoji, okundu bilgisi, mesaj arama gibi geliştirmeler ayrıca
+   planlanacak (bir kısmı zaten yukarıdaki "WhatsApp 2.0 backlog"unda maddeler 2/4/5 ile örtüşüyor
+   — iki liste birleştirilmeden önce hangi maddenin UX hangi maddenin mimari olduğu netleşmeli).
+
 ## Finans Gider Türü sihirbazı — kategori raporu açık noktası (2026-07-04)
 "Ne kaydediyorsun?" sihirbazının context-aware Gider Türü'ü `category_id` yerine `payment_type`
 kolonuna yazıyor (migration yok, mevcut kolon genişletildi). Sonuç: bundan sonra sihirbazla girilen

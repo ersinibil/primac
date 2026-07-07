@@ -18,25 +18,34 @@ CSRF korumalı + hız sınırlı; oturum kimliği kimlik doğrulama sonrası her
 remember-me token'ları rotasyonlu + `SameSite=Lax`. Detay → `CHANGELOG.md` "SECURITY SPRINT-005 —
 FINAL AUDIT", `VERSIONING.md` "Security Sprint Durumu", `ROADMAP.md` "Security Roadmap".
 
-**Aktif gündem — REOPEN Backlog** (bkz. aşağı "REOPEN Listesi", öncelik sırası sabit): güvenlik
-sprintleri bitti, artık yeni ürün geliştirmesine geçilmeyecek, üç iş sırayla ele alınıyor:
-~~REOPEN-001 (Takvim Günlük Filtre)~~ **CLOSED** → ~~REOPEN-002 (Son İşlemler Route Resolver)~~
-**CLOSED** → **REOPEN-003 (WhatsApp Conversation) — teknik test 13/13 PASS, USER TEST bekleniyor**.
+**REOPEN Backlog — ÜÇÜ DE CLOSED (2026-07-07)**: ~~REOPEN-001 (Takvim Günlük Filtre)~~ →
+~~REOPEN-002 (Son İşlemler Route Resolver)~~ → ~~REOPEN-003 (WhatsApp Conversation)~~ — üçü de
+kullanıcı tarafından production'da gerçek testle onaylandı. Güvenlik sprintleri + REOPEN backlog
+tamamen bitti — sıradaki gündem artık normal ürün geliştirme sırası (bkz. aşağı "Sıradaki Önerilen
+Sprint").
 
-**REOPEN-003 — USER TEST bekleniyor** (2026-07-07, commit `9726e14`, teknik test 13/13 PASS) —
-"PRODUCT REOPEN" olarak ele alındı (basit bugfix değil): `wa_conversation_view.php` artık gerçek
-bir WhatsApp Conversation deneyimi — tek ekranda okuma+yazma, AJAX gönderim (sayfa yenilenmeden
-balon eklenir), 3 saniyelik polling (yeni gelen mesaj otomatik görünür), masaüstünde iki-kolon
-shell (sol: konuşma listesi+arama, sağ: aktif konuşma — gerçek SPA değil, GET navigasyonu
-korunarak, sunucu tarafında render edilen paylaşılan `wa_conversation_list_html()` ile), başlıkta
-Firma/Yetkili/Cari tipi bilgisi. `wa_send_now.php` artık SADECE "Toplu WhatsApp Gönderimi" —
-1:1 mesajlaşma tamamen conversation ekranından yürüyor. `wa_webhook.php`'ye `provider_message_id`
-dedup kontrolü eklendi (aynı webhook olayı iki kez POST edilirse mükerrer kayıt açılmıyor).
-Bilinçli olarak bu turun DIŞINDA bırakılanlar (WhatsApp 2.0 backlog'una not edildi, bkz.
-`ROADMAP.md`): `fromMe` dış kaynak mesajları, aynı telefonun çoklu cariyle eşleşmesi, erişim
-izni modeli, ack/çift-tik senkronizasyonu, medya indirme. Detay → `CHANGELOG.md` "REOPEN-003".
-**Durum: USER TEST** — kullanıcının primac.tr'de gerçek görsel/tıklama testi (özellikle masaüstü
-iki-panel yerleşimi, balon animasyonu, polling) bekleniyor, CLOSED değil.
+**REOPEN-003 — CLOSED** (2026-07-07, kod commit `9726e14`, debug-teşhis commit `7afc175`, debug
+kaldırma commit `7463721`, **USER TEST: FUNCTIONAL PASS**) — "PRODUCT REOPEN" olarak ele alındı
+(basit bugfix değil): `wa_conversation_view.php` artık gerçek bir WhatsApp Conversation deneyimi —
+tek ekranda okuma+yazma, AJAX gönderim, 3 saniyelik polling, masaüstünde iki-kolon shell, başlıkta
+Firma/Yetkili/Cari tipi bilgisi, "Yeni Konuşma" girişi. `wa_send_now.php` artık SADECE "Toplu
+WhatsApp Gönderimi". `provider_message_id` dedup eklendi.
+
+**Üretimde iki tur kullanıcı testi geçti**: 1. tur BLOCKER FAIL (giden "gönderildi" görünüp
+ulaşmıyordu, gelen hiç düşmüyordu) — kullanıcı kanıt talep etti, geçici bir `DEBUG_WA` teşhis
+paketi eklendi (webhook karar zinciri + provider request/response + admin-only debug kutusu,
+token/key otomatik maskeli). Gerçek `wa_debug.log` kanıtı **kök nedeni kesinleştirdi: kod
+sorunu DEĞİLDİ** — UltraMsg panelinde webhook URL'i güncel değildi, düzeltilince inbound ANINDA
+çalıştı. 2. tur: **FUNCTIONAL PASS** — iki panel, liste, detay, compose, AJAX, polling, gelen
+mesaj, CSRF, Toplu Gönderim ayrımı hepsi production'da doğrulandı. Debug paketi kök neden
+bulununca TAMAMEN kaldırıldı (no-op'a düşürülmedi — kod fiziksel olarak silindi).
+
+Bilinçli olarak DIŞINDA bırakılanlar iki ayrı backlog'a bölündü (bkz. `ROADMAP.md`): **"WhatsApp
+2.0 backlog"** (mimari/fonksiyonel — fromMe dış kaynak mesajları, çoklu cari eşleşmesi, erişim
+izni modeli, ack senkronizasyonu, medya indirme) ve **"WHATSAPP UX 2.0"** (salt görsel cila —
+liste başlığında cari adı önceliği, "Bilinmeyen Numara" etiketi, başlıkta telefon tekrarının
+giderilmesi, Yeni Konuşma alanının sadeleştirilmesi, balonların kompaktlaştırılması, pasif
+ikonların düzeltilmesi). Detay → `CHANGELOG.md` "REOPEN-003".
 
 **REOPEN-001 — CLOSED** (2026-07-06, commit `0ecdf80`, kullanıcı primac.tr'de gerçek testle
 onayladı — **USER TEST: PASS**) — kök neden 3 turluk analiz + kullanıcının kendi üretim ekran
@@ -139,35 +148,32 @@ Production'a (acanstr.com/ots) henüz dokunulmadı — ayrı "DEPLOY MODE" komut
 
 **Production'a deploy YAPILMAYACAK** — ayrı, açık bir "DEPLOY MODE" komutu gerekir.
 
-## REOPEN Listesi — ŞİMDİ AKTİF GÜNDEM (SECURITY SPRINT-005 2026-07-06'da resmen kapandı)
-Kullanıcı gerçek kullanım testinde 3 önceki "PASS" bulguyu FAILED/REOPEN olarak işaretlemişti; hem
-SECURITY SPRINT-004 hem SPRINT-005 artık TAMAMLANDI, bu yüzden bu üç iş **şimdi aktif gündem** —
-sırayla, sıfırdan yeni kabul kriterleriyle ele alınacak:
+## REOPEN Listesi — ÜÇÜ DE CLOSED (2026-07-07'de resmen bitti)
+Kullanıcı gerçek kullanım testinde 3 önceki "PASS" bulguyu FAILED/REOPEN olarak işaretlemişti; her
+üçü de sırayla, sıfırdan yeni kabul kriterleriyle ele alındı ve production'da gerçek testle
+onaylandı:
 - ✅ **REOPEN-001 — Takvim Günlük Filtre: CLOSED** (2026-07-06, commit `0ecdf80`, **USER TEST:
-  PASS**). Kök neden 3 turluk analiz + kullanıcının üretim ekran görüntüsüyle kesinleşti: takvimin
-  `$byDay[$g]` filtresi hep doğruydu; sorun not (📝) linklerinin tarih taşımadan
-  `notes.php`/`mytasks.php`'nin TÜM açık notlarını (filtresiz) göstermesiydi. `notes.php` +
-  `mobile/mytasks.php` + `personal_notes_list()`'e opsiyonel `?date=` desteği eklendi, mevcut genel
-  liste davranışı korundu. Detay → `CHANGELOG.md` "REOPEN-001".
-- **REOPEN-002 — Son İşlemler Route Resolver**: satış/satın alma kayıtları hâlâ ilgisiz bir "yeni
-  kayıt" formuna (`sales.php`/`purchase.php`) yönleniyor. **Kısmi kök neden bu oturumda bulundu**
-  (kod değiştirilmedi): `activity_target_url()`'nin `$map` dizisinde `'sale'`/`'purchase'`
-  `entity_type` değerleri hiç yok → fonksiyon `null` döner → `activity_row_html()` satır 126'daki
-  `$resolved ?? ($r['url'] ?: '#')` stored-url fallback'ine düşer → stored url zaten write-time'da
-  `sales.php`/`purchase.php` (`mobile/sales.php:112`, `mobile/purchase.php:68`, `sales.php:136`,
-  `purchase.php:73`) — yani YENİ KAYIT formu, detay değil. Düzeltme: bu iki `entity_type` için ya
-  gerçek bir detay görünümü ya da resolver'ın "detay ekranı yok → pasif/disabled" durumu döndürmesi
-  gerekiyor (stored-url fallback'e körlemesine düşmemeli).
-- **REOPEN-003 — WhatsApp Conversation**: mevcut ekran gerçek "Web WhatsApp" mantığında değil,
-  gelen cevaplar ekranda görünmüyor (webhook/DB/sorgu zincirinin neresinde koptuğu bu oturumda analiz
-  EDİLMEDİ — kullanıcı SPRINT-005 önceliğini koyunca durduruldu).
+  PASS**). Kök neden: takvimin `$byDay[$g]` filtresi hep doğruydu; sorun not (📝) linklerinin
+  tarih taşımadan `notes.php`/`mytasks.php`'nin TÜM açık notlarını göstermesiydi. Detay →
+  `CHANGELOG.md` "REOPEN-001".
+- ✅ **REOPEN-002 — Son İşlemler Route Resolver: CLOSED** (2026-07-06, commit `2924071`, **USER
+  TEST: PASS**). Kök neden: `activity_target_url()`'nin haritası `sale`/`purchase` türlerini
+  kapsamıyordu, kontrolsüz stored-url fallback'e düşüyordu. `activity_resolve()` 4 durumlu hale
+  getirildi + `activity_safe_stored_url()` güvenli fallback kapısı eklendi. Detay → `CHANGELOG.md`
+  "REOPEN-002".
+- ✅ **REOPEN-003 — WhatsApp Conversation: CLOSED** (2026-07-07, **USER TEST: FUNCTIONAL PASS**).
+  "PRODUCT REOPEN" — tam mimari analiz + wireframe sonrası uygulandı, üretimde bir BLOCKER FAIL
+  turu ve geçici bir debug-teşhis paketiyle kök nedeni (kod değil, UltraMsg webhook URL ayarı)
+  kesinleştirdi. Detay → `CHANGELOG.md` "REOPEN-003".
 
-**Öncelik sırası (kullanıcı tarafından netleştirildi, 2026-07-05, değişmedi)**: ~~SECURITY
-SPRINT-005~~ (tamamlandı) → ~~REOPEN-001~~ (CLOSED) → **REOPEN-002 (sıradaki iş)** → REOPEN-003 → Dashboard 2.0
-→ Calendar 2.0 → CRM 2.0 → Purchase & Sales 2.0 → UX Polish → Performance → Mobile Experience →
-System Audit → Release Candidate. Bu üç REOPEN işi tamamlanmadan yeni ürün geliştirmesine
-geçilmeyecek. Detay ve çalışma felsefesi ("Evolution not Revolution", REOPEN durum makinesi:
-OPEN→IN PROGRESS→USER TEST→PASS/REOPEN) → `memory/feedback_evolution_not_revolution.md`.
+**Öncelik sırası (2026-07-05'te netleşti, 2026-07-07'de REOPEN kısmı tamamlandı)**: ~~SECURITY
+SPRINT-005~~ → ~~REOPEN-001~~ → ~~REOPEN-002~~ → ~~REOPEN-003~~ (hepsi CLOSED) → **Dashboard 2.0
+(sıradaki önerilen sprint)** → Calendar 2.0 → CRM 2.0 → Purchase & Sales 2.0 → UX Polish →
+Performance → Mobile Experience → System Audit → Release Candidate. REOPEN-003 kapanışında ayrıca
+iki yeni backlog maddesi açıldı (**WhatsApp 2.0** — mimari/fonksiyonel, **WHATSAPP UX 2.0** — cila,
+bkz. `ROADMAP.md`) — bunlar sıraya kullanıcı onayıyla dahil edilebilir, otomatik değil. Detay ve
+çalışma felsefesi ("Evolution not Revolution", REOPEN durum makinesi: OPEN→IN PROGRESS→USER
+TEST→PASS/REOPEN) → `memory/feedback_evolution_not_revolution.md`.
 
 ## iOS Safari Gerçek Cihaz Test Notları (bir sonraki oturumun 1. maddesi)
 Bu iki madde SADECE gerçek bir iPhone + Safari ile doğrulanabilir, yerel ortamda (curl/php -S)

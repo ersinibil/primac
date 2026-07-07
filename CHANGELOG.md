@@ -3,7 +3,7 @@
 Bu dosya `memory/features.md`'nin (tam gerekçe/kod detayıyla) kök dizindeki kısa özetidir — hızlı
 taramak için. Detaylı "neden böyle yapıldı" analizleri için `memory/features.md`'ye bakın.
 
-## REOPEN-003 — WhatsApp Conversation Deneyimi: USER TEST bekleniyor (2026-07-07, commit `9726e14`, teknik test 13/13 PASS)
+## REOPEN-003 — WhatsApp Conversation Deneyimi: CLOSED (2026-07-07, commit `9726e14`, USER TEST: FUNCTIONAL PASS)
 **Kapsam kararı**: kullanıcı bunu "basit bir bugfix değil, PRODUCT REOPEN" olarak tanımladı — amaç
 sadece çalışan bir mesaj sistemi değil, gerçek bir WhatsApp Conversation deneyimi. Önce tam bir
 mimari analiz yapıldı (mevcut şema, gerçek kullanıcı akışı, ürün eksikleri, önerilen mimari/ekran
@@ -48,8 +48,37 @@ ack/teslim-oldu senkronizasyonu, gelen medya dosyalarının indirilmemesi.
 
 **Teknik test**: lokal `ots_sectest`'te gerçek AJAX gönderim + simüle webhook inbound + dedup +
 polling + arama + CSRF enforcement + regresyon (dashboard.php/sales.php) test edildi, 13/13 PASS
-(bkz. `NEXT_SESSION.md`). Masaüstü iki-panel yerleşiminin GÖRSEL doğrulaması (dar/geniş ekran,
-balon animasyonu) tarayıcıda yapılamadı — bu kullanıcı testinde doğrulanacak.
+(bkz. `NEXT_SESSION.md`).
+
+**USER TEST turu 1 — PARTIAL/BLOCKER FAIL (2026-07-07)**: production'da ekran ilk açılışta
+compose/gönder butonu görünmedi (deploy henüz tamamlanmamıştı — sonra düzeldi), giden mesaj
+"gönderildi" görünüp karşıya ulaşmadı, gelen mesaj hiç düşmedi. Kullanıcı "kanıtsız düzeltme
+yapma" talimatıyla **geçici bir DEBUG_WA teşhis paketi** istedi: `wa_webhook.php`'nin her karar
+noktasını (WEBHOOK START/JSON OK/FROM OK/FROMME TRUE-FALSE/MESSAGE ACCEPTED-REJECTED+sebep/
+CONVERSATION FOUND-CREATED/MESSAGE INSERTED/RETURN 200), `wa_send()`/`wa_send_media()`'nin
+provider isteği+cevabını, ve conversation ekranında admin-only canlı bir debug kutusunu
+(Conversation ID/Phone/Message Count/Polling/Last Poll/Last Ajax/CSRF) `wa_debug.log`'a yazan,
+UltraMsg token'ı/webhook key'i otomatik maskeleyen, `DEBUG_WA` sabitiyle kontrol edilen tamamen
+geçici bir katman (commit `7afc175`).
+
+**Kök neden KANITLANDI (production `wa_debug.log` ile)**: giden mesajlar zaten doğru çalışıyordu
+(UltraMsg `"sent":"true"` dönüyordu). Gelen mesajların hiç düşmemesinin nedeni **kod DEĞİLDİ** —
+UltraMsg panelinde webhook URL'i güncel/doğru tanımlı değildi (log'da tek bir `WEBHOOK START`
+satırı bile yoktu, yani UltraMsg sunucuya hiç istek atmıyordu). Kullanıcı `wa_settings.php`'deki
+hazır webhook URL'ini UltraMsg paneline girince **anında** çalışmaya başladı — sonraki log
+`fromMe`'nin her zaman gerçek PHP boolean olarak geldiğini (ilk hipotez — string olabilir —
+yanlış çıktı ama zararsızdı) ve `provider_message_id`'nin gerçekten benzersiz olduğunu (dedup
+güvenli) doğruladı.
+
+**USER TEST turu 2 — FUNCTIONAL PASS (2026-07-07)**: production'da doğrulanan ana işlevler — iki
+panel ekran, konuşma listesi, konuşma detayı, compose kutusu, AJAX gönderim, polling, gelen
+mesajların konuşmaya düşmesi, CSRF, Toplu Gönderim ayrımı. Debug paketi kök neden bulununca
+TAMAMEN kaldırıldı (commit `7463721`) — `DEBUG_WA` sabiti, `wa_debug_log()`/`wa_debug_redact()`,
+tüm çağrı noktaları, ve conversation ekranındaki debug kutusu koddan silindi (devre dışı
+bırakılmadı — hiç kalmadı), `wa_debug.log` prod'da bırakılmadı.
+
+**Durum: CLOSED.** UX açısından tam bitmiş sayılmıyor — kullanıcı bilinçli olarak bir sonraki
+cilalama turunu **WHATSAPP UX 2.0** backlog'una erteledi (bkz. `ROADMAP.md`).
 
 **Durum: USER TEST** — kullanıcı primac.tr'de gerçek görsel/tıklama testiyle onaylamadan CLOSED
 sayılmayacak (REOPEN state machine).
