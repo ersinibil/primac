@@ -263,7 +263,7 @@ require_once __DIR__.'/layout_top.php';
       }
       if ($recent): ?>
       <div style="overflow-x:auto">
-      <table>
+      <table style="min-width:600px">
         <thead><tr><th>Tarih</th><th>Cari</th><th>Açıklama</th><th style="text-align:right">Tutar</th><th style="text-align:right">KDV</th><?php if(can_edit_delete()): ?><th>İşlem</th><?php endif; ?></tr></thead>
         <tbody>
         <?php foreach ($recent as $row): ?>
