@@ -181,6 +181,38 @@ $ps=$pdo->query("SELECT id,name,quantity,unit,sale_price,vat_rate FROM stock_ite
 </form>
 </div>
 
+<div class="panel">
+  <b>Son Satışlar</b>
+  <?php
+  try{
+      $recentM = $pdo->query(
+          "SELECT fm.id, fm.movement_date, fm.amount, fm.vat_amount, fm.description, c.name AS cname
+           FROM finance_movements fm
+           LEFT JOIN contacts c ON c.id=fm.contact_id
+           WHERE fm.movement_type='sale' OR fm.movement_type='mobile_sale'
+           ORDER BY fm.id DESC LIMIT 10"
+      )->fetchAll();
+  }catch(Throwable $e){ $recentM=[]; }
+  if(!$recentM) echo '<p class="muted" style="margin:10px 0 0">Henüz kayıt yok.</p>';
+  foreach($recentM as $row):
+  ?>
+  <div class="item" style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+    <div style="flex:1;min-width:0">
+      <b style="color:#22c55e"><?=mm($row['amount'])?></b><br>
+      <small class="muted"><?=htmlspecialchars($row['movement_date'] ?? '')?> · <?=htmlspecialchars($row['cname'] ?: '—')?></small><br>
+      <small class="muted"><?=htmlspecialchars($row['description'] ?? '')?></small>
+    </div>
+    <?php if(can_edit_delete()): ?>
+    <form method="post" onsubmit="return confirm('Bu satış kaydı ve bağlı verileri KALICI olarak silinecek. Emin misiniz?')" style="margin:0">
+      <input type="hidden" name="delete_sale" value="1">
+      <input type="hidden" name="id" value="<?=(int)$row['id']?>">
+      <button class="btn" style="background:rgba(220,38,38,.2);padding:8px 10px" type="submit">🗑</button>
+    </form>
+    <?php endif; ?>
+  </div>
+  <?php endforeach; ?>
+</div>
+
 <script>
 var PRODUCTS = <?= json_encode(array_map(function($p){
     return ['id'=>(int)$p['id'],'name'=>$p['name'],'unit'=>$p['unit'],'quantity'=>$p['quantity'],'price'=>$p['sale_price'],'vat'=>$p['vat_rate']!==null?$p['vat_rate']:20];

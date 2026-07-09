@@ -62,11 +62,13 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['save_contact'])){
             ]);
         try{ if(function_exists('activity_log')) activity_log('Cari','Düzenleme',trim($_POST['name']),'','contact',$id,'contact_view.php?id='.$id,'✏️'); }catch(Throwable $e){}
     }catch(Throwable $e){}
-    }
     header('Location: contact_view.php?id='.$id.'&ok=1'); exit;
+    }
+    header('Location: contact_view.php?id='.$id.'&err=yetki'); exit;
 }
 topx('Cari Detay');
 if(!empty($_GET['ok'])) echo '<div class="notice">Cari güncellendi.</div>';
+if(!empty($_GET['err']) && $_GET['err']==='yetki') echo '<div class="err">Bu işlem için yetkiniz yok.</div>';
 try{
     $s=db()->prepare("SELECT * FROM contacts WHERE id=?"); $s->execute([$id]); $c=$s->fetch();
     if(!$c) throw new Exception('Cari bulunamadı.');

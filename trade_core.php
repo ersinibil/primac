@@ -13,6 +13,27 @@ function trade_money($v){
     return number_format((float)$v,2,',','.').' ₺';
 }
 
+// Finans yetkisi olmayan kullanıcıya gerçek hesap adı/bakiyesi göstermemek için: form'dan gelen
+// değer ya doğrudan bir hesap id'si (finance yetkili kullanıcı, dropdown'da gerçek hesapları
+// görüyor) ya da bir account_type etiketi (finance yetkisiz kullanıcı, sales.php'deki soyut
+// ödeme yöntemi deseniyle aynı) olabilir — ikinci durumda o tipteki İLK aktif hesabı bulup
+// id'sini döner. $restrictToType=true iken (çağıran user_can('finance') değilse) sayısal girdi
+// bile DOĞRUDAN kabul edilmez — sadece account_type metnine göre çözülür; aksi halde finans
+// yetkisi olmayan biri, dropdown'da hesap adı/bakiye görmese de DevTools/POST ile bilinen bir
+// account_id'yi doğrudan gönderip belirli bir hesabı seçmeye zorlayabilirdi (2026-07-09, Selin'in
+// güvenlik denetiminde bulundu).
+function trade_account_resolve($pdo, $raw, $restrictToType=false){
+    $raw = trim((string)$raw);
+    if($raw === '') return null;
+    if(!$restrictToType && ctype_digit($raw)) return (int)$raw;
+    try{
+        $s=$pdo->prepare("SELECT id FROM finance_accounts WHERE account_type=? AND active=1 ORDER BY id LIMIT 1");
+        $s->execute([$raw]);
+        $r=$s->fetch();
+        return $r ? (int)$r['id'] : null;
+    }catch(Throwable $e){ return null; }
+}
+
 function trade_ensure_product($name,$unit,$unitPrice,$type){
     $pdo=db();
 
