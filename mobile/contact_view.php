@@ -30,8 +30,9 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['delete_contact'])){
     }
 }
 
-// Cari düzenle (çıktıdan önce)
+// Cari düzenle (çıktıdan önce) — web contact_view.php ile aynı desen: eksik olan yetki kontrolü eklendi.
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['save_contact'])){
+    if(can_edit_delete()){
     try{
         $pdo->prepare("UPDATE contacts SET
             name=?,type=?,authorized_person=?,
@@ -61,6 +62,7 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['save_contact'])){
             ]);
         try{ if(function_exists('activity_log')) activity_log('Cari','Düzenleme',trim($_POST['name']),'','contact',$id,'contact_view.php?id='.$id,'✏️'); }catch(Throwable $e){}
     }catch(Throwable $e){}
+    }
     header('Location: contact_view.php?id='.$id.'&ok=1'); exit;
 }
 topx('Cari Detay');
@@ -68,6 +70,10 @@ if(!empty($_GET['ok'])) echo '<div class="notice">Cari güncellendi.</div>';
 try{
     $s=db()->prepare("SELECT * FROM contacts WHERE id=?"); $s->execute([$id]); $c=$s->fetch();
     if(!$c) throw new Exception('Cari bulunamadı.');
+
+    // View/Edit ayrımı: web contact_view.php ile aynı desen — düzenleme sadece mevcut kaydı
+    // değiştirme yetkisi olana gösterilir.
+    $canEdit = can_edit_delete();
 
     // WhatsApp konuşma geçmişi — bu cariye ait bir conversation varsa direkt oraya, yoksa yeni
     // mesaj gönderme ekranına (telefon önceden dolu) yönlendirilir.
@@ -145,6 +151,7 @@ try{
 </div>
 <?php endif; ?>
 
+<?php if($canEdit): ?>
 <details class="panel">
   <summary style="font-weight:900;cursor:pointer">✏️ Cari Bilgilerini Düzenle</summary>
   <form method="post" style="margin-top:10px">
@@ -168,6 +175,7 @@ try{
     <button class="btn dark" name="save_contact" value="1" style="width:100%;padding:13px;margin-top:8px">💾 Kaydet</button>
   </form>
 </details>
+<?php endif; ?>
 
 <div class="panel">
   <b>📋 İşler</b>
@@ -187,6 +195,7 @@ try{
   <?php endforeach; ?>
 </div>
 
+<?php if(user_can('finance')): ?>
 <div class="panel">
   <b>Son Hareketler</b>
   <?php
@@ -202,6 +211,7 @@ try{
   </div>
   <?php endforeach; ?>
 </div>
+<?php endif; ?>
 
 <?php
 }catch(Throwable $e){ echo '<div class="err">'.htmlspecialchars($e->getMessage()).'</div>'; }
