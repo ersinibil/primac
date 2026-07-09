@@ -21,6 +21,7 @@ $direction=$_GET['direction'] ?? ($editRow['direction'] ?? 'in');
 if(!in_array($direction,['in','out'])) $direction='in';
 if($editRow) $direction=$editRow['direction'];
 $contactId=(int)($_GET['contact_id'] ?? ($editRow['contact_id'] ?? 0));
+$warning='';
 
 if($_SERVER['REQUEST_METHOD']==='POST'){
     try{
@@ -49,7 +50,34 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             }
         }
 
-        if($editId){
+        // Migration'sız kısmi önlem (2026-07-09, Finance Core Stabilization İş 3): aynı ekonomik
+        // olayın çift kaydını ENGELLEMEZ (bunun için hangi tahsilatın hangi satışı kapattığını
+        // tutan bir kolon gerekir, ayrı migration önerisiyle raporlanacak) — sadece en yaygın
+        // tetikleyiciye (aynı cari + aynı yön + aynı tutarda zaten bekleyen bir kayıt varken
+        // habersizce ikinci bir kayıt daha girilmesi) karşı yumuşak bir uyarı gösterir. Kullanıcı
+        // "Yine de kaydet" ile bilerek devam edebilir.
+        if(!$editId && empty($_POST['confirm_duplicate'])){
+            $dupContactId=(int)($_POST['contact_id'] ?? 0);
+            if($dupContactId){
+                try{
+                    $dupQ=$pdo->prepare("SELECT id,movement_date FROM finance_movements
+                        WHERE contact_id=? AND direction=? AND amount=? AND status='Bekliyor'
+                        ORDER BY id DESC LIMIT 1");
+                    $dupQ->execute([$dupContactId,$direction,$amount]);
+                    $dupRow=$dupQ->fetch();
+                    if($dupRow){
+                        $warning='Bu caride aynı tutarda ('.number_format($amount,2,',','.').' ₺) '
+                            .h($dupRow['movement_date']).' tarihli, hâlâ "Bekliyor" durumunda bir kayıt var. '
+                            .'Bu işlem onun karşılığıysa aynı tutarı iki kez girmiş olabilirsiniz — cari bakiyesi '
+                            .'çift sayılır. Gerçekten ayrı/yeni bir işlemse aşağıdaki kutuyu işaretleyip tekrar kaydedin.';
+                    }
+                }catch(Throwable $e){}
+            }
+        }
+
+        if($warning){
+            // Kaydetmiyoruz — formu girilen değerlerle yeniden gösteriyoruz.
+        }elseif($editId){
             finance_movement_update($pdo,$editId,$_POST);
 
             $contactName='Cari seçilmedi';
@@ -67,8 +95,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 
             header("Location: finance.php");
             exit;
-        }
-
+        }else{
         $stmt=$pdo->prepare("INSERT INTO finance_movements(contact_id,category_id,personnel_id,job_id,direction,amount,payment_channel,payment_type,account_id,status,movement_date,description,movement_type,reference_no)
             VALUES(?,?,?,NULL,?,?,?,?,?,?,?,?,'normal',?)");
         $status=$direction==='in'?'Tahsil Edildi':'Ödendi';
@@ -110,6 +137,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 
         header("Location: finance.php");
         exit;
+        }
     }catch(Throwable $e){
         $error=$e->getMessage();
     }
@@ -147,16 +175,21 @@ if($editRow){
 </div>
 
 <?php if($error): ?><div class="alert"><?=h($error)?></div><?php endif; ?>
+<?php if($warning): ?><div class="alert" style="background:#fffbeb;border-color:#fcd34d;color:#92400e"><b>⚠️ Dikkat:</b> <?=$warning?></div><?php endif; ?>
 
 <?php
-$fCatId=(int)($editRow['category_id'] ?? 0);
-$fAccId=(int)($editRow['account_id'] ?? ($_GET['account_id'] ?? 0));
-$fChannel=$editRow['payment_channel'] ?? '';
-$fAmount=$editRow['amount'] ?? '';
-$fDate=$editRow['movement_date'] ?? date('Y-m-d');
-$fRef=$editRow['reference_no'] ?? '';
-$fDesc=$editRow['description'] ?? '';
-$fPaymentType=$editRow['payment_type'] ?? '';
+// Uyarı gösterildiğinde formu girilen değerlerle yeniden doldur (kaydedilmedi, kullanıcı
+// baştan yazmasın diye) — normal düzenleme (editRow) yoksa bu kaynak kullanılmaz.
+$src = $warning ? $_POST : ($editRow ?: []);
+if($warning) $contactId=(int)($_POST['contact_id'] ?? 0);
+$fCatId=(int)($src['category_id'] ?? 0);
+$fAccId=(int)($src['account_id'] ?? ($_GET['account_id'] ?? 0));
+$fChannel=$src['payment_channel'] ?? '';
+$fAmount=$src['amount'] ?? '';
+$fDate=$src['movement_date'] ?? date('Y-m-d');
+$fRef=$src['reference_no'] ?? '';
+$fDesc=$src['description'] ?? '';
+$fPaymentType=$src['payment_type'] ?? '';
 $channelOpts=['Nakit','Banka / EFT','Kredi Kartı','POS','Çek','Senet','Diğer'];
 ?>
 <section class="panel">
@@ -244,7 +277,14 @@ $channelOpts=['Nakit','Banka / EFT','Kredi Kartı','POS','Çek','Senet','Diğer'
 <textarea name="description" id="fnDesc" rows="3"><?=h($fDesc)?></textarea>
 </label>
 
-<button class="btn"><?=$editId?'💾 Güncelle':'Kaydet'?></button>
+<?php if($warning): ?>
+<label class="full" style="background:#fffbeb;border-radius:10px;padding:10px 12px">
+<input type="checkbox" name="confirm_duplicate" value="1" style="width:auto;display:inline-block;margin-right:6px">
+Bunun ayrı/yeni bir işlem olduğundan eminim, yine de kaydet.
+</label>
+<?php endif; ?>
+
+<button class="btn"><?=$editId?'💾 Güncelle':($warning?'Yine de Kaydet':'Kaydet')?></button>
 </form>
 </section>
 <script>

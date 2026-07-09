@@ -7,8 +7,9 @@ $ok=''; $er='';
 
 function qty_fmt($v){ return rtrim(rtrim(number_format((float)$v,2,'.',''),'0'),'.'); }
 
-// Ödeme yöntemi → kasa hesabı tipi
+// Ödeme yöntemi → kasa hesabı tipi. Veresiye: henüz tahsil edilmedi, hiçbir hesaba işlenmez.
 function acc_for_method($pdo,$method){
+    if($method==='Veresiye') return null;
     $map=['Peşin'=>'Kasa','Kredi Kartı'=>'Kredi Kartı','Banka Havalesi'=>'Banka'];
     $type=$map[$method] ?? 'Kasa';
     try{
@@ -87,11 +88,13 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 }
 
                 // 2) Kasa kaydı (finans hareketi) ÖNCE oluşturulur (sepetin TOPLAMI ile) — id'si
-                // stok hareketlerine kesin referans olarak yazılacak.
+                // stok hareketlerine kesin referans olarak yazılacak. Veresiye: durum "Bekliyor"
+                // (web sales.php ile aynı desen, 2026-07-09 İş 3 kısmi önlemi).
                 $accId=acc_for_method($pdo,$method);
+                $saleStatus = $method==='Veresiye' ? 'Bekliyor' : 'Tahsil Edildi';
                 $pdo->prepare("INSERT INTO finance_movements(contact_id,direction,amount,vat_rate,vat_amount,payment_channel,account_id,status,movement_date,description,movement_type)
                     VALUES(?,?,?,?,?,?,?,?,?,?,'mobile_sale')")
-                    ->execute([$contact,'in',$grandTotal,count($lines)===1?($lines[0]['vat_rate']?:null):null,$grandVat,$method,$accId,'Tahsil Edildi',date('Y-m-d'),$desc]);
+                    ->execute([$contact,'in',$grandTotal,count($lines)===1?($lines[0]['vat_rate']?:null):null,$grandVat,$method,$accId,$saleStatus,date('Y-m-d'),$desc]);
                 $financeMovementId=(int)$pdo->lastInsertId();
 
                 // 3) Her satır için stok hareketi — hepsi aynı finance_movement_id ile
@@ -156,6 +159,7 @@ $ps=$pdo->query("SELECT id,name,quantity,unit,sale_price,vat_rate FROM stock_ite
     <option>Peşin</option>
     <option>Kredi Kartı</option>
     <option>Banka Havalesi</option>
+    <option>Veresiye</option>
   </select>
 
   <label style="margin-top:10px;font-weight:800">Ürünler</label>

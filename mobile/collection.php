@@ -17,6 +17,29 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         $pm=$_POST['payment_channel'] ?? 'Nakit';
         if(!$contact) throw new Exception('Cari seçin.');
         if($amount<=0) throw new Exception('Tutar geçersiz.');
+
+        // Migration'sız kısmi önlem (2026-07-09, Finance Core Stabilization İş 3): aynı ekonomik
+        // olayın çift kaydını ENGELLEMEZ, sadece en yaygın tetikleyiciye (aynı cari + aynı tutarda
+        // zaten "Bekliyor" bir kayıt varken habersizce ikinci bir tahsilat girilmesi) karşı
+        // yumuşak bir uyarı gösterir — kullanıcı bilerek devam edebilir.
+        if(empty($_POST['confirm_duplicate'])){
+            try{
+                $dupQ=$pdo->prepare("SELECT id,movement_date FROM finance_movements
+                    WHERE contact_id=? AND direction='in' AND amount=? AND status='Bekliyor'
+                    ORDER BY id DESC LIMIT 1");
+                $dupQ->execute([$contact,$amount]);
+                $dupRow=$dupQ->fetch();
+                if($dupRow){
+                    $_SESSION['collection_warning']='Bu caride aynı tutarda ('.number_format($amount,2,',','.').' ₺) '
+                        .htmlspecialchars($dupRow['movement_date']).' tarihli, hâlâ "Bekliyor" durumunda bir kayıt var. '
+                        .'Bu tahsilat onun karşılığıysa aynı tutarı iki kez girmiş olabilirsiniz. Gerçekten ayrı bir '
+                        .'işlemse aşağıdaki kutuyu işaretleyip tekrar kaydedin.';
+                    $_SESSION['collection_prefill']=['contact_id'=>$contact,'amount'=>$amount,'payment_channel'=>$pm,'description'=>trim($_POST['description'] ?? '')];
+                    header('Location: collection.php?contact_id='.$contact); exit;
+                }
+            }catch(Throwable $e){}
+        }
+
         $accId=acc_for_pm($pdo,$pm);
         $pdo->prepare("INSERT INTO finance_movements(contact_id,direction,amount,payment_channel,account_id,status,movement_date,description,movement_type)
             VALUES(?,?,?,?,?,?,?,?,'mobile')")
@@ -34,20 +57,35 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 topx('Tahsilat');
 if(!empty($_SESSION['collection_ok'])){ $ok=$_SESSION['collection_ok']; unset($_SESSION['collection_ok']); }
 if(!empty($_SESSION['collection_err'])){ $er=$_SESSION['collection_err']; unset($_SESSION['collection_err']); }
+$warning=''; $pre=[];
+if(!empty($_SESSION['collection_warning'])){ $warning=$_SESSION['collection_warning']; unset($_SESSION['collection_warning']); }
+if(!empty($_SESSION['collection_prefill'])){ $pre=$_SESSION['collection_prefill']; unset($_SESSION['collection_prefill']); }
 $cs=$pdo->query("SELECT id,name FROM contacts ORDER BY name")->fetchAll();
+$preContact=(int)($pre['contact_id'] ?? $cid);
 ?>
 <?php if($ok): ?><div class="notice"><?=htmlspecialchars($ok)?></div><?php endif; ?>
 <?php if($er): ?><div class="err"><?=htmlspecialchars($er)?></div><?php endif; ?>
+<?php if($warning): ?><div class="notice" style="background:rgba(234,179,8,.18);color:#fde68a"><b>⚠️ Dikkat:</b> <?=$warning?></div><?php endif; ?>
 <div class="panel">
 <form method="post">
   <label>Cari</label>
   <select name="contact_id" required><option value="">— Seç —</option>
-  <?php foreach($cs as $c): ?><option value="<?=$c['id']?>" <?=$cid===(int)$c['id']?'selected':''?>><?=htmlspecialchars($c['name'])?></option><?php endforeach; ?></select>
-  <label>Tutar</label><input type="number" step="0.01" name="amount" required>
+  <?php foreach($cs as $c): ?><option value="<?=$c['id']?>" <?=$preContact===(int)$c['id']?'selected':''?>><?=htmlspecialchars($c['name'])?></option><?php endforeach; ?></select>
+  <label>Tutar</label><input type="number" step="0.01" name="amount" value="<?=htmlspecialchars($pre['amount'] ?? '')?>" required>
   <label>Tahsilat Yöntemi</label>
-  <select name="payment_channel"><option>Nakit</option><option>Banka</option><option>Kredi Kartı</option><option>POS</option><option>Çek</option><option>Senet</option></select>
-  <label>Açıklama</label><textarea name="description" rows="2"></textarea>
-  <button class="btn dark" style="width:100%;padding:14px;margin-top:8px">💰 Tahsilatı Kaydet</button>
+  <select name="payment_channel">
+  <?php foreach(['Nakit','Banka','Kredi Kartı','POS','Çek','Senet'] as $pm): ?>
+  <option <?=($pre['payment_channel'] ?? '')===$pm?'selected':''?>><?=$pm?></option>
+  <?php endforeach; ?>
+  </select>
+  <label>Açıklama</label><textarea name="description" rows="2"><?=htmlspecialchars($pre['description'] ?? '')?></textarea>
+  <?php if($warning): ?>
+  <label style="background:rgba(234,179,8,.12);border-radius:10px;padding:10px;display:block;margin-top:8px">
+    <input type="checkbox" name="confirm_duplicate" value="1" style="width:auto;display:inline-block;margin-right:6px">
+    Bunun ayrı/yeni bir işlem olduğundan eminim, yine de kaydet.
+  </label>
+  <?php endif; ?>
+  <button class="btn dark" style="width:100%;padding:14px;margin-top:8px"><?=$warning?'Yine de Kaydet':'💰 Tahsilatı Kaydet'?></button>
 </form>
 </div>
 <div class="panel"><b>Son Tahsilatlar</b>

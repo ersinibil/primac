@@ -14,6 +14,9 @@ function sales_qty_fmt($v)
 
 function sales_acc_for_method($pdo, $method)
 {
+    // Veresiye: henüz tahsil edilmedi, hiçbir kasa/banka hesabına işlenmez (purchase.php'deki
+    // stock_add_purchase_finance() ile aynı desen).
+    if ($method === 'Veresiye') return null;
     $map = ['Peşin' => 'Kasa', 'Kredi Kartı' => 'Kredi Kartı', 'Banka Havalesi' => 'Banka'];
     $type = isset($map[$method]) ? $map[$method] : 'Kasa';
     try {
@@ -100,14 +103,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
 
                 // 2) Finans hareketi ÖNCE oluşturulur (sepetin TOPLAMI ile) — id'si stok
-                // hareketlerine kesin referans olarak yazılacak.
+                // hareketlerine kesin referans olarak yazılacak. Veresiye: henüz tahsil edilmedi,
+                // durum "Bekliyor" (purchase.php'deki Veresiye desenle aynı — 2026-07-09, Finance
+                // Core Stabilization İş 3, kısmi önlem: her satış artık koşulsuz "tahsil edildi"
+                // sayılmıyor).
                 $accId = sales_acc_for_method($pdo, $method);
+                $saleStatus = $method === 'Veresiye' ? 'Bekliyor' : 'Tahsil Edildi';
                 $pdo->prepare(
                     "INSERT INTO finance_movements(contact_id,direction,amount,vat_rate,vat_amount,payment_channel,account_id,status,movement_date,description,movement_type)
                      VALUES(?,?,?,?,?,?,?,?,?,?,'sale')"
                 )->execute([
                     $contact, 'in', $grandTotal, count($lines) === 1 ? ($lines[0]['vat_rate'] ?: null) : null, $grandVat,
-                    $method, $accId, 'Tahsil Edildi', date('Y-m-d'), $desc
+                    $method, $accId, $saleStatus, date('Y-m-d'), $desc
                 ]);
                 $financeMovementId = (int)$pdo->lastInsertId();
 
@@ -198,6 +205,7 @@ require_once __DIR__.'/layout_top.php';
             <option>Peşin</option>
             <option>Kredi Kartı</option>
             <option>Banka Havalesi</option>
+            <option>Veresiye</option>
           </select>
         </div>
 
