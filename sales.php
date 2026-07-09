@@ -166,7 +166,7 @@ require_once __DIR__.'/layout_top.php';
 <div class="alert"><?= h($er) ?></div>
 <?php endif; ?>
 
-<div style="display:grid;grid-template-columns:1fr 660px;gap:20px;align-items:start">
+<div style="display:grid;grid-template-columns:1fr;gap:20px;align-items:start">
 
   <!-- Sol: form -->
   <div class="panel">
