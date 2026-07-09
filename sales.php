@@ -262,6 +262,7 @@ require_once __DIR__.'/layout_top.php';
           $recent = [];
       }
       if ($recent): ?>
+      <div style="overflow-x:auto">
       <table>
         <thead><tr><th>Tarih</th><th>Cari</th><th>Açıklama</th><th style="text-align:right">Tutar</th><th style="text-align:right">KDV</th><?php if(can_edit_delete()): ?><th>İşlem</th><?php endif; ?></tr></thead>
         <tbody>
@@ -273,7 +274,7 @@ require_once __DIR__.'/layout_top.php';
             <td style="text-align:right;font-weight:800;color:#166534"><?= money($row['amount']) ?></td>
             <td style="text-align:right;color:#667085;font-size:12px"><?= $row['vat_amount'] > 0 ? money($row['vat_amount']) : '—' ?></td>
             <?php if(can_edit_delete()): ?>
-            <td>
+            <td class="nowrap">
               <form method="post" action="sil.php" style="display:inline-block;margin:0"
                     onsubmit="return confirm('Bu satış kaydı ve bağlı verileri KALICI olarak silinecek. Emin misiniz?')">
                 <input type="hidden" name="t" value="sale">
@@ -286,6 +287,7 @@ require_once __DIR__.'/layout_top.php';
         <?php endforeach; ?>
         </tbody>
       </table>
+      </div>
       <?php else: ?>
         <p class="muted">Henüz kayıt yok.</p>
       <?php endif; ?>
