@@ -5,20 +5,6 @@ $pdo=db();
 $cid=(int)($_GET['contact_id'] ?? 0);
 $ok=''; $er='';
 
-function qty_fmt($v){ return rtrim(rtrim(number_format((float)$v,2,'.',''),'0'),'.'); }
-
-// Ödeme yöntemi → kasa hesabı tipi. Veresiye: henüz tahsil edilmedi, hiçbir hesaba işlenmez.
-function acc_for_method($pdo,$method){
-    if($method==='Veresiye') return null;
-    $map=['Peşin'=>'Kasa','Kredi Kartı'=>'Kredi Kartı','Banka Havalesi'=>'Banka'];
-    $type=$map[$method] ?? 'Kasa';
-    try{
-        $s=$pdo->prepare("SELECT id FROM finance_accounts WHERE account_type=? AND active=1 ORDER BY id LIMIT 1");
-        $s->execute([$type]); $r=$s->fetch();
-        return $r?(int)$r['id']:null;
-    }catch(Throwable $e){ return null; }
-}
-
 if($_SERVER['REQUEST_METHOD']==='POST'){
     try{
         if(isset($_POST['delete_sale'])){
@@ -32,6 +18,18 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 $_SESSION['sales_er']=$res['message'];
             }
             redirect('sales.php');
+        }elseif(isset($_POST['edit_id'])){
+            // Satış düzenleme (2026-07-10, migration 043: satır bazlı fiyat/KDV altyapısı — web ile aynı mantık)
+            if(!can_edit_delete()) throw new Exception('Düzenleme için yetkiniz yok.');
+            $editId=(int)$_POST['edit_id'];
+            $elig=stock_can_edit_sale($pdo,$editId);
+            if(!$elig['editable']) throw new Exception($elig['reason']);
+            $res=stock_update_sale(
+                $pdo,$editId,(int)$_POST['contact_id'],$_POST['payment_method'] ?? 'Peşin',
+                $_POST['stock_item_id'] ?? [],$_POST['quantity'] ?? [],$_POST['unit_price'] ?? [],$_POST['vat_rate'] ?? [],
+                'Mobil satış'
+            );
+            if($res['ok']){ $ok=$res['message']; }else{ $er=$res['message']; }
         }else{
             // Yeni satış kaydı — bir cariye BİRDEN FAZLA ürün satırı (sepet) eklenebilir
             // (2026-07-03 kullanıcı isteği, web ile aynı mantık — bkz. ../sales.php).
@@ -43,40 +41,11 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             $vatRates=$_POST['vat_rate'] ?? [];
 
             if(!$contact) throw new Exception('Cari seçin.');
-            if(!is_array($ids) || !count($ids)) throw new Exception('En az bir ürün satırı ekleyin.');
 
-            $lines=[];
-            foreach($ids as $i=>$pid){
-                $pid=(int)$pid;
-                $qty=(float)($qtys[$i] ?? 0);
-                $price=(float)($prices[$i] ?? 0);
-                $vatRate=(float)($vatRates[$i] ?? 0);
-                if(!$pid || $qty<=0) continue;
-                if($price<0) throw new Exception('Fiyat geçersiz.');
-
-                $p=$pdo->prepare("SELECT * FROM stock_items WHERE id=?"); $p->execute([$pid]); $item=$p->fetch();
-                if(!$item) continue;
-
-                $subtotal=$qty*$price;
-                $vatAmount=$vatRate>0?round($subtotal*$vatRate/100,2):0;
-                $lineTotal=round($subtotal+$vatAmount,2);
-                $cost=(float)($item['avg_cost'] ?: $item['purchase_price'] ?: 0);
-
-                $lines[]=[
-                    'item'=>$item,'qty'=>$qty,'price'=>$price,'vat_rate'=>$vatRate,
-                    'vat_amount'=>$vatAmount,'line_total'=>$lineTotal,'profit'=>($price-$cost)*$qty,
-                ];
-            }
-            if(!$lines) throw new Exception('En az bir geçerli ürün satırı ekleyin.');
-
-            $grandTotal=0; $grandVat=0; $profitTotal=0; $descParts=[];
-            foreach($lines as $l){
-                $grandTotal+=$l['line_total'];
-                $grandVat+=$l['vat_amount'];
-                $profitTotal+=$l['profit'];
-                $descParts[]=$l['item']['name'].' x'.qty_fmt($l['qty']);
-            }
-            $desc=implode(', ',$descParts).' satış';
+            $built=stock_sale_build_lines($pdo,$ids,$qtys,$prices,$vatRates);
+            $lines=$built['lines'];
+            $grandTotal=$built['grand_total']; $grandVat=$built['grand_vat'];
+            $profitTotal=$built['profit_total']; $descParts=$built['desc_parts']; $desc=$built['desc'];
 
             // Sepetteki BÜTÜN satırlar tek transaction içinde işlenir (2026-07-03 düzeltmesi —
             // web sales.php ile aynı gerekçe: çoklu ürüne geçilince yarım-işlem riski doğdu).
@@ -90,17 +59,18 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 // 2) Kasa kaydı (finans hareketi) ÖNCE oluşturulur (sepetin TOPLAMI ile) — id'si
                 // stok hareketlerine kesin referans olarak yazılacak. Veresiye: durum "Bekliyor"
                 // (web sales.php ile aynı desen, 2026-07-09 İş 3 kısmi önlemi).
-                $accId=acc_for_method($pdo,$method);
+                $accId=stock_sale_resolve_account($pdo,$method);
                 $saleStatus = $method==='Veresiye' ? 'Bekliyor' : 'Tahsil Edildi';
                 $pdo->prepare("INSERT INTO finance_movements(contact_id,direction,amount,vat_rate,vat_amount,payment_channel,account_id,status,movement_date,description,movement_type)
                     VALUES(?,?,?,?,?,?,?,?,?,?,'mobile_sale')")
                     ->execute([$contact,'in',$grandTotal,count($lines)===1?($lines[0]['vat_rate']?:null):null,$grandVat,$method,$accId,$saleStatus,date('Y-m-d'),$desc]);
                 $financeMovementId=(int)$pdo->lastInsertId();
 
-                // 3) Her satır için stok hareketi — hepsi aynı finance_movement_id ile
+                // 3) Her satır için stok hareketi — hepsi aynı finance_movement_id ile, birim
+                // fiyat/KDV satır bazında da kaydedilir (migration 043 — düzenleme için gerekli;
+                // kolonlar henüz yoksa stock_insert_sale_movement() eski şemaya güvenle düşer)
                 foreach($lines as $l){
-                    $pdo->prepare("INSERT INTO stock_movements(stock_item_id,finance_movement_id,direction,quantity,reason,note,created_at) VALUES(?,?,?,?,?,?,NOW())")
-                        ->execute([$l['item']['id'],$financeMovementId,'out',$l['qty'],'Satış','Mobil satış ('.$method.')']);
+                    stock_insert_sale_movement($pdo, $l['item']['id'], $financeMovementId, $l['qty'], $l['price'], $l['vat_rate'], 'Satış', 'Mobil satış ('.$method.')');
                 }
                 // 4) Kasa bakiyesi güncelle (KDV dahil gerçek tutar)
                 if($accId){ $pdo->prepare("UPDATE finance_accounts SET current_balance=current_balance+? WHERE id=?")->execute([$grandTotal,$accId]); }
@@ -131,7 +101,22 @@ if(!empty($_SESSION['sales_er'])){
     unset($_SESSION['sales_er']);
 }
 
-topx('Satış Yap');
+// Düzenleme modu (2026-07-10, migration 043): ?edit_id=N ile mevcut bir satışı forma doldurup
+// düzenlemeye aç — web sales.php ile aynı mantık (bkz. ../sales.php).
+$editId=(int)($_GET['edit_id'] ?? 0);
+$editMode=null;
+$justEdited = isset($_POST['edit_id']) && $ok!=='';
+if($editId && !$justEdited && can_edit_delete()){
+    $elig=stock_can_edit_sale($pdo,$editId);
+    if($elig['editable']){
+        $editMode=['id'=>$editId,'sale'=>$elig['sale'],'lines'=>$elig['lines']];
+        $cid=(int)$editMode['sale']['contact_id'];
+    }elseif($er===''){
+        $er=$elig['reason'];
+    }
+}
+
+topx($editMode ? 'Satışı Düzenle' : 'Satış Yap');
 ?>
 <?php if($ok): ?><div class="notice"><?=htmlspecialchars($ok)?></div><?php endif; ?>
 <?php if($er): ?><div class="err"><?=htmlspecialchars($er)?></div><?php endif; ?>
@@ -142,7 +127,11 @@ $ps=$pdo->query("SELECT id,name,quantity,unit,sale_price,vat_rate FROM stock_ite
 ?>
 
 <div class="panel">
+<?php if($editMode): ?>
+<div class="notice">Bu satışı düzenliyorsunuz. Kaydettiğinizde stok ve kasa bakiyesi otomatik yeniden hesaplanır.</div>
+<?php endif; ?>
 <form method="post">
+  <?php if($editMode): ?><input type="hidden" name="edit_id" value="<?=(int)$editMode['id']?>"><?php endif; ?>
   <label>Cari (Müşteri)</label>
   <select name="contact_id" id="contactSel" required onchange="onContactChange()">
     <option value="">— Seç —</option>
@@ -155,11 +144,11 @@ $ps=$pdo->query("SELECT id,name,quantity,unit,sale_price,vat_rate FROM stock_ite
   </div>
 
   <label>Ödeme Yöntemi</label>
+  <?php $curMethod = $editMode ? $editMode['sale']['payment_channel'] : null; ?>
   <select name="payment_method" required>
-    <option>Peşin</option>
-    <option>Kredi Kartı</option>
-    <option>Banka Havalesi</option>
-    <option>Veresiye</option>
+    <?php foreach(['Peşin','Kredi Kartı','Banka Havalesi','Veresiye'] as $pm): ?>
+    <option <?=$curMethod===$pm?'selected':''?>><?=$pm?></option>
+    <?php endforeach; ?>
   </select>
 
   <label style="margin-top:10px;font-weight:800">Ürünler</label>
@@ -181,7 +170,8 @@ $ps=$pdo->query("SELECT id,name,quantity,unit,sale_price,vat_rate FROM stock_ite
     </div>
   </div>
 
-  <button class="btn dark" style="width:100%;padding:15px" type="submit">🧾 Satışı Tamamla</button>
+  <button class="btn dark" style="width:100%;padding:15px" type="submit"><?=$editMode?'💾 Değişiklikleri Kaydet':'🧾 Satışı Tamamla'?></button>
+  <?php if($editMode): ?><a href="sales.php" class="btn" style="width:100%;padding:12px;margin-top:8px;text-align:center;display:block">✕ Vazgeç</a><?php endif; ?>
 </form>
 </div>
 
@@ -199,6 +189,7 @@ $ps=$pdo->query("SELECT id,name,quantity,unit,sale_price,vat_rate FROM stock_ite
   }catch(Throwable $e){ $recentM=[]; }
   if(!$recentM) echo '<p class="muted" style="margin:10px 0 0">Henüz kayıt yok.</p>';
   foreach($recentM as $row):
+      $rowEditable = can_edit_delete() && stock_can_edit_sale($pdo,(int)$row['id'])['editable'];
   ?>
   <div class="item" style="display:flex;justify-content:space-between;align-items:center;gap:8px">
     <div style="flex:1;min-width:0">
@@ -207,11 +198,16 @@ $ps=$pdo->query("SELECT id,name,quantity,unit,sale_price,vat_rate FROM stock_ite
       <small class="muted"><?=htmlspecialchars($row['description'] ?? '')?></small>
     </div>
     <?php if(can_edit_delete()): ?>
-    <form method="post" onsubmit="return confirm('Bu satış kaydı ve bağlı verileri KALICI olarak silinecek. Emin misiniz?')" style="margin:0">
-      <input type="hidden" name="delete_sale" value="1">
-      <input type="hidden" name="id" value="<?=(int)$row['id']?>">
-      <button class="btn" style="background:rgba(220,38,38,.2);padding:8px 10px" type="submit">🗑</button>
-    </form>
+    <div style="display:flex;gap:6px">
+      <?php if($rowEditable): ?>
+      <a class="btn" style="background:rgba(37,99,235,.18);padding:8px 10px" href="sales.php?edit_id=<?=(int)$row['id']?>">✏️</a>
+      <?php endif; ?>
+      <form method="post" onsubmit="return confirm('Bu satış kaydı ve bağlı verileri KALICI olarak silinecek. Emin misiniz?')" style="margin:0">
+        <input type="hidden" name="delete_sale" value="1">
+        <input type="hidden" name="id" value="<?=(int)$row['id']?>">
+        <button class="btn" style="background:rgba(220,38,38,.2);padding:8px 10px" type="submit">🗑</button>
+      </form>
+    </div>
     <?php endif; ?>
   </div>
   <?php endforeach; ?>
@@ -221,6 +217,10 @@ $ps=$pdo->query("SELECT id,name,quantity,unit,sale_price,vat_rate FROM stock_ite
 var PRODUCTS = <?= json_encode(array_map(function($p){
     return ['id'=>(int)$p['id'],'name'=>$p['name'],'unit'=>$p['unit'],'quantity'=>$p['quantity'],'price'=>$p['sale_price'],'vat'=>$p['vat_rate']!==null?$p['vat_rate']:20];
 }, $ps), JSON_UNESCAPED_UNICODE) ?>;
+// Düzenleme modunda mevcut satış satırlarını forma dolduran veri (2026-07-10, migration 043 — web ile aynı).
+var PREFILL_LINES = <?= json_encode($editMode ? array_map(function($l){
+    return ['id'=>$l['stock_item_id'],'qty'=>$l['quantity'],'price'=>$l['unit_price'],'vat'=>$l['vat_rate']];
+}, $editMode['lines']) : [], JSON_UNESCAPED_UNICODE) ?>;
 var rowIndex = 0;
 
 function esc(s){ return String(s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
@@ -235,7 +235,7 @@ function productOptionsHtml(){
     return html;
 }
 
-function addItemRow(){
+function addItemRow(prefill){
     var idx = rowIndex++;
     var row = document.createElement('div');
     row.className = 'panel';
@@ -258,6 +258,15 @@ function addItemRow(){
         + '<button type="button" class="btn" style="background:rgba(220,38,38,.2)" onclick="removeRow(this)">🗑 Satırı Sil</button>'
         + '</div>';
     document.getElementById('itemsBody').appendChild(row);
+    if(prefill){
+        // Düzenleme modu: ürünün güncel varsayılan fiyatı DEĞİL, satışta o an kayıtlı olan
+        // birim fiyat/KDV kullanılır (onRowProductChange bunu ezmesin diye elle set ediliyor).
+        row.querySelector('.row-prod').value = prefill.id;
+        row.querySelector('.new-prod-box').style.display = 'none';
+        row.querySelector('.row-qty').value = prefill.qty;
+        row.querySelector('.row-price').value = prefill.price;
+        row.querySelector('.row-vat').value = prefill.vat;
+    }
     syncHiddenInputs();
     calcAll();
 }
@@ -365,7 +374,11 @@ function calcAll(){
 }
 
 document.querySelector('form').addEventListener('submit', syncHiddenInputs);
-addItemRow();
+if(PREFILL_LINES.length){
+    PREFILL_LINES.forEach(function(l){ addItemRow(l); });
+} else {
+    addItemRow();
+}
 
 function onContactChange(){
     var sel=document.getElementById('contactSel');
