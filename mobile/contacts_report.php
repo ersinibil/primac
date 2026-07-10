@@ -1,5 +1,6 @@
 <?php
 require_once 'common.php';
+require_once __DIR__.'/../contacts_lib.php';
 
 $mode = $_GET['mode'] ?? '';
 $type = $_GET['type'] ?? '';
@@ -35,9 +36,12 @@ topx('Cari Raporlar');
 <?php
 $rows=[];
 try{
+    // 2026-07-10 Finans Çekirdek düzeltmesi: web contacts_report.php ile aynı düzeltilmiş formül.
+    $balExprF = contact_balance_case_sql('f');
     $sql="SELECT c.*,
-        COALESCE(SUM(CASE WHEN f.direction='in' THEN f.amount ELSE 0 END),0) total_in,
-        COALESCE(SUM(CASE WHEN f.direction='out' THEN f.amount ELSE 0 END),0) total_out
+        COALESCE(SUM(CASE WHEN f.direction='in' AND f.movement_type IN ('normal','mobile') AND f.account_id IS NOT NULL THEN f.amount ELSE 0 END),0) total_in,
+        COALESCE(SUM(CASE WHEN f.direction='out' AND f.movement_type IN ('normal','mobile') AND f.account_id IS NOT NULL THEN f.amount ELSE 0 END),0) total_out,
+        COALESCE(SUM($balExprF),0) net_movements
         FROM contacts c
         LEFT JOIN finance_movements f ON f.contact_id=c.id
         $sqlWhere
@@ -47,7 +51,7 @@ try{
     $st->execute($params);
     $all=$st->fetchAll();
     foreach($all as $r){
-        $balance=(float)$r['opening_balance']+(float)$r['total_in']-(float)$r['total_out'];
+        $balance=(float)$r['opening_balance']+(float)$r['net_movements'];
         if($mode==='receivable' && $balance<=0) continue;
         if($mode==='payable' && $balance>=0) continue;
         if($mode==='zero' && abs($balance)>0.01) continue;

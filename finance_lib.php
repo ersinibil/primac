@@ -124,6 +124,35 @@ function finance_movement_editable_types(){
     return ['normal','mobile'];
 }
 
+/**
+ * FİNANS ÇEKİRDEK DÜZELTMESİ (2026-07-10) — bir finans hareketinin ekranda gösterilecek "Tip"
+ * etiketi. Satış/Alış/Belge kaynaklı otomatik kayıtlar açık cari borç/alacak temsil eder, GERÇEK
+ * bir tahsilat/ödeme değildir — bu yüzden "Tahsilat"/"Ödeme" etiketi SADECE elle girilmiş
+ * (movement_type: normal/mobile) gerçek nakit/banka hareketlerinde kullanılır. 'document' tipi
+ * hem Satış Belgesi hem Alış Belgesi olabilir — ikisi de aynı movement_type'ı paylaştığı için
+ * (trade_core.php::trade_apply_document()) ayrım $row['direction']'dan yapılır (satış belgesi
+ * her zaman 'in', alış belgesi her zaman 'out' — bkz. trade_core.php $direction ataması).
+ */
+function finance_movement_type_label($row){
+    $type = $row['movement_type'] ?? '';
+    if($type === 'transfer') return 'Transfer';
+    if(in_array($type, ['sale','mobile_sale'], true)) return 'Satış';
+    if($type === 'purchase') return 'Alış';
+    if($type === 'document') return ($row['direction'] ?? '')==='in' ? 'Satış Belgesi' : 'Alış Belgesi';
+    return ($row['direction'] ?? '')==='in' ? 'Tahsilat' : 'Ödeme';
+}
+
+/**
+ * Bir hareketin GERÇEK bir kasa/banka/kart hareketi olup olmadığını belirler — satış/alış
+ * (Bekliyor) hiçbir hesabı etkilemediği için account_id NULL kalır; bu yüzden "gerçek nakit"
+ * kriteri movement_type enumerasyonu yerine account_id IS NOT NULL üzerinden, kendi kendini
+ * tanımlayan (self-describing) bir şekilde kurulur — ileride yeni bir movement_type eklense
+ * bile bu kriter otomatik doğru kalır.
+ */
+function finance_movement_is_real_cash_sql($alias='finance_movements'){
+    return "$alias.account_id IS NOT NULL";
+}
+
 function finance_movement_get($pdo, $id){
     $s=$pdo->prepare("SELECT * FROM finance_movements WHERE id=?");
     $s->execute([(int)$id]);

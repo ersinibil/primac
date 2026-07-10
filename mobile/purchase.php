@@ -1,80 +1,55 @@
 <?php
 require_once 'common.php';
-require_once '../stock_lib.php';
+require_once __DIR__.'/../stock_lib.php';
 $pdo=db();
 $ok=''; $er='';
-$products=$pdo->query("SELECT id,name,unit,purchase_price,vat_rate FROM stock_items WHERE COALESCE(active,1)=1 ORDER BY name")->fetchAll();
 
-// POST: Satın alma giriş (PRG deseni — topx'ten ÖNCE işle). Bir tedarikçiden TEK seferde
-// BİRDEN FAZLA ürün satırı (sepet) eklenebilir (2026-07-03: web ile aynı mantık — bkz. ../purchase.php).
+// FİNANS ÇEKİRDEK DÜZELTMESİ (2026-07-10): Alış ekranı ödeme YAPMAZ — web purchase.php ile aynı
+// mantık (bkz. ../purchase.php).
 if($_SERVER['REQUEST_METHOD']==='POST'){
     try{
-        $supplier=(int)$_POST['contact_id'];
-        $pm=$_POST['payment_method'] ?? 'Veresiye';
-        $itemIds=$_POST['stock_item_id'] ?? [];
-        $qtys=$_POST['quantity'] ?? [];
-        $units=$_POST['unit'] ?? [];
-        $prices=$_POST['unit_price'] ?? [];
-        $vatRates=$_POST['vat_rate'] ?? [];
+        if(isset($_POST['delete_purchase'])){
+            if(!can_edit_delete()) throw new Exception('Silme için yetkiniz yok.');
+            $purchaseId=(int)$_POST['id'];
+            $res=stock_reverse_purchase($pdo,$purchaseId);
+            if($res['ok']){ $_SESSION['purchase_ok']=$res['message']; }else{ $_SESSION['purchase_er']=$res['message']; }
+            redirect('purchase.php');
+        }elseif(isset($_POST['edit_id'])){
+            if(!can_edit_delete()) throw new Exception('Düzenleme için yetkiniz yok.');
+            $editId=(int)$_POST['edit_id'];
+            $elig=stock_can_edit_purchase($pdo,$editId);
+            if(!$elig['editable']) throw new Exception($elig['reason']);
+            $res=stock_update_purchase(
+                $pdo, $editId, (int)$_POST['contact_id'],
+                $_POST['stock_item_id'] ?? [], $_POST['quantity'] ?? [], $_POST['unit_price'] ?? [], $_POST['vat_rate'] ?? [],
+                'Alış'
+            );
+            if($res['ok']){ $ok=$res['message']; }else{ $er=$res['message']; }
+        }else{
+            $supplier=(int)$_POST['contact_id'];
+            $ids=$_POST['stock_item_id'] ?? [];
+            $qtys=$_POST['quantity'] ?? [];
+            $prices=$_POST['unit_price'] ?? [];
+            $vatRates=$_POST['vat_rate'] ?? [];
 
-        if(!$supplier) throw new Exception('Tedarikçi seçin.');
-        if(!is_array($itemIds) || !count($itemIds)) throw new Exception('En az bir ürün satırı ekleyin.');
+            if(!$supplier) throw new Exception('Tedarikçi seçin.');
 
-        // Sepetteki BÜTÜN satırlar + finansal kayıt tek transaction içinde (2026-07-03: web
-        // purchase.php ile aynı gerekçe — bir satır başarısız olursa öncekiler kalıcı sapmasın).
-        // 2026-07-04: satır artık serbest metin değil, seçili stok kartı id'si (bkz. "Yeni Ürün
-        // Ekle" AJAX akışı, ../purchase.php ile aynı mantık) — isim id üzerinden çözülür.
-        $totalNet=0; $totalVat=0; $descParts=[]; $firstItemId=null;
-        $pdo->beginTransaction();
-        try{
-            $nameStmt=$pdo->prepare("SELECT name FROM stock_items WHERE id=?");
-            foreach($itemIds as $i=>$pid){
-                $pid=(int)$pid;
-                $qty=(float)($qtys[$i] ?? 0);
-                $unit=trim($units[$i] ?? '') ?: 'adet';
-                $price=(float)($prices[$i] ?? 0);
-                $vatRate=(float)($vatRates[$i] ?? 0);
-                if(!$pid || $qty<=0) continue;
+            $res=stock_create_purchase($pdo, $supplier, $ids, $qtys, $prices, $vatRates, 'Alış');
+            if(!$res['ok']) throw new Exception($res['message']);
 
-                $nameStmt->execute([$pid]);
-                $pname=$nameStmt->fetchColumn();
-                if($pname===false) continue; // seçilen ürün bulunamadı, satır atlanır
+            try{
+                if(function_exists('activity_log')){
+                    $sn=$pdo->prepare("SELECT name FROM contacts WHERE id=?");
+                    $sn->execute([$supplier]);
+                    $sname=$sn->fetch()['name']??'';
+                    activity_log('Satın Alma','Mobil',$sname.' · '.$res['message'],'Açık borç','purchase',$res['purchase_id'],'purchase.php','🛒');
+                }
+            }catch(Throwable $e){}
 
-                $stockResult=stock_add_purchase($pdo, $supplier, $pname, $qty, $price, $pm, $unit, null);
-                if(!$stockResult['ok']) throw new Exception($stockResult['message']);
-                if($firstItemId===null) $firstItemId=$stockResult['item_id'];
-
-                $totalNet += $stockResult['total'];
-                $totalVat += $vatRate>0 ? round($stockResult['total']*$vatRate/100,2) : 0;
-                $descParts[] = $pname.' x'.rtrim(rtrim(number_format($qty,2,'.',''),'0'),'.');
-            }
-            if($firstItemId===null) throw new Exception('En az bir geçerli ürün satırı ekleyin.');
-
-            $avgVatRate = $totalNet>0 ? round($totalVat/$totalNet*100,2) : 0;
-            $finResult=stock_add_purchase_finance($pdo, $supplier, $totalNet, $pm, $firstItemId, implode(', ',$descParts), $avgVatRate);
-
-            $pdo->commit();
-        }catch(Throwable $e){
-            $pdo->rollBack();
-            throw $e;
+            $ok=$res['message'];
         }
+    }catch(Throwable $e){ $er=$e->getMessage(); }
 
-        // Aktivite loğu
-        try{
-            if(function_exists('activity_log')){
-                $sn=$pdo->prepare("SELECT name FROM contacts WHERE id=?");
-                $sn->execute([$supplier]);
-                $sname=$sn->fetch()['name']??'';
-                activity_log('Satın Alma','Alış',$sname.' · '.implode(', ',$descParts).' '.mm($finResult['total']),$pm,'purchase',$firstItemId,'purchase.php','🛒');
-            }
-        }catch(Throwable $e){}
-
-        $ok=implode(', ',$descParts).' alındı: '.mm($finResult['total']).($finResult['vat_amount']>0?' (KDV: '.mm($finResult['vat_amount']).')':'').' ('.$pm.')';
-    }catch(Throwable $e){
-        $er=$e->getMessage();
-    }
-
-    // Session'a yaz + yönlendir (2026-07-03 düzeltmesi: eskiden $er redirect'te hiç taşınmıyordu)
     if($ok) $_SESSION['purchase_ok']=$ok; else if($er) $_SESSION['purchase_er']=$er;
     header('Location: purchase.php');
     exit;
@@ -83,27 +58,42 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 if(!empty($_SESSION['purchase_ok'])){ $ok=$_SESSION['purchase_ok']; unset($_SESSION['purchase_ok']); }
 if(!empty($_SESSION['purchase_er'])){ $er=$_SESSION['purchase_er']; unset($_SESSION['purchase_er']); }
 
-topx('Satın Alma');
+// Düzenleme modu: ?edit_id=N (web purchase.php ile aynı mantık).
+$editId=(int)($_GET['edit_id'] ?? 0);
+$editMode=null;
+if($editId && can_edit_delete()){
+    $elig=stock_can_edit_purchase($pdo,$editId);
+    if($elig['editable']){
+        $editMode=['id'=>$editId,'purchase'=>$elig['purchase'],'lines'=>$elig['lines']];
+    }elseif($er===''){
+        $er=$elig['reason'];
+    }
+}
+
+topx($editMode ? 'Alışı Düzenle' : 'Satın Alma');
 $cs=$pdo->query("SELECT id,name FROM contacts WHERE type IN ('Tedarikçi','Her İkisi') OR type IS NULL ORDER BY name")->fetchAll();
 if(!$cs) $cs=$pdo->query("SELECT id,name FROM contacts ORDER BY name")->fetchAll();
+$ps=$pdo->query("SELECT id,name,unit,purchase_price,vat_rate FROM stock_items WHERE COALESCE(active,1)=1 ORDER BY name")->fetchAll();
 ?>
 <?php if($ok): ?><div class="notice"><?=htmlspecialchars($ok)?></div><?php endif; ?>
 <?php if($er): ?><div class="err"><?=htmlspecialchars($er)?></div><?php endif; ?>
 <div class="panel">
+<div class="notice" style="background:rgba(37,99,235,.15)">Bu ekran ödeme yapmaz — alış tedarikçiye açık borç (Bekliyor) olarak kaydedilir. Ödeme "Ödeme" ekranından ayrıca girilir.</div>
+<?php if($editMode): ?>
+<div class="notice">Bu alışı düzenliyorsunuz. Kaydettiğinizde stok otomatik yeniden hesaplanır.</div>
+<?php endif; ?>
 <form method="post" id="purchForm">
+  <?php if($editMode): ?><input type="hidden" name="edit_id" value="<?=(int)$editMode['id']?>"><?php endif; ?>
   <label>Tedarikçi</label>
   <select name="contact_id" id="contactSel" required onchange="onSupplierChange()">
     <option value="">— Seç —</option>
-    <?php foreach($cs as $c): ?><option value="<?=$c['id']?>"><?=htmlspecialchars($c['name'])?></option><?php endforeach; ?>
+    <?php foreach($cs as $c): ?><option value="<?=$c['id']?>" <?=$editMode && (int)$editMode['purchase']['contact_id']===(int)$c['id']?'selected':''?>><?=htmlspecialchars($c['name'])?></option><?php endforeach; ?>
     <option value="__new__">➕ Listede yok — Yeni Tedarikçi Ekle…</option>
   </select>
   <div id="newContactBox" style="display:none;background:rgba(37,99,235,.12);border-radius:12px;padding:10px;margin:6px 0 12px">
     <input type="text" id="qcName" placeholder="Tedarikçi adı">
     <button type="button" class="btn dark" style="width:100%" onclick="quickContactMob(document.getElementById('qcName').value, 'Tedarikçi')">✓ Ekle ve Seç</button>
   </div>
-
-  <label>Ödeme</label>
-  <select name="payment_method"><option>Veresiye</option><option>Peşin</option><option>Banka</option><option>Kredi Kartı</option><option>Çek</option><option>Senet</option></select>
 
   <datalist id="vatPresets">
     <option value="0"></option>
@@ -125,19 +115,59 @@ if(!$cs) $cs=$pdo->query("SELECT id,name FROM contacts ORDER BY name")->fetchAll
     </div>
   </div>
 
-  <button class="btn dark" style="width:100%;padding:14px">🛒 Alışı Kaydet</button>
+  <button class="btn dark" style="width:100%;padding:14px"><?=$editMode?'💾 Değişiklikleri Kaydet':'🛒 Alışı Kaydet (Açık Borç)'?></button>
+  <?php if($editMode): ?><a href="purchase.php" class="btn" style="width:100%;padding:12px;margin-top:8px;text-align:center;display:block">✕ Vazgeç</a><?php endif; ?>
 </form>
+</div>
+
+<div class="panel">
+  <b>Son Alışlar</b>
+  <?php
+  try{
+      $recentP = $pdo->query(
+          "SELECT fm.id, fm.movement_date, fm.amount, fm.vat_amount, fm.description, fm.status, c.name AS cname
+           FROM finance_movements fm
+           LEFT JOIN contacts c ON c.id=fm.contact_id
+           WHERE fm.movement_type='purchase'
+           ORDER BY fm.id DESC LIMIT 10"
+      )->fetchAll();
+  }catch(Throwable $e){ $recentP=[]; }
+  if(!$recentP) echo '<p class="muted" style="margin:10px 0 0">Henüz kayıt yok.</p>';
+  foreach($recentP as $row):
+      $rowEditable = can_edit_delete() && stock_can_edit_purchase($pdo,(int)$row['id'])['editable'];
+  ?>
+  <div class="item" style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+    <div style="flex:1;min-width:0">
+      <b style="color:#f87171"><?=mm($row['amount'])?></b> <?=badge($row['status'],status_tone($row['status']))?><br>
+      <small class="muted"><?=htmlspecialchars($row['movement_date'] ?? '')?> · <?=htmlspecialchars($row['cname'] ?: '—')?></small><br>
+      <small class="muted"><?=htmlspecialchars($row['description'] ?? '')?></small>
+    </div>
+    <?php if(can_edit_delete()): ?>
+    <div style="display:flex;gap:6px">
+      <?php if($rowEditable): ?>
+      <a class="btn" style="background:rgba(37,99,235,.18);padding:8px 10px" href="purchase.php?edit_id=<?=(int)$row['id']?>">✏️</a>
+      <?php endif; ?>
+      <form method="post" onsubmit="return confirm('Bu alış kaydı ve bağlı verileri KALICI olarak silinecek. Emin misiniz?')" style="margin:0">
+        <input type="hidden" name="delete_purchase" value="1">
+        <input type="hidden" name="id" value="<?=(int)$row['id']?>">
+        <button class="btn" style="background:rgba(220,38,38,.2);padding:8px 10px" type="submit">🗑</button>
+      </form>
+    </div>
+    <?php endif; ?>
+  </div>
+  <?php endforeach; ?>
 </div>
 <script>
 var PRODUCTS = <?= json_encode(array_map(function($p){
     return ['id'=>(int)$p['id'],'name'=>$p['name'],'unit'=>$p['unit'],'price'=>$p['purchase_price'],'vat'=>$p['vat_rate']!==null?$p['vat_rate']:20];
-}, $products), JSON_UNESCAPED_UNICODE) ?>;
+}, $ps), JSON_UNESCAPED_UNICODE) ?>;
+var PREFILL_LINES = <?= json_encode($editMode ? array_map(function($l){
+    return ['id'=>$l['stock_item_id'],'qty'=>$l['quantity'],'price'=>$l['unit_price'],'vat'=>$l['vat_rate']];
+}, $editMode['lines']) : [], JSON_UNESCAPED_UNICODE) ?>;
 var rowIndex = 0;
 
 function escPurchM(s){ return String(s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
 
-// Ürün seçim listesi (2026-07-04: serbest metin+datalist yerine web ile aynı select+"Yeni
-// Ürün Ekle" deseni — bkz. ../purchase.php).
 function productOptionsHtmlPurchM(){
     var html = '<option value="">— Seç —</option>';
     PRODUCTS.forEach(function(p){
@@ -148,7 +178,7 @@ function productOptionsHtmlPurchM(){
     return html;
 }
 
-function addItemRow(){
+function addItemRow(prefill){
     var idx = rowIndex++;
     var row = document.createElement('div');
     row.className = 'panel';
@@ -162,7 +192,6 @@ function addItemRow(){
         + '</div>'
         + '<div style="display:flex;gap:8px">'
         + '<div style="flex:1"><small class="muted">Miktar</small><input type="number" step="0.01" min="0.01" name="quantity[]" class="row-qty" value="1" oninput="calcAll()"></div>'
-        + '<div style="flex:1"><small class="muted">Birim</small><input type="text" name="unit[]" class="row-unit" value="adet"></div>'
         + '</div>'
         + '<div style="display:flex;gap:8px;margin-top:6px">'
         + '<div style="flex:1"><small class="muted">Birim Alış Fiyatı</small><input type="number" step="0.01" min="0" name="unit_price[]" class="row-price" oninput="calcAll()"></div>'
@@ -173,6 +202,13 @@ function addItemRow(){
         + '<button type="button" class="btn" style="background:rgba(220,38,38,.2)" onclick="removeRow(this)">🗑 Satırı Sil</button>'
         + '</div>';
     document.getElementById('itemsBody').appendChild(row);
+    if(prefill){
+        row.querySelector('.row-prod').value = prefill.id;
+        row.querySelector('.new-prod-box').style.display = 'none';
+        row.querySelector('.row-qty').value = prefill.qty;
+        row.querySelector('.row-price').value = prefill.price;
+        row.querySelector('.row-vat').value = prefill.vat;
+    }
     calcAll();
 }
 
@@ -182,7 +218,6 @@ function removeRow(btn){
     if(rows.length <= 1){
         row.querySelector('.row-prod').value = '';
         row.querySelector('.row-qty').value = 1;
-        row.querySelector('.row-unit').value = 'adet';
         row.querySelector('.row-price').value = '';
         row.querySelector('.row-vat').value = 20;
         row.querySelector('.new-prod-box').style.display = 'none';
@@ -192,8 +227,6 @@ function removeRow(btn){
     calcAll();
 }
 
-// Var olan bir ürün seçilince birim/fiyat/KDV otomatik dolar; "__new__" seçilince kutu açılır
-// (sayfa yenilenmeden AJAX ile ekleme — bkz. quickAddProductRow).
 function onRowProductChange(sel){
     var row = sel.closest('.panel');
     var box = row.querySelector('.new-prod-box');
@@ -206,16 +239,12 @@ function onRowProductChange(sel){
     box.style.display = 'none';
     var opt = sel.selectedOptions[0];
     if(opt && opt.dataset.price !== undefined){
-        row.querySelector('.row-unit').value = opt.dataset.unit || 'adet';
         if(!row.querySelector('.row-price').value) row.querySelector('.row-price').value = opt.dataset.price;
         row.querySelector('.row-vat').value = opt.dataset.vat || 20;
     }
     calcAll();
 }
 
-// "➕ Yeni Ürün Ekle…" kutusundaki "Ekle ve Seç" — SADECE ürün adı ile stock_items'a hemen
-// kaydeder (detaylar sonra ürün kartından tamamlanır) ve satırda otomatik seçili hale getirir,
-// sayfa yenilenmez (2026-07-04 kullanıcı isteği).
 function quickAddProductRow(btn){
     var row = btn.closest('.panel');
     var name = row.querySelector('.np-name').value.trim();
@@ -263,9 +292,12 @@ function calcAll(){
     document.getElementById('t').textContent = (subtotalAll + vatAll).toLocaleString('tr-TR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ₺';
 }
 
-addItemRow();
+if(PREFILL_LINES.length){
+    PREFILL_LINES.forEach(function(l){ addItemRow(l); });
+} else {
+    addItemRow();
+}
 
-// Dropdown'da "Listede yok — Yeni Ekle" seçilince kutuyu aç (2026-07-03 kullanıcı isteği)
 function onSupplierChange(){
     var sel=document.getElementById('contactSel');
     var box=document.getElementById('newContactBox');

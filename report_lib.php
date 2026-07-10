@@ -1,5 +1,7 @@
 <?php
 // ACANS OS — Paylaşımlı Rapor Kütüphanesi (mobil + web ortak)
+if(file_exists(__DIR__.'/contacts_lib.php')) require_once __DIR__.'/contacts_lib.php';
+if(file_exists(__DIR__.'/finance_lib.php')) require_once __DIR__.'/finance_lib.php';
 function report_modules(){ return ['tumu'=>'🗂️ Tümü','genel'=>'📊 Yekün','tahsilat'=>'💰 Tahsilat/Finans','muhasebe'=>'📒 Muhasebe','is'=>'📋 İş Takip','gorevler'=>'✓ Görevler','personel'=>'👷 Personel','satis'=>'🧾 Satış','satinalma'=>'📥 Satın Alma','teklif'=>'📄 Teklif','cari'=>'👥 Cari','stok'=>'📦 Stok']; }
 // "Tümü"de yer alacak modüller (özet hariç tek tek hepsi)
 function report_all_keys(){ return ['genel','tahsilat','muhasebe','is','gorevler','personel','satis','satinalma','teklif','cari','stok']; }
@@ -29,8 +31,11 @@ function cari_toplu_list($pdo,$mode='',$type=''){
   $where=[]; $params=[];
   if($type){ $where[]="c.type=?"; $params[]=$type; }
   $sqlWhere = $where ? 'WHERE '.implode(' AND ',$where) : '';
+  // FİNANS ÇEKİRDEK DÜZELTMESİ (2026-07-10): contact_view.php ile aynı düzeltilmiş formül —
+  // bkz. contacts_lib.php::contact_balance_case_sql().
+  $balExpr = contact_balance_case_sql('finance_movements');
   $sql="SELECT c.id,c.name,COALESCE(c.opening_balance,0)+
-      COALESCE((SELECT SUM(CASE WHEN direction='in' THEN amount ELSE -amount END) FROM finance_movements WHERE contact_id=c.id),0) bal
+      COALESCE((SELECT SUM($balExpr) FROM finance_movements WHERE contact_id=c.id),0) bal
       FROM contacts c $sqlWhere ORDER BY c.name";
   $st=$pdo->prepare($sql); $st->execute($params);
   $list=[];
@@ -245,9 +250,10 @@ function rpt($pdo,$modul,$from,$to,$ref=0,$detail=false){
   case 'cari':
     $R['title']='Cari';
     $tot=(int)$pdo->query("SELECT COUNT(*) c FROM contacts")->fetch()['c'];
+    $balExpr = contact_balance_case_sql('finance_movements');
     $cl=$pdo->query("SELECT c.id,c.name,COALESCE(c.opening_balance,0)+
-      COALESCE((SELECT SUM(CASE WHEN direction='in' THEN amount ELSE -amount END) FROM finance_movements WHERE contact_id=c.id),0) bal
-      FROM contacts c ORDER BY ABS(COALESCE(c.opening_balance,0)+COALESCE((SELECT SUM(CASE WHEN direction='in' THEN amount ELSE -amount END) FROM finance_movements WHERE contact_id=c.id),0)) DESC LIMIT 50")->fetchAll();
+      COALESCE((SELECT SUM($balExpr) FROM finance_movements WHERE contact_id=c.id),0) bal
+      FROM contacts c ORDER BY ABS(COALESCE(c.opening_balance,0)+COALESCE((SELECT SUM($balExpr) FROM finance_movements WHERE contact_id=c.id),0)) DESC LIMIT 50")->fetchAll();
     $alacak=0;$borc=0;$cd=[];
     foreach($cl as $r){ $b=(float)$r['bal']; if($b>0)$alacak+=$b; else $borc+=abs($b); if(count($cd)<8 && $b!=0)$cd[$r['name']]=abs($b); }
     $R['cards']=[['👥','Cari',$tot,'#a78bfa'],['🟢','Alacak',tl($alacak),'#22c55e'],['🔴','Borç',tl($borc),'#f87171']];
@@ -271,15 +277,21 @@ function rpt($pdo,$modul,$from,$to,$ref=0,$detail=false){
   case 'cari_detay': // TEK CARİ EKSTRE
     $cn=$pdo->prepare("SELECT name,COALESCE(opening_balance,0) ob FROM contacts WHERE id=?"); $cn->execute([$ref]); $cc=$cn->fetch();
     $R['title']='Cari: '.($cc['name']?:('#'.$ref));
-    $ft=$pdo->prepare("SELECT COALESCE(SUM(CASE WHEN direction='in' THEN amount END),0) tin,COALESCE(SUM(CASE WHEN direction='out' THEN amount END),0) tout FROM finance_movements WHERE contact_id=? AND DATE(movement_date) BETWEEN ? AND ?");
+    // 2026-07-10: "Tahsilat"/"Ödeme" kartları SADECE gerçek kasa/banka hareketlerini sayar —
+    // satış/alış (Bekliyor) açık borç/alacaktır, gerçek tahsilat/ödeme değildir.
+    $ft=$pdo->prepare("SELECT COALESCE(SUM(CASE WHEN direction='in' THEN amount END),0) tin,COALESCE(SUM(CASE WHEN direction='out' THEN amount END),0) tout FROM finance_movements WHERE contact_id=? AND account_id IS NOT NULL AND DATE(movement_date) BETWEEN ? AND ?");
     $ft->execute([$ref,$from,$to]); $t=$ft->fetch();
-    $allBal=(float)$cc['ob'] + (float)($pdo->query("SELECT COALESCE(SUM(CASE WHEN direction='in' THEN amount ELSE -amount END),0) s FROM finance_movements WHERE contact_id=".(int)$ref)->fetch()['s']);
+    $balExpr = contact_balance_case_sql('finance_movements');
+    $allBal=(float)$cc['ob'] + (float)($pdo->query("SELECT COALESCE(SUM($balExpr),0) s FROM finance_movements WHERE contact_id=".(int)$ref)->fetch()['s']);
     $jc=$pdo->prepare("SELECT COUNT(*) n FROM jobs WHERE customer_id=?"); $jc->execute([$ref]); $jn=(int)$jc->fetch()['n'];
     $R['cards']=[['💼','Güncel Bakiye',tl($allBal),$allBal<0?'#f87171':'#22c55e'],['💰','Tahsilat',tl($t['tin']),'#22c55e'],['💸','Ödeme',tl($t['tout']),'#f87171'],['📋','İş',$jn,'#3b82f6']];
-    $mv=$pdo->prepare("SELECT movement_date,direction,amount,description FROM finance_movements WHERE contact_id=? AND DATE(movement_date) BETWEEN ? AND ? ORDER BY movement_date,id");
+    $mv=$pdo->prepare("SELECT movement_date,direction,amount,description,movement_type FROM finance_movements WHERE contact_id=? AND DATE(movement_date) BETWEEN ? AND ? ORDER BY movement_date,id");
     $mv->execute([$ref,$from,$to]); $cd=[];
     $R['table']['head']=['Tarih','Tür','Tutar','Açıklama'];
-    foreach($mv->fetchAll() as $r){ $R['table']['rows'][]=[$r['movement_date'],$r['direction']==='in'?'Tahsilat':'Ödeme',($r['direction']==='in'?'':'-').tl($r['amount']),$r['description']]; $R['table']['links'][]=null; $cd[$r['direction']==='in'?'Tahsilat':'Ödeme']=($cd[$r['direction']==='in'?'Tahsilat':'Ödeme']??0)+(float)$r['amount']; }
+    foreach($mv->fetchAll() as $r){
+        $lbl=finance_movement_type_label($r);
+        $R['table']['rows'][]=[$r['movement_date'],$lbl,($r['direction']==='in'?'':'-').tl($r['amount']),$r['description']]; $R['table']['links'][]=null; $cd[$lbl]=($cd[$lbl]??0)+(float)$r['amount'];
+    }
     // işleri de ekle — 2026-07-03 düzeltmesi: eskiden job_no "Tutar" sütununa yazılıyordu
     // (parasal olmayan bir metin parasal sütunda görünüyordu), sütunlar artık başlıkla eşleşiyor.
     $jl=$pdo->prepare("SELECT id,job_no,title,status,due_date,sale_amount,created_at FROM jobs WHERE customer_id=? ORDER BY id DESC LIMIT 30"); $jl->execute([$ref]);
@@ -294,7 +306,8 @@ function rpt($pdo,$modul,$from,$to,$ref=0,$detail=false){
 
   default: // genel / yekün
     $R['title']='Yekün Özet';
-    $f=$pdo->prepare("SELECT COALESCE(SUM(CASE WHEN direction='in' THEN amount END),0) tin,COALESCE(SUM(CASE WHEN direction='out' AND COALESCE(movement_type,'')<>'transfer' THEN amount END),0) tout FROM finance_movements WHERE DATE(movement_date) BETWEEN ? AND ?"); $f->execute([$from,$to]); $t=$f->fetch();
+    // 2026-07-10: sadece gerçek kasa/banka hareketleri (dashboard.php ile aynı gerekçe).
+    $f=$pdo->prepare("SELECT COALESCE(SUM(CASE WHEN direction='in' THEN amount END),0) tin,COALESCE(SUM(CASE WHEN direction='out' AND COALESCE(movement_type,'')<>'transfer' THEN amount END),0) tout FROM finance_movements WHERE account_id IS NOT NULL AND DATE(movement_date) BETWEEN ? AND ?"); $f->execute([$from,$to]); $t=$f->fetch();
     $ss=$pdo->prepare("SELECT COALESCE(SUM(amount),0) s FROM finance_movements WHERE movement_type LIKE '%sale%' AND DATE(movement_date) BETWEEN ? AND ?"); $ss->execute([$from,$to]); $sale=(float)$ss->fetch()['s'];
     $jo=$pdo->prepare("SELECT COUNT(*) n FROM jobs WHERE DATE(created_at) BETWEEN ? AND ?"); $jo->execute([$from,$to]); $acilan=(int)$jo->fetch()['n'];
     $jd=$pdo->prepare("SELECT COUNT(*) n FROM jobs WHERE status IN ('Tamamlandı','Teslim Edildi') AND DATE(created_at) BETWEEN ? AND ?"); $jd->execute([$from,$to]); $tamam=(int)$jd->fetch()['n'];

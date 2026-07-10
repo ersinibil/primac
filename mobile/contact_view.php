@@ -86,13 +86,10 @@ try{
         $waConvId=$waq->fetchColumn() ?: null;
     }catch(Throwable $e){}
 
-    // Bakiye: açılış + tahsilat(in) - ödeme(out)
-    $f=db()->prepare("SELECT
-        COALESCE(SUM(CASE WHEN direction='in' THEN amount ELSE 0 END),0) tin,
-        COALESCE(SUM(CASE WHEN direction='out' THEN amount ELSE 0 END),0) tout
-        FROM finance_movements WHERE contact_id=?");
-    $f->execute([$id]); $ft=$f->fetch();
-    $bal=(float)($c['opening_balance'] ?? 0)+(float)$ft['tin']-(float)$ft['tout'];
+    // Bakiye: web contact_view.php ile aynı düzeltilmiş formül (2026-07-10 Finans Çekirdek
+    // düzeltmesi) — satış/alış (Bekliyor) borç yaratır, Tahsilat/Ödeme bunu ters işaretle kapatır.
+    require_once __DIR__.'/../contacts_lib.php';
+    $bal=contact_balance(db(), $id);
     $balCol = $bal>0 ? '#22c55e' : ($bal<0 ? '#f87171' : '#94a3b8');
 ?>
 <div class="panel">

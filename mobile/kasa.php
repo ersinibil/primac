@@ -1,5 +1,6 @@
 <?php
 require_once 'common.php';
+require_once __DIR__.'/../finance_lib.php';
 $pdo=db();
 // Yeni hesap ekle (POST topx'tan ÖNCE → redirect)
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['add_account'])){
@@ -22,8 +23,11 @@ if(!empty($_SESSION['kasa_err'])){ echo '<div class="err">'.htmlspecialchars($_S
 
 function acc_sum($pdo,$type){ try{ $s=$pdo->prepare("SELECT COALESCE(SUM(current_balance),0) s FROM finance_accounts WHERE active=1 AND account_type=?"); $s->execute([$type]); return (float)$s->fetch()['s']; }catch(Throwable $e){ return 0; } }
 $kasa=acc_sum($pdo,'Kasa'); $banka=acc_sum($pdo,'Banka'); $kart=acc_sum($pdo,'Kredi Kartı'); $pos=acc_sum($pdo,'POS');
-$inToday=safe_sum("SELECT COALESCE(SUM(amount),0) s FROM finance_movements WHERE direction='in' AND movement_date=CURDATE()");
-$outToday=safe_sum("SELECT COALESCE(SUM(amount),0) s FROM finance_movements WHERE direction='out' AND COALESCE(movement_type,'')<>'transfer' AND movement_date=CURDATE()");
+// FİNANS ÇEKİRDEK DÜZELTMESİ (2026-07-10): sadece GERÇEK kasa/banka hareketleri sayılır —
+// satış/alış (Bekliyor) hiçbir hesabı etkilemediği için account_id NULL kalır, bu yüzden
+// "Bugün Tahsilat/Ödeme" bunları saymaz (aksi halde bekleyen bir satış "tahsil edilmiş" gibi görünürdü).
+$inToday=safe_sum("SELECT COALESCE(SUM(amount),0) s FROM finance_movements WHERE direction='in' AND account_id IS NOT NULL AND movement_date=CURDATE()");
+$outToday=safe_sum("SELECT COALESCE(SUM(amount),0) s FROM finance_movements WHERE direction='out' AND COALESCE(movement_type,'')<>'transfer' AND account_id IS NOT NULL AND movement_date=CURDATE()");
 ?>
 <div class="grid">
   <div class="card green"><span>💵</span><b><?=mm($kasa)?></b><small>Kasa</small></div>
@@ -69,7 +73,7 @@ try{
   if(!$rows) echo '<p class="muted" style="margin:10px 0 0">Hareket yok.</p>';
   foreach($rows as $m){ $in=$m['direction']==='in';
     $tag=$m['cari'] ?: ($m['kat'] ?: '-');
-    echo '<a class="item" href="movement_view.php?id='.(int)$m['id'].'" style="display:block"><b style="color:'.($in?'#4ade80':'#f87171').'">'.($in?'Tahsilat':'Ödeme').': '.mm($m['amount']).'</b><br><small>'.htmlspecialchars($tag.' · '.($m['payment_channel']?:'').' · '.($m['movement_date']??'')).'</small></a>';
+    echo '<a class="item" href="movement_view.php?id='.(int)$m['id'].'" style="display:block"><b style="color:'.($in?'#4ade80':'#f87171').'">'.htmlspecialchars(finance_movement_type_label($m)).': '.mm($m['amount']).'</b><br><small>'.htmlspecialchars($tag.' · '.($m['payment_channel']?:'').' · '.($m['movement_date']??'')).'</small></a>';
   }
 }catch(Throwable $e){ echo '<div class="err">'.htmlspecialchars($e->getMessage()).'</div>'; }
 ?>

@@ -25,7 +25,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             $elig=stock_can_edit_sale($pdo,$editId);
             if(!$elig['editable']) throw new Exception($elig['reason']);
             $res=stock_update_sale(
-                $pdo,$editId,(int)$_POST['contact_id'],$_POST['payment_method'] ?? 'Peşin',
+                $pdo,$editId,(int)$_POST['contact_id'],
                 $_POST['stock_item_id'] ?? [],$_POST['quantity'] ?? [],$_POST['unit_price'] ?? [],$_POST['vat_rate'] ?? [],
                 'Mobil satış'
             );
@@ -33,8 +33,11 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         }else{
             // Yeni satış kaydı — bir cariye BİRDEN FAZLA ürün satırı (sepet) eklenebilir
             // (2026-07-03 kullanıcı isteği, web ile aynı mantık — bkz. ../sales.php).
+            //
+            // FİNANS ÇEKİRDEK DÜZELTMESİ (2026-07-10): satış ekranı tahsilat YAPMAZ. Ödeme yöntemi
+            // seçimi kaldırıldı — her satış cariye açık borç oluşturur, durum her zaman "Bekliyor",
+            // kasa/banka/kart hiçbir zaman etkilenmez.
             $contact=(int)$_POST['contact_id'];
-            $method=$_POST['payment_method'] ?? 'Peşin';
             $ids=$_POST['stock_item_id'] ?? [];
             $qtys=$_POST['quantity'] ?? [];
             $prices=$_POST['unit_price'] ?? [];
@@ -56,24 +59,20 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                     $pdo->prepare("UPDATE stock_items SET quantity=quantity-? WHERE id=?")->execute([$l['qty'],$l['item']['id']]);
                 }
 
-                // 2) Kasa kaydı (finans hareketi) ÖNCE oluşturulur (sepetin TOPLAMI ile) — id'si
-                // stok hareketlerine kesin referans olarak yazılacak. Veresiye: durum "Bekliyor"
-                // (web sales.php ile aynı desen, 2026-07-09 İş 3 kısmi önlemi).
-                $accId=stock_sale_resolve_account($pdo,$method);
-                $saleStatus = $method==='Veresiye' ? 'Bekliyor' : 'Tahsil Edildi';
+                // 2) Finans hareketi ÖNCE oluşturulur (sepetin TOPLAMI ile) — id'si stok
+                // hareketlerine kesin referans olarak yazılacak. Kasa/banka/kart HİÇBİR ZAMAN
+                // etkilenmez (account_id=NULL), durum her zaman "Bekliyor".
                 $pdo->prepare("INSERT INTO finance_movements(contact_id,direction,amount,vat_rate,vat_amount,payment_channel,account_id,status,movement_date,description,movement_type)
-                    VALUES(?,?,?,?,?,?,?,?,?,?,'mobile_sale')")
-                    ->execute([$contact,'in',$grandTotal,count($lines)===1?($lines[0]['vat_rate']?:null):null,$grandVat,$method,$accId,$saleStatus,date('Y-m-d'),$desc]);
+                    VALUES(?,'in',?,?,?,NULL,NULL,'Bekliyor',?,?,'mobile_sale')")
+                    ->execute([$contact,$grandTotal,count($lines)===1?($lines[0]['vat_rate']?:null):null,$grandVat,date('Y-m-d'),$desc]);
                 $financeMovementId=(int)$pdo->lastInsertId();
 
                 // 3) Her satır için stok hareketi — hepsi aynı finance_movement_id ile, birim
                 // fiyat/KDV satır bazında da kaydedilir (migration 043 — düzenleme için gerekli;
                 // kolonlar henüz yoksa stock_insert_sale_movement() eski şemaya güvenle düşer)
                 foreach($lines as $l){
-                    stock_insert_sale_movement($pdo, $l['item']['id'], $financeMovementId, $l['qty'], $l['price'], $l['vat_rate'], 'Satış', 'Mobil satış ('.$method.')');
+                    stock_insert_sale_movement($pdo, $l['item']['id'], $financeMovementId, $l['qty'], $l['price'], $l['vat_rate'], 'Satış', 'Mobil satış');
                 }
-                // 4) Kasa bakiyesi güncelle (KDV dahil gerçek tutar)
-                if($accId){ $pdo->prepare("UPDATE finance_accounts SET current_balance=current_balance+? WHERE id=?")->execute([$grandTotal,$accId]); }
 
                 $pdo->commit();
             }catch(Throwable $e){
@@ -81,11 +80,11 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 throw $e;
             }
 
-            // 5) Log
-            try{ if(function_exists('activity_log')) activity_log('Satış','Mobil',$desc.' '.mm($grandTotal).' (kâr '.mm($profitTotal).')',$method,'sale',$lines[0]['item']['id'],'sales.php','🧾'); }catch(Throwable $e){}
+            // 4) Log
+            try{ if(function_exists('activity_log')) activity_log('Satış','Mobil',$desc.' '.mm($grandTotal).' (kâr '.mm($profitTotal).')','Açık borç','sale',$lines[0]['item']['id'],'sales.php','🧾'); }catch(Throwable $e){}
 
             $kz = $profitTotal>=0 ? ('Kâr: '.mm($profitTotal)) : ('Zarar: '.mm(-$profitTotal));
-            $ok=implode(', ',$descParts).' satıldı: '.mm($grandTotal).($grandVat>0?' (KDV: '.mm($grandVat).')':'').' ('.$method.') · '.$kz;
+            $ok=implode(', ',$descParts).' satıldı: '.mm($grandTotal).($grandVat>0?' (KDV: '.mm($grandVat).')':'').' — açık borç (Bekliyor) · '.$kz;
             $cid=$contact;
         }
     }catch(Throwable $e){ $er=$e->getMessage(); }
@@ -127,8 +126,9 @@ $ps=$pdo->query("SELECT id,name,quantity,unit,sale_price,vat_rate FROM stock_ite
 ?>
 
 <div class="panel">
+<div class="notice" style="background:rgba(37,99,235,.15)">Bu ekran tahsilat yapmaz — satış cariye açık borç (Bekliyor) olarak kaydedilir. Tahsilat "Tahsilat" ekranından ayrıca girilir.</div>
 <?php if($editMode): ?>
-<div class="notice">Bu satışı düzenliyorsunuz. Kaydettiğinizde stok ve kasa bakiyesi otomatik yeniden hesaplanır.</div>
+<div class="notice">Bu satışı düzenliyorsunuz. Kaydettiğinizde stok otomatik yeniden hesaplanır.</div>
 <?php endif; ?>
 <form method="post">
   <?php if($editMode): ?><input type="hidden" name="edit_id" value="<?=(int)$editMode['id']?>"><?php endif; ?>
@@ -142,14 +142,6 @@ $ps=$pdo->query("SELECT id,name,quantity,unit,sale_price,vat_rate FROM stock_ite
     <input type="text" id="qsContactName" placeholder="Müşteri adı">
     <button type="button" class="btn dark" style="width:100%" onclick="quickContactSales(document.getElementById('qsContactName').value, 'Müşteri')">✓ Ekle ve Seç</button>
   </div>
-
-  <label>Ödeme Yöntemi</label>
-  <?php $curMethod = $editMode ? $editMode['sale']['payment_channel'] : null; ?>
-  <select name="payment_method" required>
-    <?php foreach(['Peşin','Kredi Kartı','Banka Havalesi','Veresiye'] as $pm): ?>
-    <option <?=$curMethod===$pm?'selected':''?>><?=$pm?></option>
-    <?php endforeach; ?>
-  </select>
 
   <label style="margin-top:10px;font-weight:800">Ürünler</label>
   <div id="itemsBody"></div>
@@ -170,7 +162,7 @@ $ps=$pdo->query("SELECT id,name,quantity,unit,sale_price,vat_rate FROM stock_ite
     </div>
   </div>
 
-  <button class="btn dark" style="width:100%;padding:15px" type="submit"><?=$editMode?'💾 Değişiklikleri Kaydet':'🧾 Satışı Tamamla'?></button>
+  <button class="btn dark" style="width:100%;padding:15px" type="submit"><?=$editMode?'💾 Değişiklikleri Kaydet':'🧾 Satışı Tamamla (Açık Borç)'?></button>
   <?php if($editMode): ?><a href="sales.php" class="btn" style="width:100%;padding:12px;margin-top:8px;text-align:center;display:block">✕ Vazgeç</a><?php endif; ?>
 </form>
 </div>
@@ -180,7 +172,7 @@ $ps=$pdo->query("SELECT id,name,quantity,unit,sale_price,vat_rate FROM stock_ite
   <?php
   try{
       $recentM = $pdo->query(
-          "SELECT fm.id, fm.movement_date, fm.amount, fm.vat_amount, fm.description, c.name AS cname
+          "SELECT fm.id, fm.movement_date, fm.amount, fm.vat_amount, fm.description, fm.status, c.name AS cname
            FROM finance_movements fm
            LEFT JOIN contacts c ON c.id=fm.contact_id
            WHERE fm.movement_type='sale' OR fm.movement_type='mobile_sale'
@@ -193,7 +185,7 @@ $ps=$pdo->query("SELECT id,name,quantity,unit,sale_price,vat_rate FROM stock_ite
   ?>
   <div class="item" style="display:flex;justify-content:space-between;align-items:center;gap:8px">
     <div style="flex:1;min-width:0">
-      <b style="color:#22c55e"><?=mm($row['amount'])?></b><br>
+      <b style="color:#22c55e"><?=mm($row['amount'])?></b> <?=badge($row['status'],status_tone($row['status']))?><br>
       <small class="muted"><?=htmlspecialchars($row['movement_date'] ?? '')?> · <?=htmlspecialchars($row['cname'] ?: '—')?></small><br>
       <small class="muted"><?=htmlspecialchars($row['description'] ?? '')?></small>
     </div>

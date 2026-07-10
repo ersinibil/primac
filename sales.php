@@ -26,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $elig = stock_can_edit_sale($pdo, $editId);
             if (!$elig['editable']) throw new Exception($elig['reason']);
             $res = stock_update_sale(
-                $pdo, $editId, (int)$_POST['contact_id'], $_POST['payment_method'] ?? 'Peşin',
+                $pdo, $editId, (int)$_POST['contact_id'],
                 $_POST['stock_item_id'] ?? [], $_POST['quantity'] ?? [], $_POST['unit_price'] ?? [], $_POST['vat_rate'] ?? [],
                 'Web satış'
             );
@@ -36,8 +36,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // eklenebilir (2026-07-03 kullanıcı isteği: "bir kişiye bir firmaya birden fazla
             // ürün satılabilir"). Tüm satırlar tek finance_movements kaydında toplanır, her
             // satır kendi stock_movements kaydını (aynı finance_movement_id ile) alır.
+            //
+            // FİNANS ÇEKİRDEK DÜZELTMESİ (2026-07-10): satış ekranı tahsilat YAPMAZ. Ödeme
+            // yöntemi seçimi kaldırıldı — her satış cariye açık borç oluşturur, durum her zaman
+            // "Bekliyor", kasa/banka/kart hiçbir zaman etkilenmez. Borcun kapanması SADECE
+            // Tahsilat ekranından (finance_new.php / mobile/collection.php) yapılır.
             $contact  = (int)$_POST['contact_id'];
-            $method   = $_POST['payment_method'] ?? 'Peşin';
             $ids      = $_POST['stock_item_id'] ?? [];
             $qtys     = $_POST['quantity'] ?? [];
             $prices   = $_POST['unit_price'] ?? [];
@@ -62,18 +66,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
 
                 // 2) Finans hareketi ÖNCE oluşturulur (sepetin TOPLAMI ile) — id'si stok
-                // hareketlerine kesin referans olarak yazılacak. Veresiye: henüz tahsil edilmedi,
-                // durum "Bekliyor" (purchase.php'deki Veresiye desenle aynı — 2026-07-09, Finance
-                // Core Stabilization İş 3, kısmi önlem: her satış artık koşulsuz "tahsil edildi"
-                // sayılmıyor).
-                $accId = stock_sale_resolve_account($pdo, $method);
-                $saleStatus = $method === 'Veresiye' ? 'Bekliyor' : 'Tahsil Edildi';
+                // hareketlerine kesin referans olarak yazılacak. Kasa/banka/kart HİÇBİR ZAMAN
+                // etkilenmez (account_id=NULL), durum her zaman "Bekliyor".
                 $pdo->prepare(
                     "INSERT INTO finance_movements(contact_id,direction,amount,vat_rate,vat_amount,payment_channel,account_id,status,movement_date,description,movement_type)
-                     VALUES(?,?,?,?,?,?,?,?,?,?,'sale')"
+                     VALUES(?,'in',?,?,?,NULL,NULL,'Bekliyor',?,?,'sale')"
                 )->execute([
-                    $contact, 'in', $grandTotal, count($lines) === 1 ? ($lines[0]['vat_rate'] ?: null) : null, $grandVat,
-                    $method, $accId, $saleStatus, date('Y-m-d'), $desc
+                    $contact, $grandTotal, count($lines) === 1 ? ($lines[0]['vat_rate'] ?: null) : null, $grandVat,
+                    date('Y-m-d'), $desc
                 ]);
                 $financeMovementId = (int)$pdo->lastInsertId();
 
@@ -81,13 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // birim fiyat/KDV satır bazında da kaydedilir (migration 043 — düzenleme için gerekli;
                 // kolonlar henüz yoksa stock_insert_sale_movement() eski şemaya güvenle düşer)
                 foreach ($lines as $l) {
-                    stock_insert_sale_movement($pdo, $l['item']['id'], $financeMovementId, $l['qty'], $l['price'], $l['vat_rate'], 'Satış', 'Web satış (' . $method . ')');
-                }
-
-                // 4) Kasa bakiyesi güncelle (KDV dahil gerçek tutar)
-                if ($accId) {
-                    $pdo->prepare("UPDATE finance_accounts SET current_balance=current_balance+? WHERE id=?")
-                        ->execute([$grandTotal, $accId]);
+                    stock_insert_sale_movement($pdo, $l['item']['id'], $financeMovementId, $l['qty'], $l['price'], $l['vat_rate'], 'Satış', 'Web satış');
                 }
 
                 $pdo->commit();
@@ -96,10 +90,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw $e;
             }
 
-            // 5) Log
+            // 4) Log
             try {
                 if (function_exists('activity_log')) {
-                    activity_log('Satış', 'Web', $desc . ' ' . money($grandTotal) . ' (kâr ' . money($profitTotal) . ')', $method, 'sale', $lines[0]['item']['id'], 'sales.php', '🧾');
+                    activity_log('Satış', 'Web', $desc . ' ' . money($grandTotal) . ' (kâr ' . money($profitTotal) . ')', 'Açık borç', 'sale', $lines[0]['item']['id'], 'sales.php', '🧾');
                 }
             } catch (Throwable $e) {}
 
@@ -107,7 +101,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ? 'Kâr: ' . money($profitTotal)
                 : 'Zarar: ' . money(-$profitTotal);
 
-            $ok = h(implode(', ', $descParts)) . ' satıldı: <b>' . money($grandTotal) . '</b>' . ($grandVat > 0 ? ' (KDV dahil, KDV: ' . money($grandVat) . ')' : '') . ' (' . h($method) . ') &mdash; ' . $kz;
+            $ok = h(implode(', ', $descParts)) . ' satıldı: <b>' . money($grandTotal) . '</b>' . ($grandVat > 0 ? ' (KDV dahil, KDV: ' . money($grandVat) . ')' : '') . ' — cariye açık borç olarak kaydedildi (Bekliyor) &mdash; ' . $kz;
         }
     } catch (Throwable $e) {
         $er = $e->getMessage();
@@ -152,9 +146,10 @@ require_once __DIR__.'/layout_top.php';
   <!-- Sol: form -->
   <div class="panel">
     <div class="panel-head"><h2><?= $editMode ? '✏️ Satışı Düzenle' : 'Satış Formu' ?></h2></div>
-    <?php if ($editMode): ?>
-    <div class="notice" style="margin-bottom:12px">Bu satışı düzenliyorsunuz. Kaydettiğinizde stok ve kasa bakiyesi otomatik yeniden hesaplanır.</div>
-    <?php endif; ?>
+    <div class="notice" style="margin-bottom:12px;background:#eef4ff;color:#1e3a8a">
+      Bu ekran tahsilat yapmaz — satış cariye açık borç (Bekliyor) olarak kaydedilir. Tahsilat
+      <a href="finance_new.php?direction=in">Tahsilat ekranından</a> ayrıca girilir.
+    </div>
     <form method="post" id="salesForm">
       <?php if ($editMode): ?><input type="hidden" name="edit_id" value="<?= (int)$editMode['id'] ?>"><?php endif; ?>
       <div class="form-grid">
@@ -175,16 +170,6 @@ require_once __DIR__.'/layout_top.php';
             </select>
             <button type="button" class="btn" style="width:100%" onclick="quickAddContact(document.getElementById('contactName').value, document.getElementById('contactType').value)">✓ Ekle ve Seç</button>
           </div>
-        </div>
-
-        <div class="full">
-          <label>Ödeme Yöntemi</label>
-          <?php $curMethod = $editMode ? $editMode['sale']['payment_channel'] : null; ?>
-          <select name="payment_method" required>
-            <?php foreach (['Peşin','Kredi Kartı','Banka Havalesi','Veresiye'] as $pm): ?>
-            <option <?= $curMethod===$pm ? 'selected' : '' ?>><?= $pm ?></option>
-            <?php endforeach; ?>
-          </select>
         </div>
 
       </div><!-- /form-grid -->
@@ -226,7 +211,7 @@ require_once __DIR__.'/layout_top.php';
       </div>
 
       <button type="submit" class="btn" style="width:100%;padding:14px;font-size:16px">
-        <?= $editMode ? '💾 Değişiklikleri Kaydet' : '🧾 Satışı Tamamla' ?>
+        <?= $editMode ? '💾 Değişiklikleri Kaydet' : '🧾 Satışı Tamamla (Açık Borç)' ?>
       </button>
       <?php if ($editMode): ?><a href="sales.php" class="btn secondary" style="width:100%;padding:10px;margin-top:8px;text-align:center;display:block">✕ Vazgeç</a><?php endif; ?>
     </form>
@@ -239,7 +224,7 @@ require_once __DIR__.'/layout_top.php';
       <?php
       try {
           $recent = $pdo->query(
-              "SELECT fm.id, fm.movement_date, fm.amount, fm.vat_amount, fm.description, fm.payment_channel, c.name AS cname
+              "SELECT fm.id, fm.movement_date, fm.amount, fm.vat_amount, fm.description, fm.status, c.name AS cname
                FROM finance_movements fm
                LEFT JOIN contacts c ON c.id=fm.contact_id
                WHERE fm.movement_type='sale' OR fm.movement_type='mobile_sale'
@@ -251,7 +236,7 @@ require_once __DIR__.'/layout_top.php';
       if ($recent): ?>
       <div style="overflow-x:auto">
       <table style="min-width:600px">
-        <thead><tr><th>Tarih</th><th>Cari</th><th>Açıklama</th><th style="text-align:right">Tutar</th><th style="text-align:right">KDV</th><?php if(can_edit_delete()): ?><th>İşlem</th><?php endif; ?></tr></thead>
+        <thead><tr><th>Tarih</th><th>Cari</th><th>Açıklama</th><th style="text-align:right">Tutar</th><th style="text-align:right">KDV</th><th>Durum</th><?php if(can_edit_delete()): ?><th>İşlem</th><?php endif; ?></tr></thead>
         <tbody>
         <?php foreach ($recent as $row): ?>
           <?php $rowEditable = can_edit_delete() && stock_can_edit_sale($pdo, (int)$row['id'])['editable']; ?>
@@ -261,6 +246,7 @@ require_once __DIR__.'/layout_top.php';
             <td class="muted" style="font-size:12px"><?= h($row['description'] ?? '') ?></td>
             <td style="text-align:right;font-weight:800;color:#166534"><?= money($row['amount']) ?></td>
             <td style="text-align:right;color:#667085;font-size:12px"><?= $row['vat_amount'] > 0 ? money($row['vat_amount']) : '—' ?></td>
+            <td><?= badge($row['status'], status_tone($row['status'])) ?></td>
             <?php if(can_edit_delete()): ?>
             <td class="nowrap">
               <?php if ($rowEditable): ?>

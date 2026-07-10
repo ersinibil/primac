@@ -37,3 +37,37 @@ function contact_delete_or_deactivate($pdo, $id){
     $pdo->prepare("DELETE FROM contacts WHERE id=?")->execute([$id]);
     return ['ok'=>true,'deactivated'=>false,'msg'=>'Cari silindi.'];
 }
+
+/**
+ * FİNANS ÇEKİRDEK DÜZELTMESİ (2026-07-10) — cari açık bakiye SQL ifadesi.
+ *
+ * Satış/Alış/Belge (movement_type: sale/mobile_sale/purchase/document) hareketleri KENDİ
+ * direction'ı ile sayılır (satış cariye +borç, alış tedarikçiye +borç → -yönde). Tahsilat/Ödeme
+ * (movement_type: normal/mobile) ise bu borcu KAPATAN olaylardır — işaretleri kasten TERS
+ * çevrilir. Aksi halde "satış (Bekliyor, +1800) + o satışın kendi tahsilatı (+1800)" aynı yönde
+ * toplanıp ÇİFT SAYILIR — bu session'ın başından beri süregelen "cari bakiye double-counting"
+ * probleminin kök nedeni tam olarak buydu. Satış/alış kaydının kendisi HİÇ değiştirilmez (durumu
+ * hep "Bekliyor" kalır) — kapanma sadece bu formülün Tahsilat/Ödeme'yi ters saymasıyla olur.
+ *
+ * @param string $alias sorgudaki finance_movements tablo/takma adı (örn. 'f' ya da tam ad)
+ * @return string ham SQL CASE ifadesi (SUM(...) içine gömülmek üzere)
+ */
+function contact_balance_case_sql($alias='finance_movements'){
+    return "CASE
+        WHEN $alias.movement_type IN ('normal','mobile') THEN (CASE WHEN $alias.direction='in' THEN -$alias.amount ELSE $alias.amount END)
+        ELSE (CASE WHEN $alias.direction='in' THEN $alias.amount ELSE -$alias.amount END)
+    END";
+}
+
+/** Tek bir carinin açık bakiyesini hesaplar: opening_balance + düzeltilmiş net toplam. */
+function contact_balance($pdo, $contactId){
+    $contactId=(int)$contactId;
+    $expr = contact_balance_case_sql('finance_movements');
+    $s=$pdo->prepare("SELECT COALESCE(SUM($expr),0) s FROM finance_movements WHERE contact_id=?");
+    $s->execute([$contactId]);
+    $net=(float)$s->fetch()['s'];
+    $ob=$pdo->prepare("SELECT COALESCE(opening_balance,0) ob FROM contacts WHERE id=?");
+    $ob->execute([$contactId]);
+    $opening=(float)($ob->fetch()['ob'] ?? 0);
+    return $opening + $net;
+}

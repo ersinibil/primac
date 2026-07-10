@@ -135,9 +135,11 @@ if(($c['representative_mode'] ?? '')!=='anonim'){
     $repNames=$names ? implode(', ',$names) : 'Atanmadı';
 }
 
-$in=safe_sum("SELECT COALESCE(SUM(amount),0) s FROM finance_movements WHERE contact_id=$id AND direction='in'");
-$out=safe_sum("SELECT COALESCE(SUM(amount),0) s FROM finance_movements WHERE contact_id=$id AND direction='out'");
-$balance=(float)$c['opening_balance'] + $in - $out;
+// FİNANS ÇEKİRDEK DÜZELTMESİ (2026-07-10): bakiye artık contacts_lib.php::contact_balance()
+// üzerinden hesaplanıyor — satış/alış (Bekliyor) borç yaratır, Tahsilat/Ödeme bunu kapatır
+// (ters işaretle sayılır), aksi halde "satış + kendi tahsilatı" çift sayılırdı.
+require_once __DIR__.'/contacts_lib.php';
+$balance=contact_balance($pdo, $id);
 ?>
 
 <style>

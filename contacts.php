@@ -1,5 +1,7 @@
 <?php
 require_once __DIR__.'/layout_top.php';
+require_once __DIR__.'/contacts_lib.php';
+require_once __DIR__.'/finance_lib.php';
 
 // active kolonu güvencesi
 try{
@@ -50,9 +52,13 @@ if($conditions) $where="WHERE ".implode(' AND ',$conditions);
 // karışıp cari listesindeki hiçbir satırla eşleşmeyen bir rakam üretiyordu (kullanıcı bildirdi:
 // üstte -4.020 ₺ görünüyor ama tüm cari satırları 0,00 gösteriyordu). Artık alttaki tabloyla
 // birebir aynı mantıkla (sadece f.contact_id=c.id ile eşleşen hareketler) hesaplanıyor.
-$totalBalance=safe_sum("SELECT COALESCE(SUM(balance),0) s FROM (SELECT c.id, COALESCE(c.opening_balance,0)+COALESCE(SUM(CASE WHEN f.direction='in' THEN f.amount ELSE 0 END),0)-COALESCE(SUM(CASE WHEN f.direction='out' THEN f.amount ELSE 0 END),0) balance FROM contacts c LEFT JOIN finance_movements f ON f.contact_id=c.id GROUP BY c.id) x");
-$totalReceivable=safe_sum("SELECT COALESCE(SUM(CASE WHEN balance>0 THEN balance ELSE 0 END),0) s FROM (SELECT c.id, COALESCE(c.opening_balance,0)+COALESCE(SUM(CASE WHEN f.direction='in' THEN f.amount ELSE 0 END),0)-COALESCE(SUM(CASE WHEN f.direction='out' THEN f.amount ELSE 0 END),0) balance FROM contacts c LEFT JOIN finance_movements f ON f.contact_id=c.id GROUP BY c.id) x");
-$totalPayable=safe_sum("SELECT COALESCE(SUM(CASE WHEN balance<0 THEN -balance ELSE 0 END),0) s FROM (SELECT c.id, COALESCE(c.opening_balance,0)+COALESCE(SUM(CASE WHEN f.direction='in' THEN f.amount ELSE 0 END),0)-COALESCE(SUM(CASE WHEN f.direction='out' THEN f.amount ELSE 0 END),0) balance FROM contacts c LEFT JOIN finance_movements f ON f.contact_id=c.id GROUP BY c.id) x");
+// 2026-07-10 Finans Çekirdek düzeltmesi: contact_view.php ile aynı düzeltilmiş formül — satış/alış
+// kendi yönüyle, Tahsilat/Ödeme TERS işaretle sayılır (contacts_lib.php::contact_balance_case_sql()),
+// aksi halde "satış + kendi tahsilatı" çift sayılırdı.
+$balExprC = contact_balance_case_sql('f');
+$totalBalance=safe_sum("SELECT COALESCE(SUM(balance),0) s FROM (SELECT c.id, COALESCE(c.opening_balance,0)+COALESCE(SUM($balExprC),0) balance FROM contacts c LEFT JOIN finance_movements f ON f.contact_id=c.id GROUP BY c.id) x");
+$totalReceivable=safe_sum("SELECT COALESCE(SUM(CASE WHEN balance>0 THEN balance ELSE 0 END),0) s FROM (SELECT c.id, COALESCE(c.opening_balance,0)+COALESCE(SUM($balExprC),0) balance FROM contacts c LEFT JOIN finance_movements f ON f.contact_id=c.id GROUP BY c.id) x");
+$totalPayable=safe_sum("SELECT COALESCE(SUM(CASE WHEN balance<0 THEN -balance ELSE 0 END),0) s FROM (SELECT c.id, COALESCE(c.opening_balance,0)+COALESCE(SUM($balExprC),0) balance FROM contacts c LEFT JOIN finance_movements f ON f.contact_id=c.id GROUP BY c.id) x");
 ?>
 
 <section class="crm-tabs">
@@ -112,10 +118,15 @@ $totalPayable=safe_sum("SELECT COALESCE(SUM(CASE WHEN balance<0 THEN -balance EL
 <tbody>
 <?php
 try{
+    // 2026-07-10: "Tahsilat"/"Ödeme" kolonları SADECE gerçek kasa/banka hareketlerini gösterir
+    // (satış/alış açık borç/alacaktır, tahsilat/ödeme değil); "Bakiye" ise contact_balance_case_sql
+    // ile doğru işaretle (Tahsilat/Ödeme ters çevrilerek) hesaplanır — aksi halde çift sayılırdı.
+    $balExprF = contact_balance_case_sql('f');
     $sql="SELECT c.*,
         GROUP_CONCAT(DISTINCT p.name ORDER BY cr.is_primary DESC, p.name SEPARATOR ', ') representatives,
-        COALESCE(SUM(CASE WHEN f.direction='in' THEN f.amount ELSE 0 END),0) total_in,
-        COALESCE(SUM(CASE WHEN f.direction='out' THEN f.amount ELSE 0 END),0) total_out
+        COALESCE(SUM(CASE WHEN f.direction='in' AND f.movement_type IN ('normal','mobile') AND f.account_id IS NOT NULL THEN f.amount ELSE 0 END),0) total_in,
+        COALESCE(SUM(CASE WHEN f.direction='out' AND f.movement_type IN ('normal','mobile') AND f.account_id IS NOT NULL THEN f.amount ELSE 0 END),0) total_out,
+        COALESCE(SUM($balExprF),0) net_movements
         FROM contacts c
         LEFT JOIN contact_representatives cr ON cr.contact_id=c.id
         LEFT JOIN personnel p ON p.id=cr.personnel_id
@@ -132,7 +143,7 @@ try{
         $typeClass='type-both';
         if($r['type']==='Müşteri') $typeClass='type-customer';
         if($r['type']==='Tedarikçi') $typeClass='type-supplier';
-        $balance=(float)$r['opening_balance']+(float)$r['total_in']-(float)$r['total_out'];
+        $balance=(float)$r['opening_balance']+(float)$r['net_movements'];
         $balClass=$balance>0?'money-pos':($balance<0?'money-neg':'money-zero');
 
         $isPassive=isset($r['active']) && (int)$r['active']===0;

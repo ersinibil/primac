@@ -20,8 +20,10 @@ function getKpiMetrics($pdo, $from, $to) {
     $metrics = [];
 
     try {
-        // Tahsilat
-        $stmt = $pdo->prepare("SELECT COALESCE(SUM(amount),0) total FROM finance_movements WHERE direction='in' AND DATE(movement_date) BETWEEN ? AND ?");
+        // Tahsilat — SADECE gerçek kasa/banka hareketleri (2026-07-10 Finans Çekirdek düzeltmesi:
+        // satış artık her zaman "Bekliyor" ve account_id=NULL ile oluşuyor, bu yüzden burada
+        // sayılmaz — aksi halde bekleyen bir satış "tahsil edilmiş gelir" gibi görünürdü).
+        $stmt = $pdo->prepare("SELECT COALESCE(SUM(amount),0) total FROM finance_movements WHERE direction='in' AND account_id IS NOT NULL AND DATE(movement_date) BETWEEN ? AND ?");
         $stmt->execute([$from, $to]);
         $metrics['revenue'] = (float)($stmt->fetch()['total'] ?? 0);
     } catch(Throwable $e) { $metrics['revenue'] = 0; }
@@ -29,7 +31,9 @@ function getKpiMetrics($pdo, $from, $to) {
     try {
         // Ödeme/Gider — hesaplar arası transfer gerçek bir gider değildir, hariç tutulur (2026-07-03
         // modül-zinciri denetiminde bulundu: kasadan bankaya transfer "gider" toplamını şişiriyordu).
-        $stmt = $pdo->prepare("SELECT COALESCE(SUM(amount),0) total FROM finance_movements WHERE direction='out' AND COALESCE(movement_type,'')<>'transfer' AND DATE(movement_date) BETWEEN ? AND ?");
+        // 2026-07-10: aynı gerekçeyle SADECE gerçek kasa/banka hareketleri sayılır (alış artık
+        // "Bekliyor" + account_id=NULL ile oluşuyor).
+        $stmt = $pdo->prepare("SELECT COALESCE(SUM(amount),0) total FROM finance_movements WHERE direction='out' AND COALESCE(movement_type,'')<>'transfer' AND account_id IS NOT NULL AND DATE(movement_date) BETWEEN ? AND ?");
         $stmt->execute([$from, $to]);
         $metrics['expense'] = (float)($stmt->fetch()['total'] ?? 0);
     } catch(Throwable $e) { $metrics['expense'] = 0; }
@@ -80,7 +84,9 @@ try {
         $date = date('Y-m-01', strtotime("-$i months"));
         $monthEnd = date('Y-m-t', strtotime($date));
 
-        $stmt = $pdo->prepare("SELECT COALESCE(SUM(CASE WHEN direction='in' THEN amount END),0) rev, COALESCE(SUM(CASE WHEN direction='out' AND COALESCE(movement_type,'')<>'transfer' THEN amount END),0) exp FROM finance_movements WHERE DATE(movement_date) BETWEEN ? AND ?");
+        // 2026-07-10: sadece gerçek kasa/banka hareketleri (account_id IS NOT NULL) — yukarıdaki
+        // getKpiMetrics() ile aynı gerekçe.
+        $stmt = $pdo->prepare("SELECT COALESCE(SUM(CASE WHEN direction='in' THEN amount END),0) rev, COALESCE(SUM(CASE WHEN direction='out' AND COALESCE(movement_type,'')<>'transfer' THEN amount END),0) exp FROM finance_movements WHERE account_id IS NOT NULL AND DATE(movement_date) BETWEEN ? AND ?");
         $stmt->execute([$date, $monthEnd]);
         $row = $stmt->fetch();
 
