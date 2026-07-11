@@ -2,6 +2,72 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
+## Flow Unification 001 — Alış/Satış Belgesi Akışını Finance Core ile Birleştirme: USER TEST BEKLİYOR (2026-07-11)
+Kullanıcı bir BUG REPORT ile başlattı: `ALI-20260707-5177` (bir alış belgesi) `contact_view.php`
+"Bu Cariye Ait İşler"de görünmüyordu ve `purchase.php` "Son Alışlar"da yoktu, ama "Belge" ekranında
+vardı. Kök neden analizi (kod yazmadan, önce) doğruladı: ana menüde aynı işi (alış/satış girişi)
+yapan İKİ bağımsız, birbirinden habersiz veri modeli aynı anda canlıydı — bkz. [[bugs]] "Çözüldü".
+
+**Kesin karar (kullanıcı tarafından verildi):** `finance_movements` + `stock_movements` sistemin
+tek finans/stok doğruluk kaynağı; `stock_lib.php` ortak işlem katmanı; `trade_documents` +
+`trade_document_items` sadece belge/satır/görüntüleme/PDF katmanı olarak kalır ama artık kendi
+finans/stok etkisini üretmez.
+
+- `stock_lib.php::stock_create_purchase()`'a `$documentId=null` parametresi eklendi,
+  `finance_movements` INSERT'üne `document_id` kolonu eklendi (hızlı alışta NULL kalır).
+- **Yeni `stock_lib.php::stock_create_sale()`** — `sales.php`'nin eski inline satış-oluşturma
+  bloğu davranış değiştirmeden buraya taşındı; `$documentId`/`$confirmed` parametreleri var,
+  `StockShortageException`'ı yutmadan yukarı taşır.
+- **Dış-transaction desteği:** her iki fonksiyon da `$pdo->inTransaction()` kontrolü yapıyor —
+  kendi başına (purchase.php/sales.php) çağrılırsa kendi transaction'ını açıp kapatıyor, bir
+  çağıranın (trade_document_new.php) transaction'ı içinde çağrılırsa kendi commit/rollback'ini
+  YAPMIYOR, hatayı yukarı fırlatıyor.
+- `trade_core.php::trade_apply_document($documentId, $confirmed=false)` tamamen yeniden yazıldı:
+  eski inline stok/avg_cost/`finance_movements(movement_type='document')`/
+  `finance_accounts.current_balance` doğrudan güncelleme kodu SİLİNDİ; artık
+  `stock_create_purchase()`/`stock_create_sale()`'i çağırıyor. Bu fonksiyon TRANSACTION YÖNETMİYOR
+  — sahibi `trade_document_new.php`.
+- `trade_document_new.php`: Ödeme Durumu/Ödeme Hesabı/Ödenen Tutar alanları tamamen kaldırıldı.
+  Satış belgesinde hiçbir INSERT'ten ÖNCE `stock_sale_build_lines(...,$confirmed)` ile ön kontrol
+  yapılıyor — onaysız yetersiz stokta hiçbir tabloya yazılmıyor, sales.php ile aynı uyarı+onay
+  kutusu (form İÇİNDE, Selin'in daha önce bulduğu "checkbox form dışında" hatası tekrarlanmadı,
+  ayrıca bu turda yeniden doğrulandı) gösteriliyor. Ön kontrol geçerse tek transaction: belge+satır
+  INSERT → `trade_apply_document()` → commit; herhangi bir adım hata verirse TAMAMI rollback.
+  Yeni belgeler her zaman `account_id=NULL`, `paid_amount=0`, finans durumu `Bekliyor`.
+  **Teknik not:** `activity_lib.php::activity_install()` her çağrıda `CREATE TABLE IF NOT EXISTS`
+  çalıştırıyor — bu DDL, MySQL/MariaDB'de tablo zaten var olsa bile İMPLİCİT COMMIT yapıyor.
+  `trade_apply_document()` başarıyla bitip `activity_log()`'a ulaştığında transaction bu yüzden
+  erken kapanabiliyordu; `trade_document_new.php`'deki commit/rollback çağrıları
+  `$pdo->inTransaction()` ile korumalı hale getirilerek (aksi halde başarılı bir işlem hatalıymış
+  gibi görünürdü) çözüldü — `activity_lib.php`'ye dokunulmadı (paylaşılan, hassas dosya).
+- `purchase.php`/`sales.php` "Son Alışlar/Satışlar": `document_id`/`trade_documents` JOIN'i
+  eklendi, belge kaynaklı satırlarda Düzenle/Sil yerine "🧾 Belgeyi Aç" (`trade_document_view.php`)
+  linki gösteriliyor.
+- `contact_view.php`: "Bu Cariye Ait İşler" → "Bu Cariye Ait İşler / İş Emirleri" (kavram
+  netleştirmesi, sorgu değişmedi — `jobs` tablosu), altına ayrı "Alış / Satış Belgeleri" bölümü
+  eklendi (`trade_documents WHERE contact_id=?`).
+- **Kod incelemesinde (Ece, Elif) bulunan ve AYNI turda kapatılan güvenlik/bütünlük açığı:**
+  `stock_can_edit_purchase()`/`stock_can_edit_sale()`/`stock_reverse_purchase()`/
+  `stock_reverse_sale()` `document_id`'yi hiç kontrol etmiyordu — web'de bu sadece listede
+  Düzenle/Sil butonunu gizliyordu (backend'de crafted POST ile hâlâ açıktı), mobilde hiç koruma
+  yoktu. Bu risk, belge kaydının artık `movement_type='purchase'/'sale'` olması sayesinde (eskiden
+  `'document'` idi, listelerde hiç görünmüyordu) bu sprintle birlikte ilk kez fiilen tetiklenebilir
+  hale gelmişti. Dört fonksiyona `document_id IS NOT NULL` kilidi eklendi (tek merkezden hem web
+  hem mobili kapsıyor); Selin'in savunma-derinliği önerisiyle `stock_update_purchase()`/
+  `stock_update_sale()`'e de aynı kilit eklendi. `mobile/purchase.php`/`mobile/sales.php` listeleri
+  de web ile aynı "🧾 Belgeyi Aç" davranışına getirildi.
+- Migration YOK — `finance_movements.document_id` kolonu zaten mevcuttu. Eski veriye (backfill,
+  toplu UPDATE, `ALI-20260707-5177` dahil) hiç dokunulmadı.
+- Test: yerel MariaDB sandbox'ta 6 zorunlu senaryo (hızlı satış, hızlı alış, trade satış belgesi,
+  trade alış belgesi, onaysız-red/onaylı-kabul negatif stok, zorunlu hatada tam rollback) + ayrıca
+  document_id kilidinin edit/delete'i doğru reddettiği ve normal (belgesiz) kayıtlarda regresyon
+  olmadığı doğrulandı. Ece/Selin/Elif paralel incelemeden geçti (üçü de en az bir gerçek bulgu
+  verdi, hepsi aynı turda düzeltildi).
+- Commit: `d518103`. USER TEST: DEV/primac.tr'de kullanıcı testi BEKLİYOR — bkz. [[backlog]]
+  "Flow Unification 001 DEV PASS takibi açık" (8 senaryo: belge oluşturma her iki tip, belgeye
+  ödeme girme, stok fazlası belge denemesi, finans yetkisiz kullanıcı, eski belgeye dokunulmadığı,
+  Son Alışlar/Satışlar'da belge rozeti/link, cari ekranında Alış/Satış Belgeleri bölümü).
+
 ## Kontrollü Negatif Stok Politikası: CLOSED (WEB) (2026-07-11)
 USER TEST: Web PASS (2026-07-11) / Mobile Pending → Mobile Regression Sprint'e eklendi (bkz. backlog.md).
 

@@ -17,6 +17,31 @@
 
 ## Çözüldü
 
+- **İki paralel alış/satış veri modeli — `trade_documents` akışı Finance Core Stabilization
+  kapsamı dışında kalmış** (2026-07-11, kullanıcı BUG REPORT: `ALI-20260707-5177` cari ekranında/
+  purchase.php listesinde tutarsız görünüyordu; çözüm commit `d518103`, bkz. [[features]] "Flow
+  Unification 001"): Kök neden doğrulandı — bu bir görüntüleme hatası değil, ana menüde aynı anda
+  İKİ bağımsız "alış/satış girişi" akışı canlıydı: `purchase.php`/`sales.php` (Finance Core
+  Stabilization kapsamında, `movement_type='purchase'/'sale'`) ile `trade_document_new.php`
+  (`trade_core.php::trade_apply_document()` üzerinden, ayrı `movement_type='document'`, hâlâ ödeme
+  hesabı seçtiren ve `finance_accounts.current_balance`'ı doğrudan güncelleyen bağımsız bir kod
+  yolu). `trade_apply_document()` artık kendi inline stok/finans mantığını yazmıyor,
+  `stock_lib.php::stock_create_purchase()`/yeni `stock_create_sale()` fonksiyonlarını kullanıyor —
+  belge kaynaklı kayıtlar artık `movement_type='purchase'/'sale'` + `document_id` ile tek modele
+  bağlı, `account_id` her zaman NULL, durum her zaman `Bekliyor`. Transaction sahipliği
+  `trade_document_new.php`'ye taşındı (belge+satır+stok+finans tek transaction, hata olursa tamamı
+  rollback). Eski veriye dokunulmadı (backfill/toplu UPDATE yok).
+  **Yan bulgu — aynı sprintte kapatıldı:** kod incelemesinde (Ece, Elif) `stock_can_edit_purchase()`/
+  `stock_can_edit_sale()`/`stock_reverse_purchase()`/`stock_reverse_sale()` fonksiyonlarının
+  `document_id`'yi hiç kontrol etmediği bulundu — web'de bu sadece listede Düzenle/Sil butonunu
+  gizliyordu (backend'de hâlâ açıktı, crafted POST ile bypass edilebilirdi), mobilde hiç koruma
+  yoktu (buton gösteriliyordu). `trade_apply_document()`'ın artık `movement_type='purchase'/'sale'`
+  kullanması bu satırları ilk kez "Son Alışlar/Satışlar" listelerine (dolayısıyla Düzenle/Sil'e)
+  maruz bıraktığı için risk bu sprintle büyümüştü. Dört fonksiyona da `document_id IS NOT NULL`
+  kilidi eklendi (tek merkezden hem web hem mobili kapsıyor); Selin'in önerisiyle
+  `stock_update_purchase()`/`stock_update_sale()`'e de aynı kilit savunma-derinliği olarak eklendi.
+  `mobile/purchase.php`/`mobile/sales.php` listeleri de web ile aynı "🧾 Belgeyi Aç" davranışına
+  getirildi. USER TEST: DEV'de kullanıcı testi bekliyor (bkz. [[features]]).
 - **Satışta sessiz negatif stok — görünürlük/onay yoktu** (2026-07-11, commit `3d927c7`, USER
   TEST: Web PASS / Mobile Pending, bkz. [[features]] "Kontrollü Negatif Stok Politikası"): satış
   oluşturma/düzenlemede stok yetersiz
