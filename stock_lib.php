@@ -250,21 +250,63 @@ function stock_insert_purchase_movement($pdo, $stockItemId, $financeMovementId, 
 }
 
 /**
+ * KONTROLLÜ NEGATİF STOK POLİTİKASI (2026-07-11): stok yetersizken satış YASAKLANMAZ (satın
+ * alımdan önce satış siparişi açılabilmesi bilinçli bir iş akışı — kullanıcı kararı), ama
+ * kullanıcı onayı olmadan da sessizce geçilmez. Bu istisna hangi ürün(ler)de ne kadar açık
+ * olduğunu taşır; çağıran taraf (sales.php/mobile/sales.php) bunu yakalayıp kullanıcıya
+ * "mevcut/satış/sonuç" rakamlarıyla bir onay ekranı gösterir. Kullanıcı onaylarsa aynı istek
+ * $confirmed=true (POST allow_negative_stock=1) ile TEKRAR gönderilir.
+ */
+class StockShortageException extends Exception {
+    public $shortages;
+    public function __construct($shortages){
+        $this->shortages = $shortages;
+        $lines = [];
+        foreach($shortages as $s){
+            $lines[] = $s['name'].' — mevcut '.stock_qty_fmt($s['available_stock']).' '.$s['unit']
+                .', satış '.stock_qty_fmt($s['requested_qty']).' '.$s['unit']
+                .', işlem sonrası '.stock_qty_fmt($s['resulting_stock']).' '.$s['unit'];
+        }
+        parent::__construct("Mevcut stok bu satış için yetersiz:\n".implode("\n", $lines));
+    }
+}
+
+/**
+ * Negatif stok politikasının merkezi karar noktası — REDDETMEZ, sadece durumu hesaplar.
+ * $reserveQty, satış DÜZENLEMESİNDE eski satırın (henüz DB'ye yazılmamış ama az sonra geri
+ * eklenecek) miktarını temsil eder; yeni satışta 0 verilir.
+ * @return array ['available_stock'=>float, 'resulting_stock'=>float, 'requires_confirmation'=>bool]
+ */
+function stock_shortage_info($currentStock, $reserveQty, $requestedQty){
+    $available = (float)$currentStock + (float)$reserveQty;
+    $resulting = $available - (float)$requestedQty;
+    return [
+        'available_stock' => $available,
+        'resulting_stock' => $resulting,
+        'requires_confirmation' => $resulting < -0.0001,
+    ];
+}
+
+/**
  * POST'tan gelen ürün satırlarını doğrular, ürünleri çeker, satır/genel toplamları hesaplar.
  * Web (sales.php) ve mobil (mobile/sales.php) satış ekle/düzenle akışlarının ortak mantığı
  * (2026-07-10, satış düzenleme özelliğiyle birlikte tekrarlanan kod ortaklaştırıldı).
  *
- * BİLİNÇLİ OLARAK negatif stok engeli YOK (2026-07-11, kullanıcı kararı — DEV testinde
- * gözlemlenip onaylandı): satın alımdan ÖNCE satış siparişi girmek gerekebilir (ürün henüz
- * depoya girmeden satılmış olabilir), bu yüzden stok eksiye düşebilmesi bilinçli olarak
- * engellenmiyor. Bu satırı yeniden eklemeden önce kullanıcıyla teyitleşin.
+ * @param array $reserveMap [stock_item_id => qty] — düzenlemede geri eklenecek eski miktarlar (yeni satışta [])
+ * @param bool $confirmed kullanıcı "stok yetersiz olsa da devam et" onayı verdi mi
+ *   (KONTROLLÜ NEGATİF STOK POLİTİKASI, 2026-07-11) — false iken yetersiz stok varsa
+ *   StockShortageException fırlatılır, true iken satışa izin verilir ve açıklamaya
+ *   görünür bir işaret eklenir (migration gerektirmeyen, düşük riskli izlenebilirlik).
  * @throws Exception geçersiz girdi durumunda
- * @return array ['lines'=>[...], 'grand_total'=>float, 'grand_vat'=>float, 'profit_total'=>float, 'desc'=>string, 'desc_parts'=>array]
+ * @throws StockShortageException onaysız yetersiz stok durumunda
+ * @return array ['lines'=>[...], 'grand_total'=>float, 'grand_vat'=>float, 'profit_total'=>float, 'desc'=>string, 'desc_parts'=>array, 'shortages'=>array]
  */
-function stock_sale_build_lines($pdo, $ids, $qtys, $prices, $vatRates){
+function stock_sale_build_lines($pdo, $ids, $qtys, $prices, $vatRates, $reserveMap=[], $confirmed=false){
     if(!is_array($ids) || !count($ids)) throw new Exception('En az bir ürün satırı ekleyin.');
 
     $lines = [];
+    $requestedByItem = [];
+    $itemsById = [];
     foreach($ids as $i=>$pid){
         $pid = (int)$pid;
         $qty = (float)($qtys[$i] ?? 0);
@@ -273,10 +315,16 @@ function stock_sale_build_lines($pdo, $ids, $qtys, $prices, $vatRates){
         if(!$pid || $qty<=0) continue;
         if($price<0) throw new Exception('Fiyat geçersiz.');
 
-        $p = $pdo->prepare("SELECT * FROM stock_items WHERE id=?");
-        $p->execute([$pid]);
-        $item = $p->fetch();
-        if(!$item) continue;
+        if(!isset($itemsById[$pid])){
+            $p = $pdo->prepare("SELECT * FROM stock_items WHERE id=?");
+            $p->execute([$pid]);
+            $fetched = $p->fetch();
+            if(!$fetched) continue;
+            $itemsById[$pid] = $fetched;
+        }
+        $item = $itemsById[$pid];
+
+        $requestedByItem[$pid] = ($requestedByItem[$pid] ?? 0) + $qty;
 
         $subtotal = $qty*$price;
         $vatAmount = $vatRate>0 ? round($subtotal*$vatRate/100, 2) : 0;
@@ -290,6 +338,19 @@ function stock_sale_build_lines($pdo, $ids, $qtys, $prices, $vatRates){
     }
     if(!$lines) throw new Exception('En az bir geçerli ürün satırı ekleyin.');
 
+    $shortages = [];
+    foreach($requestedByItem as $pid=>$reqQty){
+        $item = $itemsById[$pid];
+        $info = stock_shortage_info($item['quantity'], $reserveMap[$pid] ?? 0, $reqQty);
+        if($info['requires_confirmation']){
+            $shortages[] = [
+                'stock_item_id'=>$pid, 'name'=>$item['name'], 'unit'=>$item['unit'],
+                'available_stock'=>$info['available_stock'], 'requested_qty'=>$reqQty, 'resulting_stock'=>$info['resulting_stock'],
+            ];
+        }
+    }
+    if($shortages && !$confirmed) throw new StockShortageException($shortages);
+
     $grandTotal=0; $grandVat=0; $profitTotal=0; $descParts=[];
     foreach($lines as $l){
         $grandTotal += $l['line_total'];
@@ -298,8 +359,9 @@ function stock_sale_build_lines($pdo, $ids, $qtys, $prices, $vatRates){
         $descParts[] = $l['item']['name'] . ' x' . stock_qty_fmt($l['qty']);
     }
     $desc = implode(', ', $descParts) . ' satış';
+    if($shortages) $desc .= ' ⚠️ Stok Yetersiz (Onaylandı)';
 
-    return ['lines'=>$lines, 'grand_total'=>$grandTotal, 'grand_vat'=>$grandVat, 'profit_total'=>$profitTotal, 'desc'=>$desc, 'desc_parts'=>$descParts];
+    return ['lines'=>$lines, 'grand_total'=>$grandTotal, 'grand_vat'=>$grandVat, 'profit_total'=>$profitTotal, 'desc'=>$desc, 'desc_parts'=>$descParts, 'shortages'=>$shortages];
 }
 
 /**
@@ -369,9 +431,13 @@ function stock_can_edit_sale($pdo, $saleId){
  * @param array $ids stock_item_id[]  @param array $qtys quantity[]
  * @param array $prices unit_price[] (KDV hariç net)  @param array $vatRates vat_rate[]
  * @param string $noteLabel stock_movements.note etiketi ('Web satış' / 'Mobil satış')
+ * @param bool $confirmed KONTROLLÜ NEGATİF STOK POLİTİKASI onayı (2026-07-11) — bkz. stock_sale_build_lines
  * @return array ['ok'=>bool, 'message'=>string]
+ * @throws StockShortageException onaysız yetersiz stok durumunda (çağıran taraf bunu AYRICA
+ *   yakalamalı — genel Throwable catch'ine düşerse ['ok'=>false] içine gömülüp $shortages
+ *   verisi kaybolur)
  */
-function stock_update_sale($pdo, $saleId, $contact, $ids, $qtys, $prices, $vatRates, $noteLabel='Satış'){
+function stock_update_sale($pdo, $saleId, $contact, $ids, $qtys, $prices, $vatRates, $noteLabel='Satış', $confirmed=false){
     require_once __DIR__.'/finance_lib.php';
     try{
         $saleId = (int)$saleId;
@@ -387,7 +453,15 @@ function stock_update_sale($pdo, $saleId, $contact, $ids, $qtys, $prices, $vatRa
         $oldStk->execute([$saleId]);
         $oldMovements = $oldStk->fetchAll();
 
-        $built = stock_sale_build_lines($pdo, $ids, $qtys, $prices, $vatRates);
+        // Negatif stok politikası: bu düzenleme eski satırları geri alacağı için, yeni miktarlar
+        // mevcut stok + eski (henüz geri eklenmemiş ama az sonra eklenecek) miktar üzerinden
+        // değerlendirilir — aksi halde geçerli bir düzenleme bile gereksiz yere uyarı üretirdi.
+        $reserveMap = [];
+        foreach($oldMovements as $m){
+            $reserveMap[$m['stock_item_id']] = ($reserveMap[$m['stock_item_id']] ?? 0) + (float)$m['quantity'];
+        }
+
+        $built = stock_sale_build_lines($pdo, $ids, $qtys, $prices, $vatRates, $reserveMap, $confirmed);
         $lines = $built['lines'];
 
         $pdo->beginTransaction();
@@ -422,6 +496,8 @@ function stock_update_sale($pdo, $saleId, $contact, $ids, $qtys, $prices, $vatRa
         }
 
         return ['ok'=>true, 'message'=>implode(', ', $built['desc_parts']).' güncellendi: '.money($built['grand_total'])];
+    }catch(StockShortageException $e){
+        throw $e; // yukarı taşı — genel catch'e düşüp $shortages verisi kaybolmasın
     }catch(Throwable $e){
         return ['ok'=>false, 'message'=>'Satış güncelleme hatası: '.$e->getMessage()];
     }

@@ -2,6 +2,41 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
+## Kontrollü Negatif Stok Politikası — USER TEST BEKLİYOR (2026-07-11)
+**Negatif stok yasak DEĞİLDİR. Yetersiz stokta kullanıcı onayı zorunludur.** Bu davranış, satın
+alma öncesi satış/sipariş açılabilmesi için bilinçli olarak tasarlanmıştır (örn. müşteri siparişi
+alınır, ürün henüz satın alınmamıştır — satış önce girilir, alış sonra tamamlanır).
+
+Önceki tur (aynı gün): kullanıcı satış düzenleme/silme akışlarının bir denetimini istedi (stok
+etkisi tam geri alınıyor mu, negatif stok engeli var mı, COGS/kârlılık bozuluyor mu — bkz.
+bugs.md). Denetim sonucu sert bir negatif-stok REDDİ eklendi (commit `b536494`). Kullanıcı DEV
+testinde bu ret davranışının gerçek bir iş akışını (satın alımdan önce satış siparişi girme)
+engellediğini fark edip kararı revize etti — sert ret geri alındı (commit `e330b99`), yerine
+**bu maddedeki kontrollü onay akışı** kondu.
+
+- `stock_lib.php::stock_shortage_info($currentStock,$reserveQty,$requestedQty)` — merkezi karar
+  noktası, REDDETMEZ, sadece `available_stock`/`resulting_stock`/`requires_confirmation` hesaplar.
+- `stock_lib.php::StockShortageException` — stok yetersiz + onaysız durumda fırlatılır, hangi
+  ürün(ler)de ne kadar açık olduğunu (`$shortages`) taşır.
+- `stock_sale_build_lines()` ve `stock_update_sale()` artık `$confirmed` parametresi alıyor —
+  `$_POST['allow_negative_stock']=='1'` ise satışa izin verilir (stok negatife düşebilir),
+  aksi halde `StockShortageException` fırlatılır. **Onay SADECE backend'de zorunlu kılınıyor**
+  (frontend JS uyarısı değil) — bu parametre olmadan istek gönderilirse backend reddeder.
+- Düzenlemede eski miktar "rezerve" sayılır (mevcut stok + geri alınacak eski miktar) — aksi
+  halde geçerli bir düzenleme (örn. stok 2, eski satış 5, yeni satış 6 → kullanılabilir 7) bile
+  yanlışlıkla uyarı üretirdi.
+- Görünürlük (migrationsız, düşük riskli): onaylı bir yetersiz-stok satışının açıklamasına
+  (`finance_movements.description`) otomatik " ⚠️ Stok Yetersiz (Onaylandı)" eklenir — yeni kolon
+  AÇILMADI, mevcut açıklama alanı kullanıldı (Son Satışlar listesinde zaten görünüyor).
+- `sales.php`/`mobile/sales.php`: stok yetersizse aynı sayfada uyarı kutusu + "onaylıyorum"
+  onay kutusu gösterilir, kullanıcının az önce girdiği değerler (DB'den değil, POST'tan) forma
+  yeniden doldurulur — onaylayıp tekrar gönderdiğinde işlem tamamlanır.
+- Silme (`stock_reverse_sale`) etkilenmedi — negatif stoklu bir satış da dahil, silme her zaman
+  stoğu tam ve atomik geri yükler.
+- Test: 8 hedefli senaryo (yeterli/tam sınır/yetersiz-onaysız-red/yetersiz-onaylı-kabul, hem
+  oluşturma hem düzenleme için, silme dahil) yerel MariaDB sandbox'ta PASS. Ece/Selin review'dan
+  geçti.
+
 ## Finance Core Stabilization — Satış/Alış Artık Ödeme Yapmıyor: CLOSED (WEB) (2026-07-11)
 USER TEST: Web PASS (2026-07-11) / Mobile Pending → ayrı Mobile Regression Sprint (bkz. backlog.md).
 

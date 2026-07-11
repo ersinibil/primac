@@ -17,6 +17,16 @@
 
 ## Çözüldü
 
+- **Satışta sessiz negatif stok — görünürlük/onay yoktu** (2026-07-11, bkz.
+  [[features]] "Kontrollü Negatif Stok Politikası"): satış oluşturma/düzenlemede stok yetersiz
+  olsa da hiçbir uyarı çıkmadan işlem tamamlanıp stok eksiye düşüyordu — kullanıcının kendisi
+  DEV'de fark edip bildirdi. **Not: negatif stok kasıtlı olarak YASAKLANMADI** (satın alımdan önce
+  satış siparişi girilebilmesi gerçek bir iş akışı) — çözüm, `StockShortageException` +
+  `allow_negative_stock` backend onayı ile "sessiz" olan kısmı kapatmak oldu: yetersiz stokta artık
+  açık bir uyarı + onay adımı var, onaylanırsa satış açıklamasına görünür bir işaret ekleniyor.
+  İlk düzeltme turu (commit `b536494`) yanlışlıkla sert bir RET eklemişti, kullanıcı DEV testinde
+  bunun gerçek iş akışını bozduğunu bildirince geri alındı (commit `e330b99`) ve doğru (onay
+  bazlı) çözümle değiştirildi.
 - **Cari bakiye double-counting (satış + kendi tahsilatı aynı yönde toplanıyordu)** (2026-07-11,
   commit `d02665b`, bkz. [[features]] "Finance Core Stabilization"): `finance_movements`'ta bir
   satışın kendisi VE onun sonradan girilen tahsilatı ikisi de `direction='in'` ile toplandığı için

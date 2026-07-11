@@ -2,6 +2,16 @@
 
 <!-- Açık geliştirme görevleri. Kapanan madde buradan silinip memory/features.md'ye taşınır. -->
 
+## Kontrollü Negatif Stok Politikası — DEV kullanıcı testi bekliyor (2026-07-11)
+- Kod yazıldı, yerel MariaDB sandbox'ta 8 hedefli senaryo + mevcut regresyon testleri PASS,
+  Ece/Selin review'dan geçti (bkz. features.md). DEV/primac.tr'de kullanıcı testi henüz
+  yapılmadı — PASS gelmeden CLOSED yazılmayacak, CHANGELOG.md/KNOWN_BUGS.md'ye de eklenmeyecek.
+- Küçük, düşük öncelikli bir polish notu: şu an yetersiz-stok-onaylı satışların "görünürlüğü"
+  sadece `finance_movements.description`'a eklenen " ⚠️ Stok Yetersiz (Onaylandı)" metni ile
+  sağlanıyor (migrationsız, düşük riskli tercih). İstenirse ileride Son Satışlar listesinde
+  gerçek bir rozet/filtre (örn. "Tedarik Bekliyor") eklenebilir — bu turun kapsamı dışında
+  bırakıldı (kullanıcı: "büyük UI refactor yapma").
+
 ## Migration 042 (settles_movement_id) ve 043 (satır bazlı fiyat/KDV) DEV PASS takibi açık
 - İkisi de primac.tr'ye deploy edilen kod tabanında hazır (sale-edit özelliği migration 043'e
   bağımlı) ama kullanıcının DEV'de `migrate.php`'yi çalıştırıp teknik doğrulama yapması Finance

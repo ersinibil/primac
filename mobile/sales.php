@@ -4,9 +4,11 @@ require_once __DIR__.'/../stock_lib.php';
 $pdo=db();
 $cid=(int)($_GET['contact_id'] ?? 0);
 $ok=''; $er='';
+$stockShortage = null; // KONTROLLÜ NEGATİF STOK POLİTİKASI (2026-07-11) — bkz. ../stock_lib.php
 
 if($_SERVER['REQUEST_METHOD']==='POST'){
     try{
+        $confirmNegativeStock = !empty($_POST['allow_negative_stock']);
         if(isset($_POST['delete_sale'])){
             // Satış silme (PRG: POST → işlem → redirect)
             if(!can_edit_delete()) throw new Exception('Silme için yetkiniz yok.');
@@ -24,12 +26,16 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             $editId=(int)$_POST['edit_id'];
             $elig=stock_can_edit_sale($pdo,$editId);
             if(!$elig['editable']) throw new Exception($elig['reason']);
-            $res=stock_update_sale(
-                $pdo,$editId,(int)$_POST['contact_id'],
-                $_POST['stock_item_id'] ?? [],$_POST['quantity'] ?? [],$_POST['unit_price'] ?? [],$_POST['vat_rate'] ?? [],
-                'Mobil satış'
-            );
-            if($res['ok']){ $ok=$res['message']; }else{ $er=$res['message']; }
+            try{
+                $res=stock_update_sale(
+                    $pdo,$editId,(int)$_POST['contact_id'],
+                    $_POST['stock_item_id'] ?? [],$_POST['quantity'] ?? [],$_POST['unit_price'] ?? [],$_POST['vat_rate'] ?? [],
+                    'Mobil satış', $confirmNegativeStock
+                );
+                if($res['ok']){ $ok=$res['message']; }else{ $er=$res['message']; }
+            }catch(StockShortageException $e){
+                $stockShortage = $e->shortages;
+            }
         }else{
             // Yeni satış kaydı — bir cariye BİRDEN FAZLA ürün satırı (sepet) eklenebilir
             // (2026-07-03 kullanıcı isteği, web ile aynı mantık — bkz. ../sales.php).
@@ -45,7 +51,14 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 
             if(!$contact) throw new Exception('Cari seçin.');
 
-            $built=stock_sale_build_lines($pdo,$ids,$qtys,$prices,$vatRates);
+            try{
+                $built=stock_sale_build_lines($pdo,$ids,$qtys,$prices,$vatRates,[],$confirmNegativeStock);
+            }catch(StockShortageException $e){
+                $stockShortage = $e->shortages;
+                $built = null;
+            }
+
+            if($built){
             $lines=$built['lines'];
             $grandTotal=$built['grand_total']; $grandVat=$built['grand_vat'];
             $profitTotal=$built['profit_total']; $descParts=$built['desc_parts']; $desc=$built['desc'];
@@ -86,6 +99,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             $kz = $profitTotal>=0 ? ('Kâr: '.mm($profitTotal)) : ('Zarar: '.mm(-$profitTotal));
             $ok=implode(', ',$descParts).' satıldı: '.mm($grandTotal).($grandVat>0?' (KDV: '.mm($grandVat).')':'').' — açık borç (Bekliyor) · '.$kz;
             $cid=$contact;
+            }
         }
     }catch(Throwable $e){ $er=$e->getMessage(); }
 }
@@ -101,11 +115,12 @@ if(!empty($_SESSION['sales_er'])){
 }
 
 // Düzenleme modu (2026-07-10, migration 043): ?edit_id=N ile mevcut bir satışı forma doldurup
-// düzenlemeye aç — web sales.php ile aynı mantık (bkz. ../sales.php).
+// düzenlemeye aç — web sales.php ile aynı mantık (bkz. ../sales.php). Stok yetersiz uyarısı
+// bekliyorsa GET'ten değil, kullanıcının az önce POSTladığı ham değerlerden yeniden doldurulur.
 $editId=(int)($_GET['edit_id'] ?? 0);
 $editMode=null;
 $justEdited = isset($_POST['edit_id']) && $ok!=='';
-if($editId && !$justEdited && can_edit_delete()){
+if($editId && !$justEdited && !$stockShortage && can_edit_delete()){
     $elig=stock_can_edit_sale($pdo,$editId);
     if($elig['editable']){
         $editMode=['id'=>$editId,'sale'=>$elig['sale'],'lines'=>$elig['lines']];
@@ -115,7 +130,28 @@ if($editId && !$justEdited && can_edit_delete()){
     }
 }
 
-topx($editMode ? 'Satışı Düzenle' : 'Satış Yap');
+// Görünüm durumu (2026-07-11): web sales.php ile aynı mantık — normal düzenleme modu VEYA
+// stok-yetersiz onay bekleyen bir deneme, ikisi de aynı şablonu farklı veri kaynağıyla kullanır.
+$isEditView = false;
+$viewEditId = null;
+$viewLines = [];
+if($stockShortage){
+    $isEditView = isset($_POST['edit_id']);
+    $viewEditId = $isEditView ? (int)$_POST['edit_id'] : null;
+    $cid = (int)($_POST['contact_id'] ?? 0);
+    foreach($_POST['stock_item_id'] ?? [] as $i=>$pid){
+        if(!$pid) continue;
+        $viewLines[] = ['id'=>(int)$pid, 'qty'=>(float)($_POST['quantity'][$i] ?? 0), 'price'=>(float)($_POST['unit_price'][$i] ?? 0), 'vat'=>(float)($_POST['vat_rate'][$i] ?? 0)];
+    }
+}elseif($editMode){
+    $isEditView = true;
+    $viewEditId = $editMode['id'];
+    foreach($editMode['lines'] as $l){
+        $viewLines[] = ['id'=>$l['stock_item_id'], 'qty'=>$l['quantity'], 'price'=>$l['unit_price'], 'vat'=>$l['vat_rate']];
+    }
+}
+
+topx($isEditView ? 'Satışı Düzenle' : 'Satış Yap');
 ?>
 <?php if($ok): ?><div class="notice"><?=htmlspecialchars($ok)?></div><?php endif; ?>
 <?php if($er): ?><div class="err"><?=htmlspecialchars($er)?></div><?php endif; ?>
@@ -127,11 +163,26 @@ $ps=$pdo->query("SELECT id,name,quantity,unit,sale_price,vat_rate FROM stock_ite
 
 <div class="panel">
 <div class="notice" style="background:rgba(37,99,235,.15)">Bu ekran tahsilat yapmaz — satış cariye açık borç (Bekliyor) olarak kaydedilir. Tahsilat "Tahsilat" ekranından ayrıca girilir.</div>
-<?php if($editMode): ?>
+<?php if($isEditView && !$stockShortage): ?>
 <div class="notice">Bu satışı düzenliyorsunuz. Kaydettiğinizde stok otomatik yeniden hesaplanır.</div>
 <?php endif; ?>
 <form method="post">
-  <?php if($editMode): ?><input type="hidden" name="edit_id" value="<?=(int)$editMode['id']?>"><?php endif; ?>
+  <?php if($viewEditId): ?><input type="hidden" name="edit_id" value="<?=(int)$viewEditId?>"><?php endif; ?>
+  <?php if($stockShortage): ?>
+  <div class="notice" style="background:rgba(234,179,8,.18);color:#fde68a">
+    <b>⚠️ Mevcut stok bu satış için yetersiz.</b><br>
+    İşlem tamamlanırsa aşağıdaki ürün(ler)de stok negatife düşecek:
+    <?php foreach($stockShortage as $s): ?>
+      <br>• <b><?=htmlspecialchars($s['name'])?></b> — mevcut <?=htmlspecialchars(stock_qty_fmt($s['available_stock']))?> <?=htmlspecialchars($s['unit'])?>,
+      satış <?=htmlspecialchars(stock_qty_fmt($s['requested_qty']))?> <?=htmlspecialchars($s['unit'])?>,
+      sonuç <?=htmlspecialchars(stock_qty_fmt($s['resulting_stock']))?> <?=htmlspecialchars($s['unit'])?>
+    <?php endforeach; ?>
+    <label style="display:block;background:rgba(234,179,8,.12);border-radius:10px;padding:10px;margin-top:8px">
+      <input type="checkbox" name="allow_negative_stock" value="1" style="width:auto;display:inline-block;margin-right:6px">
+      Stok yetersiz olsa da devam etmek istiyorum.
+    </label>
+  </div>
+  <?php endif; ?>
   <label>Cari (Müşteri)</label>
   <select name="contact_id" id="contactSel" required onchange="onContactChange()">
     <option value="">— Seç —</option>
@@ -162,8 +213,8 @@ $ps=$pdo->query("SELECT id,name,quantity,unit,sale_price,vat_rate FROM stock_ite
     </div>
   </div>
 
-  <button class="btn dark" style="width:100%;padding:15px" type="submit"><?=$editMode?'💾 Değişiklikleri Kaydet':'🧾 Satışı Tamamla (Açık Borç)'?></button>
-  <?php if($editMode): ?><a href="sales.php" class="btn" style="width:100%;padding:12px;margin-top:8px;text-align:center;display:block">✕ Vazgeç</a><?php endif; ?>
+  <button class="btn dark" style="width:100%;padding:15px" type="submit"><?php if($stockShortage): ?>⚠️ Onaylıyorum, Devam Et<?php elseif($isEditView): ?>💾 Değişiklikleri Kaydet<?php else: ?>🧾 Satışı Tamamla (Açık Borç)<?php endif; ?></button>
+  <?php if($isEditView && !$stockShortage): ?><a href="sales.php" class="btn" style="width:100%;padding:12px;margin-top:8px;text-align:center;display:block">✕ Vazgeç</a><?php endif; ?>
 </form>
 </div>
 
@@ -209,10 +260,9 @@ $ps=$pdo->query("SELECT id,name,quantity,unit,sale_price,vat_rate FROM stock_ite
 var PRODUCTS = <?= json_encode(array_map(function($p){
     return ['id'=>(int)$p['id'],'name'=>$p['name'],'unit'=>$p['unit'],'quantity'=>$p['quantity'],'price'=>$p['sale_price'],'vat'=>$p['vat_rate']!==null?$p['vat_rate']:20];
 }, $ps), JSON_UNESCAPED_UNICODE) ?>;
-// Düzenleme modunda mevcut satış satırlarını forma dolduran veri (2026-07-10, migration 043 — web ile aynı).
-var PREFILL_LINES = <?= json_encode($editMode ? array_map(function($l){
-    return ['id'=>$l['stock_item_id'],'qty'=>$l['quantity'],'price'=>$l['unit_price'],'vat'=>$l['vat_rate']];
-}, $editMode['lines']) : [], JSON_UNESCAPED_UNICODE) ?>;
+// Düzenleme modunda VEYA stok-yetersiz onay bekleyen bir denemede formu dolduran veri
+// (2026-07-10 migration 043 / 2026-07-11 kontrollü negatif stok politikası — web ile aynı).
+var PREFILL_LINES = <?= json_encode($viewLines, JSON_UNESCAPED_UNICODE) ?>;
 var rowIndex = 0;
 
 function esc(s){ return String(s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
