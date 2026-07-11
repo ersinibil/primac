@@ -338,7 +338,7 @@ $balance=contact_balance($pdo, $id);
 </section>
 
 <section class="panel">
-<div class="panel-head"><h2>Bu Cariye Ait İşler</h2><a class="btn small secondary" href="report.php?modul=cari_detay&ref=<?=$id?>">📊 Ekstre / PDF</a></div>
+<div class="panel-head"><h2>Bu Cariye Ait İşler / İş Emirleri</h2><a class="btn small secondary" href="report.php?modul=cari_detay&ref=<?=$id?>">📊 Ekstre / PDF</a></div>
 <table>
 <thead><tr><th>İş No</th><th>Başlık</th><th>Tarih</th><th>Durum</th><th style="text-align:right">Tutar</th></tr></thead>
 <tbody>
@@ -360,6 +360,35 @@ try{
     if(!$jrows) echo "<tr><td colspan='5' class='muted'>Bu cariye ait iş yok.</td></tr>";
 }catch(Throwable $e){
     echo "<tr><td colspan='5'><div class='alert'>".h($e->getMessage())."</div></td></tr>";
+}
+?>
+</tbody>
+</table>
+</section>
+
+<section class="panel">
+<div class="panel-head"><h2>Alış / Satış Belgeleri</h2></div>
+<table>
+<thead><tr><th>Belge No</th><th>Tür</th><th>Tarih</th><th style="text-align:right">Genel Toplam</th><th>Durum</th><th>Aç</th></tr></thead>
+<tbody>
+<?php
+try{
+    $trows=$pdo->prepare("SELECT * FROM trade_documents WHERE contact_id=? ORDER BY id DESC LIMIT 20");
+    $trows->execute([$id]);
+    $trows=$trows->fetchAll();
+    foreach($trows as $t){
+        echo "<tr>";
+        echo "<td><b>".h($t['document_no'])."</b></td>";
+        echo "<td>".h($t['document_type']==='purchase'?'Alış':'Satış')."</td>";
+        echo "<td class='nowrap'>".h($t['document_date'])."</td>";
+        echo "<td style='text-align:right;font-weight:800'>".money($t['grand_total'])."</td>";
+        echo "<td>".badge($t['status'],status_tone($t['status']))."</td>";
+        echo "<td><a class='btn secondary small' href='trade_document_view.php?id=".(int)$t['id']."'>Aç</a></td>";
+        echo "</tr>";
+    }
+    if(!$trows) echo "<tr><td colspan='6' class='muted'>Bu cariye ait belge yok.</td></tr>";
+}catch(Throwable $e){
+    echo "<tr><td colspan='6'><div class='alert'>".h($e->getMessage())."</div></td></tr>";
 }
 ?>
 </tbody>

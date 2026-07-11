@@ -125,24 +125,33 @@ $ps=$pdo->query("SELECT id,name,unit,purchase_price,vat_rate FROM stock_items WH
   <?php
   try{
       $recentP = $pdo->query(
-          "SELECT fm.id, fm.movement_date, fm.amount, fm.vat_amount, fm.description, fm.status, c.name AS cname
+          "SELECT fm.id, fm.movement_date, fm.amount, fm.vat_amount, fm.description, fm.status, fm.document_id, c.name AS cname, td.document_no
            FROM finance_movements fm
            LEFT JOIN contacts c ON c.id=fm.contact_id
+           LEFT JOIN trade_documents td ON td.id=fm.document_id
            WHERE fm.movement_type='purchase'
            ORDER BY fm.id DESC LIMIT 10"
       )->fetchAll();
   }catch(Throwable $e){ $recentP=[]; }
   if(!$recentP) echo '<p class="muted" style="margin:10px 0 0">Henüz kayıt yok.</p>';
   foreach($recentP as $row):
-      $rowEditable = can_edit_delete() && stock_can_edit_purchase($pdo,(int)$row['id'])['editable'];
+      $isDoc = !empty($row['document_id']);
+      $rowEditable = !$isDoc && can_edit_delete() && stock_can_edit_purchase($pdo,(int)$row['id'])['editable'];
   ?>
   <div class="item" style="display:flex;justify-content:space-between;align-items:center;gap:8px">
     <div style="flex:1;min-width:0">
       <b style="color:#f87171"><?=mm($row['amount'])?></b> <?=badge($row['status'],status_tone($row['status']))?><br>
       <small class="muted"><?=htmlspecialchars($row['movement_date'] ?? '')?> · <?=htmlspecialchars($row['cname'] ?: '—')?></small><br>
-      <small class="muted"><?=htmlspecialchars($row['description'] ?? '')?></small>
+      <small class="muted">
+        <?php if($isDoc): ?><b><?=htmlspecialchars($row['document_no'] ?: 'Belge')?></b> · <?php endif; ?>
+        <?=htmlspecialchars($row['description'] ?? '')?>
+      </small>
     </div>
-    <?php if(can_edit_delete()): ?>
+    <?php if($isDoc): ?>
+    <div style="display:flex;gap:6px">
+      <a class="btn" style="background:rgba(37,99,235,.18);padding:8px 10px" href="trade_document_view.php?id=<?=(int)$row['document_id']?>">🧾</a>
+    </div>
+    <?php elseif(can_edit_delete()): ?>
     <div style="display:flex;gap:6px">
       <?php if($rowEditable): ?>
       <a class="btn" style="background:rgba(37,99,235,.18);padding:8px 10px" href="purchase.php?edit_id=<?=(int)$row['id']?>">✏️</a>

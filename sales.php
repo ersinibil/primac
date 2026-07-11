@@ -55,55 +55,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if (!$contact) throw new Exception('Cari seçin.');
 
+            // Oluşturma mantığı stock_lib.php::stock_create_sale()'e taşındı (Flow Unification 001,
+            // 2026-07-11 — trade_document_new.php'nin de aynı çekirdeği kullanabilmesi için); davranış/
+            // görünüm birebir korunuyor, sadece DB yazımı ortak fonksiyonda.
             try {
-                $built = stock_sale_build_lines($pdo, $ids, $qtys, $prices, $vatRates, [], $confirmNegativeStock);
+                $res = stock_create_sale($pdo, $contact, $ids, $qtys, $prices, $vatRates, 'Web satış', $confirmNegativeStock);
             } catch (StockShortageException $e) {
                 $stockShortage = $e->shortages;
-                $built = null;
+                $res = null;
             }
 
-            if ($built) {
-            $lines = $built['lines'];
-            $grandTotal = $built['grand_total']; $grandVat = $built['grand_vat'];
-            $profitTotal = $built['profit_total']; $descParts = $built['desc_parts']; $desc = $built['desc'];
+            if ($res) {
+            $lines = $res['lines'];
+            $grandTotal = $res['grand_total']; $grandVat = $res['grand_vat'];
+            $profitTotal = $res['profit_total']; $descParts = $res['desc_parts']; $desc = $res['desc'];
 
-            // Sepetteki BÜTÜN satırlar tek transaction içinde işlenir (2026-07-03 düzeltmesi:
-            // çoklu ürüne geçilince, bir satırın stok güncellemesi/hareketi başarısız olursa
-            // önceki satırların stoku düşmüş ama finans kaydı hiç oluşmamış kalabiliyordu —
-            // tek ürün döneminde imkânsız olan yeni bir yarım-işlem riskiydi).
-            $pdo->beginTransaction();
-            try {
-                // 1) Stok düş (her satır için)
-                foreach ($lines as $l) {
-                    $pdo->prepare("UPDATE stock_items SET quantity=quantity-? WHERE id=?")->execute([$l['qty'], $l['item']['id']]);
-                }
-
-                // 2) Finans hareketi ÖNCE oluşturulur (sepetin TOPLAMI ile) — id'si stok
-                // hareketlerine kesin referans olarak yazılacak. Kasa/banka/kart HİÇBİR ZAMAN
-                // etkilenmez (account_id=NULL), durum her zaman "Bekliyor".
-                $pdo->prepare(
-                    "INSERT INTO finance_movements(contact_id,direction,amount,vat_rate,vat_amount,payment_channel,account_id,status,movement_date,description,movement_type)
-                     VALUES(?,'in',?,?,?,NULL,NULL,'Bekliyor',?,?,'sale')"
-                )->execute([
-                    $contact, $grandTotal, count($lines) === 1 ? ($lines[0]['vat_rate'] ?: null) : null, $grandVat,
-                    date('Y-m-d'), $desc
-                ]);
-                $financeMovementId = (int)$pdo->lastInsertId();
-
-                // 3) Her satır için stok hareketi — hepsi aynı finance_movement_id ile kesin referanslı,
-                // birim fiyat/KDV satır bazında da kaydedilir (migration 043 — düzenleme için gerekli;
-                // kolonlar henüz yoksa stock_insert_sale_movement() eski şemaya güvenle düşer)
-                foreach ($lines as $l) {
-                    stock_insert_sale_movement($pdo, $l['item']['id'], $financeMovementId, $l['qty'], $l['price'], $l['vat_rate'], 'Satış', 'Web satış');
-                }
-
-                $pdo->commit();
-            } catch (Throwable $e) {
-                $pdo->rollBack();
-                throw $e;
-            }
-
-            // 4) Log
             try {
                 if (function_exists('activity_log')) {
                     activity_log('Satış', 'Web', $desc . ' ' . money($grandTotal) . ' (kâr ' . money($profitTotal) . ')', 'Açık borç', 'sale', $lines[0]['item']['id'], 'sales.php', '🧾');
@@ -286,9 +252,10 @@ require_once __DIR__.'/layout_top.php';
       <?php
       try {
           $recent = $pdo->query(
-              "SELECT fm.id, fm.movement_date, fm.amount, fm.vat_amount, fm.description, fm.status, c.name AS cname
+              "SELECT fm.id, fm.movement_date, fm.amount, fm.vat_amount, fm.description, fm.status, fm.document_id, c.name AS cname, td.document_no
                FROM finance_movements fm
                LEFT JOIN contacts c ON c.id=fm.contact_id
+               LEFT JOIN trade_documents td ON td.id=fm.document_id
                WHERE fm.movement_type='sale' OR fm.movement_type='mobile_sale'
                ORDER BY fm.id DESC LIMIT 10"
           )->fetchAll();
@@ -301,16 +268,23 @@ require_once __DIR__.'/layout_top.php';
         <thead><tr><th>Tarih</th><th>Cari</th><th>Açıklama</th><th style="text-align:right">Tutar</th><th style="text-align:right">KDV</th><th>Durum</th><?php if(can_edit_delete()): ?><th>İşlem</th><?php endif; ?></tr></thead>
         <tbody>
         <?php foreach ($recent as $row): ?>
-          <?php $rowEditable = can_edit_delete() && stock_can_edit_sale($pdo, (int)$row['id'])['editable']; ?>
+          <?php $isDoc = !empty($row['document_id']); ?>
+          <?php $rowEditable = !$isDoc && can_edit_delete() && stock_can_edit_sale($pdo, (int)$row['id'])['editable']; ?>
           <tr>
             <td class="nowrap"><?= h($row['movement_date']) ?></td>
             <td><?= h($row['cname'] ?? '—') ?></td>
-            <td class="muted" style="font-size:12px"><?= h($row['description'] ?? '') ?></td>
+            <td class="muted" style="font-size:12px">
+              <?php if ($isDoc): ?><span class="badge" style="background:#e0f2fe;color:#0369a1"><?= h($row['document_no'] ?: 'Belge') ?></span> <?php endif; ?>
+              <?= h($row['description'] ?? '') ?>
+            </td>
             <td style="text-align:right;font-weight:800;color:#166534"><?= money($row['amount']) ?></td>
             <td style="text-align:right;color:#667085;font-size:12px"><?= $row['vat_amount'] > 0 ? money($row['vat_amount']) : '—' ?></td>
             <td><?= badge($row['status'], status_tone($row['status'])) ?></td>
             <?php if(can_edit_delete()): ?>
             <td class="nowrap">
+              <?php if ($isDoc): ?>
+              <a class="btn secondary small" href="trade_document_view.php?id=<?= (int)$row['document_id'] ?>">🧾 Belgeyi Aç</a>
+              <?php else: ?>
               <?php if ($rowEditable): ?>
               <a class="btn secondary small" href="sales.php?edit_id=<?= (int)$row['id'] ?>">✏️ Düzenle</a>
               <?php endif; ?>
@@ -320,6 +294,7 @@ require_once __DIR__.'/layout_top.php';
                 <input type="hidden" name="id" value="<?= (int)$row['id'] ?>">
                 <button class="btn danger small" type="submit">🗑 Sil</button>
               </form>
+              <?php endif; ?>
             </td>
             <?php endif; ?>
           </tr>

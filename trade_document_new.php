@@ -5,14 +5,16 @@ require_once __DIR__.'/trade_core.php';
 
 $pdo=db();
 $error='';
+$stockShortage=null; // KONTROLLÜ NEGATİF STOK POLİTİKASI — bkz. stock_lib.php (Flow Unification 001, 2026-07-11)
 $type=$_GET['type'] ?? 'purchase';
 if(!in_array($type,['purchase','sale'])) $type='purchase';
 
 if($_SERVER['REQUEST_METHOD']==='POST'){
+    $confirmNegativeStock = !empty($_POST['allow_negative_stock']);
     try{
         $type=$_POST['document_type'];
+        if(!in_array($type,['purchase','sale'])) $type='purchase';
         $contactId=(int)$_POST['contact_id'] ?: null;
-        $accountId=trade_account_resolve($pdo, $_POST['account_id'] ?? '', !user_can('finance'));
         $docDate=$_POST['document_date'] ?: date('Y-m-d');
         $docNo=trim($_POST['document_no']) ?: trade_next_no($type);
 
@@ -69,34 +71,72 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 
         if(!$prepared) throw new Exception('En az bir ürün/hizmet satırı girilmelidir.');
 
-        $paid=(float)($_POST['paid_amount'] ?? 0);
-
-        $pdo->prepare("INSERT INTO trade_documents(document_no,document_type,contact_id,account_id,document_date,status,subtotal,vat_total,grand_total,paid_amount,description,created_by)
-            VALUES(?,?,?,?,?,'Kesinleşti',?,?,?,?,?,?)")
-            ->execute([$docNo,$type,$contactId,$accountId,$docDate,$subtotal,$vatTotal,$grandTotal,$paid,trim($_POST['description']),$_SESSION['user']['id'] ?? null]);
-        $docId=$pdo->lastInsertId();
-
-        $ins=$pdo->prepare("INSERT INTO trade_document_items(document_id,stock_item_id,item_name,unit,quantity,unit_price,vat_rate,line_total,line_vat,line_grand,auto_created_product)
-            VALUES(?,?,?,?,?,?,?,?,?,?,?)");
-
-        foreach($prepared as $it){
-            $ins->execute([$docId,$it['stock_item_id'],$it['item_name'],$it['unit'],$it['quantity'],$it['unit_price'],$it['vat_rate'],$it['line_total'],$it['line_vat'],$it['line_grand'],$it['auto_created_product']]);
+        // KONTROLLÜ NEGATİF STOK POLİTİKASI — hiçbir tabloya yazmadan ÖNCE ön kontrol (Flow
+        // Unification 001, 2026-07-11): satış belgesinde stok yetersizse ve kullanıcı onay
+        // vermediyse, StockShortageException burada (transaction açılmadan, hiçbir INSERT
+        // olmadan) fırlar — sales.php ile aynı davranış.
+        if($type==='sale'){
+            $ids=[]; $qtysChk=[]; $pricesChk=[]; $vatsChk=[];
+            foreach($prepared as $it){
+                $ids[]=$it['stock_item_id'];
+                $qtysChk[]=$it['quantity'];
+                $pricesChk[]=$it['unit_price'];
+                $vatsChk[]=$it['vat_rate'];
+            }
+            stock_sale_build_lines($pdo, $ids, $qtysChk, $pricesChk, $vatsChk, [], $confirmNegativeStock);
         }
 
-        trade_apply_document($docId);
+        // Belge + satırlar + stok/finans etkisi TEK transaction içinde — transaction sahibi
+        // burasıdır, trade_apply_document() kendi transaction'ını açmaz/kapatmaz
+        // (stock_create_purchase()/stock_create_sale() $pdo->inTransaction() kontrolüyle bunu
+        // bilir). Herhangi bir adım hata verirse TAMAMI rollback edilir.
+        $pdo->beginTransaction();
+        try{
+            $pdo->prepare("INSERT INTO trade_documents(document_no,document_type,contact_id,account_id,document_date,status,subtotal,vat_total,grand_total,paid_amount,description,created_by)
+                VALUES(?,?,?,NULL,?,'Kesinleşti',?,?,?,0,?,?)")
+                ->execute([$docNo,$type,$contactId,$docDate,$subtotal,$vatTotal,$grandTotal,trim($_POST['description']),$_SESSION['user']['id'] ?? null]);
+            $docId=$pdo->lastInsertId();
+
+            $ins=$pdo->prepare("INSERT INTO trade_document_items(document_id,stock_item_id,item_name,unit,quantity,unit_price,vat_rate,line_total,line_vat,line_grand,auto_created_product)
+                VALUES(?,?,?,?,?,?,?,?,?,?,?)");
+
+            foreach($prepared as $it){
+                $ins->execute([$docId,$it['stock_item_id'],$it['item_name'],$it['unit'],$it['quantity'],$it['unit_price'],$it['vat_rate'],$it['line_total'],$it['line_vat'],$it['line_grand'],$it['auto_created_product']]);
+            }
+
+            trade_apply_document($docId, $confirmNegativeStock);
+
+            // inTransaction() korumalı commit (2026-07-11): activity_log() -> activity_install()
+            // "CREATE TABLE IF NOT EXISTS activity_logs" çalıştırıyor — bu bir DDL ifadesi ve MySQL/
+            // MariaDB DDL'de İMPLİCİT COMMIT yapar (tablo zaten var olsa bile). trade_apply_document()
+            // başarıyla bitip activity_log()'a ulaştığında transaction bu yüzden ERKEN ve SESSİZCE
+            // kapanmış olabilir — commit() o noktada zaten kapalı bir transaction'a çağrılırsa
+            // PDOException ("There is no active transaction") fırlatır ve BAŞARILI bir işlemi
+            // hatalıymış gibi gösterir. inTransaction() hâlâ açıksa normal commit yapılır; DDL
+            // yüzünden zaten kapanmışsa (veri zaten commit edilmiş durumda) tekrar commit denenmez.
+            if($pdo->inTransaction()) $pdo->commit();
+        }catch(Throwable $e){
+            if($pdo->inTransaction()) $pdo->rollBack();
+            throw $e;
+        }
 
         header("Location: trade_document_view.php?id=".$docId);
         exit;
+    }catch(StockShortageException $e){
+        $stockShortage = $e->shortages;
     }catch(Throwable $e){
         $error=$e->getMessage();
     }
 }
 
+// Stok yetersiz uyarısı bekliyorsa formu kullanıcının az önce POSTladığı ham değerlerle yeniden
+// doldur (sales.php ile aynı desen) — aksi halde varsayılan boş form.
+$pf = $stockShortage ? $_POST : null;
+
 require_once __DIR__.'/layout_top.php';
 
 $contacts=$pdo->query("SELECT id,name,type FROM contacts ORDER BY name")->fetchAll();
 $products=$pdo->query("SELECT id,name,product_code,unit,purchase_price,sale_price FROM stock_items ORDER BY name")->fetchAll();
-$accounts=$pdo->query("SELECT id,name,account_type,current_balance FROM finance_accounts WHERE active=1 ORDER BY account_type,name")->fetchAll();
 ?>
 
 <div class="panel-head">
@@ -110,57 +150,52 @@ $accounts=$pdo->query("SELECT id,name,account_type,current_balance FROM finance_
 <?php if($error): ?><div class="alert"><?=h($error)?></div><?php endif; ?>
 
 <section class="panel">
+<div class="notice" style="margin-bottom:12px;background:#eef4ff;color:#1e3a8a">
+Bu ekran tahsilat/ödeme yapmaz — belge cariye açık borç/alacak (Bekliyor) olarak kaydedilir.
+Kapanış <a href="finance_new.php">Tahsilat/Ödeme ekranından</a> ayrıca girilir.
+</div>
 <form method="post" class="form-grid" id="tradeForm">
 
 <input type="hidden" name="document_type" value="<?=$type?>">
 
+<?php if($stockShortage): ?>
+<div class="alert full" style="background:#fffbeb;border:1px solid #fde68a;color:#92400e;margin-bottom:12px">
+  <b>⚠️ Mevcut stok bu satış belgesi için yetersiz.</b><br>
+  İşlem tamamlanırsa aşağıdaki ürün(ler)de stok negatife düşecek — KONTROLLÜ NEGATİF STOK
+  POLİTİKASI gereği, devam etmek için onayınız gerekiyor:
+  <ul style="margin:8px 0 8px 20px;padding:0">
+    <?php foreach($stockShortage as $s): ?>
+    <li><b><?=h($s['name'])?></b> — mevcut <?=h(stock_qty_fmt($s['available_stock']))?> <?=h($s['unit'])?>,
+        satış <?=h(stock_qty_fmt($s['requested_qty']))?> <?=h($s['unit'])?>,
+        işlem sonrası <b style="color:#b91c1c"><?=h(stock_qty_fmt($s['resulting_stock']))?> <?=h($s['unit'])?></b></li>
+    <?php endforeach; ?>
+  </ul>
+  <label style="display:block;background:#fef3c7;border-radius:10px;padding:10px;margin-top:8px">
+    <input type="checkbox" name="allow_negative_stock" value="1" style="width:auto;display:inline-block;margin-right:6px">
+    Stok yetersiz olsa da bu belgeye devam etmek istiyorum (satın alım daha sonra tamamlanacak).
+  </label>
+</div>
+<?php endif; ?>
+
 <label>Belge No
-<input name="document_no" value="<?=h(trade_next_no($type))?>">
+<input name="document_no" value="<?=h($pf['document_no'] ?? trade_next_no($type))?>">
 </label>
 
 <label>Cari
 <select name="contact_id" required>
 <option value="">Cari seçiniz</option>
 <?php foreach($contacts as $c): ?>
-<option value="<?=$c['id']?>"><?=h($c['name'].' / '.$c['type'])?></option>
+<option value="<?=$c['id']?>" <?=(isset($pf) && (int)($pf['contact_id'] ?? 0)===(int)$c['id'])?'selected':''?>><?=h($c['name'].' / '.$c['type'])?></option>
 <?php endforeach; ?>
 </select>
 </label>
 
 <label>Tarih
-<input type="date" name="document_date" value="<?=date('Y-m-d')?>">
-</label>
-
-<?php if($type==='sale'): ?>
-<label>Ödeme Durumu
-<select name="payment_status" id="paymentStatus" onchange="onPaymentStatusChange()">
-<option value="veresiye">Veresiye (henüz ödenmedi)</option>
-<option value="pesin">Peşin / Tahsil Edildi</option>
-</select>
-</label>
-<?php endif; ?>
-
-<label>Ödeme / Tahsilat Hesabı
-<select name="account_id" id="accountSel">
-<option value="">Ödeme/Tahsilat yok</option>
-<?php if(user_can('finance')): ?>
-<?php foreach($accounts as $a): ?>
-<option value="<?=$a['id']?>"><?=h($a['account_type'].' - '.$a['name'].' / '.money($a['current_balance']))?></option>
-<?php endforeach; ?>
-<?php else: ?>
-<?php foreach(array_unique(array_column($accounts,'account_type')) as $t): ?>
-<option value="<?=h($t)?>"><?=h($t)?></option>
-<?php endforeach; ?>
-<?php endif; ?>
-</select>
-</label>
-
-<label>Ödenen / Tahsil Edilen Tutar
-<input type="number" step="0.01" name="paid_amount" id="paidAmount" value="0">
+<input type="date" name="document_date" value="<?=h($pf['document_date'] ?? date('Y-m-d'))?>">
 </label>
 
 <label class="full">Açıklama
-<textarea name="description" rows="2"></textarea>
+<textarea name="description" rows="2"><?=h($pf['description'] ?? '')?></textarea>
 </label>
 
 <div class="full">
@@ -177,15 +212,15 @@ $accounts=$pdo->query("SELECT id,name,account_type,current_balance FROM finance_
 <select name="stock_item_id[]">
 <option value="">Yeni / Hizmet</option>
 <?php foreach($products as $p): ?>
-<option value="<?=$p['id']?>"><?=h(($p['product_code']?$p['product_code'].' - ':'').$p['name'])?></option>
+<option value="<?=$p['id']?>" <?=(isset($pf) && (int)($pf['stock_item_id'][$i] ?? 0)===(int)$p['id'])?'selected':''?>><?=h(($p['product_code']?$p['product_code'].' - ':'').$p['name'])?></option>
 <?php endforeach; ?>
 </select>
 </td>
-<td><input name="item_name[]" placeholder="Örn: PLA Siyah 1 KG veya Montaj Hizmeti"></td>
-<td><input name="unit[]" value="adet"></td>
-<td><input type="number" step="0.001" name="quantity[]" value="1" class="row-qty" oninput="calcAll()"></td>
-<td><input type="number" step="0.01" name="unit_price[]" value="0" class="row-price" oninput="calcAll()"></td>
-<td><input type="number" step="0.01" name="vat_rate[]" value="20" class="row-vat" oninput="calcAll()"></td>
+<td><input name="item_name[]" placeholder="Örn: PLA Siyah 1 KG veya Montaj Hizmeti" value="<?=h($pf['item_name'][$i] ?? '')?>"></td>
+<td><input name="unit[]" value="<?=h($pf['unit'][$i] ?? 'adet')?>"></td>
+<td><input type="number" step="0.001" name="quantity[]" value="<?=h($pf['quantity'][$i] ?? '1')?>" class="row-qty" oninput="calcAll()"></td>
+<td><input type="number" step="0.01" name="unit_price[]" value="<?=h($pf['unit_price'][$i] ?? '0')?>" class="row-price" oninput="calcAll()"></td>
+<td><input type="number" step="0.01" name="vat_rate[]" value="<?=h($pf['vat_rate'][$i] ?? '20')?>" class="row-vat" oninput="calcAll()"></td>
 <td class="row-sub" style="text-align:right;font-weight:800">0,00 ₺</td>
 </tr>
 <?php endfor; ?>
@@ -203,7 +238,7 @@ $accounts=$pdo->query("SELECT id,name,account_type,current_balance FROM finance_
 </div>
 </div>
 
-<button class="btn"><?=$type==='purchase'?'Alış Belgesini Kaydet':'Satış Belgesini Kaydet'?></button>
+<button class="btn"><?php if($stockShortage): ?>⚠️ Onaylıyorum, Devam Et<?php else: ?><?=$type==='purchase'?'Alış Belgesini Kaydet':'Satış Belgesini Kaydet'?><?php endif; ?></button>
 
 </form>
 </section>
@@ -227,19 +262,6 @@ function calcAll(){
     document.getElementById('tradeSubtotal').textContent = subtotalAll.toLocaleString('tr-TR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ₺';
     document.getElementById('tradeVat').textContent = vatAll.toLocaleString('tr-TR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ₺';
     document.getElementById('tradeTotal').textContent = TRADE_GRAND_TOTAL.toLocaleString('tr-TR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ₺';
-    var st = document.getElementById('paymentStatus');
-    if(st && st.value === 'pesin'){
-        document.getElementById('paidAmount').value = TRADE_GRAND_TOTAL.toFixed(2);
-    }
-}
-
-// Veresiye seçilirse ödenen tutar 0'a çekilir; Peşin seçilirse genel toplam otomatik yazılır
-// (kullanıcı yine de elle değiştirip kısmi ödeme girebilir).
-function onPaymentStatusChange(){
-    var st = document.getElementById('paymentStatus');
-    var pa = document.getElementById('paidAmount');
-    if(!st || !pa) return;
-    pa.value = st.value === 'pesin' ? TRADE_GRAND_TOTAL.toFixed(2) : '0';
 }
 
 calcAll();

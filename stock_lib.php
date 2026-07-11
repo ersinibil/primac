@@ -110,40 +110,46 @@ function stock_apply_purchase_line($pdo, $itemId, $qty, $unitPrice, $vatRate, $f
  * Yeni alış kaydı oluşturur. Kural: ödeme yapmaz — finans hareketi ÖNCE oluşturulur (account_id
  * NULL, status 'Bekliyor'), id'si stok hareketlerine kesin referans olarak yazılır, sonra her
  * satır için stok kartı güncellenir (sales.php'nin "finans önce, stok sonra, aynı id" deseniyle
- * simetrik — bkz. sales.php POST handler).
- * @return array ['ok'=>bool, 'message'=>string, 'purchase_id'=>int|null]
+ * simetrik — bkz. sales.php POST handler). $documentId doluysa (trade_document_new.php üzerinden
+ * çağrıldıysa) finance_movements.document_id'ye yazılır, hızlı alışta (purchase.php) null kalır.
+ *
+ * Dış transaction desteği (Flow Unification 001, 2026-07-11): çağıran taraf (trade_document_new.php)
+ * kendi transaction'ını açmışsa ($pdo->inTransaction()===true) bu fonksiyon KENDİ transaction'ını
+ * AÇMAZ/commit/rollback ETMEZ — hata durumunda sadece yukarı fırlatır, rollback sorumluluğu dış
+ * transaction sahibindedir. Transaction'sız çağrılırsa (purchase.php/mobile/purchase.php) önceki
+ * gibi kendi transaction'ını açar/kapatır. Hata artık ok=false DÖNMEZ, fırlatır — mevcut çağıranlar
+ * zaten `if(!$res['ok']) throw new Exception($res['message'])` ile aynı sonuca ulaşıyordu.
+ * @throws Exception hata durumunda
+ * @return array ['ok'=>true, 'message'=>string, 'purchase_id'=>int]
  */
-function stock_create_purchase($pdo, $supplier, $ids, $qtys, $prices, $vatRates, $noteLabel="Alış"){
+function stock_create_purchase($pdo, $supplier, $ids, $qtys, $prices, $vatRates, $noteLabel="Alış", $documentId=null){
+    if(!$supplier) throw new Exception('Tedarikçi seçin.');
+    $built = stock_purchase_build_lines($pdo, $ids, $qtys, $prices, $vatRates);
+    $lines = $built['lines'];
+
+    $ownsTransaction = !$pdo->inTransaction();
+    if($ownsTransaction) $pdo->beginTransaction();
     try{
-        if(!$supplier) throw new Exception('Tedarikçi seçin.');
-        $built = stock_purchase_build_lines($pdo, $ids, $qtys, $prices, $vatRates);
-        $lines = $built['lines'];
+        $pdo->prepare(
+            "INSERT INTO finance_movements(contact_id,direction,amount,vat_rate,vat_amount,payment_channel,account_id,status,movement_date,description,movement_type,document_id)
+             VALUES(?,'out',?,?,?,NULL,NULL,'Bekliyor',?,?,'purchase',?)"
+        )->execute([
+            $supplier, $built['grand_total'], count($lines)===1 ? ($lines[0]['vat_rate'] ?: null) : null, $built['grand_vat'],
+            date('Y-m-d'), $built['desc'], $documentId
+        ]);
+        $financeMovementId = (int)$pdo->lastInsertId();
 
-        $pdo->beginTransaction();
-        try{
-            $pdo->prepare(
-                "INSERT INTO finance_movements(contact_id,direction,amount,vat_rate,vat_amount,payment_channel,account_id,status,movement_date,description,movement_type)
-                 VALUES(?,'out',?,?,?,NULL,NULL,'Bekliyor',?,?,'purchase')"
-            )->execute([
-                $supplier, $built['grand_total'], count($lines)===1 ? ($lines[0]['vat_rate'] ?: null) : null, $built['grand_vat'],
-                date('Y-m-d'), $built['desc']
-            ]);
-            $financeMovementId = (int)$pdo->lastInsertId();
-
-            foreach($lines as $l){
-                stock_apply_purchase_line($pdo, $l['item']['id'], $l['qty'], $l['price'], $l['vat_rate'], $financeMovementId, $noteLabel);
-            }
-
-            $pdo->commit();
-        }catch(Throwable $e){
-            $pdo->rollBack();
-            throw $e;
+        foreach($lines as $l){
+            stock_apply_purchase_line($pdo, $l['item']['id'], $l['qty'], $l['price'], $l['vat_rate'], $financeMovementId, $noteLabel);
         }
 
-        return ['ok'=>true, 'message'=>implode(', ', $built['desc_parts']).' alındı: '.money($built['grand_total']).' — tedarikçiye açık borç (Bekliyor)', 'purchase_id'=>$financeMovementId];
+        if($ownsTransaction) $pdo->commit();
     }catch(Throwable $e){
-        return ['ok'=>false, 'message'=>$e->getMessage(), 'purchase_id'=>null];
+        if($ownsTransaction) $pdo->rollBack();
+        throw $e;
     }
+
+    return ['ok'=>true, 'message'=>implode(', ', $built['desc_parts']).' alındı: '.money($built['grand_total']).' — tedarikçiye açık borç (Bekliyor)', 'purchase_id'=>$financeMovementId];
 }
 
 /**
@@ -167,6 +173,7 @@ function stock_reverse_sale($pdo, $saleId){
         $s->execute([$saleId]);
         $sale = $s->fetch();
         if(!$sale) return ['ok'=>false, 'message'=>'Satış kaydı bulunamadı.'];
+        if(!empty($sale['document_id'])) return ['ok'=>false, 'message'=>'Bu satış bir Alış/Satış Belgesine bağlı — buradan silinemez, belge görüntüleme ekranından kontrol edin.'];
 
         // İlişkili TÜM stok hareketlerini KESİN referansla (finance_movement_id) bul — sepette
         // birden fazla ürün satırı varsa hepsi aynı finance_movement_id'yi taşır.
@@ -365,6 +372,59 @@ function stock_sale_build_lines($pdo, $ids, $qtys, $prices, $vatRates, $reserveM
 }
 
 /**
+ * Yeni satış kaydı oluşturur (sales.php'nin inline oluşturma bloğundan davranış değiştirmeden
+ * ortaklaştırıldı — Flow Unification 001, 2026-07-11). Kural: ödeme yapmaz — finans hareketi her
+ * zaman account_id=NULL, status='Bekliyor'. $documentId doluysa (trade_document_new.php üzerinden
+ * çağrıldıysa) finance_movements.document_id'ye yazılır, doğrudan web satışında null kalır.
+ *
+ * Dış transaction desteği: stock_create_purchase() ile birebir aynı $pdo->inTransaction() deseni.
+ * StockShortageException stock_sale_build_lines() tarafından (transaction açılmadan ÖNCE)
+ * fırlatılır, burada yakalanmaz — hiçbir yerde yutulmadan çağırana kadar yükselir.
+ * @throws StockShortageException onaysız yetersiz stok durumunda
+ * @throws Exception diğer hata durumlarında
+ * @return array ['ok'=>true,'message'=>string,'sale_id'=>int,'grand_total'=>float,
+ *   'grand_vat'=>float,'profit_total'=>float,'desc'=>string,'desc_parts'=>array,'lines'=>array]
+ *   — sales.php mevcut zengin başarı HTML mesajını bu ham verilerden birebir yeniden kurar.
+ */
+function stock_create_sale($pdo, $contact, $ids, $qtys, $prices, $vatRates, $noteLabel="Satış", $confirmed=false, $documentId=null){
+    if(!$contact) throw new Exception('Cari seçin.');
+    $built = stock_sale_build_lines($pdo, $ids, $qtys, $prices, $vatRates, [], $confirmed);
+    $lines = $built['lines'];
+
+    $ownsTransaction = !$pdo->inTransaction();
+    if($ownsTransaction) $pdo->beginTransaction();
+    try{
+        foreach($lines as $l){
+            $pdo->prepare("UPDATE stock_items SET quantity=quantity-? WHERE id=?")->execute([$l['qty'], $l['item']['id']]);
+        }
+
+        $pdo->prepare(
+            "INSERT INTO finance_movements(contact_id,direction,amount,vat_rate,vat_amount,payment_channel,account_id,status,movement_date,description,movement_type,document_id)
+             VALUES(?,'in',?,?,?,NULL,NULL,'Bekliyor',?,?,'sale',?)"
+        )->execute([
+            $contact, $built['grand_total'], count($lines)===1 ? ($lines[0]['vat_rate'] ?: null) : null, $built['grand_vat'],
+            date('Y-m-d'), $built['desc'], $documentId
+        ]);
+        $financeMovementId = (int)$pdo->lastInsertId();
+
+        foreach($lines as $l){
+            stock_insert_sale_movement($pdo, $l['item']['id'], $financeMovementId, $l['qty'], $l['price'], $l['vat_rate'], 'Satış', $noteLabel);
+        }
+
+        if($ownsTransaction) $pdo->commit();
+    }catch(Throwable $e){
+        if($ownsTransaction) $pdo->rollBack();
+        throw $e;
+    }
+
+    return [
+        'ok'=>true, 'message'=>implode(', ', $built['desc_parts']).' satıldı: '.money($built['grand_total']).' — cariye açık borç (Bekliyor)',
+        'sale_id'=>$financeMovementId, 'grand_total'=>$built['grand_total'], 'grand_vat'=>$built['grand_vat'],
+        'profit_total'=>$built['profit_total'], 'desc'=>$built['desc'], 'desc_parts'=>$built['desc_parts'], 'lines'=>$lines,
+    ];
+}
+
+/**
  * Bir satışın "Düzenle" ekranında GÜVENLE açılıp açılamayacağını belirler (migration 043,
  * stock_movements.unit_price/vat_rate). Satır bazlı fiyatı olmayan (migration öncesi) satışlarda
  * tahmin/eşit bölme YAPILMAZ — sadece tek satırlı eski satışlarda toplamdan güvenle türetilir.
@@ -377,6 +437,7 @@ function stock_can_edit_sale($pdo, $saleId){
     $s->execute([$saleId]);
     $sale = $s->fetch();
     if(!$sale) return ['editable'=>false, 'reason'=>'Satış kaydı bulunamadı.', 'sale'=>null, 'lines'=>[]];
+    if(!empty($sale['document_id'])) return ['editable'=>false, 'reason'=>'Bu satış bir Alış/Satış Belgesine bağlı — buradan düzenlenemez, belge görüntüleme ekranından kontrol edin.', 'sale'=>$sale, 'lines'=>[]];
 
     $stk = $pdo->prepare("SELECT sm.*, si.name AS item_name, si.unit AS item_unit FROM stock_movements sm LEFT JOIN stock_items si ON si.id=sm.stock_item_id WHERE sm.finance_movement_id=? ORDER BY sm.id");
     $stk->execute([$saleId]);
@@ -448,6 +509,11 @@ function stock_update_sale($pdo, $saleId, $contact, $ids, $qtys, $prices, $vatRa
         $old->execute([$saleId]);
         $oldSale = $old->fetch();
         if(!$oldSale) return ['ok'=>false, 'message'=>'Satış kaydı bulunamadı.'];
+        // Savunma derinliği (Selin/security-audit, 2026-07-11): stock_can_edit_sale() zaten aynı kilidi
+        // uyguluyor ve tüm mevcut çağıranlar önce onu kontrol ediyor — ama bu fonksiyon ileride
+        // eligibility kontrolsüz doğrudan çağrılırsa belge-bağlı bir satış sessizce değiştirilmesin diye
+        // kilit burada da tekrarlanıyor (stock_purchase_avg_cost_safe ile aynı "tek kapı" felsefesi).
+        if(!empty($oldSale['document_id'])) return ['ok'=>false, 'message'=>'Bu satış bir Alış/Satış Belgesine bağlı — buradan düzenlenemez, belge görüntüleme ekranından kontrol edin.'];
 
         $oldStk = $pdo->prepare("SELECT * FROM stock_movements WHERE finance_movement_id=?");
         $oldStk->execute([$saleId]);
@@ -580,6 +646,7 @@ function stock_reverse_purchase($pdo, $purchaseId){
         $s->execute([$purchaseId]);
         $purchase = $s->fetch();
         if(!$purchase) return ['ok'=>false, 'message'=>'Alış kaydı bulunamadı.'];
+        if(!empty($purchase['document_id'])) return ['ok'=>false, 'message'=>'Bu alış bir Alış/Satış Belgesine bağlı — buradan silinemez, belge görüntüleme ekranından kontrol edin.'];
 
         if(!stock_purchase_avg_cost_safe($pdo, $purchaseId)){
             return ['ok'=>false, 'message'=>'Bu alıştaki bir veya daha fazla ürün için, bu alıştan SONRA başka bir stok hareketi (alış/satış) oluşmuş. Ortalama maliyet güvenle geri alınamayacağı için bu kayıt silinemez.'];
@@ -616,6 +683,7 @@ function stock_can_edit_purchase($pdo, $purchaseId){
     $s->execute([$purchaseId]);
     $purchase = $s->fetch();
     if(!$purchase) return ['editable'=>false, 'reason'=>'Alış kaydı bulunamadı.', 'purchase'=>null, 'lines'=>[]];
+    if(!empty($purchase['document_id'])) return ['editable'=>false, 'reason'=>'Bu alış bir Alış/Satış Belgesine bağlı — buradan düzenlenemez, belge görüntüleme ekranından kontrol edin.', 'purchase'=>$purchase, 'lines'=>[]];
 
     $stk = $pdo->prepare("SELECT sm.*, si.name AS item_name, si.unit AS item_unit FROM stock_movements sm LEFT JOIN stock_items si ON si.id=sm.stock_item_id WHERE sm.finance_movement_id=? AND sm.direction='in' ORDER BY sm.id");
     $stk->execute([$purchaseId]);
@@ -676,6 +744,8 @@ function stock_update_purchase($pdo, $purchaseId, $supplier, $ids, $qtys, $price
         $old->execute([$purchaseId]);
         $oldPurchase = $old->fetch();
         if(!$oldPurchase) return ['ok'=>false, 'message'=>'Alış kaydı bulunamadı.'];
+        // Savunma derinliği (Selin/security-audit, 2026-07-11): bkz. stock_update_sale() aynı not.
+        if(!empty($oldPurchase['document_id'])) return ['ok'=>false, 'message'=>'Bu alış bir Alış/Satış Belgesine bağlı — buradan düzenlenemez, belge görüntüleme ekranından kontrol edin.'];
 
         $built = stock_purchase_build_lines($pdo, $ids, $qtys, $prices, $vatRates);
         $lines = $built['lines'];

@@ -186,9 +186,10 @@ require_once __DIR__.'/layout_top.php';
 <?php
 try{
     $recent=$pdo->query(
-        "SELECT fm.id, fm.movement_date, fm.amount, fm.vat_amount, fm.description, fm.status, c.name AS cname
+        "SELECT fm.id, fm.movement_date, fm.amount, fm.vat_amount, fm.description, fm.status, fm.document_id, c.name AS cname, td.document_no
          FROM finance_movements fm
          LEFT JOIN contacts c ON c.id=fm.contact_id
+         LEFT JOIN trade_documents td ON td.id=fm.document_id
          WHERE fm.movement_type='purchase'
          ORDER BY fm.id DESC LIMIT 10"
     )->fetchAll();
@@ -199,16 +200,23 @@ if($recent): ?>
   <thead><tr><th>Tarih</th><th>Tedarikçi</th><th>Açıklama</th><th style="text-align:right">Tutar</th><th style="text-align:right">KDV</th><th>Durum</th><?php if(can_edit_delete()): ?><th>İşlem</th><?php endif; ?></tr></thead>
   <tbody>
   <?php foreach($recent as $row): ?>
-    <?php $rowEditable = can_edit_delete() && stock_can_edit_purchase($pdo, (int)$row['id'])['editable']; ?>
+    <?php $isDoc = !empty($row['document_id']); ?>
+    <?php $rowEditable = !$isDoc && can_edit_delete() && stock_can_edit_purchase($pdo, (int)$row['id'])['editable']; ?>
     <tr>
       <td class="nowrap"><?=h($row['movement_date'])?></td>
       <td><?=h($row['cname'] ?? '—')?></td>
-      <td class="muted" style="font-size:12px"><?=h($row['description'] ?? '')?></td>
+      <td class="muted" style="font-size:12px">
+        <?php if($isDoc): ?><span class="badge" style="background:#e0f2fe;color:#0369a1"><?=h($row['document_no'] ?: 'Belge')?></span> <?php endif; ?>
+        <?=h($row['description'] ?? '')?>
+      </td>
       <td style="text-align:right;font-weight:800;color:#991b1b"><?=money($row['amount'])?></td>
       <td style="text-align:right;color:#667085;font-size:12px"><?=$row['vat_amount']>0?money($row['vat_amount']):'—'?></td>
       <td><?=badge($row['status'], status_tone($row['status']))?></td>
       <?php if(can_edit_delete()): ?>
       <td class="nowrap">
+        <?php if($isDoc): ?>
+        <a class="btn secondary small" href="trade_document_view.php?id=<?=(int)$row['document_id']?>">🧾 Belgeyi Aç</a>
+        <?php else: ?>
         <?php if($rowEditable): ?>
         <a class="btn secondary small" href="purchase.php?edit_id=<?=(int)$row['id']?>">✏️ Düzenle</a>
         <?php endif; ?>
@@ -217,6 +225,7 @@ if($recent): ?>
           <input type="hidden" name="id" value="<?=(int)$row['id']?>">
           <button class="btn danger small" type="submit">🗑 Sil</button>
         </form>
+        <?php endif; ?>
       </td>
       <?php endif; ?>
     </tr>

@@ -65,10 +65,25 @@ function trade_ensure_product($name,$unit,$unitPrice,$type){
     return [(int)$pdo->lastInsertId(), true];
 }
 
-function trade_apply_document($documentId){
+/**
+ * Belge onaylandıktan sonra stok+finans etkisini uygular. Flow Unification 001 (2026-07-11):
+ * artık kendi inline stok/avg_cost/finance_movements mantığını YAZMAZ — stock_lib.php'nin ortak
+ * çekirdeğine (stock_create_purchase()/stock_create_sale()) devreder. Sonuç: movement_type artık
+ * 'purchase'/'sale' olur (eski 'document' tipi YENİ kayıtlarda bir daha oluşmaz), document_id ile
+ * belgeye bağlanır, account_id her zaman NULL, status her zaman 'Bekliyor' — belge oluşturma
+ * kasa/banka/current_balance'ı hiçbir zaman etkilemez (Finance Core Stabilization ile aynı kural).
+ *
+ * Bu fonksiyon TRANSACTION YÖNETMEZ — transaction sahibi çağırandır (trade_document_new.php).
+ * Burada atılan her exception (StockShortageException dahil) yutulmadan doğrudan yukarı taşınır;
+ * dış transaction'ı rollback etmek çağıranın sorumluluğudur.
+ * @param bool $confirmed satış belgesinde Kontrollü Negatif Stok Politikası onayı (alışta kullanılmaz)
+ * @throws StockShortageException satışta onaysız yetersiz stok durumunda
+ * @throws Exception diğer hata durumlarında (belge bulunamadı, geçersiz satır, vb.)
+ */
+function trade_apply_document($documentId, $confirmed=false){
     $pdo=db();
 
-    $ds=$pdo->prepare("SELECT d.*, c.name contact_name, a.name account_name FROM trade_documents d LEFT JOIN contacts c ON c.id=d.contact_id LEFT JOIN finance_accounts a ON a.id=d.account_id WHERE d.id=?");
+    $ds=$pdo->prepare("SELECT d.*, c.name contact_name FROM trade_documents d LEFT JOIN contacts c ON c.id=d.contact_id WHERE d.id=?");
     $ds->execute([$documentId]);
     $doc=$ds->fetch();
     if(!$doc) throw new Exception('Belge bulunamadı.');
@@ -77,82 +92,36 @@ function trade_apply_document($documentId){
     $items->execute([$documentId]);
     $rows=$items->fetchAll();
 
+    $ids=[]; $qtys=[]; $prices=[]; $vats=[];
     foreach($rows as $it){
         if(!$it['stock_item_id']) continue;
+        $ids[]=$it['stock_item_id'];
+        $qtys[]=$it['quantity'];
+        $prices[]=$it['unit_price'];
+        $vats[]=$it['vat_rate'];
+    }
 
-        $sid=(int)$it['stock_item_id'];
-        $qty=(float)$it['quantity'];
-        $unitPrice=(float)$it['unit_price'];
-
-        $ps=$pdo->prepare("SELECT * FROM stock_items WHERE id=?");
-        $ps->execute([$sid]);
-        $p=$ps->fetch();
-        if(!$p) continue;
-
+    if($ids){
+        $mod = $doc['document_type']==='purchase' ? 'Alış' : 'Satış';
+        $noteLabel = $mod.' belgesi: '.$doc['document_no'];
         if($doc['document_type']==='purchase'){
-            $oldQty=(float)$p['quantity'];
-            $oldAvg=(float)($p['avg_cost'] ?: $p['purchase_price']);
-            $newQty=$oldQty+$qty;
-            $newAvg=$newQty>0 ? (($oldQty*$oldAvg)+($qty*$unitPrice))/$newQty : $unitPrice;
-
-            $pdo->prepare("UPDATE stock_items SET quantity=?, avg_cost=?, purchase_price=?, last_purchase_price=? WHERE id=?")
-                ->execute([$newQty,$newAvg,$unitPrice,$unitPrice,$sid]);
-
-            try{
-                $note='Birim fiyat: '.trade_money($unitPrice).' · Tutar: '.trade_money($qty*$unitPrice).' · Cari: '.($doc['contact_name'] ?: '-');
-                stock_record_movement($pdo,$sid,'in',$qty,'Alış belgesi: '.$doc['document_no'],$note,null,null);
-            }catch(Throwable $e){}
-        }
-
-        if($doc['document_type']==='sale'){
-            $cost=(float)($p['avg_cost'] ?: $p['purchase_price']);
-
-            $pdo->prepare("UPDATE stock_items SET quantity=quantity-? WHERE id=?")
-                ->execute([$qty,$sid]);
-
-            try{
-                $note='Birim maliyet: '.trade_money($cost).' · Birim satış: '.trade_money($unitPrice).' · Cari: '.($doc['contact_name'] ?: '-');
-                stock_record_movement($pdo,$sid,'out',$qty,'Satış belgesi: '.$doc['document_no'],$note,null,null);
-            }catch(Throwable $e){}
+            stock_create_purchase($pdo, $doc['contact_id'], $ids, $qtys, $prices, $vats, $noteLabel, $documentId);
+        }else{
+            stock_create_sale($pdo, $doc['contact_id'], $ids, $qtys, $prices, $vats, $noteLabel, $confirmed, $documentId);
         }
     }
 
-    // Cari/finans hareketi — 2026-07-03 düzeltmesi (Deniz/schema-drift denetimi): önceden SADECE
-    // $paid>0 && account_id varsa finance_movements kaydı oluşuyordu, veresiye/kısmi ödemeli belgeler
-    // cari bakiye ekranlarına (contacts.php, contact_view.php, contacts_report.php — hepsi
-    // finance_movements'tan toplar) HİÇ yansımıyordu. Artık finance_movements kaydı belgenin TAM
-    // tutarıyla (grand_total) HER ZAMAN oluşturulur (purchase.php'deki stock_add_purchase_finance()
-    // ile aynı felsefe: veresiye de olsa tam tutar finans kaydına yazılır). Hesap bakiyesi
-    // (finance_accounts.current_balance) ise SADECE fiilen ödenen kısım ($paid) kadar güncellenir —
-    // aksi halde kasa/banka bakiyesi olmayan parayla şişer.
-    $direction=$doc['document_type']==='purchase'?'out':'in';
-    $channel=$doc['account_id']?'Hesap':'Cari Belge';
-
-    $paid=(float)$doc['paid_amount'];
-    $grandTotal=(float)$doc['grand_total'];
-
-    if($grandTotal>0){
-        $fullyPaid = ($grandTotal>0 && $paid>=$grandTotal);
-        $status = $fullyPaid ? ($direction==='in'?'Tahsil Edildi':'Ödendi') : 'Bekliyor';
-
-        $pdo->prepare("INSERT INTO finance_movements(contact_id,job_id,direction,amount,payment_channel,account_id,status,movement_date,description,movement_type,document_id)
-            VALUES(?,NULL,?,?,?,?,?,?,?,'document',?)")
-            ->execute([$doc['contact_id'],$direction,$grandTotal,$channel,$doc['account_id'],$status,$doc['document_date'],$doc['document_no'].' ödeme/tahsilat',$documentId]);
-
-        // Hesap bakiyesi SADECE fiilen ödenen/tahsil edilen kısım kadar güncellenir (grand_total değil)
-        if($paid>0 && $doc['account_id']){
-            if($direction==='in'){
-                $pdo->prepare("UPDATE finance_accounts SET current_balance=current_balance+? WHERE id=?")->execute([$paid,$doc['account_id']]);
-            }else{
-                $pdo->prepare("UPDATE finance_accounts SET current_balance=current_balance-? WHERE id=?")->execute([$paid,$doc['account_id']]);
-            }
+    // try/catch ile korunuyor (Flow Unification 001, 2026-07-11): bu fonksiyon artık çağıranın
+    // (trade_document_new.php) transaction'ı içinde çalışıyor — activity_log() burada patlarsa
+    // korumasız bırakılırsa aksi halde TAMAMEN başarılı olan belge+stok+finans işlemi sırf bir
+    // loglama hatası yüzünden rollback edilirdi. Diğer tüm activity_log çağrı yerleriyle (sales.php/
+    // purchase.php) aynı savunmacı desen.
+    try{
+        if(function_exists('activity_log')){
+            $mod=$doc['document_type']==='purchase'?'Alış':'Satış';
+            $icon=$doc['document_type']==='purchase'?'🛒':'🧾';
+            activity_log('Cari',$mod,$mod.' belgesi oluşturuldu',($doc['contact_name'] ?: 'Cari yok').' · '.$doc['document_no'].' · '.trade_money($doc['grand_total']),'trade_document',$documentId,base_url().'trade_document_view.php?id='.$documentId,$icon);
         }
-    }
-
-    if(function_exists('activity_log')){
-        $mod=$doc['document_type']==='purchase'?'Alış':'Satış';
-        $icon=$doc['document_type']==='purchase'?'🛒':'🧾';
-        activity_log('Cari',$mod,$mod.' belgesi oluşturuldu',($doc['contact_name'] ?: 'Cari yok').' · '.$doc['document_no'].' · '.trade_money($doc['grand_total']),'trade_document',$documentId,base_url().'trade_document_view.php?id='.$documentId,$icon);
-    }
+    }catch(Throwable $e){}
 }
 ?>
