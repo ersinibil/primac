@@ -174,26 +174,28 @@ function stock_reverse_sale($pdo, $saleId){
         $stk->execute([$saleId]);
         $movements = $stk->fetchAll();
 
-        foreach($movements as $movement){
-            $itemId = $movement['stock_item_id'];
-            $qty = $movement['quantity'];
-
-            // Stoku geri koy
-            try{
-                $pdo->prepare("UPDATE stock_items SET quantity=quantity+? WHERE id=?")->execute([$qty, $itemId]);
-            }catch(Throwable $e){}
-
-            // Stok hareketini sil
-            try{
+        // TEK transaction (2026-07-11 düzeltmesi — Kerem/audit): önceden her satırın stok geri
+        // ekleme adımı KENDİ try/catch'i içinde sessizce yutuluyordu ve stock_movements satırı
+        // bu geri ekleme başarısız olsa BİLE siliniyordu — teorik olarak sessiz stok kaybına yol
+        // açabilirdi. Artık hata olursa TÜM işlem (stok + finans) rollback edilir.
+        $pdo->beginTransaction();
+        try{
+            foreach($movements as $movement){
+                $pdo->prepare("UPDATE stock_items SET quantity=quantity+? WHERE id=?")->execute([$movement['quantity'], $movement['stock_item_id']]);
                 $pdo->prepare("DELETE FROM stock_movements WHERE id=?")->execute([$movement['id']]);
-            }catch(Throwable $e){}
-        }
+            }
 
-        // Finans hareketini geri al — finance_movement_delete() 'sale'/'mobile_sale' tipini kasıtlı
-        // olarak reddediyor (normal finans düzenleme ekranından dokunulmasın diye), bu yüzden burada
-        // bakiye geri alma + silme DOĞRUDAN yapılıyor (finance_movement_reverse_balance() ortak fonksiyonu).
-        finance_movement_reverse_balance($pdo, $sale);
-        $pdo->prepare("DELETE FROM finance_movements WHERE id=?")->execute([$saleId]);
+            // Finans hareketini geri al — finance_movement_delete() 'sale'/'mobile_sale' tipini kasıtlı
+            // olarak reddediyor (normal finans düzenleme ekranından dokunulmasın diye), bu yüzden burada
+            // bakiye geri alma + silme DOĞRUDAN yapılıyor (finance_movement_reverse_balance() ortak fonksiyonu).
+            finance_movement_reverse_balance($pdo, $sale);
+            $pdo->prepare("DELETE FROM finance_movements WHERE id=?")->execute([$saleId]);
+
+            $pdo->commit();
+        }catch(Throwable $e){
+            $pdo->rollBack();
+            throw $e;
+        }
 
         return ['ok'=>true, 'message'=>'Satış silindi, stok ve bakiyeler geri alındı.'];
     }catch(Throwable $e){
@@ -251,13 +253,23 @@ function stock_insert_purchase_movement($pdo, $stockItemId, $financeMovementId, 
  * POST'tan gelen ürün satırlarını doğrular, ürünleri çeker, satır/genel toplamları hesaplar.
  * Web (sales.php) ve mobil (mobile/sales.php) satış ekle/düzenle akışlarının ortak mantığı
  * (2026-07-10, satış düzenleme özelliğiyle birlikte tekrarlanan kod ortaklaştırıldı).
- * @throws Exception geçersiz girdi durumunda
+ *
+ * NEGATİF STOK GÜVENLİK KAPISI (2026-07-11): satışın kendi bütünlük riski alıştakinden farklıdır
+ * (avg_cost gibi ağırlıklı-ortalama bir değer yok, satış hiçbir zaman avg_cost'a dokunmaz) — tek
+ * risk, istenen miktarın mevcut stoğu eksiye düşürmesidir. $reserveMap, DÜZENLEME sırasında eski
+ * satırların geri ekleyeceği miktarı temsil eder (stock_update_sale bunu, henüz geri EKLENMEMİŞ
+ * olsa da, "mevcut stok + bu düzenlemenin serbest bırakacağı miktar" olarak hesaba katar — aksi
+ * halde geçerli bir düzenleme bile yanlışlıkla reddedilirdi). Yeni satışta boş kalır (mevcut
+ * stoğun tamamı gerçek sınırdır).
+ * @param array $reserveMap [stock_item_id => qty] — düzenleme sırasında geri eklenecek eski miktarlar
+ * @throws Exception geçersiz girdi veya yetersiz stok durumunda
  * @return array ['lines'=>[...], 'grand_total'=>float, 'grand_vat'=>float, 'profit_total'=>float, 'desc'=>string, 'desc_parts'=>array]
  */
-function stock_sale_build_lines($pdo, $ids, $qtys, $prices, $vatRates){
+function stock_sale_build_lines($pdo, $ids, $qtys, $prices, $vatRates, $reserveMap=[]){
     if(!is_array($ids) || !count($ids)) throw new Exception('En az bir ürün satırı ekleyin.');
 
     $lines = [];
+    $requestedByItem = [];
     foreach($ids as $i=>$pid){
         $pid = (int)$pid;
         $qty = (float)($qtys[$i] ?? 0);
@@ -270,6 +282,12 @@ function stock_sale_build_lines($pdo, $ids, $qtys, $prices, $vatRates){
         $p->execute([$pid]);
         $item = $p->fetch();
         if(!$item) continue;
+
+        $requestedByItem[$pid] = ($requestedByItem[$pid] ?? 0) + $qty;
+        $available = (float)$item['quantity'] + (float)($reserveMap[$pid] ?? 0);
+        if($requestedByItem[$pid] > $available + 0.0001){
+            throw new Exception('Yetersiz stok: '.$item['name'].' — mevcut '.stock_qty_fmt($available).' '.$item['unit'].', istenen '.stock_qty_fmt($requestedByItem[$pid]).'.');
+        }
 
         $subtotal = $qty*$price;
         $vatAmount = $vatRate>0 ? round($subtotal*$vatRate/100, 2) : 0;
@@ -376,12 +394,20 @@ function stock_update_sale($pdo, $saleId, $contact, $ids, $qtys, $prices, $vatRa
         $oldSale = $old->fetch();
         if(!$oldSale) return ['ok'=>false, 'message'=>'Satış kaydı bulunamadı.'];
 
-        $built = stock_sale_build_lines($pdo, $ids, $qtys, $prices, $vatRates);
-        $lines = $built['lines'];
-
         $oldStk = $pdo->prepare("SELECT * FROM stock_movements WHERE finance_movement_id=?");
         $oldStk->execute([$saleId]);
         $oldMovements = $oldStk->fetchAll();
+
+        // Negatif stok kapısı için "rezerve": bu düzenleme eski satırları geri alacağı için,
+        // yeni miktarlar mevcut stok + eski (henüz geri eklenmemiş ama az sonra eklenecek) miktar
+        // sınırına göre kontrol edilir — aksi halde geçerli bir düzenleme bile reddedilirdi.
+        $reserveMap = [];
+        foreach($oldMovements as $m){
+            $reserveMap[$m['stock_item_id']] = ($reserveMap[$m['stock_item_id']] ?? 0) + (float)$m['quantity'];
+        }
+
+        $built = stock_sale_build_lines($pdo, $ids, $qtys, $prices, $vatRates, $reserveMap);
+        $lines = $built['lines'];
 
         $pdo->beginTransaction();
         try{
