@@ -2,6 +2,22 @@
 
 <!-- Açık geliştirme görevleri. Kapanan madde buradan silinip memory/features.md'ye taşınır. -->
 
+## Migration 042 (settles_movement_id) ve 043 (satır bazlı fiyat/KDV) DEV PASS takibi açık
+- İkisi de primac.tr'ye deploy edilen kod tabanında hazır (sale-edit özelliği migration 043'e
+  bağımlı) ama kullanıcının DEV'de `migrate.php`'yi çalıştırıp teknik doğrulama yapması Finance
+  Core Stabilization commit'inden (`d02665b`, migration İÇERMİYOR) BAĞIMSIZ ayrı ayrı takip
+  ediliyor. Her ikisi de yerel MariaDB sandbox'ta idempotency + fonksiyonel senaryolarla test
+  edildi (bkz. features.md), ama DEV üzerinde kullanıcı PASS'ı gelmeden CLOSED yazılmayacak.
+
+## Mobile Regression Sprint — Finance Core Stabilization mobil doğrulaması (2026-07-11)
+- Finance Core Stabilization (satış/alış artık ödeme yapmıyor, cari bakiye formülü düzeltmesi —
+  bkz. features.md, bugs.md "Çözüldü") WEB tarafında kullanıcı PASS aldı ve CLOSED (WEB)
+  işaretlendi. Kod incelemesinde (Elif/ots-parity-auditor) web/mobil parite PASS aldığı için bu
+  karar bloklanmadı, ama kullanıcı henüz mobilde fiilen test etmedi. Ayrı bir sprint olarak:
+  `mobile/sales.php` + `mobile/purchase.php`'de aynı 13 zorunlu senaryo (satış→tahsilat,
+  alış→ödeme, eski satışı veresiyeye çevirme, alış miktar düzenleme, avg_cost güvenlik kapısı)
+  mobil arayüzde elle doğrulanmalı.
+
 ## tasks.deleted_at soft-delete filtresi bazı sayaç/rapor sorgularına eklenmedi (2026-07-04)
 - "İşlerim" Düzenle/Detay/Sil turu (bkz. features.md) `tasks` tablosuna soft-delete (`deleted_at`)
   ekledi ve `mytasks.php`/`mobile/mytasks.php`/`tasks.php`/`mobile/tasks.php`/`task_view.php`

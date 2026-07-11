@@ -3,6 +3,16 @@
 Bu dosya `memory/features.md`'nin (tam gerekçe/kod detayıyla) kök dizindeki kısa özetidir — hızlı
 taramak için. Detaylı "neden böyle yapıldı" analizleri için `memory/features.md`'ye bakın.
 
+## Finance Core Stabilization — Satış/Alış Artık Ödeme Yapmıyor: CLOSED (WEB) (2026-07-11, commit `d02665b`, USER TEST: Web PASS / Mobile Pending)
+Kök kural: satış tahsilat yapmaz, alış ödeme yapmaz — ikisi de sadece cariye/tedarikçiye açık
+borç oluşturur ("Bekliyor", kasa/banka/kart hiç etkilenmez), kapanma sadece Tahsilat/Ödeme
+ekranından. Kök neden düzeltmesi: `contacts_lib.php::contact_balance_case_sql()` — session
+başından beri süregelen "cari bakiye double-counting" bug'ını çözdü (satış+kendi tahsilatı aynı
+yönde toplanıyordu). `purchase.php`'ye ilk kez düzenleme/silme eklendi (avg_cost güvenlik
+kapısıyla). Migration YOK. Ece/Selin/Elif review'dan geçti, yerel sandbox'ta 13 zorunlu senaryo
+PASS. Mobil doğrulama ayrı Mobile Regression Sprint'te. Detay → `memory/features.md`,
+`memory/bugs.md`.
+
 ## Görev Detayı — "Çek / Senet Bilgileri" Kartı: CLOSED (2026-07-07, commit `b3e0def`, USER TEST: PASS — DEV/primac.tr)
 Takvimdeki Çek/Senet Vadesi görevinin görev kartına, SADECE `finance` yetkisi olan kullanıcıya
 görünen salt-okunur bir özet kart eklendi (tür/no/cari/banka/tutar/vade/portföy durumu/açıklama/

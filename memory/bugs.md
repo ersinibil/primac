@@ -17,6 +17,15 @@
 
 ## Çözüldü
 
+- **Cari bakiye double-counting (satış + kendi tahsilatı aynı yönde toplanıyordu)** (2026-07-11,
+  commit `d02665b`, bkz. [[features]] "Finance Core Stabilization"): `finance_movements`'ta bir
+  satışın kendisi VE onun sonradan girilen tahsilatı ikisi de `direction='in'` ile toplandığı için
+  cari açık bakiye olduğundan yüksek/yanlış görünüyordu — bu sorunun ilk somut belirtisi bu
+  oturumun başında "Yasmin Gelişim Merkezi" cari kaydında yaşanan mükerrer kayıt olayıydı.
+  `contacts_lib.php::contact_balance_case_sql()` ile kalıcı çözüldü: Tahsilat/Ödeme artık ters
+  işaretle sayılıyor. Kök çözümün bir parçası olarak satış/alış ekranları da artık hiç kasa/banka
+  etkilemiyor (sadece "Bekliyor" açık borç), ödeme yöntemi seçimi kaldırıldı. USER TEST: Web PASS,
+  mobil doğrulaması ayrı Mobile Regression Sprint'te (bkz. [[backlog]]).
 - **Web'de bildirime tıklayınca mobile'a zıplama + hayalet "okunmamış mesaj" rozeti + mobil görev
   yetki açığı** (2026-07-03, commit bb8a710): Kullanıcı PRIMAC'ta test etti — zip iki kere yüklenmiş
   olmasına rağmen "bildirim var ama mesaj yok" ve "web'de bildirime tıklayınca mobil ekrana düşüyorum"

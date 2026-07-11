@@ -2,6 +2,48 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
+## Finance Core Stabilization — Satış/Alış Artık Ödeme Yapmıyor: CLOSED (WEB) (2026-07-11)
+USER TEST: Web PASS (2026-07-11) / Mobile Pending → ayrı Mobile Regression Sprint (bkz. backlog.md).
+
+Kök kural: satış ekranı tahsilat yapmaz, alış ekranı ödeme yapmaz — ikisi de sadece cariye/
+tedarikçiye açık borç oluşturur (durum her zaman "Bekliyor", account_id her zaman NULL, kasa/
+banka/kart hiçbir zaman etkilenmez). Borcun kapanması SADECE Tahsilat/Ödeme ekranından olur.
+Migration YOK bu sprintte — sadece kod değişti.
+
+- **Kök neden düzeltmesi (session başından beri süregelen "cari bakiye double-counting" bug'ı):**
+  aynı ekonomik olayın (bir satış VE onun sonradan girilen tahsilatı) ikisi de finance_movements'ta
+  aynı yönde (`direction='in'`) toplandığı için cari açık bakiye olduğundan yüksek görünüyordu —
+  bu oturumun başında "Yasmin Gelişim Merkezi" carisinde somut bir olayla ortaya çıkmıştı.
+  `contacts_lib.php::contact_balance_case_sql()` ile kalıcı çözüldü: satış/alış kendi yönüyle,
+  Tahsilat/Ödeme TERS işaretle sayılıyor (biri borç açar, diğeri kapatır). `contact_view.php`,
+  `mobile/contact_view.php`, `contacts.php`, `contacts_report.php`, `mobile/contacts_report.php`,
+  `report_lib.php` (cari listesi + tekil ekstre) artık hepsi bu tek formülü kullanıyor — daha
+  önce sadece `contact_view.php` düzeltilip diğerleri unutulmuştu, kod incelemesinde (Ece) bulunup
+  aynı turda tamamlandı.
+- `sales.php`/`mobile/sales.php` + `purchase.php`/`mobile/purchase.php`: ödeme yöntemi seçimi
+  tamamen kaldırıldı. `purchase.php`'ye İLK KEZ "Son Alışlar" listesi + Düzenle/Sil eklendi
+  (`stock_lib.php`: `stock_reverse_purchase`/`stock_can_edit_purchase`/`stock_update_purchase`,
+  `sales.php`'nin migration-043 edit altyapısıyla simetrik). Ağırlıklı ortalama maliyet (avg_cost)
+  için güvenlik kapısı: bu alıştan sonra aynı üründe başka stok hareketi varsa hem düzenleme HEM
+  silme reddedilir (ilk yazımda sadece düzenleme korunuyordu — Selin/ots-security-auditor'ın
+  bulduğu asimetri, `stock_purchase_avg_cost_safe()` ortak fonksiyonuyla kapatıldı).
+- `finance_lib.php::finance_movement_type_label()` — Satış/Alış/Satış Belgesi/Alış Belgesi
+  kaynaklı otomatik kayıtlar artık Tahsilat/Ödeme diye etiketlenmiyor (`finance.php`,
+  `mobile/kasa.php`, `report_lib.php`). Dashboard/finans toplamları (`dashboard.php`,
+  `finance.php`, `mobile/kasa.php`, `report_lib.php`) artık sadece `account_id IS NOT NULL`
+  (gerçek kasa/banka hareketi) satırlarını sayıyor.
+- Test: yerel MariaDB sandbox'ta 13 zorunlu senaryo (satış→tahsilat, alış→ödeme, eski peşin
+  satışı veresiyeye çevirme, alış miktar düzenleme) + ayrı bir güvenlik-kapısı testi — hepsi PASS.
+  Review: Ece/Selin/Elif (ots-code-reviewer/ots-security-auditor/ots-parity-auditor); ilk turda
+  bulunan 3 sorun (`purchase.php`'nin try/catch dışı silme bloğu, alış silme-düzenleme avg_cost
+  asimetrisi, cari listesi/raporundaki eksik formül) düzeltilip yeniden test edildi.
+- Commit: `d02665b` (Finance Core ana commit). Aynı sprint içindeki önceki ilişkili işler:
+  `871f63e` (satış düzenleme özelliği + migration 043), `8292583` (migration 042,
+  settles_movement_id altyapısı — bu sprintte KULLANILMADI, "satış kaydı değişmeden kalır" kararı
+  yüzünden gerek kalmadı), `c363727` (İş 3, migration'sız kısmi önlemler), `d3252b2` (İş 2,
+  trade_document_new.php + web-mobil parite).
+- Açık kalan: migration 042/043 DEV PASS takibi ve mobil doğrulama → [[backlog]].
+
 ## Görev Detayı — "Çek / Senet Bilgileri" Kartı: CLOSED (2026-07-07)
 Kullanıcı isteği: takvimdeki Çek/Senet Vadesi görev kartının UX'i yetersizdi — tür/numara/cari/
 banka/tutar/vade/durum tek bakışta görünmüyordu, ekran "finans ekranının küçük bir özeti gibi"

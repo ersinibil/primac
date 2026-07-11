@@ -48,6 +48,12 @@ Tam denetim raporu (mimari/performans/UX/veri modeli dahil) → System Audit Art
 
 ## Son Çözülenler (detay → `memory/bugs.md`)
 
+- **DÜZELTİLDİ — Cari bakiye double-counting (Finance Core Stabilization, 2026-07-11, commit
+  `d02665b`, USER TEST: Web PASS / Mobile Pending)** — bir satışın kendisi VE onun sonradan
+  girilen tahsilatı `finance_movements`'ta aynı yönde toplandığı için cari açık bakiye olduğundan
+  yüksek görünüyordu. Satış/alış ekranları artık ödeme yapmıyor (sadece açık borç, kasa/banka hiç
+  etkilenmiyor), Tahsilat/Ödeme bu borcu ters işaretle kapatıyor. Migration yok. Mobil doğrulama
+  ayrı bir Mobile Regression Sprint'te (bkz. `ROADMAP.md`/backlog).
 - **DÜZELTİLDİ — `sifre_sifirla.php` brute-force koruması yoktu (SECURITY SPRINT-003, 2026-07-05)** —
   6 haneli kod (`random_int(100000,999999)`), önceden 30 dk geçerli, deneme sayısı sınırı/lockout
   yoktu. Eklendi: yanlış deneme sayacı (5 denemede token tam iptal), IP bazlı rate-limit
