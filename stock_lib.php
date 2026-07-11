@@ -254,22 +254,17 @@ function stock_insert_purchase_movement($pdo, $stockItemId, $financeMovementId, 
  * Web (sales.php) ve mobil (mobile/sales.php) satış ekle/düzenle akışlarının ortak mantığı
  * (2026-07-10, satış düzenleme özelliğiyle birlikte tekrarlanan kod ortaklaştırıldı).
  *
- * NEGATİF STOK GÜVENLİK KAPISI (2026-07-11): satışın kendi bütünlük riski alıştakinden farklıdır
- * (avg_cost gibi ağırlıklı-ortalama bir değer yok, satış hiçbir zaman avg_cost'a dokunmaz) — tek
- * risk, istenen miktarın mevcut stoğu eksiye düşürmesidir. $reserveMap, DÜZENLEME sırasında eski
- * satırların geri ekleyeceği miktarı temsil eder (stock_update_sale bunu, henüz geri EKLENMEMİŞ
- * olsa da, "mevcut stok + bu düzenlemenin serbest bırakacağı miktar" olarak hesaba katar — aksi
- * halde geçerli bir düzenleme bile yanlışlıkla reddedilirdi). Yeni satışta boş kalır (mevcut
- * stoğun tamamı gerçek sınırdır).
- * @param array $reserveMap [stock_item_id => qty] — düzenleme sırasında geri eklenecek eski miktarlar
- * @throws Exception geçersiz girdi veya yetersiz stok durumunda
+ * BİLİNÇLİ OLARAK negatif stok engeli YOK (2026-07-11, kullanıcı kararı — DEV testinde
+ * gözlemlenip onaylandı): satın alımdan ÖNCE satış siparişi girmek gerekebilir (ürün henüz
+ * depoya girmeden satılmış olabilir), bu yüzden stok eksiye düşebilmesi bilinçli olarak
+ * engellenmiyor. Bu satırı yeniden eklemeden önce kullanıcıyla teyitleşin.
+ * @throws Exception geçersiz girdi durumunda
  * @return array ['lines'=>[...], 'grand_total'=>float, 'grand_vat'=>float, 'profit_total'=>float, 'desc'=>string, 'desc_parts'=>array]
  */
-function stock_sale_build_lines($pdo, $ids, $qtys, $prices, $vatRates, $reserveMap=[]){
+function stock_sale_build_lines($pdo, $ids, $qtys, $prices, $vatRates){
     if(!is_array($ids) || !count($ids)) throw new Exception('En az bir ürün satırı ekleyin.');
 
     $lines = [];
-    $requestedByItem = [];
     foreach($ids as $i=>$pid){
         $pid = (int)$pid;
         $qty = (float)($qtys[$i] ?? 0);
@@ -282,12 +277,6 @@ function stock_sale_build_lines($pdo, $ids, $qtys, $prices, $vatRates, $reserveM
         $p->execute([$pid]);
         $item = $p->fetch();
         if(!$item) continue;
-
-        $requestedByItem[$pid] = ($requestedByItem[$pid] ?? 0) + $qty;
-        $available = (float)$item['quantity'] + (float)($reserveMap[$pid] ?? 0);
-        if($requestedByItem[$pid] > $available + 0.0001){
-            throw new Exception('Yetersiz stok: '.$item['name'].' — mevcut '.stock_qty_fmt($available).' '.$item['unit'].', istenen '.stock_qty_fmt($requestedByItem[$pid]).'.');
-        }
 
         $subtotal = $qty*$price;
         $vatAmount = $vatRate>0 ? round($subtotal*$vatRate/100, 2) : 0;
@@ -398,15 +387,7 @@ function stock_update_sale($pdo, $saleId, $contact, $ids, $qtys, $prices, $vatRa
         $oldStk->execute([$saleId]);
         $oldMovements = $oldStk->fetchAll();
 
-        // Negatif stok kapısı için "rezerve": bu düzenleme eski satırları geri alacağı için,
-        // yeni miktarlar mevcut stok + eski (henüz geri eklenmemiş ama az sonra eklenecek) miktar
-        // sınırına göre kontrol edilir — aksi halde geçerli bir düzenleme bile reddedilirdi.
-        $reserveMap = [];
-        foreach($oldMovements as $m){
-            $reserveMap[$m['stock_item_id']] = ($reserveMap[$m['stock_item_id']] ?? 0) + (float)$m['quantity'];
-        }
-
-        $built = stock_sale_build_lines($pdo, $ids, $qtys, $prices, $vatRates, $reserveMap);
+        $built = stock_sale_build_lines($pdo, $ids, $qtys, $prices, $vatRates);
         $lines = $built['lines'];
 
         $pdo->beginTransaction();
