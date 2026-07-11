@@ -3,6 +3,16 @@
 Bu dosya `memory/features.md`'nin (tam gerekçe/kod detayıyla) kök dizindeki kısa özetidir — hızlı
 taramak için. Detaylı "neden böyle yapıldı" analizleri için `memory/features.md`'ye bakın.
 
+## Kontrollü Negatif Stok Politikası: CLOSED (WEB) (2026-07-11, commit `3d927c7`, USER TEST: Web PASS / Mobile Pending)
+**Sistem standardı: negatif stok reddedilmez, bilinçli kullanıcı onayı istenir — onay backend'de
+doğrulanır, istemci tarafı uyarısına güvenilmez.** Satış oluşturma/düzenlemede stok yetersizse
+`StockShortageException` fırlatılır; `allow_negative_stock=1` onayı olmadan işlem tamamlanmaz,
+DB'de hiçbir şey değişmez. Onaylanırsa satış tamamlanır, stok negatife düşebilir, açıklamaya
+görünür bir işaret eklenir. Migration YOK. Selin'in incelemesinde onay checkbox'ının `<form>`
+dışında kaldığı (hiç POST edilmediği) kritik bir hata bulundu ve düzeltildi. Yerel sandbox'ta 8
+hedefli senaryo + tüm regresyonlar PASS, DEV'de kullanıcı PASS aldı. Mobil doğrulama Mobile
+Regression Sprint'e eklendi. Detay → `memory/features.md`, `memory/bugs.md`.
+
 ## Finance Core Stabilization — Satış/Alış Artık Ödeme Yapmıyor: CLOSED (WEB) (2026-07-11, commit `d02665b`, USER TEST: Web PASS / Mobile Pending)
 Kök kural: satış tahsilat yapmaz, alış ödeme yapmaz — ikisi de sadece cariye/tedarikçiye açık
 borç oluşturur ("Bekliyor", kasa/banka/kart hiç etkilenmez), kapanma sadece Tahsilat/Ödeme

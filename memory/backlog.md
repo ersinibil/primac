@@ -2,15 +2,12 @@
 
 <!-- Açık geliştirme görevleri. Kapanan madde buradan silinip memory/features.md'ye taşınır. -->
 
-## Kontrollü Negatif Stok Politikası — DEV kullanıcı testi bekliyor (2026-07-11)
-- Kod yazıldı, yerel MariaDB sandbox'ta 8 hedefli senaryo + mevcut regresyon testleri PASS,
-  Ece/Selin review'dan geçti (bkz. features.md). DEV/primac.tr'de kullanıcı testi henüz
-  yapılmadı — PASS gelmeden CLOSED yazılmayacak, CHANGELOG.md/KNOWN_BUGS.md'ye de eklenmeyecek.
-- Küçük, düşük öncelikli bir polish notu: şu an yetersiz-stok-onaylı satışların "görünürlüğü"
-  sadece `finance_movements.description`'a eklenen " ⚠️ Stok Yetersiz (Onaylandı)" metni ile
-  sağlanıyor (migrationsız, düşük riskli tercih). İstenirse ileride Son Satışlar listesinde
-  gerçek bir rozet/filtre (örn. "Tedarik Bekliyor") eklenebilir — bu turun kapsamı dışında
-  bırakıldı (kullanıcı: "büyük UI refactor yapma").
+## Kontrollü Negatif Stok Politikası — küçük polish notu (2026-07-11)
+- Özelliğin kendisi CLOSED (WEB) — bkz. features.md. Tek açık kalan, düşük öncelikli not: şu an
+  yetersiz-stok-onaylı satışların "görünürlüğü" sadece `finance_movements.description`'a eklenen
+  " ⚠️ Stok Yetersiz (Onaylandı)" metni ile sağlanıyor (migrationsız, düşük riskli tercih).
+  İstenirse ileride Son Satışlar listesinde gerçek bir rozet/filtre (örn. "Tedarik Bekliyor")
+  eklenebilir — bu turun kapsamı dışında bırakıldı (kullanıcı: "büyük UI refactor yapma").
 
 ## Migration 042 (settles_movement_id) ve 043 (satır bazlı fiyat/KDV) DEV PASS takibi açık
 - İkisi de primac.tr'ye deploy edilen kod tabanında hazır (sale-edit özelliği migration 043'e
@@ -19,14 +16,17 @@
   ediliyor. Her ikisi de yerel MariaDB sandbox'ta idempotency + fonksiyonel senaryolarla test
   edildi (bkz. features.md), ama DEV üzerinde kullanıcı PASS'ı gelmeden CLOSED yazılmayacak.
 
-## Mobile Regression Sprint — Finance Core Stabilization mobil doğrulaması (2026-07-11)
+## Mobile Regression Sprint — Finance Core + Kontrollü Negatif Stok mobil doğrulaması (2026-07-11)
 - Finance Core Stabilization (satış/alış artık ödeme yapmıyor, cari bakiye formülü düzeltmesi —
-  bkz. features.md, bugs.md "Çözüldü") WEB tarafında kullanıcı PASS aldı ve CLOSED (WEB)
-  işaretlendi. Kod incelemesinde (Elif/ots-parity-auditor) web/mobil parite PASS aldığı için bu
-  karar bloklanmadı, ama kullanıcı henüz mobilde fiilen test etmedi. Ayrı bir sprint olarak:
-  `mobile/sales.php` + `mobile/purchase.php`'de aynı 13 zorunlu senaryo (satış→tahsilat,
-  alış→ödeme, eski satışı veresiyeye çevirme, alış miktar düzenleme, avg_cost güvenlik kapısı)
-  mobil arayüzde elle doğrulanmalı.
+  bkz. features.md, bugs.md "Çözüldü") ve Kontrollü Negatif Stok Politikası (stok yetersizken
+  onay akışı) WEB tarafında kullanıcı PASS aldı, ikisi de CLOSED (WEB) işaretlendi. Kod
+  incelemesinde (Elif/ots-parity-auditor, Ece/ots-code-reviewer) web/mobil parite PASS aldığı
+  için bu kararlar bloklanmadı, ama kullanıcı henüz mobilde fiilen test etmedi. Ayrı bir sprint
+  olarak: `mobile/sales.php` + `mobile/purchase.php`'de aynı 13 zorunlu Finance Core senaryosu
+  (satış→tahsilat, alış→ödeme, eski satışı veresiyeye çevirme, alış miktar düzenleme, avg_cost
+  güvenlik kapısı) VE Kontrollü Negatif Stok senaryosu (stoğu 5 olan üründen 8 adet satış → ilk
+  denemede red, onaylı denemede kabul + stok -3, silince stok 5'e dönüş) mobil arayüzde elle
+  doğrulanmalı.
 
 ## tasks.deleted_at soft-delete filtresi bazı sayaç/rapor sorgularına eklenmedi (2026-07-04)
 - "İşlerim" Düzenle/Detay/Sil turu (bkz. features.md) `tasks` tablosuna soft-delete (`deleted_at`)

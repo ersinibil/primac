@@ -2,7 +2,13 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
-## Kontrollü Negatif Stok Politikası — USER TEST BEKLİYOR (2026-07-11)
+## Kontrollü Negatif Stok Politikası: CLOSED (WEB) (2026-07-11)
+USER TEST: Web PASS (2026-07-11) / Mobile Pending → Mobile Regression Sprint'e eklendi (bkz. backlog.md).
+
+**KONTROLLÜ NEGATİF STOK POLİTİKASI artık sistem standardıdır. Varsayılan davranış satışın reddi
+değil, bilinçli kullanıcı onayıdır. Onay backend tarafından doğrulanır; yalnızca istemci tarafı
+uyarısına güvenilmez.**
+
 **Negatif stok yasak DEĞİLDİR. Yetersiz stokta kullanıcı onayı zorunludur.** Bu davranış, satın
 alma öncesi satış/sipariş açılabilmesi için bilinçli olarak tasarlanmıştır (örn. müşteri siparişi
 alınır, ürün henüz satın alınmamıştır — satış önce girilir, alış sonra tamamlanır).
@@ -35,7 +41,15 @@ engellediğini fark edip kararı revize etti — sert ret geri alındı (commit 
   stoğu tam ve atomik geri yükler.
 - Test: 8 hedefli senaryo (yeterli/tam sınır/yetersiz-onaysız-red/yetersiz-onaylı-kabul, hem
   oluşturma hem düzenleme için, silme dahil) yerel MariaDB sandbox'ta PASS. Ece/Selin review'dan
-  geçti.
+  geçti — Selin ilk yazımda KRİTİK bir hata buldu: onay checkbox'ı `<form>` etiketinin DIŞINDAydı,
+  kullanıcı onaylasa bile hiçbir zaman POST edilmiyordu (özellik fiilen çalışmıyordu); checkbox
+  form içine taşınıp yeniden test edildi.
+- Commit: `3d927c7`. USER TEST (2026-07-11, DEV/primac.tr): Web PASS — doğrulanan tüm maddeler:
+  yeterli stokta normal devam, yetersiz stokta onaysız ilk denemede red, onaylı denemede kabul +
+  kontrollü negatif stok, açıklamada görünür uyarı, silmede stok tam iadesi, mevcut sale-edit/
+  Finance Core akışlarında regresyon yok. Mobil testi henüz yapılmadı → Mobile Regression
+  Sprint'e eklendi (bkz. backlog.md); kod incelemesinde web/mobil parite PASS aldığı için bu
+  karar mobil testi beklemeden verildi.
 
 ## Finance Core Stabilization — Satış/Alış Artık Ödeme Yapmıyor: CLOSED (WEB) (2026-07-11)
 USER TEST: Web PASS (2026-07-11) / Mobile Pending → ayrı Mobile Regression Sprint (bkz. backlog.md).

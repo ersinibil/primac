@@ -48,6 +48,12 @@ Tam denetim raporu (mimari/performans/UX/veri modeli dahil) → System Audit Art
 
 ## Son Çözülenler (detay → `memory/bugs.md`)
 
+- **DÜZELTİLDİ — Satışta sessiz negatif stok (Kontrollü Negatif Stok Politikası, 2026-07-11,
+  commit `3d927c7`, USER TEST: Web PASS / Mobile Pending)** — stok yetersizken satış hiçbir uyarı
+  olmadan tamamlanıp stoğu eksiye düşürüyordu. Negatif stok YASAKLANMADI (satın alımdan önce
+  satış girilebilmesi gerçek bir iş akışı) — bunun yerine backend `allow_negative_stock=1` onayı
+  zorunlu kılındı, onay yoksa işlem reddedilir. Migration yok. Mobil doğrulama Mobile Regression
+  Sprint'te.
 - **DÜZELTİLDİ — Cari bakiye double-counting (Finance Core Stabilization, 2026-07-11, commit
   `d02665b`, USER TEST: Web PASS / Mobile Pending)** — bir satışın kendisi VE onun sonradan
   girilen tahsilatı `finance_movements`'ta aynı yönde toplandığı için cari açık bakiye olduğundan

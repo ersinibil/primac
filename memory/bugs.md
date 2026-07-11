@@ -17,8 +17,9 @@
 
 ## Çözüldü
 
-- **Satışta sessiz negatif stok — görünürlük/onay yoktu** (2026-07-11, bkz.
-  [[features]] "Kontrollü Negatif Stok Politikası"): satış oluşturma/düzenlemede stok yetersiz
+- **Satışta sessiz negatif stok — görünürlük/onay yoktu** (2026-07-11, commit `3d927c7`, USER
+  TEST: Web PASS / Mobile Pending, bkz. [[features]] "Kontrollü Negatif Stok Politikası"): satış
+  oluşturma/düzenlemede stok yetersiz
   olsa da hiçbir uyarı çıkmadan işlem tamamlanıp stok eksiye düşüyordu — kullanıcının kendisi
   DEV'de fark edip bildirdi. **Not: negatif stok kasıtlı olarak YASAKLANMADI** (satın alımdan önce
   satış siparişi girilebilmesi gerçek bir iş akışı) — çözüm, `StockShortageException` +
