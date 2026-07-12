@@ -2,7 +2,62 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
-## Finance CRUD UX Patch 001 — Finans Hareketi Düzenle/Sil Her Ekrandan Erişilebilir: USER TEST BEKLİYOR (2026-07-12)
+## WEB UI ALIGNMENT & NAVIGATION SPRINT 001 — Dashboard sürükle-bırak + sol menü sadeleştirme + ortak tasarım dili: USER TEST BEKLİYOR (2026-07-13)
+Bu sprintten itibaren PRIMAC OTS'ta ad-hoc "Patch" isimlendirmesi bırakıldı, kalıcı bir Sprint
+sistemine geçildi (SECURITY/FINANCE/UX/MOBILE/PERFORMANCE/INTEGRATION/REPORTING/REFACTOR SPRINT) —
+her sprintin kendi kapsamı, tek commit zinciri, tek teslim raporu var ve kendi Regresyon Sprint'i
+geçmeden CLOSED yazılmıyor. Bu kural artık standing (kalıcı) proje kuralı.
+
+Sprint 3 fazdan oluştu:
+
+**Faz A — Komuta Merkezi kart sırası (kullanıcı bazlı, sürükle-bırak):**
+- Yeni migration `044_user_preferences.sql`: genel amaçlı `user_preferences(user_id, pref_key,
+  pref_value)` key/value tablosu — bu sprintte SADECE `dashboard_tile_order` anahtarı kullanılıyor,
+  başka tercih alanı eklenmedi (kullanıcının kendi kararı).
+- Yeni `user_prefs_lib.php` (`user_pref_get`/`user_pref_set`) ve yeni `ajax_dashboard_order.php`
+  (CSRF korumalı POST endpoint, `boot.php` `$__csrf_enforced_pages`'e eklendi).
+- `dashboard.php`: navtiles artık `$__tileDefs` veri dizisinden render ediliyor, kaydedilmiş sıra
+  varsa uygulanıyor (yetkisi kalkan/yeni eklenen kart sessizce doğru yere düşüyor). HTML5
+  `draggable` ile sürükleme SADECE küçük bir `.tile-drag` tutamaçla yapılıyor — kartın tamamı
+  draggable değil, link tıklaması bozulmuyor (kullanıcının kesin talimatı).
+- Migration henüz DEV'de çalıştırılmamışken de (`user_preferences` tablosu yokken) sayfa fatal
+  vermiyor — `user_pref_get`/`set` try/catch ile sessizce default'a düşüyor, doğrulandı.
+
+**Faz B — Sol menü sadeleştirme:**
+- "İş / Üretim Yönetimi" → "İş / Üretim" (web+mobil aynı isim, kullanıcının kararı).
+- Eski tek "Muhasebe İşlemleri" grubu **TİCARET** (Cariler/Teklif/Stok/Satış/Alış) ve **FİNANS**
+  (Finans Paneli/Hesaplar/Tahsilat/Ödeme/Çek-Senet/Muhasebe) olarak ikiye ayrıldı; içindeki rapor
+  linkleri (`report.php?modul=...` + `contacts_report.php`) tamamen Raporlama grubuna taşındı —
+  hiçbir route iki grupta birden görünmüyor (script ile doğrulandı). `mobile/more.php`'ye birebir
+  aynı gruplama uygulandı (parite).
+- Taşıma sırasında fark edilen pre-existing bir uyumsuzluk da düzeltildi: `contacts_report.php`
+  menüde `user_can('report')` şartına bağlıydı ama gerçek sayfa yetkisi (`page_module_map()`)
+  `contacts` idi — artık menü de `user_can('contacts')` şartına bağlı (mobil zaten doğruydu).
+
+**Faz C — Ortak tasarım dili (sadece 8 öncelikli ekran: Komuta Merkezi, Sol Menü, Üst Bar, ortak
+sayfa başlığı, Cari Detay, Finans Hareketleri, Satış/Alış ana listeleri):**
+- `layout_top.php`'ye yeni CSS: `.page-header` (sayfa üst başlığı için `.panel-head`'i genişletir),
+  `.row-actions` (tablo satırındaki Düzenle/Sil/kaynak-linki butonlarını sarmalar), `.quick-action`
+  (başlık aksiyon butonları). `.module-card`/`.section-card` ise mevcut `.ntile`/`.command-card`/
+  `.panel` kurallarını DEĞİŞTİRMEDEN sadece isim olarak ekleniyor (extend, don't replace).
+  `boot.php::badge()` artık ek olarak `status-badge` class'ı da basıyor (görsel etki yok).
+- `dashboard.php`, `contact_view.php`, `finance.php`, `sales.php`, `purchase.php` başlıkları
+  standartlaştırıldı; `sales.php`'nin eskiden çıplak `<h1>` olan başlığı bu sırada diğer 3 ekranla
+  aynı `.panel-head`/`.actions` kalıbına çekildi (pre-existing tutarsızlık, fırsattan
+  düzeltildi). `sales.php`/`purchase.php` başlıklarına küçük çapraz-navigasyon linkleri eklendi
+  (Satış↔Alış, Satış/Alış Belgesi) — mobil karşılığı bilinçli olarak bu sprintin kapsamı dışında
+  bırakıldı (bkz. [[backlog]]).
+
+**Kapsam dışı bırakılan (bilinçli):** Faz A'nın sürükle-bırağı SADECE web'de — mobilin sabit kart
+sırası değişmedi (kullanıcının kararı, dokunma-touch ortamında HTML5 native drag zaten uygun değil).
+
+**Test notu:** Bu oturumda bir tarayıcı otomasyon aracı mevcut değildi ve gerçek görsel/responsive
+test (A/B/C test matrisi maddeleri) bu yüzden yapılamadı — sadece kod seviyesinde regresyon (D
+maddesi: route/yetki/CSRF/dashboard link/mobil view/mobil menü/bildirim-mesaj linki/kullanıcı
+menüsü) doğrulandı + Ece/Selin/Elif incelemesinden geçti (kritik/orta bulgu yok). Görsel/responsive
+doğrulama ve sprintin kendi kapanış kriterleri (sürükle-bırak çalışıyor mu, sol menü anlaşılır mı,
+web mobille aynı ürün ailesi gibi hissettiriyor mu) kullanıcının DEV'de bizzat test etmesini
+bekliyor — PASS gelmeden CLOSED yazılmayacak. — Finans Hareketi Düzenle/Sil Her Ekrandan Erişilebilir: USER TEST BEKLİYOR (2026-07-12)
 Sorun: bir finans hareketini (tahsilat/ödeme) düzenlemek/silmek için kullanıcının "Raporlar >
 Son İşlemler" (aslında ana finans ekranı, finance.php) yolunu bilmesi gerekiyordu — cari detay ve
 hesap (kasa/banka) detay ekranları aynı satırları SADECE görüntülüyordu, işlem yapılamıyordu.

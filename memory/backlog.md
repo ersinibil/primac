@@ -2,6 +2,25 @@
 
 <!-- Açık geliştirme görevleri. Kapanan madde buradan silinip memory/features.md'ye taşınır. -->
 
+## WEB UI ALIGNMENT & NAVIGATION SPRINT 001 DEV PASS takibi açık (2026-07-13)
+- Kod tamamlandı (Faz A+B+C), commit `9bdff1e`, push edildi. php -l tüm dosyalarda temiz,
+  route/yetki seti değişmedi (script ile doğrulandı), Ece/Selin/Elif incelemesinden geçti (kritik/
+  orta bulgu yok, düşük öncelikli 1 bulgu — contacts_report.php yetki uyumsuzluğu — aynı turda
+  düzeltildi, bkz. [[bugs]]). guncelleme.zip/MD5 hazırlanacak.
+- **Görsel/responsive test yapılamadı** — bu oturumda tarayıcı otomasyon aracı yoktu, sprintin
+  kendi test matrisinin A/B/C maddeleri (görsel tutarlılık, kullanılabilirlik, responsive
+  Safari/Chrome 1440/1280/1024/tablet) sadece kod seviyesinde değil, gerçek görsel bir
+  değerlendirme gerektiriyor. Kullanıcının DEV/primac.tr'de bizzat doğrulaması gereken 3 kapanış
+  kriteri (sprintin kendi tanımı): (1) dashboard'da kart sürükle-bırak çalışıyor mu, (2) sol menü
+  grupları (Ticaret/Finans/İş-Üretim/Raporlama) anlaşılır mı, (3) web arayüzü mobille aynı ürün
+  ailesi gibi hissettiriyor mu, daha sade/hızlı mı. PASS gelmeden CLOSED yazılmayacak.
+- **Bilinçli kapsam dışı bırakılan (mobil parite notu, Ece'nin bulgusu):** `sales.php`/
+  `purchase.php` başlıklarına Faz C'de eklenen küçük çapraz-navigasyon linkleri (Satış↔Alış,
+  Satış/Alış Belgesi oluşturma) `mobile/sales.php`/`mobile/purchase.php`'ye taşınmadı — basit
+  `<a>` linkleri oldukları için teknik engel yok, istenirse ayrı küçük bir iş olarak eklenebilir.
+- **Bilinçli kapsam dışı bırakılan (kullanıcının kendi kararı):** Faz A'nın sürükle-bırak kart
+  sıralaması SADECE web'de — mobilin sabit kart sırası bu sprintte değişmedi.
+
 ## Finance CRUD UX Patch 001 DEV PASS takibi açık (2026-07-12)
 - Kod tamamlandı, yerel MariaDB'de 18 birim test + Bahçera Restaurant benzeri gerçek senaryo
   (manuel tahsilat → düzenlenebilir/silinebilir → silme → bakiye doğru geri alınıyor; bekleyen

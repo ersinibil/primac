@@ -17,6 +17,14 @@
 
 ## Çözüldü
 
+- **contact_report.php sol menüde yanlış yetki şartına bağlıydı** (2026-07-13, WEB UI ALIGNMENT &
+  NAVIGATION SPRINT 001, commit `9bdff1e`, Elif/parity-auditor'da bulundu): `layout_top.php`'de
+  `contacts_report.php` linki `user_can('report')` şartı altında gösteriliyordu, ama gerçek sayfa
+  erişimi `page_module_map()`'te `contacts` modülüne bağlıydı. Sonuç: `contacts` yetkisi olup
+  `report` yetkisi olmayan personel linki menüde GÖRMÜYORDU ama URL'yi bilirse sayfaya erişebiliyordu;
+  tersi durumda ise linke tıklayan kullanıcı "yetkisiz" hatası alıyordu. Pre-existing (bu sprint
+  yaratmadı, sadece grubu Muhasebe İşlemleri'nden Raporlama'ya taşırken fark edildi) — mobil
+  tarafı zaten doğruydu (`user_can('contacts')`). Web artık mobille aynı şarta bağlı.
 - **mobile/purchase.php + mobile/sales.php "🧾 Belgeyi Aç" linki 404 veriyordu** (2026-07-12,
   commit `1cb9e31`, Ece/code-review'da bulundu — bkz. [[features]] "Finance CRUD UX Patch 001"):
   Flow Unification 001'de (commit `d518103`) eklenen link `href="trade_document_view.php?id=..."`
