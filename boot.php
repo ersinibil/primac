@@ -303,7 +303,11 @@ function brand_icon(){
 
 function money($v){ return number_format((float)$v, 2, ',', '.') . ' ₺'; }
 function qty($v){ return rtrim(rtrim(number_format((float)$v, 3, ',', '.'), '0'), ','); }
-function badge($text, $tone='gray'){ return '<span class="badge '.$tone.'">'.h($text).'</span>'; }
+// "status-badge" web'in ortak tasarım dili sözlüğüne (WEB UI ALIGNMENT & NAVIGATION SPRINT 001
+// Faz C) ek bir isim — kendi CSS kuralı yok, mevcut .badge kurallarını olduğu gibi kullanır.
+// badge() hem web hem mobil tarafından çağrıldığı için mobilde de basılıyor ama mobil CSS'te
+// .status-badge için bir kural olmadığından zararsız (görsel etkisi yok).
+function badge($text, $tone='gray'){ return '<span class="badge status-badge '.$tone.'">'.h($text).'</span>'; }
 
 function status_tone($status){
     return [
@@ -421,7 +425,7 @@ if($__page !== '' && isset($__pmap[$__page])){
 // FAZ-5F (Temizlik grubu): accounting_categories.php, check_note_view.php (mobil-only),
 // report.php, ajax_quick_add.php (mobil-only karşılığı yok, web+mobil formlardan ortak
 // çağrılıyor), wa_settings.php eklendi.
-$__csrf_enforced_pages = ['users.php', 'sil.php', 'notifications.php', 'accounting.php', 'finance.php', 'finance_accounts.php', 'checks_notes.php', 'kasa.php', 'finance_new.php', 'finance_transfer.php', 'finance_account_view.php', 'payment.php', 'collection.php', 'transfer.php', 'account_view.php', 'movement_view.php', 'personnel_new.php', 'personnel_edit.php', 'personnel_view.php', 'sifre_sifirla.php', 'temizle_veri.php', 'trade_document_new.php', 'teklif.php', 'quote_approve.php', 'public_file.php', 'wa_send_now.php', 'job_view.php', 'task_view.php', 'work_view.php', 'contact_new.php', 'contact_view.php', 'product_new.php', 'product_view.php', 'product_categories.php', 'product_taxonomy.php', 'stock_movement_new.php', 'brand_settings.php', 'job_new.php', 'jobs.php', 'task_new.php', 'tasks.php', 'mytask_new.php', 'mytasks.php', 'uretim_new.php', 'group_new.php', 'messages.php', 'notes.php', 'request_new.php', 'requests.php', 'profile.php', 'sales.php', 'purchase.php', 'accounting_categories.php', 'check_note_view.php', 'report.php', 'ajax_quick_add.php', 'wa_settings.php', 'wa_conversation_view.php'];
+$__csrf_enforced_pages = ['users.php', 'sil.php', 'notifications.php', 'accounting.php', 'finance.php', 'finance_accounts.php', 'checks_notes.php', 'kasa.php', 'finance_new.php', 'finance_transfer.php', 'finance_account_view.php', 'payment.php', 'collection.php', 'transfer.php', 'account_view.php', 'movement_view.php', 'personnel_new.php', 'personnel_edit.php', 'personnel_view.php', 'sifre_sifirla.php', 'temizle_veri.php', 'trade_document_new.php', 'teklif.php', 'quote_approve.php', 'public_file.php', 'wa_send_now.php', 'job_view.php', 'task_view.php', 'work_view.php', 'contact_new.php', 'contact_view.php', 'product_new.php', 'product_view.php', 'product_categories.php', 'product_taxonomy.php', 'stock_movement_new.php', 'brand_settings.php', 'job_new.php', 'jobs.php', 'task_new.php', 'tasks.php', 'mytask_new.php', 'mytasks.php', 'uretim_new.php', 'group_new.php', 'messages.php', 'notes.php', 'request_new.php', 'requests.php', 'profile.php', 'sales.php', 'purchase.php', 'accounting_categories.php', 'check_note_view.php', 'report.php', 'ajax_quick_add.php', 'ajax_dashboard_order.php', 'wa_settings.php', 'wa_conversation_view.php'];
 if($_SERVER['REQUEST_METHOD'] === 'POST' && in_array($__page, $__csrf_enforced_pages, true)){
     csrf_verify();
 }

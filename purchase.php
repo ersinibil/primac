@@ -92,8 +92,14 @@ require_once __DIR__.'/layout_top.php';
 <style>
 .notice{background:#dcfce7;color:#14532d;padding:12px 16px;border-radius:10px;margin:14px 0;font-size:14px}
 </style>
-<div class="panel-head">
+<div class="panel-head page-header">
 <h1><?=$editMode?'✏️ Alışı Düzenle':'Satın Alma'?></h1>
+<?php if(!$editMode): ?>
+<div class="actions">
+<a class="btn secondary quick-action" href="sales.php">🧾 Satış</a>
+<a class="btn secondary quick-action" href="trade_document_new.php?type=purchase">🛒 Alış Belgesi</a>
+</div>
+<?php endif; ?>
 </div>
 
 <?php if($ok): ?>
@@ -181,7 +187,7 @@ require_once __DIR__.'/layout_top.php';
 </section>
 
 <!-- Son Alışlar -->
-<section class="panel">
+<section class="panel section-card">
 <div class="panel-head"><h2 style="margin:0">Son Alışlar</h2></div>
 <?php
 try{
@@ -213,7 +219,7 @@ if($recent): ?>
       <td style="text-align:right;color:#667085;font-size:12px"><?=$row['vat_amount']>0?money($row['vat_amount']):'—'?></td>
       <td><?=badge($row['status'], status_tone($row['status']))?></td>
       <?php if(can_edit_delete()): ?>
-      <td class="nowrap">
+      <td class="nowrap"><div class="row-actions">
         <?php if($isDoc): ?>
         <a class="btn secondary small" href="trade_document_view.php?id=<?=(int)$row['document_id']?>">🧾 Belgeyi Aç</a>
         <?php else: ?>
@@ -226,7 +232,7 @@ if($recent): ?>
           <button class="btn danger small" type="submit">🗑 Sil</button>
         </form>
         <?php endif; ?>
-      </td>
+      </div></td>
       <?php endif; ?>
     </tr>
   <?php endforeach; ?>

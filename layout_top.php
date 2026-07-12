@@ -162,6 +162,24 @@ input,select,textarea{font-size:16px}
 .ntile small{color:#475467;font-size:12.5px}
 .ntile.blue{background:#dbeafe}.ntile.green{background:#dcfce7}.ntile.orange{background:#ffedd5}.ntile.purple{background:#ede9fe}.ntile.red{background:#fee2e2}.ntile.yellow{background:#fef3c7}.ntile.teal{background:#ccfbf1}.ntile.gray{background:#eef2f6}.ntile.indigo{background:#e0e7ff}
 @media(max-width:960px){.navtiles{grid-template-columns:1fr 1fr;gap:11px}.ntile{min-height:104px;border-radius:18px;padding:15px}}
+
+/* Kart sürükle-bırak tutamacı (WEB UI ALIGNMENT & NAVIGATION SPRINT 001 — Faz A). Tutamaç
+   dışındaki alan draggable DEĞİL, böylece kart linkinin tıklanması bozulmaz. */
+.ntile-wrap{position:relative}
+.ntile-wrap.dragging{opacity:.4}
+.ntile-wrap .tile-drag{position:absolute;top:10px;right:10px;width:26px;height:26px;border-radius:8px;background:rgba(255,255,255,.6);display:flex;align-items:center;justify-content:center;font-size:15px;color:#475467;cursor:grab;z-index:2;user-select:none}
+.ntile-wrap .tile-drag:active{cursor:grabbing}
+@media(max-width:960px){.ntile-wrap .tile-drag{width:24px;height:24px;top:8px;right:8px;font-size:14px}}
+
+/* ── Ortak tasarım dili sınıfları (WEB UI ALIGNMENT & NAVIGATION SPRINT 001 — Faz C) ──
+   Sadece 8 öncelikli ekranda (Komuta Merkezi, Sol Menü, Üst Bar, ortak sayfa başlığı, Cari
+   Detay, Finans Hareketleri, Satış/Alış ana listeleri) kullanılıyor. .module-card ve
+   .section-card mevcut .ntile/.command-card/.panel kurallarını olduğu gibi KULLANIR — yeni bir
+   görsel kural TANIMLAMAZ, sadece isimlendirmeyi standartlaştırır (extend, don't replace). */
+.page-header.panel-head{border-bottom:1px solid #eef2f6;padding-bottom:14px;margin-bottom:18px}
+.page-header .page-header-icon{font-size:26px;margin-right:8px}
+.row-actions{display:flex;align-items:center;gap:6px;flex-wrap:nowrap;white-space:nowrap}
+.quick-action{border-radius:999px}
 </style>
 </head>
 <body>
@@ -200,9 +218,16 @@ input,select,textarea{font-size:16px}
            link bir ağaca (İç Mesajlar + Bildirimler + WhatsApp Gönder) dönüştü, Raporlama
            kendi başına ayrı bir grup. */
         $personelIsTakip_pages = ['jobs.php','job_new.php','takvim.php','tasks.php','approval_waiting.php','external.php','production.php','assembly.php','design.php','work_center.php','requests.php','personnel.php','personnel_new.php','kpi.php','gunluk_rapor.php'];
-        $muhasebe_pages = ['contacts.php','contact_new.php','contacts_report.php','teklif.php','sales.php','purchase.php','stock.php','product_new.php','stock_movement_new.php','product_categories.php','product_taxonomy.php','finance.php','finance_accounts.php','finance_new.php','finance_transfer.php','checks_notes.php','check_note_view.php','accounting.php','accounting_categories.php','trade_documents.php','trade_document_new.php','trade_document_view.php'];
+        // WEB UI ALIGNMENT & NAVIGATION SPRINT 001 — Faz B (2026-07-12): eski tek "Muhasebe
+        // İşlemleri" grubu (contacts+teklif+stock+finance+accounting+raporlar hepsi bir arada,
+        // çok uzun bir flyout'tu) TİCARET ve FİNANS olarak ikiye ayrıldı. Grup içindeki rapor
+        // linkleri (report.php?modul=... + contacts_report.php) hiçbir sol menü grubunda
+        // tekrar etmesin diye SADECE Raporlama grubuna taşındı — kart içerikleri/yetki
+        // kontrolleri (user_can(...)) DEĞİŞMEDİ, sadece hangi grupta göründükleri değişti.
+        $ticaret_pages = ['contacts.php','contact_new.php','teklif.php','stock.php','product_new.php','stock_movement_new.php','product_categories.php','product_taxonomy.php','sales.php','purchase.php','trade_documents.php','trade_document_new.php','trade_document_view.php'];
+        $finans_pages = ['finance.php','finance_accounts.php','finance_new.php','finance_transfer.php','checks_notes.php','check_note_view.php','accounting.php','accounting_categories.php'];
         $mesajlar_pages = ['messages.php','notifications.php','wa_send_now.php','wa_conversations.php','wa_conversation_view.php'];
-        $rapor_pages = ['activity.php','report.php'];
+        $rapor_pages = ['activity.php','report.php','contacts_report.php'];
         $sistem_pages = ['users.php','audit_log.php','wa_settings.php','brand_settings.php','profile.php','request_new.php','temizle_veri.php','logout.php'];
         ?>
 
@@ -218,7 +243,7 @@ input,select,textarea{font-size:16px}
         </details>
 
         <?php if(user_can('jobs')||user_can('tasks')||user_can('personnel')||user_can('users')): ?>
-        <details <?=(in_array($cur,$personelIsTakip_pages)?'open':'')?>><summary><span>🧭</span> İş / Üretim Yönetimi</summary>
+        <details <?=(in_array($cur,$personelIsTakip_pages)?'open':'')?>><summary><span>🧭</span> İş / Üretim</summary>
             <div class="sub">
                 <?php if(user_can('jobs')): ?>
                 <a href="jobs.php" <?=($cur==='jobs.php'?'class="active"':'')?>><span>📁</span> İş Merkezi</a>
@@ -252,8 +277,8 @@ input,select,textarea{font-size:16px}
         </details>
         <?php endif; ?>
 
-        <?php if(user_can('contacts')||user_can('teklif')||user_can('stock')||user_can('finance')||user_can('muhasebe')): ?>
-        <details <?=(in_array($cur,$muhasebe_pages)?'open':'')?>><summary><span>💰</span> Muhasebe İşlemleri</summary>
+        <?php if(user_can('contacts')||user_can('teklif')||user_can('stock')): ?>
+        <details <?=(in_array($cur,$ticaret_pages)?'open':'')?>><summary><span>🤝</span> Ticaret</summary>
             <div class="sub">
                 <?php if(user_can('contacts')): ?>
                 <a href="contacts.php" <?=($cur==='contacts.php' && empty($_GET['type'])?'class="active"':'')?>><span>📋</span> Tüm Cariler</a>
@@ -275,6 +300,13 @@ input,select,textarea{font-size:16px}
                 <a href="sales.php" <?=($cur==='sales.php'?'class="active"':'')?>><span>🧾</span> Satış</a>
                 <a href="purchase.php" <?=($cur==='purchase.php'?'class="active"':'')?>><span>🛒</span> Satın Alma İşleri</a>
                 <?php endif; ?>
+            </div>
+        </details>
+        <?php endif; ?>
+
+        <?php if(user_can('finance')||user_can('muhasebe')): ?>
+        <details <?=(in_array($cur,$finans_pages)?'open':'')?>><summary><span>💰</span> Finans</summary>
+            <div class="sub">
                 <?php if(user_can('finance')): ?>
                 <a href="finance.php" <?=($cur==='finance.php'?'class="active"':'')?>><span>📊</span> Finans Paneli</a>
                 <a href="finance_accounts.php" <?=($cur==='finance_accounts.php'?'class="active"':'')?>><span>🏦</span> Banka / Kasa / Kart / POS</a>
@@ -290,16 +322,6 @@ input,select,textarea{font-size:16px}
                 <a href="accounting.php?tab=ozet"><span>📊</span> Muhasebe Özeti</a>
                 <?php if(is_admin()): ?><a href="accounting_categories.php" <?=($cur==='accounting_categories.php'?'class="active"':'')?>><span>⚙</span> Muhasebe Kategorileri</a><?php endif; ?>
                 <?php endif; ?>
-                <?php if(user_can('report')): ?>
-                <a href="report.php?modul=tahsilat"><span>📊</span> Finans / Tahsilat Raporu</a>
-                <a href="report.php?modul=muhasebe"><span>📊</span> Muhasebe Raporu</a>
-                <a href="report.php?modul=cari"><span>📊</span> Cari Bakiye Raporu</a>
-                <a href="contacts_report.php" <?=($cur==='contacts_report.php'?'class="active"':'')?>><span>📊</span> Cari Raporu / Toplu Ekstre</a>
-                <a href="report.php?modul=satis"><span>📊</span> Satış Raporu</a>
-                <a href="report.php?modul=satinalma"><span>📊</span> Satın Alma Raporu</a>
-                <a href="report.php?modul=teklif"><span>📊</span> Teklif Raporu</a>
-                <a href="report.php?modul=stok"><span>📊</span> Stok Raporu</a>
-                <?php endif; ?>
             </div>
         </details>
         <?php endif; ?>
@@ -310,6 +332,16 @@ input,select,textarea{font-size:16px}
                 <?php if(user_can('report')): ?>
                 <a href="report.php" <?=($cur==='report.php'?'class="active"':'')?>><span>📊</span> Genel Özet Rapor</a>
                 <a href="report.php?modul=tumu"><span>🗂️</span> Tüm Modüller (Detaylı)</a>
+                <a href="report.php?modul=tahsilat"><span>📊</span> Finans / Tahsilat Raporu</a>
+                <a href="report.php?modul=muhasebe"><span>📊</span> Muhasebe Raporu</a>
+                <a href="report.php?modul=cari"><span>📊</span> Cari Bakiye Raporu</a>
+                <a href="report.php?modul=satis"><span>📊</span> Satış Raporu</a>
+                <a href="report.php?modul=satinalma"><span>📊</span> Satın Alma Raporu</a>
+                <a href="report.php?modul=teklif"><span>📊</span> Teklif Raporu</a>
+                <a href="report.php?modul=stok"><span>📊</span> Stok Raporu</a>
+                <?php endif; ?>
+                <?php if(user_can('contacts')): ?>
+                <a href="contacts_report.php" <?=($cur==='contacts_report.php'?'class="active"':'')?>><span>📊</span> Cari Raporu / Toplu Ekstre</a>
                 <?php endif; ?>
             </div>
         </details>

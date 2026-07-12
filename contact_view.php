@@ -154,16 +154,16 @@ $balance=contact_balance($pdo, $id);
 @media(max-width:960px){.rep-mode,.rep-list{grid-template-columns:1fr}}
 </style>
 
-<div class="panel-head">
+<div class="panel-head page-header">
 <h1><?=h($c['name'])?></h1>
 <div class="actions">
-<a class="btn" href="finance_new.php?direction=in&contact_id=<?=$id?>">+ Tahsilat</a>
-<a class="btn secondary" href="finance_new.php?direction=out&contact_id=<?=$id?>">+ Ödeme</a>
-<a class="btn" href="report.php?modul=cari_detay&ref=<?=$id?>">📊 Cari Raporu</a>
-<?php if($waConvId): ?><a class="btn secondary" href="wa_conversation_view.php?id=<?=(int)$waConvId?>">💬 WhatsApp</a>
-<?php elseif(!empty($c['phone'])): ?><a class="btn secondary" href="wa_conversation_view.php?phone=<?=urlencode($c['phone'])?>">💬 WhatsApp</a>
+<a class="btn quick-action" href="finance_new.php?direction=in&contact_id=<?=$id?>">+ Tahsilat</a>
+<a class="btn secondary quick-action" href="finance_new.php?direction=out&contact_id=<?=$id?>">+ Ödeme</a>
+<a class="btn quick-action" href="report.php?modul=cari_detay&ref=<?=$id?>">📊 Cari Raporu</a>
+<?php if($waConvId): ?><a class="btn secondary quick-action" href="wa_conversation_view.php?id=<?=(int)$waConvId?>">💬 WhatsApp</a>
+<?php elseif(!empty($c['phone'])): ?><a class="btn secondary quick-action" href="wa_conversation_view.php?phone=<?=urlencode($c['phone'])?>">💬 WhatsApp</a>
 <?php endif; ?>
-<a class="btn secondary" href="contacts.php">Cari Listesi</a>
+<a class="btn secondary quick-action" href="contacts.php">Cari Listesi</a>
 <?php if(is_admin() || user_can('contacts')): ?>
 <?php $isActive=(int)($c['active'] ?? 1); ?>
 <form method="post" style="display:inline">
@@ -398,7 +398,7 @@ try{
 </section>
 
 <?php if(user_can('finance')): ?>
-<section class="panel">
+<section class="panel section-card">
 <div class="panel-head"><h2>Finans Hareketleri</h2><a class="btn small secondary" href="finance.php?contact_id=<?=$id?>">Tümü</a></div>
 <table>
 <thead><tr><th>Tarih</th><th>Tip</th><th>Hesap</th><th>Tutar</th><th>Durum</th><th>Açıklama</th><th>İşlem</th></tr></thead>
@@ -423,9 +423,9 @@ try{
         echo "<td>".money($r['amount'])."</td>";
         echo "<td>".badge($r['status'],status_tone($r['status']))."</td>";
         echo "<td>".h($r['description'])."</td>";
-        echo "<td>";
+        echo "<td><div class='row-actions'>";
         if($canEdit){
-            echo "<a class='btn small secondary' href='finance_new.php?id=".$rid."&return_context=contact&return_ref=".$id."'>✏️ Düzenle</a> ";
+            echo "<a class='btn small secondary' href='finance_new.php?id=".$rid."&return_context=contact&return_ref=".$id."'>✏️ Düzenle</a>";
             echo "<form method='post' action='sil.php' style='display:inline' onsubmit=\"return confirm('Bu finans hareketi KALICI olarak silinecek ve ilgili hesap bakiyesi geri alınacak. Emin misiniz?')\">"
                 ."<input type='hidden' name='t' value='finance'>"
                 ."<input type='hidden' name='id' value='".$rid."'>"
@@ -438,7 +438,7 @@ try{
         }else{
             echo "<span class='muted' title='".h($actions['block_reason'])."'>Otomatik</span>";
         }
-        echo "</td>";
+        echo "</div></td>";
         echo "</tr>";
     }
     if(!$rows) echo "<tr><td colspan='7' class='muted'>Hareket yok.</td></tr>";

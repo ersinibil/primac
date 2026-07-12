@@ -2,6 +2,7 @@
 require_once __DIR__.'/layout_top.php';
 if(file_exists(__DIR__.'/activity_lib.php')) require_once __DIR__.'/activity_lib.php';
 require_once __DIR__.'/notes_lib.php';
+require_once __DIR__.'/user_prefs_lib.php';
 
 $today=date('Y-m-d');
 $pdo=db();
@@ -113,7 +114,7 @@ $receivable=safe_sum("SELECT COALESCE(SUM(amount),0) s FROM finance_movements WH
 $payable=safe_sum("SELECT COALESCE(SUM(amount),0) s FROM finance_movements WHERE direction='out' AND status='Bekliyor'");
 
 function cmd_card($title,$value,$desc,$url,$tone='blue'){
-    echo '<a class="command-card '.$tone.'" href="'.h($url).'">';
+    echo '<a class="command-card module-card '.$tone.'" href="'.h($url).'">';
     echo '<small>'.h($title).'</small>';
     echo '<strong>'.h($value).'</strong>';
     echo '<span>'.h($desc).'</span>';
@@ -205,25 +206,88 @@ function cmd_card($title,$value,$desc,$url,$tone='blue'){
 @media(max-width:960px){.command-grid,.mini-grid,.kpi-comparison-grid{grid-template-columns:1fr}}
 </style>
 
-<div class="panel-head">
+<div class="panel-head page-header">
 <h1>Komuta Merkezi</h1>
 <div class="actions">
-<a class="btn" href="job_new.php">+ Yeni İş</a>
-<a class="btn secondary" href="request_new.php">+ Talep</a>
+<a class="btn quick-action" href="job_new.php">+ Yeni İş</a>
+<a class="btn secondary quick-action" href="request_new.php">+ Talep</a>
 </div>
 </div>
 
-<div class="navtiles">
-<?php if(user_can('jobs')): ?><a class="ntile blue" href="jobs.php"><span class="ic">📋</span><b>İşler</b><small>İş merkezi &amp; takip</small></a><?php endif; ?>
-<?php if(user_can('contacts')): ?><a class="ntile teal" href="contacts.php"><span class="ic">👥</span><b>Cariler</b><small>Müşteri / tedarikçi</small></a><?php endif; ?>
-<?php if(user_can('teklif')): ?><a class="ntile purple" href="teklif.php"><span class="ic">📄</span><b>Teklifler</b><small>Hazırla &amp; gönder</small></a><?php endif; ?>
-<?php if(user_can('finance')): ?><a class="ntile green" href="finance.php"><span class="ic">💰</span><b>Finans</b><small>Kasa / banka / kart</small></a><?php endif; ?>
-<?php if(user_can('stock')): ?><a class="ntile orange" href="stock.php"><span class="ic">📦</span><b>Stok</b><small>Ürün &amp; depo</small></a><?php endif; ?>
-<?php if(user_can('report')): ?><a class="ntile yellow" href="report.php"><span class="ic">📊</span><b>Raporlar</b><small>Yekün &amp; modül</small></a><?php endif; ?>
-<?php if(user_can('personnel')): ?><a class="ntile red" href="personnel.php"><span class="ic">👷</span><b>Personel</b><small>Ekip &amp; görev</small></a><?php endif; ?>
-<a class="ntile gray" href="messages.php"><span class="ic">💬</span><b>Mesajlar</b><small>İç yazışma</small></a>
-<a class="ntile indigo" href="takvim.php"><span class="ic">📅</span><b>Takvim</b><small>Planlama &amp; hatırlatma</small></a>
+<?php
+// WEB UI ALIGNMENT & NAVIGATION SPRINT 001 — Faz A: kart sırası artık statik değil, kullanıcı
+// bazlı kaydedilmiş sıraya göre (user_preferences.dashboard_tile_order) render ediliyor.
+// Sürükle-bırak sadece küçük bir "tile-drag" tutamaçla yapılır (kartın tamamı draggable DEĞİL),
+// böylece kart içindeki link tıklaması bozulmaz.
+$__tileDefs = [
+    'jobs'      => ['perm'=>'jobs',      'color'=>'blue',   'icon'=>'📋', 'title'=>'İşler',     'desc'=>'İş merkezi &amp; takip',     'url'=>'jobs.php'],
+    'contacts'  => ['perm'=>'contacts',  'color'=>'teal',   'icon'=>'👥', 'title'=>'Cariler',   'desc'=>'Müşteri / tedarikçi',        'url'=>'contacts.php'],
+    'teklif'    => ['perm'=>'teklif',    'color'=>'purple', 'icon'=>'📄', 'title'=>'Teklifler', 'desc'=>'Hazırla &amp; gönder',       'url'=>'teklif.php'],
+    'finance'   => ['perm'=>'finance',   'color'=>'green',  'icon'=>'💰', 'title'=>'Finans',    'desc'=>'Kasa / banka / kart',        'url'=>'finance.php'],
+    'stock'     => ['perm'=>'stock',     'color'=>'orange', 'icon'=>'📦', 'title'=>'Stok',      'desc'=>'Ürün &amp; depo',            'url'=>'stock.php'],
+    'report'    => ['perm'=>'report',    'color'=>'yellow', 'icon'=>'📊', 'title'=>'Raporlar',  'desc'=>'Yekün &amp; modül',          'url'=>'report.php'],
+    'personnel' => ['perm'=>'personnel', 'color'=>'red',    'icon'=>'👷', 'title'=>'Personel',  'desc'=>'Ekip &amp; görev',           'url'=>'personnel.php'],
+    'messages'  => ['perm'=>null,        'color'=>'gray',   'icon'=>'💬', 'title'=>'Mesajlar',  'desc'=>'İç yazışma',                 'url'=>'messages.php'],
+    'takvim'    => ['perm'=>null,        'color'=>'indigo', 'icon'=>'📅', 'title'=>'Takvim',    'desc'=>'Planlama &amp; hatırlatma',  'url'=>'takvim.php'],
+];
+$__visibleTileKeys = [];
+foreach($__tileDefs as $__k=>$__t){ if($__t['perm']===null || user_can($__t['perm'])) $__visibleTileKeys[]=$__k; }
+$__myId = (int)(current_user()['id'] ?? 0);
+$__savedOrderRaw = user_pref_get($pdo, $__myId, 'dashboard_tile_order', '');
+$__savedOrder = $__savedOrderRaw ? explode(',', $__savedOrderRaw) : [];
+$__orderedTileKeys = array_values(array_intersect($__savedOrder, $__visibleTileKeys));
+foreach($__visibleTileKeys as $__k){ if(!in_array($__k, $__orderedTileKeys, true)) $__orderedTileKeys[]=$__k; }
+?>
+<div class="navtiles" id="navtiles">
+<?php foreach($__orderedTileKeys as $__k): $__t=$__tileDefs[$__k]; ?>
+<div class="ntile-wrap" data-key="<?=h($__k)?>">
+    <span class="tile-drag" draggable="true" title="Sürükle, sırayı değiştir">⠿</span>
+    <a class="ntile module-card <?=h($__t['color'])?>" href="<?=h($__t['url'])?>"><span class="ic"><?=$__t['icon']?></span><b><?=h($__t['title'])?></b><small><?=$__t['desc']?></small></a>
 </div>
+<?php endforeach; ?>
+</div>
+<script>
+(function(){
+  var container = document.getElementById('navtiles');
+  if(!container) return;
+  var draggedWrap = null;
+  function bindHandle(handle){
+    handle.addEventListener('dragstart', function(e){
+      draggedWrap = handle.closest('.ntile-wrap');
+      if(!draggedWrap) return;
+      e.dataTransfer.setData('text/plain', draggedWrap.dataset.key);
+      e.dataTransfer.effectAllowed = 'move';
+      draggedWrap.classList.add('dragging');
+    });
+    handle.addEventListener('dragend', function(){
+      if(draggedWrap) draggedWrap.classList.remove('dragging');
+      draggedWrap = null;
+      saveTileOrder();
+    });
+  }
+  function bindWrap(wrap){
+    wrap.addEventListener('dragover', function(e){ e.preventDefault(); });
+    wrap.addEventListener('drop', function(e){
+      e.preventDefault();
+      if(!draggedWrap || draggedWrap===wrap) return;
+      var rect = wrap.getBoundingClientRect();
+      var after = (e.clientX - rect.left) > rect.width/2;
+      if(after){ wrap.parentNode.insertBefore(draggedWrap, wrap.nextSibling); }
+      else{ wrap.parentNode.insertBefore(draggedWrap, wrap); }
+    });
+  }
+  container.querySelectorAll('.tile-drag').forEach(bindHandle);
+  container.querySelectorAll('.ntile-wrap').forEach(bindWrap);
+  function saveTileOrder(){
+    var keys = Array.prototype.map.call(container.querySelectorAll('.ntile-wrap'), function(w){ return w.dataset.key; });
+    fetch('ajax_dashboard_order.php', {
+      method: 'POST',
+      headers: {'Content-Type':'application/x-www-form-urlencoded','X-CSRF-Token': window.CSRF_TOKEN},
+      body: 'order=' + encodeURIComponent(keys.join(','))
+    }).catch(function(){});
+  }
+})();
+</script>
 
 <!-- ── Karşılaştırmalı KPI Kartları ── -->
 <section class="panel">

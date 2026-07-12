@@ -142,7 +142,13 @@ $products  = $pdo->query(
 require_once __DIR__.'/layout_top.php';
 ?>
 
+<div class="panel-head page-header">
 <h1>Hızlı Satış</h1>
+<div class="actions">
+<a class="btn secondary quick-action" href="purchase.php">🛒 Satın Alma</a>
+<a class="btn secondary quick-action" href="trade_document_new.php?type=sale">🧾 Satış Belgesi</a>
+</div>
+</div>
 
 <?php if ($ok): ?>
 <div class="ok"><?= $ok ?></div>
@@ -247,7 +253,7 @@ require_once __DIR__.'/layout_top.php';
 
   <!-- Sağ: son satışlar -->
   <div>
-    <div class="panel">
+    <div class="panel section-card">
       <div class="panel-head"><h2 style="font-size:15px">Son Satışlar</h2></div>
       <?php
       try {
@@ -281,7 +287,7 @@ require_once __DIR__.'/layout_top.php';
             <td style="text-align:right;color:#667085;font-size:12px"><?= $row['vat_amount'] > 0 ? money($row['vat_amount']) : '—' ?></td>
             <td><?= badge($row['status'], status_tone($row['status'])) ?></td>
             <?php if(can_edit_delete()): ?>
-            <td class="nowrap">
+            <td class="nowrap"><div class="row-actions">
               <?php if ($isDoc): ?>
               <a class="btn secondary small" href="trade_document_view.php?id=<?= (int)$row['document_id'] ?>">🧾 Belgeyi Aç</a>
               <?php else: ?>
@@ -295,7 +301,7 @@ require_once __DIR__.'/layout_top.php';
                 <button class="btn danger small" type="submit">🗑 Sil</button>
               </form>
               <?php endif; ?>
-            </td>
+            </div></td>
             <?php endif; ?>
           </tr>
         <?php endforeach; ?>

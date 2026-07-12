@@ -39,13 +39,13 @@ $pos=safe_sum("SELECT COALESCE(SUM(current_balance),0) s FROM finance_accounts W
 @media(max-width:960px){.command-grid{grid-template-columns:1fr}}
 </style>
 
-<div class="panel-head">
+<div class="panel-head page-header">
 <h1>Finans Paneli</h1>
 <div class="actions">
-<a class="btn" href="finance_new.php?direction=in">+ Tahsilat</a>
-<a class="btn secondary" href="finance_new.php?direction=out">+ Ödeme</a>
-<a class="btn secondary" href="finance_transfer.php">+ Transfer</a>
-<a class="btn secondary" href="finance_accounts.php">Hesaplar</a>
+<a class="btn quick-action" href="finance_new.php?direction=in">+ Tahsilat</a>
+<a class="btn secondary quick-action" href="finance_new.php?direction=out">+ Ödeme</a>
+<a class="btn secondary quick-action" href="finance_transfer.php">+ Transfer</a>
+<a class="btn secondary quick-action" href="finance_accounts.php">Hesaplar</a>
 </div>
 </div>
 
@@ -65,7 +65,7 @@ $pos=safe_sum("SELECT COALESCE(SUM(current_balance),0) s FROM finance_accounts W
 <a class="command-card purple" href="finance_transfer.php"><small>Transfer</small><strong>↔</strong><span>Hesaplar arası aktarım</span></a>
 </section>
 
-<section class="panel">
+<section class="panel section-card">
 <div class="panel-head"><h2>Son Finans Hareketleri</h2><a class="btn small secondary" href="finance_new.php">Yeni Hareket</a></div>
 <table>
 <thead>
@@ -117,9 +117,9 @@ try{
         echo "<td>".money($r['amount'])."</td>";
         echo "<td>".badge($r['status'],status_tone($r['status']))."</td>";
         echo "<td>".h($r['description'])."</td>";
-        echo "<td>";
+        echo "<td><div class='row-actions'>";
         if($canEdit){
-            echo "<a class='btn small secondary' href='finance_new.php?id=".$rid."'>✏️ Düzenle</a> ";
+            echo "<a class='btn small secondary' href='finance_new.php?id=".$rid."'>✏️ Düzenle</a>";
             echo "<form method='post' action='sil.php' style='display:inline' onsubmit=\"return confirm('Bu finans hareketi KALICI olarak silinecek ve ilgili hesap bakiyesi geri alınacak. Emin misiniz?')\">"
                 ."<input type='hidden' name='t' value='finance'>"
                 ."<input type='hidden' name='id' value='".$rid."'>"
@@ -130,7 +130,7 @@ try{
         }else{
             echo "<span class='muted' title='".h($actions['block_reason'])."'>Otomatik</span>";
         }
-        echo "</td>";
+        echo "</div></td>";
         echo "</tr>";
     }
     if(!$rows) echo "<tr><td colspan='10' class='muted'>Henüz finans hareketi yok.</td></tr>";

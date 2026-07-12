@@ -6,14 +6,17 @@
    "Genel Sistem Yönetimi" grubuna taşındı (aşağıda, user_can('users') şartıyla). */
 ?>
 <?php
-/* Taksonomi — web sol menüyle (layout_top.php) hizalı: Personel İş Takip Yönetimi, Muhasebe
-   İşlemleri, Mesajlar, Raporlama, Genel Sistem Yönetimi (2026-07-03: önce 6 gruptan 4'e
-   sadeleştirildi; aynı gün 2. turda "Mesajlaşma ve Raporlama" tek grubu ikiye ayrıldı —
-   kullanıcı bildirimi: "mesajlaşmaları tek yere al, raporlama ayrı kalsın"). Kart
-   içerikleri/yetki kontrolleri aynı, sadece gruplama değişti. */
+/* Taksonomi — web sol menüyle (layout_top.php) hizalı: İş / Üretim, Ticaret, Finans, Mesajlar,
+   Raporlama, Genel Sistem Yönetimi (2026-07-03: önce 6 gruptan 4'e sadeleştirildi; aynı gün
+   2. turda "Mesajlaşma ve Raporlama" tek grubu ikiye ayrıldı — kullanıcı bildirimi:
+   "mesajlaşmaları tek yere al, raporlama ayrı kalsın"; 2026-07-12 WEB UI ALIGNMENT & NAVIGATION
+   SPRINT 001 Faz B: "Personel İş Takip Yönetimi" adı web ile aynı olacak şekilde "İş / Üretim"e
+   kısaltıldı, eski tek "Muhasebe İşlemleri" grubu Ticaret/Finans olarak ikiye ayrıldı ve içindeki
+   rapor kartları Raporlama grubuna taşındı). Kart içerikleri/yetki kontrolleri aynı, sadece
+   gruplama değişti. */
 ?>
 
-<div style="font-weight:900;margin:16px 4px 8px">🧭 Personel İş Takip Yönetimi</div>
+<div style="font-weight:900;margin:16px 4px 8px">🧭 İş / Üretim</div>
 <div class="grid">
   <?php
   card('İşlerim','Bana atanan işler','✅','mytasks.php','green');
@@ -46,14 +49,13 @@
   ?>
 </div>
 
-<?php if(user_can('contacts') || user_can('stock') || user_can('teklif') || user_can('finance') || user_can('muhasebe')): ?>
-<div style="font-weight:900;margin:16px 4px 8px">💰 Muhasebe İşlemleri</div>
+<?php if(user_can('contacts') || user_can('stock') || user_can('teklif')): ?>
+<div style="font-weight:900;margin:16px 4px 8px">🤝 Ticaret</div>
 <div class="grid">
   <?php
   if(user_can('contacts')) {
     card('Cariler','Müşteri/tedarikçi','👥','contacts.php','purple');
     card('Yeni Cari','Cari ekle','➕','contact_new.php','blue');
-    card('Cari Raporlar','Alacaklı/borçlu · toplu ekstre','📊','contacts_report.php','teal');
   }
   if(user_can('stock')) {
     card('Stok','Ürün listesi','📦','stock.php','red');
@@ -67,6 +69,14 @@
   if(user_can('teklif')) {
     card('Teklif','Teklif hazırla/gönder','📄','teklif.php','blue');
   }
+  ?>
+</div>
+<?php endif; ?>
+
+<?php if(user_can('finance') || user_can('muhasebe')): ?>
+<div style="font-weight:900;margin:16px 4px 8px">💰 Finans</div>
+<div class="grid">
+  <?php
   if(user_can('finance')) {
     card('Kasa Durumu','Banka/kasa/kart','🏦','kasa.php','teal');
     card('Tahsilat','Tahsilat gir','💰','collection.php','yellow');
@@ -78,15 +88,6 @@
     card('Muhasebe','Gider · Gelir · Personel','📒','accounting.php','purple');
     card('Yeni Kayıt','Hızlı gider/gelir gir','➕','accounting.php#yeni','orange');
     if($isAdmin) card('Muhasebe Kategorileri','Kategori yönetimi','⚙️','accounting_categories.php','gray');
-  }
-  if($isAdmin || user_can('report')) {
-    card('Finans/Tahsilat','Tahsilat·ödeme·net','💰','report.php?modul=tahsilat','green');
-    card('Muhasebe Raporu','Kategori gelir/gider','📒','report.php?modul=muhasebe','purple');
-    card('Cari','Bakiye·hareket','👥','report.php?modul=cari','teal');
-    card('Satış Raporu','Satış dökümü','🧾','report.php?modul=satis','yellow');
-    card('Satın Alma Raporu','Alış dökümü','📥','report.php?modul=satinalma','green');
-    card('Teklif Raporu','Teklif dökümü','📄','report.php?modul=teklif','blue');
-    card('Stok Raporu','Kritik·stok değeri','📦','report.php?modul=stok','red');
   }
   ?>
 </div>
@@ -111,6 +112,18 @@
   if($isAdmin || user_can('report')) {
     card('Genel Özet Rapor','Yekün özet','📊','report.php?modul=genel','blue');
     card('Tüm Modüller','Hepsi tek sunum','🗂️','report.php?modul=tumu','blue');
+  }
+  if(user_can('contacts')) {
+    card('Cari Raporlar','Alacaklı/borçlu · toplu ekstre','📊','contacts_report.php','teal');
+  }
+  if($isAdmin || user_can('report')) {
+    card('Finans/Tahsilat','Tahsilat·ödeme·net','💰','report.php?modul=tahsilat','green');
+    card('Muhasebe Raporu','Kategori gelir/gider','📒','report.php?modul=muhasebe','purple');
+    card('Cari','Bakiye·hareket','👥','report.php?modul=cari','teal');
+    card('Satış Raporu','Satış dökümü','🧾','report.php?modul=satis','yellow');
+    card('Satın Alma Raporu','Alış dökümü','📥','report.php?modul=satinalma','green');
+    card('Teklif Raporu','Teklif dökümü','📄','report.php?modul=teklif','blue');
+    card('Stok Raporu','Kritik·stok değeri','📦','report.php?modul=stok','red');
   }
   ?>
 </div>
