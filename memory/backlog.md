@@ -2,6 +2,16 @@
 
 <!-- Açık geliştirme görevleri. Kapanan madde buradan silinip memory/features.md'ye taşınır. -->
 
+## Finance CRUD UX Patch 001 DEV PASS takibi açık (2026-07-12)
+- Kod tamamlandı, yerel MariaDB'de 18 birim test + Bahçera Restaurant benzeri gerçek senaryo
+  (manuel tahsilat → düzenlenebilir/silinebilir → silme → bakiye doğru geri alınıyor; bekleyen
+  satış → düzenlenemez → reddediliyor) PASS, Ece/Selin incelemesinden geçti, commit `1cb9e31`,
+  push edildi, guncelleme.zip/MD5 hazır — bkz. [[bugs]] "Çözüldü" ve [[features]] "Finance CRUD UX
+  Patch 001". Kullanıcının DEV/primac.tr'de gerçek bir manuel tahsilat/ödeme kaydını cari ekranı +
+  hesap ekranı + ana finans ekranından yönetebildiğini, bekleyen bir satış/alış/belge kaydında
+  Düzenle/Sil YERİNE doğru kaynak linkinin göründüğünü test edip PASS vermesi bekleniyor; PASS
+  gelmeden CLOSED yazılmayacak.
+
 ## Flow Unification 001 DEV PASS takibi açık (2026-07-11)
 - Kod tamamlandı, yerel MariaDB'de 6 zorunlu senaryo + document_id edit/delete kilidi PASS, Ece/
   Selin/Elif incelemesinden geçti, commit `d518103`, push edildi, guncelleme.zip/MD5 hazır — bkz.

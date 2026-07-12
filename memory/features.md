@@ -2,6 +2,56 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
+## Finance CRUD UX Patch 001 — Finans Hareketi Düzenle/Sil Her Ekrandan Erişilebilir: USER TEST BEKLİYOR (2026-07-12)
+Sorun: bir finans hareketini (tahsilat/ödeme) düzenlemek/silmek için kullanıcının "Raporlar >
+Son İşlemler" (aslında ana finans ekranı, finance.php) yolunu bilmesi gerekiyordu — cari detay ve
+hesap (kasa/banka) detay ekranları aynı satırları SADECE görüntülüyordu, işlem yapılamıyordu.
+
+**Yeni bir CRUD motoru YAZILMADI.** `finance_new.php` (düzenleme) ve `sil.php`'nin `t=finance`
+dalı (silme) — ikisi de zaten CSRF korumalı ve `finance_movement_editable_types()` ile
+yetki/tip kontrollü — olduğu gibi yeniden kullanıldı, sadece bu route'lara giden LİNKLER yeni
+ekranlara eklendi.
+
+- **`finance_lib.php::finance_movement_actions($row)`** — TEK merkezi karar fonksiyonu: manuel mi
+  (`movement_type` normal/mobile), düzenlenebilir/silinebilir mi, değilse hangi "kaynağı aç"
+  linkinin gösterileceği (`document_id` doluysa "🧾 Belgeyi Aç", `sale`/`mobile_sale` ise "🧾
+  Satışı Aç", `purchase` ise "🛒 Alışı Aç", `settles_movement_id` doluysa "🔗 Bağlı Hareketi Aç" —
+  migration 042'nin kolonu, henüz hiçbir yazma yolu yok ama ileriye dönük eklendi — `transfer`/
+  bilinmeyen tip düz "Otomatik"). `finance.php`, `contact_view.php`, `finance_account_view.php` ve
+  mobil eşdeğerleri artık kendi ayrı `$canEdit` mantıklarını YAZMIYOR, hepsi buradan okuyor.
+- **`finance_lib.php::finance_return_url($context,$ref,$default)`** — İşlem sonrası kullanıcı
+  geldiği ekrana dönsün diye güvenli dönüş URL'i üretir. SADECE 3 sabit isim (`contact`/`account`/
+  `finance`) + basit bir tamsayı id kabul eder, ASLA ham URL/host kabul ETMEZ — open redirect
+  riski yok (Selin'in denetiminde doğrulandı).
+- `finance_new.php`/`sil.php`: `return_context`/`return_ref` GET/POST'tan okunup form'a hidden
+  alan olarak taşınıyor, başarılı işlem sonrası sabit `finance.php` yerine bu bağlama göre
+  hesaplanan hedefe yönlendiriyor.
+- `contact_view.php`/`finance_account_view.php`: "Finans Hareketleri"/"Hesap Hareketleri"
+  tablolarına yeni bir "İşlem" kolonu eklendi (manuel → ✏️ Düzenle/🗑 Sil, sistem kaynaklı →
+  kaynak linki).
+- Mobil: `mobile/contact_view.php` + `mobile/account_view.php` aynı ayrımı uyguluyor ama yeni bir
+  CRUD YAZMADAN — zaten var olan `mobile/movement_view.php` (kendi edit+delete ekranı) route'una
+  bağlanıyor; o dosyaya da aynı `return_context`/`return_ref` deseni (kendi yerel `mv_return_url()`
+  ile) eklendi.
+- **Review'da bulunup aynı turda kapatılan iki gerçek bug:** (1) önceki sprintte (Flow Unification
+  001) `mobile/purchase.php`/`mobile/sales.php`'ye eklenen "Belgeyi Aç" linki `../` önekini
+  unutmuştu, mobilde 404 veriyordu — düzeltildi (bkz. [[bugs]]). (2) `contact_view.php` ve
+  `finance_account_view.php`'nin "Tip"/"Tür" kolonu `finance_movement_type_label()` yerine ham
+  `direction`'a bakıyordu, satış/alış kaynaklı eski kayıtları yanlış etiketliyordu — düzeltildi.
+- Test: yerel MariaDB sandbox'ta `finance_movement_actions()`/`finance_return_url()` için 18 birim
+  test (her movement_type/document_id/settles_movement_id kombinasyonu, open-redirect denemesi
+  dahil) + kullanıcının verdiği örneğe birebir uyan bir DB senaryosu (manuel tahsilat → Düzenle/Sil
+  açık → silme → kasa bakiyesi doğru geri alınıyor → kayıt kayboluyor; bekleyen satış kaydı →
+  Düzenle/Sil kapalı → `finance_movement_delete()` reddediyor) PASS. Ece/Selin incelemesinden
+  geçti — Selin kritik/yüksek bulgu vermedi (open redirect yok, yetki kontrolü backend'de
+  bağımsız ikinci kez doğrulanıyor, CSRF/XSS temiz); Ece 2 gerçek bug (yukarıda) + 2 düşük öncelik
+  not (mobil "silindi" toast'ı eksikti → eklendi; `mobile/movement_view.php` merkezi fonksiyonu
+  kullanmıyordu → bağlandı) buldu, hepsi aynı turda kapatıldı.
+- Commit: `1cb9e31`. USER TEST: DEV/primac.tr'de kullanıcı testi BEKLİYOR — bkz. [[backlog]]
+  "Finance CRUD UX Patch 001 DEV PASS takibi açık" (kullanıcının kendi test senaryosu: gerçek bir
+  manuel tahsilat kaydını cari ekranından/hesap ekranından/ana finans ekranından yönetebildiğini,
+  bekleyen bir satışta Düzenle/Sil YERİNE doğru kaynak linkinin göründüğünü doğrulaması gerekiyor).
+
 ## Flow Unification 001 — Alış/Satış Belgesi Akışını Finance Core ile Birleştirme: USER TEST BEKLİYOR (2026-07-11)
 Kullanıcı bir BUG REPORT ile başlattı: `ALI-20260707-5177` (bir alış belgesi) `contact_view.php`
 "Bu Cariye Ait İşler"de görünmüyordu ve `purchase.php` "Son Alışlar"da yoktu, ama "Belge" ekranında

@@ -17,6 +17,20 @@
 
 ## Çözüldü
 
+- **mobile/purchase.php + mobile/sales.php "🧾 Belgeyi Aç" linki 404 veriyordu** (2026-07-12,
+  commit `1cb9e31`, Ece/code-review'da bulundu — bkz. [[features]] "Finance CRUD UX Patch 001"):
+  Flow Unification 001'de (commit `d518103`) eklenen link `href="trade_document_view.php?id=..."`
+  yazılmıştı — ama `trade_document_view.php` sadece repo kökünde var, `mobile/` altında yok. Mobil
+  sayfalarda kök dizindeki bir dosyaya link verirken `../` öneki gerekiyor (bkz. `mobile/job_view.php`,
+  `mobile/profile.php` gibi mevcut örnekler) — bu unutulmuştu. `../trade_document_view.php?id=...`
+  olarak düzeltildi.
+- **contact_view.php + finance_account_view.php'de "Tip"/"Tür" etiketi satış/alış kaynaklı
+  satırları yanlış gösteriyordu** (2026-07-12, commit `1cb9e31`): direction'a (`in`/`out`) bakarak
+  düz "Tahsilat"/"Ödeme" yazan eski kod, `finance_movement_type_label()` merkezi fonksiyonu
+  ÇAĞIRMIYORDU — bu fonksiyon Finans Çekirdek Stabilizasyonu sırasında `finance.php` gibi diğer
+  ekranlara uygulanmıştı ama bu iki dosyada unutulmuş kalmıştı (contact_view.php'deki Finance CRUD
+  UX Patch 001 çalışması sırasında fark edildi; finance_account_view.php'deki eşi Ece'nin code
+  review'unda bulundu). İkisi de düzeltildi.
 - **İki paralel alış/satış veri modeli — `trade_documents` akışı Finance Core Stabilization
   kapsamı dışında kalmış** (2026-07-11, kullanıcı BUG REPORT: `ALI-20260707-5177` cari ekranında/
   purchase.php listesinde tutarsız görünüyordu; çözüm commit `d518103`, bkz. [[features]] "Flow
