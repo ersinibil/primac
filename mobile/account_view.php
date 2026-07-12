@@ -36,6 +36,7 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['delete_account'])){
 
 topx('Hesap');
 if(!empty($_GET['ok'])) echo '<div class="ok">Hesap güncellendi.</div>';
+if(!empty($_GET['deleted'])) echo '<div class="ok">Finans hareketi silindi, hesap bakiyesi güncellendi.</div>';
 if(!empty($_SESSION['acc_ok'])){ echo '<div class="ok">'.htmlspecialchars($_SESSION['acc_ok']).'</div>'; unset($_SESSION['acc_ok']); }
 if(!empty($_SESSION['acc_err'])){ echo '<div class="err">'.htmlspecialchars($_SESSION['acc_err']).'</div>'; unset($_SESSION['acc_err']); }
 try{
@@ -92,8 +93,24 @@ try{
   $mv=$pdo->prepare("SELECT f.*, c.name cari FROM finance_movements f LEFT JOIN contacts c ON c.id=f.contact_id WHERE f.account_id=? ORDER BY f.id DESC LIMIT 100");
   $mv->execute([$id]); $rows=$mv->fetchAll();
   if(!$rows) echo '<p class="muted" style="margin:10px 0 0">Bu hesapta hareket yok.</p>';
-  foreach($rows as $m){ $in=$m['direction']==='in';
-    echo '<div class="item" style="display:flex;justify-content:space-between"><span><b style="color:'.($in?'#4ade80':'#f87171').'">'.($in?'Tahsilat':'Ödeme').'</b> '.mm($m['amount']).'<br><small class="muted">'.htmlspecialchars(($m['cari']?:'-').' · '.($m['description']??'')).'</small></span><small class="muted">'.htmlspecialchars($m['movement_date']??'').'</small></div>';
+  // FINANCE CRUD UX PATCH 001 (2026-07-12): aynı karar mekanizması web (contact_view.php/
+  // finance_account_view.php) ile birebir — manuel hareketler mevcut mobil düzenleme ekranına
+  // (movement_view.php) bağlanıyor, yeni bir CRUD YAZILMADI. Tip etiketi finance_movement_type_label()
+  // ile diğer ekranlarla tutarlı (satış/alış/belge kaynaklı satırlar artık "Tahsilat"/"Ödeme" değil).
+  $srcIcon=['sale'=>'🧾','purchase'=>'🛒','document'=>'🧾','settlement'=>'🔗'];
+  foreach($rows as $m){
+    $in=$m['direction']==='in';
+    $actions=finance_movement_actions($m);
+    $canEdit=$actions['editable'] && can_edit_delete();
+    $srcUrl=$actions['source_url'];
+    if($srcUrl && in_array($actions['source_type'],['document','settlement'],true)) $srcUrl='../'.$srcUrl; // trade_document_view.php/finance.php sadece kökte var
+    $btn='';
+    if($canEdit){
+        $btn='<a class="btn" style="background:rgba(37,99,235,.18);padding:6px 9px;margin-left:6px" href="movement_view.php?id='.(int)$m['id'].'&return_context=account&return_ref='.$id.'">✏️</a>';
+    }elseif($srcUrl){
+        $btn='<a class="btn" style="background:rgba(37,99,235,.18);padding:6px 9px;margin-left:6px" href="'.htmlspecialchars($srcUrl).'">'.($srcIcon[$actions['source_type']] ?? '🔗').'</a>';
+    }
+    echo '<div class="item" style="display:flex;justify-content:space-between;align-items:center"><span><b style="color:'.($in?'#4ade80':'#f87171').'">'.htmlspecialchars(finance_movement_type_label($m)).'</b> '.mm($m['amount']).'<br><small class="muted">'.htmlspecialchars(($m['cari']?:'-').' · '.($m['description']??'')).'</small></span><span style="display:flex;align-items:center;white-space:nowrap"><small class="muted">'.htmlspecialchars($m['movement_date']??'').'</small>'.$btn.'</span></div>';
   }
 ?>
 </div>

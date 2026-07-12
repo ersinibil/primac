@@ -56,6 +56,7 @@ $isCard = ($a['account_type']==='Kredi Kartı');
   </div>
 </div>
 
+<?php if(isset($_GET['deleted'])): ?><div class="ok">Finans hareketi silindi, hesap bakiyesi güncellendi.</div><?php endif; ?>
 <?php if($editOk): ?><div class="ok"><?=h($editOk)?></div><?php endif; ?>
 <?php if($editError): ?><div class="alert"><?=h($editError)?></div><?php endif; ?>
 
@@ -99,14 +100,25 @@ $isCard = ($a['account_type']==='Kredi Kartı');
 <section class="panel">
 <h2>Hesap Hareketleri</h2>
 <table>
-<thead><tr><th>Tarih</th><th>Açıklama</th><th>Cari</th><th>Tür</th><th style="text-align:right">Tutar</th></tr></thead>
+<thead><tr><th>Tarih</th><th>Açıklama</th><th>Cari</th><th>Tür</th><th style="text-align:right">Tutar</th><th>İşlem</th></tr></thead>
 <tbody>
 <?php foreach($rows as $m):
     // Bu hesaba etkisi: transfer hedefi ise giriş (+); değilse direction'a göre
     $incoming = ((int)$m['target_account_id']===$id) || ($m['direction']==='in' && (int)$m['account_id']===$id);
     $sign = $incoming ? '+' : '−';
     $tone = $incoming ? 'green' : 'red';
-    $label = ($m['movement_type']==='transfer') ? ((int)$m['target_account_id']===$id?'Transfer Giriş':'Transfer Çıkış') : ($m['direction']==='in'?'Tahsilat':'Ödeme');
+    // FINANCE CRUD UX PATCH 001 (2026-07-12, Ece/code-review): eskiden burada da direction bazlı
+    // "Tahsilat"/"Ödeme" yazıyordu — bu tablo account_id filtreli olduğu için normalde sadece
+    // gerçek nakit hareketleri görünür, ama migration-öncesi eski "Peşin satış" kayıtları (account_id
+    // dolu) hâlâ buraya düşebilir ve yanlış etiketlenirdi. finance_movement_type_label() ile
+    // contact_view.php'de düzeltilen aynı hata burada da giderildi.
+    $label = ($m['movement_type']==='transfer') ? ((int)$m['target_account_id']===$id?'Transfer Giriş':'Transfer Çıkış') : finance_movement_type_label($m);
+    // FINANCE CRUD UX PATCH 001 (2026-07-12): aynı karar mekanizması contact_view.php/finance.php
+    // ile birebir — bir kaydın cari ekranında düzenlenebilir, kasa ekranında düzenlenemez olması
+    // yasak (kullanıcı talebi), tek merkezi fonksiyon bunu garanti ediyor.
+    $mid=(int)$m['id'];
+    $actions=finance_movement_actions($m);
+    $canEdit=$actions['editable'] && can_edit_delete();
 ?>
 <tr>
   <td><?=h($m['movement_date'])?></td>
@@ -114,9 +126,25 @@ $isCard = ($a['account_type']==='Kredi Kartı');
   <td><?=h($m['contact_name'] ?: '-')?></td>
   <td><?=badge($label,$tone)?></td>
   <td style="text-align:right;font-weight:700;color:<?=$incoming?'#166534':'#991b1b'?>"><?=$sign.' '.money($m['amount'])?></td>
+  <td>
+  <?php if($canEdit): ?>
+    <a class="btn small secondary" href="finance_new.php?id=<?=$mid?>&return_context=account&return_ref=<?=$id?>">✏️ Düzenle</a>
+    <form method="post" action="sil.php" style="display:inline" onsubmit="return confirm('Bu finans hareketi KALICI olarak silinecek ve ilgili hesap bakiyesi geri alınacak. Emin misiniz?')">
+      <input type="hidden" name="t" value="finance">
+      <input type="hidden" name="id" value="<?=$mid?>">
+      <input type="hidden" name="return_context" value="account">
+      <input type="hidden" name="return_ref" value="<?=$id?>">
+      <button class="btn small danger" type="submit">🗑 Sil</button>
+    </form>
+  <?php elseif($actions['source_url']): ?>
+    <a class="btn small secondary" href="<?=h($actions['source_url'])?>" title="<?=h($actions['block_reason'])?>"><?=h($actions['source_label'])?></a>
+  <?php else: ?>
+    <span class="muted" title="<?=h($actions['block_reason'])?>">Otomatik</span>
+  <?php endif; ?>
+  </td>
 </tr>
 <?php endforeach; ?>
-<?php if(!$rows): ?><tr><td colspan="5" class="muted">Bu hesapta henüz hareket yok.</td></tr><?php endif; ?>
+<?php if(!$rows): ?><tr><td colspan="6" class="muted">Bu hesapta henüz hareket yok.</td></tr><?php endif; ?>
 </tbody>
 </table>
 </section>

@@ -153,6 +153,80 @@ function finance_movement_is_real_cash_sql($alias='finance_movements'){
     return "$alias.account_id IS NOT NULL";
 }
 
+/**
+ * TEK merkezi karar fonksiyonu (FINANCE CRUD UX PATCH 001, 2026-07-12): bir finance_movements
+ * satırının hangi ekranda görünürse görünsün (contact_view.php, finance_account_view.php,
+ * finance.php, mobil eşdeğerleri) Düzenle/Sil gösterip göstermeyeceğine ve gösterilmiyorsa hangi
+ * "kaynağı aç" bağlantısının sunulacağına karar verir. Buton görünürlüğü her ekranda ayrı ayrı
+ * yazılmasın diye — çağıran taraf sadece bunu okur, kendi $canEdit mantığını YAZMAZ.
+ *
+ * Kesin ayrım: SADECE elle girilmiş bağımsız hareketler (movement_type: normal/mobile — bağımsız
+ * tahsilat/ödeme/gelir/gider) düzenlenebilir/silinebilir. document_id dolu, sale/purchase kaynaklı,
+ * settles_movement_id ilişkili veya transfer gibi otomatik/bağlı hareketler KAPALI — bunlar için
+ * ait olduğu ekranın linki gösterilir.
+ *
+ * @return array [
+ *   'manual'=>bool, 'editable'=>bool, 'deletable'=>bool, 'source_type'=>string|null,
+ *   'source_label'=>string|null, 'source_url'=>string|null, 'block_reason'=>string|null,
+ * ]
+ */
+function finance_movement_actions($row){
+    $type = $row['movement_type'] ?? '';
+    $manual = in_array($type, finance_movement_editable_types(), true);
+
+    if($manual){
+        return ['manual'=>true, 'editable'=>true, 'deletable'=>true,
+            'source_type'=>null, 'source_label'=>null, 'source_url'=>null, 'block_reason'=>null];
+    }
+
+    $hasDocument = !empty($row['document_id']);
+    $hasSettles = !empty($row['settles_movement_id']); // migration 042 — henüz hiçbir yazma yolu yok, ileriye dönük
+
+    if($hasDocument){
+        $sourceType='document'; $sourceLabel='🧾 Belgeyi Aç';
+        $sourceUrl='trade_document_view.php?id='.(int)$row['document_id'];
+        $blockReason='Bu hareket bir Alış/Satış Belgesine bağlı.';
+    }elseif(in_array($type, ['sale','mobile_sale'], true)){
+        $sourceType='sale'; $sourceLabel='🧾 Satışı Aç';
+        $sourceUrl='sales.php?edit_id='.(int)$row['id'];
+        $blockReason='Bu hareket bir satıştan otomatik oluştu.';
+    }elseif($type === 'purchase'){
+        $sourceType='purchase'; $sourceLabel='🛒 Alışı Aç';
+        $sourceUrl='purchase.php?edit_id='.(int)$row['id'];
+        $blockReason='Bu hareket bir alıştan otomatik oluştu.';
+    }elseif($hasSettles){
+        $sourceType='settlement'; $sourceLabel='🔗 Bağlı Hareketi Aç';
+        $sourceUrl='finance.php';
+        $blockReason='Bu hareket başka bir kaydı kapatıyor.';
+    }elseif($type === 'transfer'){
+        $sourceType='transfer'; $sourceLabel=null; $sourceUrl=null;
+        $blockReason='Bu hareket bir hesaplar arası transferden otomatik oluştu.';
+    }else{
+        $sourceType=null; $sourceLabel=null; $sourceUrl=null;
+        $blockReason='Bu hareket başka bir işlemden otomatik oluştu.';
+    }
+
+    return ['manual'=>false, 'editable'=>false, 'deletable'=>false,
+        'source_type'=>$sourceType, 'source_label'=>$sourceLabel, 'source_url'=>$sourceUrl, 'block_reason'=>$blockReason];
+}
+
+/**
+ * "context" + basit bir tamsayı id'den GÜVENLİ bir iç URL üretir (FINANCE CRUD UX PATCH 001,
+ * 2026-07-12) — asla ham bir URL/host kabul ETMEZ, sadece bilinen birkaç ekran adı + id.
+ * contact_view.php/finance_account_view.php'den Düzenle/Sil'e tıklandığında, işlem sonrası
+ * kullanıcı geldiği ekrana dönsün diye finance_new.php ve sil.php tarafından kullanılır.
+ * Open redirect YOK — whitelist dışına asla çıkamaz.
+ */
+function finance_return_url($context, $ref, $default='finance.php'){
+    $ref = (int)$ref;
+    switch($context){
+        case 'contact': return $ref>0 ? 'contact_view.php?id='.$ref : $default;
+        case 'account': return $ref>0 ? 'finance_account_view.php?id='.$ref : $default;
+        case 'finance': return 'finance.php';
+        default:        return $default;
+    }
+}
+
 function finance_movement_get($pdo, $id){
     $s=$pdo->prepare("SELECT * FROM finance_movements WHERE id=?");
     $s->execute([(int)$id]);

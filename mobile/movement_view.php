@@ -4,29 +4,41 @@ require_once dirname(__DIR__).'/finance_lib.php';
 require_once dirname(__DIR__).'/accounting_lib.php';
 $pdo=db(); $id=(int)($_GET['id']??0);
 
+// FINANCE CRUD UX PATCH 001 (2026-07-12): mobile/contact_view.php ve mobile/account_view.php'den
+// buraya tıklandığında, işlem sonrası kullanıcı geldiği ekrana dönsün — sadece bilinen birkaç
+// mobil ekran adı + tamsayı id kabul edilir (open redirect yok, ham URL asla kullanılmaz).
+$returnContext = $_GET['return_context'] ?? $_POST['return_context'] ?? '';
+$returnRef = (int)($_GET['return_ref'] ?? $_POST['return_ref'] ?? 0);
+function mv_return_url($context,$ref){
+    if($context==='contact' && $ref>0) return 'contact_view.php?id='.$ref;
+    if($context==='account' && $ref>0) return 'account_view.php?id='.$ref;
+    return 'kasa.php';
+}
+$mvReturnQS = $returnContext ? '&return_context='.urlencode($returnContext).'&return_ref='.(int)$returnRef : '';
+
 /* Hareket düzenle — topx'tan ÖNCE (PRG) */
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['edit_movement'])){
     if(!can_edit_delete()){
         $_SESSION['mv_err']='Bu işlem için yetkiniz yok.';
-        header('Location: movement_view.php?id='.$id); exit;
+        header('Location: movement_view.php?id='.$id.$mvReturnQS); exit;
     }
     try{
         finance_movement_update($pdo,$id,$_POST);
-        header('Location: movement_view.php?id='.$id.'&ok=1'); exit;
+        header('Location: movement_view.php?id='.$id.'&ok=1'.$mvReturnQS); exit;
     }catch(Throwable $e){
         $_SESSION['mv_err']=$e->getMessage();
-        header('Location: movement_view.php?id='.$id); exit;
+        header('Location: movement_view.php?id='.$id.$mvReturnQS); exit;
     }
 }
 /* Hareket sil — admin veya 'edit_delete' yetkili personel */
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['delete_movement'])){
     if(can_edit_delete()){
         $res=finance_movement_delete($pdo,$id);
-        if($res['ok']){ header('Location: kasa.php?deleted=1'); exit; }
+        if($res['ok']){ header('Location: '.mv_return_url($returnContext,$returnRef).'?deleted=1'); exit; }
         $_SESSION['mv_err']=$res['msg'];
-        header('Location: movement_view.php?id='.$id); exit;
+        header('Location: movement_view.php?id='.$id.$mvReturnQS); exit;
     }
-    header('Location: movement_view.php?id='.$id); exit;
+    header('Location: movement_view.php?id='.$id.$mvReturnQS); exit;
 }
 
 topx('Hareket');
@@ -42,7 +54,10 @@ try{
     $m->execute([$id]); $mv=$m->fetch();
     if(!$mv) throw new Exception('Hareket bulunamadı.');
     $in=$mv['direction']==='in';
-    $editable=in_array($mv['movement_type'],finance_movement_editable_types(),true);
+    // FINANCE CRUD UX PATCH 001 (2026-07-12, Ece/code-review): merkezi karar fonksiyonuna bağlandı
+    // (aynı in_array/editable_types kontrolü artık finance_movement_actions() içinde tek yerde) —
+    // davranış aynı, sadece web ekranlarıyla tek kaynaktan besleniyor.
+    $editable=finance_movement_actions($mv)['editable'];
     // FINANCE UX REFACTOR (2026-07-04): mevcut kaydın dolu alanlarına bakarak en olası sihirbaz
     // adımını türet — DB'ye yeni bir "tür" kolonu eklemeden, eski kayıtlar da doğru adımla açılır.
     $initialStep = finance_record_type_info($mv, $mv['cat_group'] ?? null, $mv['acc_type'] ?? null);
@@ -58,6 +73,7 @@ try{
   <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
     <form method="post" style="margin:0" onsubmit="return confirm('Bu hareketi silmek istediğinize emin misiniz? Hesap bakiyesi geri alınacak.')">
       <input type="hidden" name="delete_movement" value="1">
+      <?php if($returnContext): ?><input type="hidden" name="return_context" value="<?=htmlspecialchars($returnContext)?>"><input type="hidden" name="return_ref" value="<?=(int)$returnRef?>"><?php endif; ?>
       <button class="btn" style="background:#dc2626;color:#fff;padding:9px 16px;font-size:14px">🗑 Sil</button>
     </form>
   </div>
@@ -68,6 +84,7 @@ try{
 <details class="panel">
   <summary style="font-weight:900;cursor:pointer">✏️ Hareketi Düzenle</summary>
   <form method="post" style="margin-top:10px">
+    <?php if($returnContext): ?><input type="hidden" name="return_context" value="<?=htmlspecialchars($returnContext)?>"><input type="hidden" name="return_ref" value="<?=(int)$returnRef?>"><?php endif; ?>
     <?php
     $cs=[]; $accounts=[]; $gelirCats=[]; $personnel=[];
     try{ $cs=$pdo->query("SELECT id,name FROM contacts ORDER BY name")->fetchAll(); }catch(Throwable $e){}

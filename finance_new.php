@@ -9,11 +9,16 @@ $pdo=db();
 $error='';
 $editId=(int)($_GET['id'] ?? $_POST['id'] ?? 0);
 $editRow=null;
+// FINANCE CRUD UX PATCH 001 (2026-07-12): contact_view.php/finance_account_view.php gibi
+// ekranlardan Düzenle'ye tıklandığında, kaydetme sonrası kullanıcı geldiği ekrana dönsün diye
+// bağlam GET'ten okunup formun hidden alanlarıyla POST'a taşınır — bkz. finance_return_url().
+$returnContext = $_GET['return_context'] ?? $_POST['return_context'] ?? '';
+$returnRef = $_GET['return_ref'] ?? $_POST['return_ref'] ?? '';
 if($editId){
     $editRow=finance_movement_get($pdo,$editId);
-    if(!$editRow){ header('Location: finance.php'); exit; }
+    if(!$editRow){ header('Location: '.finance_return_url($returnContext,$returnRef)); exit; }
     if(!in_array($editRow['movement_type'],finance_movement_editable_types(),true) || !can_edit_delete()){
-        header('Location: finance.php'); exit;
+        header('Location: '.finance_return_url($returnContext,$returnRef)); exit;
     }
 }
 
@@ -93,7 +98,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             $desc = $contactName.' · '.number_format($amount,2,',','.').' ₺ · '.$accountName;
             activity_log('Finans',$direction==='in'?'Tahsilat':'Ödeme',$title,$desc,'finance',$editId,base_url().'finance.php','✏️');
 
-            header("Location: finance.php");
+            header("Location: ".finance_return_url($returnContext,$returnRef));
             exit;
         }else{
         $stmt=$pdo->prepare("INSERT INTO finance_movements(contact_id,category_id,personnel_id,job_id,direction,amount,payment_channel,payment_type,account_id,status,movement_date,description,movement_type,reference_no)
@@ -135,7 +140,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         $desc = $contactName.' · '.number_format($amount,2,',','.').' ₺ · '.$accountName;
         activity_log('Finans',$direction==='in'?'Tahsilat':'Ödeme',$title,$desc,'finance',$fmId,base_url().'finance.php','💰');
 
-        header("Location: finance.php");
+        header("Location: ".finance_return_url($returnContext,$returnRef));
         exit;
         }
     }catch(Throwable $e){
@@ -195,6 +200,7 @@ $channelOpts=['Nakit','Banka / EFT','Kredi Kartı','POS','Çek','Senet','Diğer'
 <section class="panel">
 <form method="post" class="form-grid">
 <?php if($editId): ?><input type="hidden" name="id" value="<?=$editId?>"><?php endif; ?>
+<?php if($returnContext): ?><input type="hidden" name="return_context" value="<?=h($returnContext)?>"><input type="hidden" name="return_ref" value="<?=h($returnRef)?>"><?php endif; ?>
 
 <label>İşlem Tipi
 <select name="direction" id="fnDirection" onchange="fnFilterCats();fnToggleWizard()">

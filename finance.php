@@ -85,7 +85,6 @@ $pos=safe_sum("SELECT COALESCE(SUM(current_balance),0) s FROM finance_accounts W
 <tbody>
 <?php
 require_once __DIR__.'/finance_lib.php';
-$editableTypes=finance_movement_editable_types();
 try{
     $st=db()->prepare("SELECT f.*, c.name contact_name, ac.name cat_name, a.name account_name, a.account_type, ta.name target_account_name
         FROM finance_movements f
@@ -99,7 +98,11 @@ try{
     $rows=$st->fetchAll();
     foreach($rows as $r){
         $rid=(int)$r['id'];
-        $canEdit=in_array($r['movement_type'],$editableTypes,true) && can_edit_delete();
+        // FINANCE CRUD UX PATCH 001 (2026-07-12): buton görünürlüğü artık tek merkezden
+        // (finance_movement_actions()) kararlaştırılıyor — her ekranda ayrı $canEdit mantığı
+        // tekrarlanmıyor. $editableTypes/in_array deseni bu fonksiyonun içinde zaten var.
+        $actions=finance_movement_actions($r);
+        $canEdit=$actions['editable'] && can_edit_delete();
         // Satırın tamamı tıklanabilir → finance_new.php?id= (mevcut Düzenle/Sil hedefiyle aynı,
         // yeni bir detay sayfası icat edilmedi) — Düzenle/Sil'e tıklamak kendi davranışında kalır.
         echo "<tr".($canEdit?" style=\"cursor:pointer\" onclick=\"if(event.target.closest('a,button,form'))return;location.href='finance_new.php?id=".$rid."'\"":"").">";
@@ -122,8 +125,10 @@ try{
                 ."<input type='hidden' name='id' value='".$rid."'>"
                 ."<button class='btn small danger' type='submit'>🗑 Sil</button>"
                 ."</form>";
-        }elseif(!in_array($r['movement_type'],$editableTypes,true)){
-            echo "<span class='muted' title='Satış/belge/transfer işleminden otomatik oluştu'>Otomatik</span>";
+        }elseif($actions['source_url']){
+            echo "<a class='btn small secondary' href='".h($actions['source_url'])."' title='".h($actions['block_reason'])."'>".h($actions['source_label'])."</a>";
+        }else{
+            echo "<span class='muted' title='".h($actions['block_reason'])."'>Otomatik</span>";
         }
         echo "</td>";
         echo "</tr>";

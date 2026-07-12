@@ -54,7 +54,11 @@ if($t==='finance'){
         if(!$res['ok']) exit('Silinemedi: '.htmlspecialchars($res['msg']));
         try{ if(function_exists('activity_log')) activity_log('Silme',$res['msg'],$table.' #'.$id,'','admin',null,$back,'🗑'); }catch(Throwable $e){}
     }catch(Throwable $e){ exit('Silinemedi: '.htmlspecialchars($e->getMessage())); }
-    redirect($back.'?deleted=1');
+    // FINANCE CRUD UX PATCH 001 (2026-07-12): contact_view.php/finance_account_view.php gibi
+    // ekranlardan silindiğinde kullanıcı geldiği ekrana dönsün — finance_return_url() sadece
+    // bilinen ekran adı + tamsayı id kabul eder (open redirect yok, ham URL asla kullanılmaz).
+    $returnUrl = finance_return_url($_POST['return_context'] ?? '', $_POST['return_ref'] ?? '', $back);
+    redirect($returnUrl.(strpos($returnUrl,'?')!==false?'&':'?').'deleted=1');
 }
 
 // Satış (satış hareketi silme): stoku geri koy, finans hareketini sil/geri al —

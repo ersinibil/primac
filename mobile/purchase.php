@@ -149,7 +149,7 @@ $ps=$pdo->query("SELECT id,name,unit,purchase_price,vat_rate FROM stock_items WH
     </div>
     <?php if($isDoc): ?>
     <div style="display:flex;gap:6px">
-      <a class="btn" style="background:rgba(37,99,235,.18);padding:8px 10px" href="trade_document_view.php?id=<?=(int)$row['document_id']?>">🧾</a>
+      <a class="btn" style="background:rgba(37,99,235,.18);padding:8px 10px" href="../trade_document_view.php?id=<?=(int)$row['document_id']?>">🧾</a>
     </div>
     <?php elseif(can_edit_delete()): ?>
     <div style="display:flex;gap:6px">

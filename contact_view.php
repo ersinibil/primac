@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__.'/boot.php';
+require_once __DIR__.'/finance_lib.php';
 require_login();
 
 $pdo=db();
@@ -178,6 +179,7 @@ $balance=contact_balance($pdo, $id);
 
 <?php if($error): ?><div class="alert"><?=h($error)?></div><?php endif; ?>
 <?php if($ok): ?><div class="ok"><?=h($ok)?></div><?php endif; ?>
+<?php if(isset($_GET['deleted'])): ?><div class="ok">Finans hareketi silindi, hesap bakiyesi güncellendi.</div><?php endif; ?>
 
 <div class="cards">
 <div class="card"><small>Tip</small><strong><?=h($c['type'])?></strong></div>
@@ -399,7 +401,7 @@ try{
 <section class="panel">
 <div class="panel-head"><h2>Finans Hareketleri</h2><a class="btn small secondary" href="finance.php?contact_id=<?=$id?>">Tümü</a></div>
 <table>
-<thead><tr><th>Tarih</th><th>Tip</th><th>Hesap</th><th>Tutar</th><th>Durum</th><th>Açıklama</th></tr></thead>
+<thead><tr><th>Tarih</th><th>Tip</th><th>Hesap</th><th>Tutar</th><th>Durum</th><th>Açıklama</th><th>İşlem</th></tr></thead>
 <tbody>
 <?php
 try{
@@ -407,18 +409,41 @@ try{
     $st->execute([$id]);
     $rows=$st->fetchAll();
     foreach($rows as $r){
+        $rid=(int)$r['id'];
+        // FINANCE CRUD UX PATCH 001 (2026-07-12): daha önce burada sadece direction bazlı
+        // "Tahsilat"/"Ödeme" yazıyordu — satış/alış/belge kaynaklı satırlar da yanlışlıkla böyle
+        // etiketleniyordu (finance.php'de daha önce düzeltilmiş aynı hata, bu tabloda unutulmuştu).
+        // finance_movement_type_label() ile diğer ekranlarla tutarlı hale getirildi.
+        $actions=finance_movement_actions($r);
+        $canEdit=$actions['editable'] && can_edit_delete();
         echo "<tr>";
         echo "<td>".h($r['movement_date'])."</td>";
-        echo "<td>".h($r['direction']=='in'?'Tahsilat':'Ödeme')."</td>";
+        echo "<td>".h(finance_movement_type_label($r))."</td>";
         echo "<td>".h($r['account_name'] ?: $r['payment_channel'])."</td>";
         echo "<td>".money($r['amount'])."</td>";
         echo "<td>".badge($r['status'],status_tone($r['status']))."</td>";
         echo "<td>".h($r['description'])."</td>";
+        echo "<td>";
+        if($canEdit){
+            echo "<a class='btn small secondary' href='finance_new.php?id=".$rid."&return_context=contact&return_ref=".$id."'>✏️ Düzenle</a> ";
+            echo "<form method='post' action='sil.php' style='display:inline' onsubmit=\"return confirm('Bu finans hareketi KALICI olarak silinecek ve ilgili hesap bakiyesi geri alınacak. Emin misiniz?')\">"
+                ."<input type='hidden' name='t' value='finance'>"
+                ."<input type='hidden' name='id' value='".$rid."'>"
+                ."<input type='hidden' name='return_context' value='contact'>"
+                ."<input type='hidden' name='return_ref' value='".$id."'>"
+                ."<button class='btn small danger' type='submit'>🗑 Sil</button>"
+                ."</form>";
+        }elseif($actions['source_url']){
+            echo "<a class='btn small secondary' href='".h($actions['source_url'])."' title='".h($actions['block_reason'])."'>".h($actions['source_label'])."</a>";
+        }else{
+            echo "<span class='muted' title='".h($actions['block_reason'])."'>Otomatik</span>";
+        }
+        echo "</td>";
         echo "</tr>";
     }
-    if(!$rows) echo "<tr><td colspan='6' class='muted'>Hareket yok.</td></tr>";
+    if(!$rows) echo "<tr><td colspan='7' class='muted'>Hareket yok.</td></tr>";
 }catch(Throwable $e){
-    echo "<tr><td colspan='6'><div class='alert'>".h($e->getMessage())."</div></td></tr>";
+    echo "<tr><td colspan='7'><div class='alert'>".h($e->getMessage())."</div></td></tr>";
 }
 ?>
 </tbody>

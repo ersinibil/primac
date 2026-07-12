@@ -1,5 +1,6 @@
 <?php
 require_once 'common.php';
+require_once dirname(__DIR__).'/finance_lib.php';
 $pdo=db();
 $id=(int)($_GET['id'] ?? 0);
 
@@ -68,6 +69,7 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['save_contact'])){
 }
 topx('Cari Detay');
 if(!empty($_GET['ok'])) echo '<div class="notice">Cari güncellendi.</div>';
+if(!empty($_GET['deleted'])) echo '<div class="notice">Finans hareketi silindi, hesap bakiyesi güncellendi.</div>';
 if(!empty($_GET['err']) && $_GET['err']==='yetki') echo '<div class="err">Bu işlem için yetkiniz yok.</div>';
 try{
     $s=db()->prepare("SELECT * FROM contacts WHERE id=?"); $s->execute([$id]); $c=$s->fetch();
@@ -201,12 +203,28 @@ try{
   $mv=db()->prepare("SELECT * FROM finance_movements WHERE contact_id=? ORDER BY id DESC LIMIT 25");
   $mv->execute([$id]); $rows=$mv->fetchAll();
   if(!$rows) echo '<p class="muted" style="margin:10px 0 0">Henüz hareket yok.</p>';
+  // FINANCE CRUD UX PATCH 001 (2026-07-12): "Tahsilat"/"Ödeme" etiketi direction'dan değil
+  // finance_movement_type_label()'dan (web ile aynı fonksiyon) geliyor artık — satış/alış/belge
+  // kaynaklı satırlar burada da yanlışlıkla "Tahsilat"/"Ödeme" göstermesin diye. Manuel hareketler
+  // mevcut mobil düzenleme ekranına (movement_view.php) bağlanıyor — yeni bir CRUD YAZILMADI.
+  $srcIcon = ['sale'=>'🧾','purchase'=>'🛒','document'=>'🧾','settlement'=>'🔗'];
   foreach($rows as $m):
     $in=$m['direction']==='in';
+    $actions=finance_movement_actions($m);
+    $canEdit=$actions['editable'] && can_edit_delete();
+    $srcUrl=$actions['source_url'];
+    if($srcUrl && in_array($actions['source_type'],['document','settlement'],true)) $srcUrl='../'.$srcUrl; // trade_document_view.php/finance.php sadece kökte var
   ?>
-  <div class="item">
-    <b style="color:<?=$in?'#22c55e':'#f87171'?>"><?=$in?'Tahsilat':'Ödeme'?>: <?=mm($m['amount'])?></b><br>
-    <small><?=htmlspecialchars($m['movement_date'] ?? '')?><?=$m['description']?' · '.htmlspecialchars($m['description']):''?></small>
+  <div class="item" style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+    <div style="flex:1;min-width:0">
+      <b style="color:<?=$in?'#22c55e':'#f87171'?>"><?=htmlspecialchars(finance_movement_type_label($m))?>: <?=mm($m['amount'])?></b><br>
+      <small><?=htmlspecialchars($m['movement_date'] ?? '')?><?=$m['description']?' · '.htmlspecialchars($m['description']):''?></small>
+    </div>
+    <?php if($canEdit): ?>
+    <a class="btn" style="background:rgba(37,99,235,.18);padding:8px 10px" href="movement_view.php?id=<?=(int)$m['id']?>&return_context=contact&return_ref=<?=$id?>">✏️</a>
+    <?php elseif($srcUrl): ?>
+    <a class="btn" style="background:rgba(37,99,235,.18);padding:8px 10px" href="<?=htmlspecialchars($srcUrl)?>"><?=$srcIcon[$actions['source_type']] ?? '🔗'?></a>
+    <?php endif; ?>
   </div>
   <?php endforeach; ?>
 </div>
