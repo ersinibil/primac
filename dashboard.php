@@ -203,6 +203,14 @@ function cmd_card($title,$value,$desc,$url,$tone='blue'){
 .overdue-job-item .job-info{flex:1;color:#101828;font-weight:600}
 .overdue-job-item .overdue-days{background:#ef4444;color:#fff;border-radius:6px;padding:3px 8px;font-weight:700;font-size:10px}
 
+/* ── Dashboard bölüm sürükle-bırak (Seviye 1) — WEB UI ALIGNMENT & NAVIGATION SPRINT 001 ── */
+.dash-section{position:relative}
+.dash-section.dragging{opacity:.5}
+.dash-section-handlebar{display:flex;justify-content:flex-end;margin:6px 2px 2px}
+.dash-section-handlebar .section-drag{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:#94a3b8;cursor:grab;padding:5px 11px;border-radius:999px;background:rgba(148,163,184,.14);user-select:none}
+.dash-section-handlebar .section-drag:active{cursor:grabbing}
+.dash-reset-bar{display:flex;gap:8px;justify-content:flex-end;margin:0 0 6px}
+
 @media(max-width:960px){.command-grid,.mini-grid,.kpi-comparison-grid{grid-template-columns:1fr}}
 </style>
 
@@ -212,6 +220,11 @@ function cmd_card($title,$value,$desc,$url,$tone='blue'){
 <a class="btn quick-action" href="job_new.php">+ Yeni İş</a>
 <a class="btn secondary quick-action" href="request_new.php">+ Talep</a>
 </div>
+</div>
+
+<div class="dash-reset-bar">
+<button type="button" class="btn small secondary" onclick="resetDashboardOrder('tiles')">↺ Kart Sırası</button>
+<button type="button" class="btn small secondary" onclick="resetDashboardOrder('sections')">↺ Sayfa Düzeni</button>
 </div>
 
 <?php
@@ -237,11 +250,29 @@ $__savedOrderRaw = user_pref_get($pdo, $__myId, 'dashboard_tile_order', '');
 $__savedOrder = $__savedOrderRaw ? explode(',', $__savedOrderRaw) : [];
 $__orderedTileKeys = array_values(array_intersect($__savedOrder, $__visibleTileKeys));
 foreach($__visibleTileKeys as $__k){ if(!in_array($__k, $__orderedTileKeys, true)) $__orderedTileKeys[]=$__k; }
+
+// WEB UI ALIGNMENT & NAVIGATION SPRINT 001 — Faz A devamı (2026-07-13): Seviye 1 kişiselleştirme
+// — Komuta Merkezi'nin ANA BÖLÜMLERİNİN sayfa üzerindeki sırası. Seviye 2 (yukarıdaki
+// $__tileDefs) Ana Modül Kartları bölümünün İÇİNDEKİ kart sırası — iki seviye tamamen bağımsız:
+// ayrı tercih anahtarı (dashboard_section_order — JSON dizi), ayrı drag sistemi
+// (dashboard_section_order — JSON dizi). İzolasyon ayrı DOM seçicileri (.ntile-wrap vs
+// .dash-section) VE ayrı state değişkenleri (draggedWrap/draggedSection, her biri kendi tipi
+// dışındaki sürüklemede null kalıp no-op yapar) üzerinden sağlanıyor — data-drag-type niteliği
+// belgeleme/ileride ek kontrol için tutuluyor, event'ler bilerek stopPropagation edilMEZ (aşağıda
+// bindWrap'teki not) ki bir SECTION, module_tiles'ın kart alanına bırakılınca event doğru
+// yukarı kabarıp (bubble) o bölümün kendi drop handler'ına ulaşabilsin.
+// Her bölüm önce output buffering ile yakalanır (SADECE gerçekten görünürse $__sections'a girer,
+// böylece yetki/veri nedeniyle gizli bir bölüm sıralamayı bozmaz), sonra kayıtlı sıraya göre
+// yeniden dizilip yazdırılır. Bölüm anahtarları dashboard_section_keys() (user_prefs_lib.php)
+// içinde SUNUCU tarafında sabit — ajax_dashboard_order.php de aynı listeden okur.
+$__sections = [];
+
+ob_start();
 ?>
 <div class="navtiles" id="navtiles">
 <?php foreach($__orderedTileKeys as $__k): $__t=$__tileDefs[$__k]; ?>
 <div class="ntile-wrap" data-key="<?=h($__k)?>">
-    <span class="tile-drag" draggable="true" title="Sürükle, sırayı değiştir">⠿</span>
+    <span class="tile-drag" draggable="true" data-drag-type="tile" title="Sürükle, sırayı değiştir">⠿</span>
     <a class="ntile module-card <?=h($__t['color'])?>" href="<?=h($__t['url'])?>"><span class="ic"><?=$__t['icon']?></span><b><?=h($__t['title'])?></b><small><?=$__t['desc']?></small></a>
 </div>
 <?php endforeach; ?>
@@ -258,14 +289,21 @@ foreach($__visibleTileKeys as $__k){ if(!in_array($__k, $__orderedTileKeys, true
       e.dataTransfer.setData('text/plain', draggedWrap.dataset.key);
       e.dataTransfer.effectAllowed = 'move';
       draggedWrap.classList.add('dragging');
+      e.stopPropagation();
     });
-    handle.addEventListener('dragend', function(){
+    handle.addEventListener('dragend', function(e){
       if(draggedWrap) draggedWrap.classList.remove('dragging');
       draggedWrap = null;
       saveTileOrder();
+      e.stopPropagation();
     });
   }
   function bindWrap(wrap){
+    // stopPropagation KULLANILMIYOR (2026-07-13, Ece/code-review'da bulundu): module_tiles bölümü
+    // kendi de bir section-drop hedefi olduğu için, bir SECTION tile alanının üzerine bırakılırsa
+    // event'in dış .dash-section'a kabarması (bubble) gerekiyor. İzolasyon zaten draggedWrap/
+    // draggedSection ayrı state değişkenleriyle (aşağıdaki null-guard) sağlanıyor, propagation'ı
+    // durdurmaya gerek yok — durdurulursa section-drop bu alanda sessizce çalışmaz hale gelirdi.
     wrap.addEventListener('dragover', function(e){ e.preventDefault(); });
     wrap.addEventListener('drop', function(e){
       e.preventDefault();
@@ -283,12 +321,16 @@ foreach($__visibleTileKeys as $__k){ if(!in_array($__k, $__orderedTileKeys, true
     fetch('ajax_dashboard_order.php', {
       method: 'POST',
       headers: {'Content-Type':'application/x-www-form-urlencoded','X-CSRF-Token': window.CSRF_TOKEN},
-      body: 'order=' + encodeURIComponent(keys.join(','))
+      body: 'order_type=tiles&order=' + encodeURIComponent(keys.join(','))
     }).catch(function(){});
   }
 })();
 </script>
+<?php
+$__sections['module_tiles'] = ob_get_clean();
 
+ob_start();
+?>
 <!-- ── Karşılaştırmalı KPI Kartları ── -->
 <section class="panel">
 <div class="panel-head">
@@ -332,9 +374,13 @@ foreach($__visibleTileKeys as $__k){ if(!in_array($__k, $__orderedTileKeys, true
     </div>
 </div>
 </section>
+<?php
+$__sections['month_comparison'] = ob_get_clean();
 
+if(!empty($trends)):
+ob_start();
+?>
 <!-- ── 6 Ay Trend Grafiği ── -->
-<?php if(!empty($trends)): ?>
 <section class="panel">
 <div class="panel-head">
     <h2><span class="section-icon">📈</span> Son 6 Ay Trend - Tahsilat vs Ödeme</h2>
@@ -379,8 +425,12 @@ foreach($__visibleTileKeys as $__k){ if(!in_array($__k, $__orderedTileKeys, true
     </div>
 </div>
 </section>
-<?php endif; ?>
+<?php
+$__sections['six_month_trend'] = ob_get_clean();
+endif;
 
+ob_start();
+?>
 <!-- ── Gecikme Uyarı Panosu ── -->
 <section class="panel">
 <div class="panel-head">
@@ -443,8 +493,11 @@ foreach($__visibleTileKeys as $__k){ if(!in_array($__k, $__orderedTileKeys, true
 </div>
 <?php endif; ?>
 </section>
+<?php
+$__sections['critical_alerts'] = ob_get_clean();
 
-
+ob_start();
+?>
 <section class="command-grid">
 <?php
 cmd_card('Bugün Teslim', $todayDue, 'Bugün terminli açık işler', 'jobs.php?filter=today', 'red');
@@ -457,8 +510,12 @@ cmd_card('Açık Görev', $tasks, 'Personel açık görevleri', 'tasks.php', 'te
 cmd_card('Bekleyen İş', $open, 'Tüm açık işler', 'jobs.php?filter=open', 'green');
 ?>
 </section>
+<?php
+$__sections['operation_kpis'] = ob_get_clean();
 
-<?php if($__myNotes): ?>
+if($__myNotes):
+ob_start();
+?>
 <section class="panel" style="background:#fffbeb">
 <div class="panel-head">
     <h2><span class="section-icon">📝</span> Notlarım <small class="muted" style="font-weight:400">(sadece sana özel)</small></h2>
@@ -471,8 +528,12 @@ cmd_card('Bekleyen İş', $open, 'Tüm açık işler', 'jobs.php?filter=open', '
 </div>
 <?php endforeach; ?>
 </section>
-<?php endif; ?>
+<?php
+$__sections['notes'] = ob_get_clean();
+endif;
 
+ob_start();
+?>
 <section class="panel">
 <div class="panel-head">
     <h2><span class="section-icon">🕘</span> Son İşlemler</h2>
@@ -486,8 +547,11 @@ try{
 }
 ?>
 </section>
+<?php
+$__sections['recent_actions'] = ob_get_clean();
 
-
+ob_start();
+?>
 <section class="panel">
 <div class="panel-head">
 <h2><span class="section-icon">🔔</span> Canlı Bildirimler</h2>
@@ -529,7 +593,11 @@ $readUrl='notifications.php?read='.$n['id'].'&go='.urlencode($go);
 }catch(Throwable $e){ echo "<div class='alert'>".h($e->getMessage())."</div>";}
 ?>
 </section>
+<?php
+$__sections['live_notifications'] = ob_get_clean();
 
+ob_start();
+?>
 <div class="mini-grid">
 <section class="panel">
 <div class="panel-head">
@@ -597,7 +665,11 @@ if($rows):
 ?>
 </section>
 </div>
+<?php
+$__sections['today_and_late_lists'] = ob_get_clean();
 
+ob_start();
+?>
 <section class="panel">
 <div class="panel-head">
     <h2><span class="section-icon">📋</span> Son İşler</h2>
@@ -631,5 +703,97 @@ if($rows):
 }catch(Throwable $e){ echo "<div class='alert'>".h($e->getMessage())."</div>";}
 ?>
 </section>
+<?php
+$__sections['recent_jobs'] = ob_get_clean();
+
+// ---- Bölüm sırasını uygula ve yazdır ----
+$__sectionDefaultOrder = dashboard_section_keys();
+$__sectionLabels = [
+    'module_tiles'         => 'Ana Modül Kartları',
+    'month_comparison'     => 'Bu Ay vs Geçen Ay',
+    'six_month_trend'      => 'Son 6 Ay Trend',
+    'critical_alerts'      => 'Dikkat / Geciken & Kritik Stok',
+    'operation_kpis'       => 'Operasyon KPI Kartları',
+    'notes'                => 'Notlarım',
+    'recent_actions'       => 'Son İşlemler',
+    'live_notifications'   => 'Canlı Bildirimler',
+    'today_and_late_lists' => 'Bugün Teslim & Geciken İşler',
+    'recent_jobs'          => 'Son İşler',
+];
+$__visibleSectionKeys = array_keys($__sections);
+$__savedSectionOrderRaw = user_pref_get($pdo, $__myId, 'dashboard_section_order', '');
+$__savedSectionOrder = [];
+if($__savedSectionOrderRaw){
+    $__decoded = json_decode($__savedSectionOrderRaw, true);
+    if(is_array($__decoded)) $__savedSectionOrder = $__decoded;
+}
+$__orderedSectionKeys = array_values(array_intersect($__savedSectionOrder, $__visibleSectionKeys));
+foreach($__sectionDefaultOrder as $__sk){
+    if(in_array($__sk, $__visibleSectionKeys, true) && !in_array($__sk, $__orderedSectionKeys, true)) $__orderedSectionKeys[]=$__sk;
+}
+
+foreach($__orderedSectionKeys as $__sk):
+?>
+<div class="dash-section" data-drag-type="section" data-key="<?=h($__sk)?>">
+  <div class="dash-section-handlebar">
+    <span class="section-drag" draggable="true" data-drag-type="section" title="Bölümü sürükle, sırayı değiştir">⋮⋮ <?=h($__sectionLabels[$__sk] ?? $__sk)?></span>
+  </div>
+  <?=$__sections[$__sk]?>
+</div>
+<?php endforeach; ?>
+
+<script>
+(function(){
+  var draggedSection = null;
+  function bindSectionHandle(handle){
+    handle.addEventListener('dragstart', function(e){
+      draggedSection = handle.closest('.dash-section');
+      if(!draggedSection) return;
+      e.dataTransfer.setData('text/plain', draggedSection.dataset.key);
+      e.dataTransfer.effectAllowed = 'move';
+      draggedSection.classList.add('dragging');
+      e.stopPropagation();
+    });
+    handle.addEventListener('dragend', function(e){
+      if(draggedSection) draggedSection.classList.remove('dragging');
+      draggedSection = null;
+      saveSectionOrder();
+      e.stopPropagation();
+    });
+  }
+  function bindSectionWrap(sec){
+    sec.addEventListener('dragover', function(e){ e.preventDefault(); e.stopPropagation(); });
+    sec.addEventListener('drop', function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      if(!draggedSection || draggedSection===sec) return;
+      var rect = sec.getBoundingClientRect();
+      var after = (e.clientY - rect.top) > rect.height/2;
+      if(after){ sec.parentNode.insertBefore(draggedSection, sec.nextSibling); }
+      else{ sec.parentNode.insertBefore(draggedSection, sec); }
+    });
+  }
+  document.querySelectorAll('.dash-section > .dash-section-handlebar > .section-drag').forEach(bindSectionHandle);
+  document.querySelectorAll('.dash-section').forEach(bindSectionWrap);
+  function saveSectionOrder(){
+    var keys = Array.prototype.map.call(document.querySelectorAll('.dash-section'), function(w){ return w.dataset.key; });
+    fetch('ajax_dashboard_order.php', {
+      method: 'POST',
+      headers: {'Content-Type':'application/x-www-form-urlencoded','X-CSRF-Token': window.CSRF_TOKEN},
+      body: 'order_type=sections&order=' + encodeURIComponent(JSON.stringify(keys))
+    }).catch(function(){});
+  }
+})();
+
+function resetDashboardOrder(type){
+  var label = type==='tiles' ? 'kart sırasını' : 'sayfa düzenini';
+  if(!confirm('Varsayılan '+label+' geri yüklemek istiyor musunuz?')) return;
+  fetch('ajax_dashboard_order.php', {
+    method: 'POST',
+    headers: {'Content-Type':'application/x-www-form-urlencoded','X-CSRF-Token': window.CSRF_TOKEN},
+    body: 'order_type=' + type + '&reset=1'
+  }).then(function(){ location.reload(); }).catch(function(){ location.reload(); });
+}
+</script>
 
 <?php require_once __DIR__.'/layout_bottom.php'; ?>
