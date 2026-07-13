@@ -3,15 +3,28 @@
 <!-- Açık geliştirme görevleri. Kapanan madde buradan silinip memory/features.md'ye taşınır. -->
 
 ## WEB UI ALIGNMENT & NAVIGATION SPRINT 001 DEV PASS takibi açık (2026-07-13)
-- Kod tamamlandı (Faz A+B+C), commit `9bdff1e`, push edildi. php -l tüm dosyalarda temiz,
-  route/yetki seti değişmedi (script ile doğrulandı), Ece/Selin/Elif incelemesinden geçti (kritik/
-  orta bulgu yok, düşük öncelikli 1 bulgu — contacts_report.php yetki uyumsuzluğu — aynı turda
-  düzeltildi, bkz. [[bugs]]). guncelleme.zip/MD5 hazırlanacak.
+- Kod tamamlandı (Faz A+B+C + Faz A'nın devamı olan bölüm sürükle-bırak), commit `9bdff1e` →
+  `3b431ec` (docs) → `59e51dc` (section-drag). Push edildi, guncelleme.zip/MD5 hazır
+  (`8d6250c17fbffd88296f7c8ed4923e4a`). php -l tüm dosyalarda temiz, route/yetki seti değişmedi
+  (script ile doğrulandı), Ece/Selin/Elif incelemesinden geçti (kritik/orta bulgu yok; düşük
+  öncelikli contacts_report.php yetki uyumsuzluğu VE section-drag'daki bir "ölü bölge" bugu aynı
+  turlarda düzeltildi, bkz. [[bugs]]/[[features]]).
+- **KALICI KALİTE KURALI (kullanıcı talimatı, 2026-07-13):** Drag&Drop/Modal/Menü/Hover/
+  Responsive/JS/AJAX/Bildirim/Arama/Filtreleme gibi kullanıcı-etkileşimli özellikler için "Kod
+  tamamlandı" ile "Kullanıcı davranışı doğrulandı" ARTIK AYRI raporlanıyor; ikincisi doğrulanmadan
+  hiçbiri TAMAMLANDI/CLOSED yazılmıyor. Bu kural PRIMAC OTS'un tüm gelecek sprintleri için geçerli.
+- **Durum (bu kurala göre):** Tile-drag (Ana Modül Kartları'nın iç sırası) → **PASS**, kullanıcı
+  DEV'de ⠿ tutamacı görüp fiilen sürükledi, doğruladı. Section-drag (10 ana bölümün sayfa
+  sırası, `dashboard_section_order`) → **KOD TAMAMLANDI, KULLANICI DAVRANIŞI HENÜZ
+  DOĞRULANMADI**. Kullanıcının doğrulaması gereken somut adımlar: "Son İşlemler"/"Notlarım"/
+  "Canlı Bildirimler" bölümlerini ⋮⋮ tutamacından sürükleyip taşımak, sayfayı yenilemek (sıra
+  korunmalı), çıkış-giriş yapmak (sıra hâlâ korunmalı), "↺ Sayfa Düzeni" sıfırlama butonunu
+  denemek.
 - **Görsel/responsive test yapılamadı** — bu oturumda tarayıcı otomasyon aracı yoktu, sprintin
   kendi test matrisinin A/B/C maddeleri (görsel tutarlılık, kullanılabilirlik, responsive
   Safari/Chrome 1440/1280/1024/tablet) sadece kod seviyesinde değil, gerçek görsel bir
-  değerlendirme gerektiriyor. Kullanıcının DEV/primac.tr'de bizzat doğrulaması gereken 3 kapanış
-  kriteri (sprintin kendi tanımı): (1) dashboard'da kart sürükle-bırak çalışıyor mu, (2) sol menü
+  değerlendirme gerektiriyor. Kullanıcının DEV/primac.tr'de bizzat doğrulaması gereken kapanış
+  kriterleri: (1) dashboard'da hem kart hem sayfa düzeni sürükle-bırakı çalışıyor mu, (2) sol menü
   grupları (Ticaret/Finans/İş-Üretim/Raporlama) anlaşılır mı, (3) web arayüzü mobille aynı ürün
   ailesi gibi hissettiriyor mu, daha sade/hızlı mı. PASS gelmeden CLOSED yazılmayacak.
 - **Bilinçli kapsam dışı bırakılan (mobil parite notu, Ece'nin bulgusu):** `sales.php`/

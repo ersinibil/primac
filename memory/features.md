@@ -57,7 +57,30 @@ maddesi: route/yetki/CSRF/dashboard link/mobil view/mobil menü/bildirim-mesaj l
 menüsü) doğrulandı + Ece/Selin/Elif incelemesinden geçti (kritik/orta bulgu yok). Görsel/responsive
 doğrulama ve sprintin kendi kapanış kriterleri (sürükle-bırak çalışıyor mu, sol menü anlaşılır mı,
 web mobille aynı ürün ailesi gibi hissettiriyor mu) kullanıcının DEV'de bizzat test etmesini
-bekliyor — PASS gelmeden CLOSED yazılmayacak. — Finans Hareketi Düzenle/Sil Her Ekrandan Erişilebilir: USER TEST BEKLİYOR (2026-07-12)
+bekliyor — PASS gelmeden CLOSED yazılmayacak.
+
+**2026-07-13 EK — Faz A tamamlandı (bölüm sürükle-bırak) + kalıcı kalite kuralı:** İlk kullanıcı
+testinde tile-drag PASS aldı (kartların sağ üst köşesindeki ⠿ tutamaç görülüp fiilen sürüklendi,
+sıra kaydedildi) — AMA kullanıcının asıl talebinin "sayfanın TAMAMININ" bloklar halinde
+sıralanabilmesi olduğu, sadece Ana Modül Kartları'yla sınırlı kalındığı ortaya çıktı. Bunun
+üzerine **Seviye 2** eklendi: `dashboard_section_order` (yeni tercih anahtarı, aynı
+`user_preferences` tablosu, yeni migration YOK) — Komuta Merkezi'nin 10 gerçek bölümünün
+(module_tiles, month_comparison, six_month_trend, critical_alerts, operation_kpis, notes,
+recent_actions, live_notifications, today_and_late_lists, recent_jobs — `dashboard_section_keys()`
+tek doğru kaynak) her biri artık kendi ⋮⋮ tutamacıyla ayrı ayrı taşınabiliyor, tile-level sıralama
+ile tamamen bağımsız (ayrı state, ayrı DOM seçicisi). Ece'nin code review'unda bulunan bir "ölü
+bölge" bugu (bir SECTION, module_tiles'ın kart alanına bırakılınca stopPropagation() event'i
+yutuyordu) aynı turda düzeltildi. **Kalıcı kalite kuralı (kullanıcı talimatı, standing rule):**
+bundan böyle Drag&Drop/Modal/Menü/Accordion/Hover/Responsive/JS/AJAX/Bildirim/Arama/Filtreleme gibi
+kullanıcı-etkileşimli özellikler için "Kod tamamlandı" ile "Kullanıcı davranışı doğrulandı" ayrı
+başlıklar altında raporlanır; gerçek kullanıcı testi geçmeden hiçbiri "TAMAMLANDI"/CLOSED
+yazılmaz. Bu sprint için durum: **tile-drag PASS (kullanıcı doğrulaması var), section-drag KOD
+TAMAMLANDI + code review geçti ama KULLANICI DAVRANIŞI HENÜZ DOĞRULANMADI** — commit `59e51dc`,
+push edildi, zip hazır. Kullanıcının "Son İşlemler"/"Notlarım"/"Canlı Bildirimler" bölümlerini
+gerçekten sürükleyip sayfa yenilendiğinde/çıkış-girişten sonra sırasının korunduğunu doğrulaması
+gerekiyor.
+
+## Finance CRUD UX Patch 001 — Finans Hareketi Düzenle/Sil Her Ekrandan Erişilebilir: USER TEST BEKLİYOR (2026-07-12)
 Sorun: bir finans hareketini (tahsilat/ödeme) düzenlemek/silmek için kullanıcının "Raporlar >
 Son İşlemler" (aslında ana finans ekranı, finance.php) yolunu bilmesi gerekiyordu — cari detay ve
 hesap (kasa/banka) detay ekranları aynı satırları SADECE görüntülüyordu, işlem yapılamıyordu.
