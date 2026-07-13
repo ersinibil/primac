@@ -52,14 +52,68 @@ $outToday=safe_sum("SELECT COALESCE(SUM(amount),0) s FROM finance_movements WHER
 </form>
 </details>
 
+<?php
+// FINANCE ACCOUNT LIST FILTER UX (2026-07-14) — web (finance_accounts.php) ile aynı whitelist
+// mantığı finance_lib.php'den paylaşılıyor. Mobilin ESKİ varsayılanı "sadece aktif" idi (pasif
+// hiç görünmüyordu) — bu davranış status='active' varsayılanıyla KORUNDU, kullanıcı isterse
+// Durum filtresinden Pasif/Tümü'ne geçebilir (öncesinde bu seçenek hiç yoktu).
+$mtype=$_GET['type'] ?? '';
+$mstatus=$_GET['status'] ?? 'active';
+$mbank=trim($_GET['bank'] ?? '');
+$mq=trim($_GET['q'] ?? '');
+$mHasFilter=($mtype!=='' || $mstatus!=='active' || $mbank!=='' || $mq!=='');
+$mTypeCounts=finance_account_type_counts($pdo, $mstatus);
+$mBankOptions=finance_account_bank_options($pdo);
+function kasa_tab_url($typeVal,$status,$bank,$q){
+    $qs=[];
+    if($typeVal!=='') $qs['type']=$typeVal;
+    if($status!=='active') $qs['status']=$status;
+    if($bank!=='') $qs['bank']=$bank;
+    if($q!=='') $qs['q']=$q;
+    return 'kasa.php'.($qs ? '?'.http_build_query($qs) : '');
+}
+?>
+<div style="display:flex;gap:6px;overflow:auto;margin:12px 0 8px;-webkit-overflow-scrolling:touch">
+<?php
+$mTabs=['' => '💰 Tümü ('.$mTypeCounts['all'].')', 'Kasa'=>'💵 Kasalar ('.$mTypeCounts['Kasa'].')', 'Banka'=>'🏦 Banka Hesapları ('.$mTypeCounts['Banka'].')', 'Kredi Kartı'=>'💳 Kredi Kartları ('.$mTypeCounts['Kredi Kartı'].')', 'Diger'=>'➕ Diğer ('.$mTypeCounts['Diger'].')'];
+foreach($mTabs as $tv=>$label):
+?>
+  <a class="btn" style="white-space:nowrap;padding:8px 13px;<?=$mtype===$tv?'background:#2563eb;color:#fff':'background:#334155;color:#cbd5e1'?>" href="<?=htmlspecialchars(kasa_tab_url($tv,$mstatus,$mbank,$mq))?>"><?=htmlspecialchars($label)?></a>
+<?php endforeach; ?>
+</div>
+
+<details class="panel"<?=$mHasFilter?' open':''?>><summary style="font-weight:900;cursor:pointer">🔎 Filtrele<?=$mHasFilter?' (aktif)':''?></summary>
+<form method="get" style="margin-top:10px">
+  <?php if($mtype!==''): ?><input type="hidden" name="type" value="<?=htmlspecialchars($mtype)?>"><?php endif; ?>
+  <select name="status">
+    <option value="active" <?=$mstatus==='active'?'selected':''?>>Aktif</option>
+    <option value="passive" <?=$mstatus==='passive'?'selected':''?>>Pasif</option>
+    <option value="" <?=$mstatus===''?'selected':''?>>Tümü</option>
+  </select>
+  <select name="bank">
+    <option value="">Tüm Bankalar</option>
+    <?php foreach($mBankOptions as $b): ?><option value="<?=htmlspecialchars($b)?>" <?=$mbank===$b?'selected':''?>><?=htmlspecialchars($b)?></option><?php endforeach; ?>
+  </select>
+  <input type="text" name="q" value="<?=htmlspecialchars($mq)?>" placeholder="Hesap, banka, IBAN veya kart ara...">
+  <button class="btn dark" type="submit" style="width:100%">Uygula</button>
+  <?php if($mHasFilter): ?><a href="kasa.php" class="btn" style="width:100%;text-align:center;display:block;margin-top:8px;background:#334155;color:#fff">✕ Filtreyi Temizle</a><?php endif; ?>
+</form>
+</details>
+
 <div class="panel"><b>🏦 Hesaplar</b>
 <?php
 try{
-  $accs=$pdo->query("SELECT * FROM finance_accounts WHERE COALESCE(active,1)=1 ORDER BY account_type,name")->fetchAll();
-  if(!$accs) echo '<p class="muted" style="margin:10px 0 0">Henüz hesap yok — yukarıdan ekleyin.</p>';
+  list($mWhere,$mParams)=finance_account_filter_where($mtype,$mstatus,$mbank,$mq);
+  $accs=$pdo->prepare("SELECT * FROM finance_accounts $mWhere ORDER BY account_type,name");
+  $accs->execute($mParams);
+  $accs=$accs->fetchAll();
+  if(!$accs){
+    if($mHasFilter) echo '<p class="muted" style="margin:10px 0 0">Seçili filtrelere uygun hesap bulunamadı.<br><a href="kasa.php" style="color:#93c5fd">Filtreleri Temizle</a></p>';
+    else echo '<p class="muted" style="margin:10px 0 0">Henüz hesap yok — yukarıdan ekleyin.</p>';
+  }
   foreach($accs as $a){ $ic=$a['account_type']==='Banka'?'🏦':($a['account_type']==='Kredi Kartı'?'💳':($a['account_type']==='POS'?'🧾':'💵'));
     echo '<a class="item" href="account_view.php?id='.(int)$a['id'].'" style="display:flex;justify-content:space-between;align-items:center">'
-       .'<span>'.$ic.' <b>'.htmlspecialchars($a['name']).'</b><br><small class="muted">'.htmlspecialchars($a['account_type'].($a['bank_name']?' · '.$a['bank_name']:'')).'</small></span>'
+       .'<span>'.$ic.' <b>'.htmlspecialchars($a['name']).'</b><br><small class="muted">'.htmlspecialchars($a['account_type'].($a['bank_name']?' · '.$a['bank_name']:'').(!$a['active']?' · Pasif':'')).'</small></span>'
        .'<b style="color:'.((float)$a['current_balance']<0?'#f87171':'#4ade80').'">'.mm($a['current_balance']??0).'</b></a>';
   }
 }catch(Throwable $e){ echo '<div class="err">'.htmlspecialchars($e->getMessage()).'</div>'; }

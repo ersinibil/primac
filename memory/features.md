@@ -2,6 +2,75 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
+## FINANCE ACCOUNT LIST FILTER UX — Hesaplar ekranına tür/durum/banka/arama filtresi: USER TEST BEKLİYOR (2026-07-14)
+Sorun: `finance_accounts.php` (Banka/Kasa/Kredi Kartı/POS hepsi) tek tabloda karışık listeleniyordu,
+tür bazlı ayrım için sadece 5 sabit sekme vardı (Tümü/Bankalar/Kasalar/Kredi Kartları/POS), durum
+(aktif/pasif) veya banka adına göre filtre hiç yoktu, arama yoktu.
+
+**Gerçek şema (kod/migration'dan doğrulandı, varsayılmadı):** kolon adı `type` DEĞİL,
+`account_type` (`database/migrations/005_finance.sql`); gerçek değerler `finance_lib.php::
+finance_account_types()`'tan: `['Banka','Kasa','Kredi Kartı','POS','Diğer']`. Durum kolonu `active`
+(tinyint 0/1), ayrı bir "status" kolonu yok.
+
+**Tür eşleme (3 ana grup + "Diğer" havuzu):**
+| Sekme | SQL karşılığı |
+|---|---|
+| Kasalar | `account_type='Kasa'` |
+| Banka Hesapları | `account_type='Banka'` |
+| Kredi Kartları | `account_type='Kredi Kartı'` |
+| Diğer | `account_type NOT IN ('Banka','Kasa','Kredi Kartı')` — POS + Diğer + ileride eklenecek her yeni tür otomatik burada görünür, kaybolmaz |
+
+**Geriye dönük uyumluluk (kritik):** `finance.php`'nin var olan 4 derin linki
+(`finance_accounts.php?type=Banka/Kasa/Kredi Kartı/POS`) BİREBİR korundu — `finance_account_filter_where()`
+bu değerleri hâlâ exact-match ile işliyor, sadece YENİ `type=Diger` özel değeri (3 ana grup dışındaki
+her şey) eklendi. Ece'nin code review'unda bulunan tek düşük öncelik not (`type=POS` ile gelindiğinde
+hiçbir sekme aktif görünmüyordu) aynı turda düzeltildi.
+
+**Varsayılan filtre davranışı (mevcut ekran davranışı korunuyor kuralına göre tespit edildi):**
+- Web: eskiden hem aktif hem pasif hesaplar birlikte gösteriliyordu (hiç durum filtresi yoktu) →
+  yeni varsayılan da `status=''` (Tümü), kullanıcı alışkanlığı bozulmadı.
+- Mobil (`mobile/kasa.php`): eskiden SADECE aktif hesaplar gösteriliyordu (`WHERE COALESCE(active,1)=1`,
+  pasif hiç görünmüyordu) → yeni varsayılan `status='active'` ile bu davranış korundu, ama artık
+  kullanıcı isterse Pasif/Tümü'ne geçebiliyor (öncesinde bu seçenek hiç yoktu — platformlar arası
+  varsayılan FARKLI ama her biri kendi eski davranışını koruyor, bilinçli).
+
+**SQL filtre yöntemi:** tüm mantık `finance_lib.php`'de tek yerde (web+mobil ortak):
+`finance_account_filter_where($type,$status,$bank,$q)` → `[$whereSql,$params]` (hepsi prepared
+statement param'ı, whitelist dışı type/status sessizce "filtre yok" davranışına düşer, SQL'e ham
+yansımaz). `finance_account_bank_options($pdo)` — banka dropdown'ı SABİT DEĞİL, DISTINCT
+`bank_name`'den üretiliyor; büyük/küçük harf farkı (`GARANTİ`/`Garanti`) MySQL'in
+`utf8mb4_unicode_ci` collation'ı sayesinde hem `GROUP BY` hem `WHERE =` seviyesinde zaten tek
+grup olarak eşleşiyor (yerel sandbox'ta doğrulandı), veri tabanında hiçbir satır otomatik
+UPDATE edilmedi. `finance_account_type_counts($pdo,$status)` — sekme sayaçları TEK aggregate
+sorgu.
+
+**Değiştirilen dosyalar:** `finance_lib.php` (4 yeni paylaşılan fonksiyon), `finance_accounts.php`
+(sekme+durum+banka+arama toolbar'ı, boş-durum mesajı, Ekstre linkine filtre bağlamı), 
+`finance_account_view.php` ("Hesaplar" geri-dönüş linki filtre bağlamını korur — `rtype/rstatus/
+rbank/rq`, sadece sabit `finance_accounts.php`'ye eklenen query string, open redirect yok),
+`mobile/kasa.php` (aynı filtre, mobil pill-tab + collapsible form).
+
+**Bilinçli kapsam dışı bırakılan (mümkünse notuna rağmen, düşük risk/değer gerekçesiyle):** hesap
+"🗑 Sil" işlemi `sil.php?t=account` üzerinden (sadece `finance_account_view.php`'nin kendi Sil
+butonu) hâlâ filtresiz `finance_accounts.php?deleted=1`'e dönüyor — bu tek yol `sil.php` gibi
+paylaşılan, çok sayıda başka akışın kullandığı bir dosyaya dokunmayı gerektirdiği için bilinçli
+olarak dışarıda bırakıldı (listenin KENDİ inline Sil'i zaten filtre bağlamını otomatik koruyor,
+çünkü formlar `action` belirtmiyor ve aynı sayfaya post ediliyor).
+
+**Güvenlik:** Selin (ots-security-auditor) — kritik/yüksek bulgu yok (SQL injection, whitelist,
+XSS, open redirect, yetki, CRUD çakışması hepsi temiz). Ece (ots-code-reviewer) — kritik/yüksek
+bulgu yok, PHP 7.2 uyumu/parite/paylaşılan mantık PASS, tek düşük öncelik notu (yukarıda) aynı
+turda kapatıldı.
+
+**Test:** Yerel MariaDB sandbox'ta (`ots_sectest`) 15 zorunlu senaryo + ek kontroller (SQL
+injection denemesi, GARANTİ/Garanti gruplama, geçersiz type/status whitelist düşüşü) — hepsi
+PASS. `php -l` 4 dosyada temiz.
+
+**USER TEST BEKLİYOR:** kullanıcının DEV/primac.tr'de Kasalar/Banka Hesapları/Kredi Kartları/
+Aktif-Pasif/banka adı/arama filtrelerinin gerçekten çalıştığını, `finance.php`'nin eski derin
+linklerinin (Bankalar/Kasalar/Kredi Kartları/POS kartları) hâlâ doğru çalıştığını, filtreliyken
+Ekstre/Düzenle/Sil davranışının bozulmadığını doğrulamadan CLOSED yazılmayacak.
+
 ## UX TERMINOLOGY FIX — "İş Takip"/"İşlerim" karışıklığı çözüldü: CLOSED — USER TEST PASS (2026-07-13)
 Kullanıcı bildirimi: sol menüde "İşlerim" ve "İş Takip" isimleri birbirine çok yakındı, operasyonel
 iş kayıtları (jobs.php) ile kullanıcıya atanmış kişisel görev/hatırlatmalar (mytasks.php) arasında

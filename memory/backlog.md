@@ -12,6 +12,19 @@ devam edecek. Aşağıdaki maddeler şimdilik BEKLEMEDE: "Yaklaşan İşler" wid
 navigasyon, `deleted_at` filtre genişletmesi, VAPID yapılandırması, mobil karşılığı olmayan
 ekranlar.
 
+## FINANCE ACCOUNT LIST FILTER UX DEV PASS takibi açık (2026-07-14)
+- Kod tamamlandı (tür/durum/banka/arama filtresi, `finance_accounts.php` + `mobile/kasa.php` +
+  `finance_account_view.php` + `finance_lib.php`), yerel MariaDB sandbox'ta 15 zorunlu senaryo +
+  ek kontroller PASS, Selin/Ece incelemesinden geçti (kritik/yüksek bulgu yok, tek düşük öncelik
+  not aynı turda kapatıldı — bkz. [[features]]). Kullanıcının DEV/primac.tr'de Kasalar/Banka
+  Hesapları/Kredi Kartları/Aktif-Pasif/banka adı/arama filtrelerini, `finance.php`'nin eski derin
+  linklerinin hâlâ çalıştığını, filtreliyken Ekstre/Düzenle/Sil davranışının bozulmadığını test
+  edip PASS vermesi bekleniyor; PASS gelmeden CLOSED yazılmayacak.
+- Bilinçli kapsam dışı bırakılan (düşük risk/değer): hesap "🗑 Sil" (`sil.php?t=account` üzerinden,
+  sadece `finance_account_view.php`'nin kendi Sil butonu) hâlâ filtresiz listeye dönüyor — `sil.php`
+  paylaşılan bir dosya olduğu için dokunulmadı, listenin kendi inline Sil'i zaten filtre bağlamını
+  koruyor.
+
 ## "Yaklaşan İşler / Yaklaşan Vadeler" widget'ı — resmi backlog maddesi (2026-07-13)
 - Dashboard Tarih Mantığı KARAR'ının (bkz. [[features]] "Dashboard Tarih Mantığı Düzeltmesi")
   4 numaralı iş kuralı: "Bugün Yapılacaklar", "Gecikenler", "Açık İşler" yanında dördüncü kavram

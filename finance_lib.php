@@ -8,6 +8,105 @@ function finance_account_types(){
     return ['Banka','Kasa','Kredi Kartı','POS','Diğer'];
 }
 
+/* ---------------------------------------------------------------------------------------------
+ * Hesap Listesi Filtreleme (FINANCE ACCOUNT LIST FILTER UX, 2026-07-14) — web (finance_accounts.php)
+ * + mobil (mobile/kasa.php) ORTAK. Tek doğru kaynak burada, iki ayrı yerde tekrarlanıp
+ * birbirinden sapma riski taşımaz.
+ * ------------------------------------------------------------------------------------------- */
+
+// Sekme grubu: 3 ana tür (Banka/Kasa/Kredi Kartı) kendi başına, geri kalan HER ŞEY (POS, Diğer,
+// ileride eklenecek yeni bir tür) "Diğer" sekmesinin altında toplanır — yeni bir tür eklenirse
+// kod değişmeden otomatik "Diğer" altında görünür, kaybolmaz.
+function finance_account_main_types(){
+    return ['Banka','Kasa','Kredi Kartı'];
+}
+
+// $type filtre değeri normalize: gerçek account_type değerlerinden biri (geriye dönük uyumluluk —
+// finance.php'nin var olan ?type=Banka/Kasa/Kredi Kartı/POS derin linkleri KIRILMAZ, tek tek
+// eşleşmeye devam eder) YA DA yeni 'Diger' sekme değeri (3 ana grup DIŞINDAKİ tüm türler).
+// Tanınmayan/boş değer → filtre yok ("Tümü"), whitelist dışı bir string asla SQL'e ham yansımaz.
+function finance_account_filter_where($type, $status, $bank, $q){
+    $where = [];
+    $params = [];
+
+    $mainTypes = finance_account_main_types();
+    if($type === 'Diger'){
+        $placeholders = implode(',', array_fill(0, count($mainTypes), '?'));
+        $where[] = "account_type NOT IN ($placeholders)";
+        foreach($mainTypes as $t) $params[] = $t;
+    } elseif(in_array($type, finance_account_types(), true)){
+        $where[] = 'account_type=?';
+        $params[] = $type;
+    }
+    // (aksi halde: type boş ya da tanınmayan değer → filtre eklenmez, "Tümü")
+
+    if($status === 'active'){
+        $where[] = 'active=1';
+    } elseif($status === 'passive'){
+        $where[] = 'active=0';
+    }
+    // (aksi halde: 'active' değilse mevcut ekranın eski varsayılanı korunur — filtre yok, tümü)
+
+    $bank = trim((string)$bank);
+    if($bank !== ''){
+        // utf8mb4_unicode_ci zaten çoğu durumda case-insensitive eşleşir ama Türkçe İ/ı için
+        // güvenilir değil — UPPER(TRIM()) ile açıkça normalize edip karşılaştırıyoruz.
+        $where[] = 'UPPER(TRIM(bank_name))=UPPER(TRIM(?))';
+        $params[] = $bank;
+    }
+
+    $q = trim((string)$q);
+    if($q !== ''){
+        $where[] = '(name LIKE ? OR bank_name LIKE ? OR iban LIKE ? OR card_last4 LIKE ?)';
+        $like = '%'.$q.'%';
+        array_push($params, $like, $like, $like, $like);
+    }
+
+    return [$where ? ('WHERE '.implode(' AND ', $where)) : '', $params];
+}
+
+// Banka filtre dropdown'ının seçenekleri — SABİT DEĞİL, mevcut kayıtlardan DISTINCT üretilir.
+// Büyük/küçük harf farkı olan aynı banka adı ("GARANTİ" / "Garanti") kullanıcıya mükerrer
+// seçenek olarak GÖRÜNMEZ — normalize edilmiş anahtara göre gruplanır, grup içindeki en sık
+// kullanılan yazım biçimi temsilci etiket olarak gösterilir. Veri tabanında hiçbir satır
+// otomatik UPDATE EDİLMEZ, sadece sunumda normalize edilir.
+function finance_account_bank_options($pdo){
+    try{
+        $rows = $pdo->query("SELECT bank_name, COUNT(*) c FROM finance_accounts
+            WHERE bank_name IS NOT NULL AND TRIM(bank_name)<>'' GROUP BY bank_name")->fetchAll();
+    }catch(Throwable $e){ return []; }
+    $groups = [];
+    foreach($rows as $r){
+        $label = trim($r['bank_name']);
+        if($label==='') continue;
+        $key = mb_strtoupper($label, 'UTF-8');
+        if(!isset($groups[$key]) || (int)$r['c'] > $groups[$key]['c']){
+            $groups[$key] = ['label'=>$label, 'c'=>(int)$r['c']];
+        }
+    }
+    $labels = array_map(function($g){ return $g['label']; }, $groups);
+    sort($labels, SORT_FLAG_CASE | SORT_STRING);
+    return $labels;
+}
+
+// Tür sekmelerinin yanındaki adet sayaçları — TEK aggregate sorgu (ağır ek sorgu YOK). $status
+// mevcut durum filtresini de yansıtır (ör. "Aktif" seçiliyken sekme sayıları da sadece aktifleri sayar).
+function finance_account_type_counts($pdo, $status=''){
+    $counts = ['all'=>0, 'Kasa'=>0, 'Banka'=>0, 'Kredi Kartı'=>0, 'Diger'=>0];
+    $statusWhere = $status==='active' ? 'WHERE active=1' : ($status==='passive' ? 'WHERE active=0' : '');
+    try{
+        $rows = $pdo->query("SELECT account_type, COUNT(*) c FROM finance_accounts $statusWhere GROUP BY account_type")->fetchAll();
+    }catch(Throwable $e){ return $counts; }
+    $mainTypes = finance_account_main_types();
+    foreach($rows as $r){
+        $c = (int)$r['c'];
+        $counts['all'] += $c;
+        if(in_array($r['account_type'], $mainTypes, true)) $counts[$r['account_type']] += $c;
+        else $counts['Diger'] += $c;
+    }
+    return $counts;
+}
+
 // Hesap finance_movements'ta (doğrudan ya da transfer hedefi olarak) ya da accounting_entries'te
 // (Muhasebe modülü gider/gelir/personel ödemesi kaydı) kullanılmış mı?
 function finance_account_has_movements($pdo, $id){

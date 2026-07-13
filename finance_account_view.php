@@ -24,6 +24,17 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['edit_account'])){
 $a=null;
 try{ $s=$pdo->prepare("SELECT * FROM finance_accounts WHERE id=?"); $s->execute([$id]); $a=$s->fetch(); }catch(Throwable $e){}
 
+// FINANCE ACCOUNT LIST FILTER UX (2026-07-14): finance_accounts.php'den filtreli gelindiyse
+// (r* param'ları), "Hesaplar" linki filtre bağlamını korusun diye aynı 4 anahtarı geri taşır.
+// Asla ham URL/host kabul ETMEZ — sadece sabit finance_accounts.php'ye eklenen bilinen 4 query
+// param'ı, open redirect riski yok.
+$backQs=[];
+if(!empty($_GET['rtype'])) $backQs['type']=$_GET['rtype'];
+if(!empty($_GET['rstatus'])) $backQs['status']=$_GET['rstatus'];
+if(!empty($_GET['rbank'])) $backQs['bank']=$_GET['rbank'];
+if(!empty($_GET['rq'])) $backQs['q']=$_GET['rq'];
+$accountsBackUrl='finance_accounts.php'.($backQs ? '?'.http_build_query($backQs) : '');
+
 require_once __DIR__.'/layout_top.php';
 if(!$a){ echo '<div class="alert">Hesap bulunamadı.</div>'; require __DIR__.'/layout_bottom.php'; exit; }
 
@@ -43,7 +54,7 @@ $isCard = ($a['account_type']==='Kredi Kartı');
 <div class="panel-head">
   <h1><?=h($a['name'])?> <span class="muted" style="font-size:14px">· <?=h($a['account_type'])?><?=$a['bank_name']?' · '.h($a['bank_name']):''?></span></h1>
   <div class="actions">
-    <a class="btn secondary" href="finance_accounts.php">Hesaplar</a>
+    <a class="btn secondary" href="<?=h($accountsBackUrl)?>">Hesaplar</a>
     <?php if($isCard): ?><a class="btn" href="finance_transfer.php?to=<?=$id?>">💳 Karta Ödeme</a><?php endif; ?>
     <a class="btn" href="finance_new.php?direction=in&account_id=<?=$id?>">+ Giriş</a>
     <a class="btn secondary" href="finance_new.php?direction=out&account_id=<?=$id?>">+ Çıkış</a>
