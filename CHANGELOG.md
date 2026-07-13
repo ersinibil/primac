@@ -3,6 +3,17 @@
 Bu dosya `memory/features.md`'nin (tam gerekçe/kod detayıyla) kök dizindeki kısa özetidir — hızlı
 taramak için. Detaylı "neden böyle yapıldı" analizleri için `memory/features.md`'ye bakın.
 
+## Finance CRUD UX Patch 001: CLOSED (2026-07-12, commit `1cb9e31`, USER TEST: PASS 2026-07-14)
+Bir finans hareketini (tahsilat/ödeme) düzenlemek/silmek artık "Raporlar > Son İşlemler" yolunu
+bilmeyi gerektirmiyor — cari detay ve hesap (kasa/banka) detay ekranları da manuel hareketlerde
+doğrudan ✏️ Düzenle/🗑 Sil sunuyor, sistem kaynaklı hareketlerde ise doğru kaynağa ("🧾 Satışı Aç"/
+"🛒 Alışı Aç"/"🧾 Belgeyi Aç") yönlendiriyor. Yeni bir CRUD motoru yazılmadı — mevcut
+`finance_new.php`/`sil.php` yeniden kullanıldı, tek merkezi karar noktası
+`finance_lib.php::finance_movement_actions()`. İşlem sonrası kullanıcı geldiği ekrana geri
+dönüyor (`finance_return_url()`, open-redirect'e kapalı, Selin'in denetiminde doğrulandı). Mobil
+parite (`mobile/contact_view.php`/`mobile/account_view.php` → `mobile/movement_view.php`) aynı
+turda sağlandı. Detay → `memory/features.md`, `memory/bugs.md`.
+
 ## WEB UI ALIGNMENT & NAVIGATION SPRINT 001: CLOSED (2026-07-13, commit `59e51dc`..`db16565`, USER TEST: PASS)
 Komuta Merkezi'ne kullanıcı bazlı sürükle-bırak eklendi — iki bağımsız seviye: Ana Modül
 Kartları'nın iç sırası (`dashboard_tile_order`) ve sayfanın 10 ana bölümünün sırası

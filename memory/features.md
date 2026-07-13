@@ -120,7 +120,7 @@ PASS, Navigation UX PASS, Web UI Alignment PASS. **Sprint CLOSED.** (Not: Dashbo
 DEĞİLDİR, ayrı bir bugfix turu — bkz. `memory/bugs.md`; o iş hâlâ USER TEST BEKLİYOR, yarınki
 (2026-07-14) yeni günlük bildirim ile ayrı doğrulanacak.)
 
-## Finance CRUD UX Patch 001 — Finans Hareketi Düzenle/Sil Her Ekrandan Erişilebilir: USER TEST BEKLİYOR (2026-07-12)
+## Finance CRUD UX Patch 001 — Finans Hareketi Düzenle/Sil Her Ekrandan Erişilebilir: CLOSED — USER TEST PASS (2026-07-12, testi 2026-07-14)
 Sorun: bir finans hareketini (tahsilat/ödeme) düzenlemek/silmek için kullanıcının "Raporlar >
 Son İşlemler" (aslında ana finans ekranı, finance.php) yolunu bilmesi gerekiyordu — cari detay ve
 hesap (kasa/banka) detay ekranları aynı satırları SADECE görüntülüyordu, işlem yapılamıyordu.
@@ -165,10 +165,10 @@ ekranlara eklendi.
   bağımsız ikinci kez doğrulanıyor, CSRF/XSS temiz); Ece 2 gerçek bug (yukarıda) + 2 düşük öncelik
   not (mobil "silindi" toast'ı eksikti → eklendi; `mobile/movement_view.php` merkezi fonksiyonu
   kullanmıyordu → bağlandı) buldu, hepsi aynı turda kapatıldı.
-- Commit: `1cb9e31`. USER TEST: DEV/primac.tr'de kullanıcı testi BEKLİYOR — bkz. [[backlog]]
-  "Finance CRUD UX Patch 001 DEV PASS takibi açık" (kullanıcının kendi test senaryosu: gerçek bir
-  manuel tahsilat kaydını cari ekranından/hesap ekranından/ana finans ekranından yönetebildiğini,
-  bekleyen bir satışta Düzenle/Sil YERİNE doğru kaynak linkinin göründüğünü doğrulaması gerekiyor).
+- Commit: `1cb9e31`. **USER TEST PASS (2026-07-14):** kullanıcı DEV/primac.tr'de 7 maddelik test
+  paketini çalıştırdı (cari ekranından/hesap ekranından manuel hareket düzenleme/silme, doğru
+  ekrana geri dönüş, sistem kaynaklı hareketlerde doğru kaynak linki, bekleyen satışta Düzenle/Sil
+  kapalı, mobil parite) — PASS. **CLOSED.**
 
 ## Flow Unification 001 — Alış/Satış Belgesi Akışını Finance Core ile Birleştirme: USER TEST BEKLİYOR (2026-07-11)
 Kullanıcı bir BUG REPORT ile başlattı: `ALI-20260707-5177` (bir alış belgesi) `contact_view.php`

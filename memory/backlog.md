@@ -3,11 +3,12 @@
 <!-- Açık geliştirme görevleri. Kapanan madde buradan silinip memory/features.md'ye taşınır. -->
 
 ## AKTİF ÖNCELİK SIRASI (kullanıcı kararı, 2026-07-14 — "ÇALIŞMA PLANI GÜNCELLEMESİ")
-Yeni özellik/sprint açılmadan önce bu sıra tamamlanacak: **1) Finance CRUD UX Patch 001** DEV PASS
-→ **2) Flow Unification 001** DEV PASS → **3) Migration 042/043** DEV doğrulaması → **4) Mobile
-Regression Sprint** (Finance Core + Kontrollü Negatif Stok mobil testi). Aşağıdaki maddeler
-şimdilik BEKLEMEDE: "Yaklaşan İşler" widget'ı, mobil çapraz navigasyon, `deleted_at` filtre
-genişletmesi, VAPID yapılandırması, mobil karşılığı olmayan ekranlar.
+Yeni özellik/sprint açılmadan önce bu sıra tamamlanacak: ~~1) Finance CRUD UX Patch 001~~ **PASS,
+CLOSED (2026-07-14)** → **2) Flow Unification 001** DEV PASS (şimdi aktif) → **3) Migration
+042/043** DEV doğrulaması → **4) Mobile Regression Sprint** (Finance Core + Kontrollü Negatif Stok
+mobil testi). Aşağıdaki maddeler şimdilik BEKLEMEDE: "Yaklaşan İşler" widget'ı, mobil çapraz
+navigasyon, `deleted_at` filtre genişletmesi, VAPID yapılandırması, mobil karşılığı olmayan
+ekranlar.
 
 ## "Yaklaşan İşler / Yaklaşan Vadeler" widget'ı — resmi backlog maddesi (2026-07-13)
 - Dashboard Tarih Mantığı KARAR'ının (bkz. [[features]] "Dashboard Tarih Mantığı Düzeltmesi")
@@ -25,16 +26,6 @@ genişletmesi, VAPID yapılandırması, mobil karşılığı olmayan ekranlar.
   küçük çapraz-navigasyon linkleri (Satış↔Alış, Satış/Alış Belgesi oluşturma) `mobile/sales.php`/
   `mobile/purchase.php`'ye taşınmadı (Ece'nin bulgusu, sprint CLOSED — bkz. [[features]]). Basit
   `<a>` linkleri oldukları için teknik engel yok, istenirse ayrı küçük bir iş olarak eklenebilir.
-
-## Finance CRUD UX Patch 001 DEV PASS takibi açık (2026-07-12)
-- Kod tamamlandı, yerel MariaDB'de 18 birim test + Bahçera Restaurant benzeri gerçek senaryo
-  (manuel tahsilat → düzenlenebilir/silinebilir → silme → bakiye doğru geri alınıyor; bekleyen
-  satış → düzenlenemez → reddediliyor) PASS, Ece/Selin incelemesinden geçti, commit `1cb9e31`,
-  push edildi, guncelleme.zip/MD5 hazır — bkz. [[bugs]] "Çözüldü" ve [[features]] "Finance CRUD UX
-  Patch 001". Kullanıcının DEV/primac.tr'de gerçek bir manuel tahsilat/ödeme kaydını cari ekranı +
-  hesap ekranı + ana finans ekranından yönetebildiğini, bekleyen bir satış/alış/belge kaydında
-  Düzenle/Sil YERİNE doğru kaynak linkinin göründüğünü test edip PASS vermesi bekleniyor; PASS
-  gelmeden CLOSED yazılmayacak.
 
 ## Flow Unification 001 DEV PASS takibi açık (2026-07-11)
 - Kod tamamlandı, yerel MariaDB'de 6 zorunlu senaryo + document_id edit/delete kilidi PASS, Ece/

@@ -78,6 +78,10 @@ netleştirildi — bkz. `ROADMAP.md` "Security Roadmap"):
 
 ## Current Development Version
 **v1.1.0-dev** (primac.tr) — ortam ayrımından SONRAKİ ilk geliştirme turu
++ **Finance CRUD UX Patch 001: PASS** (2026-07-12, commit `1cb9e31`, USER TEST: PASS 2026-07-14):
+  finans hareketi düzenle/sil artık cari + hesap detay ekranlarından da erişilebilir (Son
+  İşlemler'e gitmeye gerek yok), sistem kaynaklı hareketlerde doğru kaynak linki gösteriliyor.
+  Detay → `CHANGELOG.md`, `memory/features.md`.
 + **WEB UI ALIGNMENT & NAVIGATION SPRINT 001: PASS** (2026-07-13, commit `59e51dc`..`db16565`,
   USER TEST: PASS): Komuta Merkezi kart+bölüm sürükle-bırak (`user_preferences` — migration YOK),
   sol menü sadeleştirme (Ticaret/Finans ayrımı), 8 öncelikli ekranda ortak tasarım dili, "İş
