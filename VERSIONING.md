@@ -78,6 +78,11 @@ netleştirildi — bkz. `ROADMAP.md` "Security Roadmap"):
 
 ## Current Development Version
 **v1.1.0-dev** (primac.tr) — ortam ayrımından SONRAKİ ilk geliştirme turu
++ **WEB UI ALIGNMENT & NAVIGATION SPRINT 001: PASS** (2026-07-13, commit `59e51dc`..`db16565`,
+  USER TEST: PASS): Komuta Merkezi kart+bölüm sürükle-bırak (`user_preferences` — migration YOK),
+  sol menü sadeleştirme (Ticaret/Finans ayrımı), 8 öncelikli ekranda ortak tasarım dili, "İş
+  Takip"/"İşlerim" isim karışıklığının "İş Emirleri"/"Görevlerim" olarak netleştirilmesi. Detay →
+  `CHANGELOG.md`, `memory/features.md`.
 + **Görev Detayı — "Çek / Senet Bilgileri" Kartı: PASS** (2026-07-07, commit `b3e0def`, USER
   TEST: PASS): takvimdeki Çek/Senet Vadesi görev kartına SADECE `finance` yetkili kullanıcıya
   görünen salt-okunur özet kart eklendi (`checks_notes.task_id → tasks.id` ilişkisi, yeni

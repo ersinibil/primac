@@ -3,6 +3,18 @@
 Bu dosya `memory/features.md`'nin (tam gerekçe/kod detayıyla) kök dizindeki kısa özetidir — hızlı
 taramak için. Detaylı "neden böyle yapıldı" analizleri için `memory/features.md`'ye bakın.
 
+## WEB UI ALIGNMENT & NAVIGATION SPRINT 001: CLOSED (2026-07-13, commit `59e51dc`..`db16565`, USER TEST: PASS)
+Komuta Merkezi'ne kullanıcı bazlı sürükle-bırak eklendi — iki bağımsız seviye: Ana Modül
+Kartları'nın iç sırası (`dashboard_tile_order`) ve sayfanın 10 ana bölümünün sırası
+(`dashboard_section_order`, aynı `user_preferences` tablosu, migration YOK). Sol menü sadeleşti:
+"Muhasebe İşlemleri" → TİCARET/FİNANS, rapor linkleri tamamen Raporlama grubuna taşındı. Ortak
+tasarım dili (`.page-header`/`.row-actions`/`.quick-action`) 8 öncelikli ekrana uygulandı. Ayrı
+bir turda "İş Takip"/"İş Merkezi"/"İşlerim" isim karışıklığı da "İş Emirleri"/"Görevlerim" olarak
+netleştirildi (route/yetki değişmedi). Ece'nin code review'unda bulunan nested-drag "ölü bölge"
+bugu (bir SECTION, kart alanına bırakılınca event'in kaybolması) aynı turda düzeltildi. Kullanıcı
+DEV'de tile-drag + section-drag + sol menü + tasarım tutarlılığını PASS ile doğruladı. Detay →
+`memory/features.md`, `memory/bugs.md`.
+
 ## Kontrollü Negatif Stok Politikası: CLOSED (WEB) (2026-07-11, commit `3d927c7`, USER TEST: Web PASS / Mobile Pending)
 **Sistem standardı: negatif stok reddedilmez, bilinçli kullanıcı onayı istenir — onay backend'de
 doğrulanır, istemci tarafı uyarısına güvenilmez.** Satış oluşturma/düzenlemede stok yetersizse
