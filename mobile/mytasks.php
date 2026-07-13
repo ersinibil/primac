@@ -46,7 +46,7 @@ $f=$_GET['f']??'open';
 // REOPEN-001: takvimden bir not öğesine tıklanınca ?date=YYYY-MM-DD taşınır — sadece o günün
 // notları gösterilir. Hatalı/eksik formatta sessizce yok sayılır, normal davranışa düşer.
 $date=(!empty($_GET['date']) && preg_match('/^\d{4}-\d{2}-\d{2}$/',$_GET['date'])) ? $_GET['date'] : null;
-topx('İşlerim');
+topx('Görevlerim');
 ?>
 
 <div class="panel">
@@ -95,7 +95,7 @@ try{
 }catch(Throwable $e){}
 ?>
 
-<div style="font-weight:900;margin:16px 4px 8px">✅ İşlerim</div>
+<div style="font-weight:900;margin:16px 4px 8px">✅ Görevlerim</div>
 <div class="panel" style="display:flex;gap:8px;padding:10px;flex-wrap:wrap">
   <a class="btn <?=$f==='open'?'dark':''?>" style="flex:1;text-align:center;<?=$f==='open'?'':'background:#334155;color:#fff'?>" href="mytasks.php?f=open">Açık</a>
   <a class="btn <?=$f==='done'?'dark':''?>" style="flex:1;text-align:center;<?=$f==='done'?'':'background:#334155;color:#fff'?>" href="mytasks.php?f=done">Tamamlanan</a>
@@ -106,7 +106,7 @@ try{
 try{
   if(!$pid && !$isAdmin){ echo '<div class="panel muted" style="text-align:center">Sana bağlı personel kaydı yok.</div>'; }
   $w = $f==='done' ? "t.status='Tamamlandı'" : "t.status NOT IN ('Tamamlandı','İptal')";
-  // "İşlerim" = sadece sana atanan işler. Admin dahil herkesin işleri için tasks.php ("Tüm Görevler") kullanılır.
+  // "Görevlerim" = sadece sana atanan işler. Admin dahil herkesin işleri için tasks.php ("Tüm Görevler") kullanılır.
   $rows=$pdo->prepare("SELECT t.*, j.id job_real, j.job_no, p.name pname, p.phone pphone FROM tasks t LEFT JOIN jobs j ON j.id=t.job_id LEFT JOIN personnel p ON p.id=t.personnel_id WHERE $w AND t.personnel_id=? AND t.deleted_at IS NULL ORDER BY (t.due_date IS NULL), t.due_date, t.id DESC LIMIT 100");
   $rows->execute([$pid]);
   $rows=$rows->fetchAll();

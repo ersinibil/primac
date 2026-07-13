@@ -1,5 +1,6 @@
 <?php
-// İşlerim — kişisel görev listesi (sadece giriş yapan kullanıcıya atanan işler).
+// Görevlerim — kişisel görev listesi (sadece giriş yapan kullanıcıya atanan işler).
+// (2026-07-13 terminoloji kararı: "İşlerim" adı "Görevlerim" olarak değiştirildi, dosya adı/route AYNI.)
 // Web paritesi: mobil karşılığı mobile/mytasks.php. 'tasks' yetkisi İSTEMİYOR (page_module_map'te
 // yok) — çünkü bir personelin kendine atanan görevi görebilmesi için 'tasks' modül yetkisine sahip
 // olması gerekmiyor (tasks.php = TÜM görevler, admin/yetkili görünümü; burası sadece kendi görevi).
@@ -44,8 +45,8 @@ if($_SERVER['REQUEST_METHOD']==='POST' && (int)($_POST['tid']??0)){
 $f=$_GET['f']??'open';
 require_once __DIR__.'/layout_top.php';
 ?>
-<div class="panel-head"><h1>✅ İşlerim</h1></div>
-<p class="muted">Sana atanan işler — tüm görevler için (yetkiniz varsa) <a href="tasks.php">Görevler</a> sayfasına bakın.</p>
+<div class="panel-head"><h1>✅ Görevlerim</h1></div>
+<p class="muted">Bana atanan görevler ve hatırlatmalar — tüm görevler için (yetkiniz varsa) <a href="tasks.php">Görevler</a> sayfasına bakın.</p>
 <?php if(!empty($_GET['ok'])): ?><div class="ok">İş eklendi.</div><?php endif; ?>
 
 <div class="filters">

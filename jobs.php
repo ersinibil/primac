@@ -23,7 +23,8 @@ if($type){ $where[]="j.job_type=?"; $params[]=$type; }
 $sqlWhere='WHERE '.implode(' AND ',$where);
 $tabs=['aktif'=>'Aktif','bekleyen'=>'Bekleyen','devam'=>'Devam Eden','tamam'=>'Tamamlanan','iptal'=>'İptal','gec'=>'Geciken','tumu'=>'Tümü'];
 ?>
-<div class="panel-head"><h1>İş Takip</h1><a class="btn" href="job_new.php">+ Yeni İş</a></div>
+<div class="panel-head"><h1>İş Emirleri</h1><a class="btn" href="job_new.php">+ Yeni İş</a></div>
+<p class="muted">Müşteri işleri ve operasyon takibi</p>
 <div class="filters">
 <?php foreach($tabs as $k=>$v): ?><a href="jobs.php?s=<?=$k?>" style="<?=$s===$k?'background:#2563eb;color:#fff;border-radius:8px;padding:6px 10px':''?>"><?=$v?></a><?php endforeach; ?>
 </div>

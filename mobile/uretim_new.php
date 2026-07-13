@@ -33,7 +33,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 $ru=(int)$u['id'];
                 // Detaylı İÇ MESAJ (ürün/adet/talimat) — atanan kişinin sohbetine
                 $tipLbl=['3d_imalat'=>'3D İmalat','uv_baski'=>'UV Baskı','lazer'=>'Lazer','montaj'=>'Montaj','dis_atolye'=>'Dış Atölye','karma'=>'Karma'][$type]??$type;
-                $msg="🏭 ÜRETİM EMRİ\nÜrün: ".$urun.($qty!==''?"\nMiktar: ".$qty:'')."\nTip: ".$tipLbl."\nÖncelik: ".($_POST['priority']??'Normal').(($_POST['due_date']??'')?"\nTermin: ".$_POST['due_date']:'').(trim($_POST['notes']??'')!==''?"\nTalimat: ".trim($_POST['notes']):'')."\nİş No: ".$no." (İş Takip → aç)";
+                $msg="🏭 ÜRETİM EMRİ\nÜrün: ".$urun.($qty!==''?"\nMiktar: ".$qty:'')."\nTip: ".$tipLbl."\nÖncelik: ".($_POST['priority']??'Normal').(($_POST['due_date']??'')?"\nTermin: ".$_POST['due_date']:'').(trim($_POST['notes']??'')!==''?"\nTalimat: ".trim($_POST['notes']):'')."\nİş No: ".$no." (İş Emirleri → aç)";
                 try{ $pdo->prepare("INSERT INTO internal_messages(sender_user_id,receiver_user_id,message,is_read) VALUES(?,?,?,0)")->execute([$me,$ru,$msg]); }catch(Throwable $e){}
                 // Bildirim + push
                 if(function_exists('notify_user')) notify_user($ru,'🏭 Üretim emri: '.$urun.($qty!==''?' ×'.$qty:''),$tipLbl.' · '.$no,'messages.php?with='.$me);

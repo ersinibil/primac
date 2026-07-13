@@ -1,7 +1,7 @@
 <?php
 // Kendime İş Ekle — kullanıcının kendine (kendi personnel_id'sine) iş kaydı oluşturması.
 // task_new.php'den (admin başkasına atar) FARKLI ve AYRI bir form: 'tasks' yetkisi istemiyor,
-// personel seçimi yok (her zaman kendine), İşlerim (mytasks.php) listesine düşer.
+// personel seçimi yok (her zaman kendine), Görevlerim (mytasks.php) listesine düşer.
 require_once __DIR__.'/boot.php';
 require_login();
 $pdo=db();
@@ -26,7 +26,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 require_once __DIR__.'/layout_top.php';
 ?>
 <div class="panel-head"><h1>➕ Kendime İş Ekle</h1></div>
-<p class="muted">Bu iş sadece sana atanır, <a href="mytasks.php">İşlerim</a> listende görünür.</p>
+<p class="muted">Bu iş sadece sana atanır, <a href="mytasks.php">Görevlerim</a> listende görünür.</p>
 
 <?php if($error): ?><div class="alert"><?=h($error)?></div><?php endif; ?>
 

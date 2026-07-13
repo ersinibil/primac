@@ -1,5 +1,5 @@
 <?php
-// Görev Detayı — "İşlerim" Detay ekranı (Mobil UX Standardı: tekil aksiyonlar — Düzenle/Sil —
+// Görev Detayı — "Görevlerim" Detay ekranı (Mobil UX Standardı: tekil aksiyonlar — Düzenle/Sil —
 // sadece burada, liste ekranında (mytasks.php/tasks.php) DEĞİL). Web paritesi: task_view.php.
 require_once 'common.php';
 require_once __DIR__.'/../tasks_lib.php';

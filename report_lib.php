@@ -2,7 +2,7 @@
 // ACANS OS — Paylaşımlı Rapor Kütüphanesi (mobil + web ortak)
 if(file_exists(__DIR__.'/contacts_lib.php')) require_once __DIR__.'/contacts_lib.php';
 if(file_exists(__DIR__.'/finance_lib.php')) require_once __DIR__.'/finance_lib.php';
-function report_modules(){ return ['tumu'=>'🗂️ Tümü','genel'=>'📊 Yekün','tahsilat'=>'💰 Tahsilat/Finans','muhasebe'=>'📒 Muhasebe','is'=>'📋 İş Takip','gorevler'=>'✓ Görevler','personel'=>'👷 Personel','satis'=>'🧾 Satış','satinalma'=>'📥 Satın Alma','teklif'=>'📄 Teklif','cari'=>'👥 Cari','stok'=>'📦 Stok']; }
+function report_modules(){ return ['tumu'=>'🗂️ Tümü','genel'=>'📊 Yekün','tahsilat'=>'💰 Tahsilat/Finans','muhasebe'=>'📒 Muhasebe','is'=>'📋 İş Emirleri','gorevler'=>'✓ Görevler','personel'=>'👷 Personel','satis'=>'🧾 Satış','satinalma'=>'📥 Satın Alma','teklif'=>'📄 Teklif','cari'=>'👥 Cari','stok'=>'📦 Stok']; }
 // "Tümü"de yer alacak modüller (özet hariç tek tek hepsi)
 function report_all_keys(){ return ['genel','tahsilat','muhasebe','is','gorevler','personel','satis','satinalma','teklif','cari','stok']; }
 // Tüm modülleri tek raporda alt alta render et
@@ -143,7 +143,7 @@ function rpt($pdo,$modul,$from,$to,$ref=0,$detail=false){
     break;
 
   case 'is':
-    $R['title']='İş Takip';
+    $R['title']='İş Emirleri';
     $a=$pdo->prepare("SELECT COUNT(*) n FROM jobs WHERE DATE(created_at) BETWEEN ? AND ?"); $a->execute([$from,$to]); $acilan=(int)$a->fetch()['n'];
     $st=$pdo->prepare("SELECT status,COUNT(*) c FROM jobs WHERE DATE(created_at) BETWEEN ? AND ? GROUP BY status"); $st->execute([$from,$to]);
     $cd=[]; $tamam=0; foreach($st->fetchAll() as $r){ $cd[$r['status']]=(int)$r['c']; if(in_array($r['status'],['Tamamlandı','Teslim Edildi']))$tamam+=(int)$r['c']; }

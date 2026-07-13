@@ -1,5 +1,5 @@
 <?php
-// tasks_lib.php — "İşlerim" (tasks tablosu) için web+mobil ORTAK iş mantığı.
+// tasks_lib.php — "Görevlerim" (tasks tablosu) için web+mobil ORTAK iş mantığı.
 // Kapsam (2026-07-04, kullanıcı isteği): task detay/düzenle/soft-delete/yorum/dosya.
 // Migration: database/migrations/040_task_edit_detail_soft_delete.sql
 //   (tasks.created_by/updated_by/deleted_at + task_comments + task_files).

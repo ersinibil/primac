@@ -340,7 +340,7 @@ $balance=contact_balance($pdo, $id);
 </section>
 
 <section class="panel">
-<div class="panel-head"><h2>Bu Cariye Ait İşler / İş Emirleri</h2><a class="btn small secondary" href="report.php?modul=cari_detay&ref=<?=$id?>">📊 Ekstre / PDF</a></div>
+<div class="panel-head"><h2>Bu Cariye Ait İş Emirleri</h2><a class="btn small secondary" href="report.php?modul=cari_detay&ref=<?=$id?>">📊 Ekstre / PDF</a></div>
 <table>
 <thead><tr><th>İş No</th><th>Başlık</th><th>Tarih</th><th>Durum</th><th style="text-align:right">Tutar</th></tr></thead>
 <tbody>

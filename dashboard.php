@@ -233,7 +233,7 @@ function cmd_card($title,$value,$desc,$url,$tone='blue'){
 // Sürükle-bırak sadece küçük bir "tile-drag" tutamaçla yapılır (kartın tamamı draggable DEĞİL),
 // böylece kart içindeki link tıklaması bozulmaz.
 $__tileDefs = [
-    'jobs'      => ['perm'=>'jobs',      'color'=>'blue',   'icon'=>'📋', 'title'=>'İşler',     'desc'=>'İş merkezi &amp; takip',     'url'=>'jobs.php'],
+    'jobs'      => ['perm'=>'jobs',      'color'=>'blue',   'icon'=>'📋', 'title'=>'İş Emirleri', 'desc'=>'Müşteri işleri ve operasyon takibi', 'url'=>'jobs.php'],
     'contacts'  => ['perm'=>'contacts',  'color'=>'teal',   'icon'=>'👥', 'title'=>'Cariler',   'desc'=>'Müşteri / tedarikçi',        'url'=>'contacts.php'],
     'teklif'    => ['perm'=>'teklif',    'color'=>'purple', 'icon'=>'📄', 'title'=>'Teklifler', 'desc'=>'Hazırla &amp; gönder',       'url'=>'teklif.php'],
     'finance'   => ['perm'=>'finance',   'color'=>'green',  'icon'=>'💰', 'title'=>'Finans',    'desc'=>'Kasa / banka / kart',        'url'=>'finance.php'],
@@ -673,7 +673,7 @@ ob_start();
 <section class="panel">
 <div class="panel-head">
     <h2><span class="section-icon">📋</span> Son İşler</h2>
-    <a href="jobs.php" class="btn small secondary">İş Merkezine Git</a>
+    <a href="jobs.php" class="btn small secondary">İş Emirlerine Git</a>
 </div>
 <?php
 try{

@@ -8,8 +8,8 @@ geçerli, bu dosya onların yerine değil, önüne geçer.
 ## Öncelik Sırası (yeni özellik DEĞİL)
 1. **Stabilite** — mevcut çalışan akışı bozmamak her şeyden önce gelir.
 2. **Bug Fix** — bildirilen hatayı kökten çöz, yanına başka iş ekleme.
-3. **Tutarlılık** — isimlendirme/kavram/route aynı anlamda kullanılmalı (örn. "İşlerim" vs
-   "Görevlerim" karışıklığı — bkz. `memory/bugs.md` 2026-07-03 kaydı).
+3. **Tutarlılık** — isimlendirme/kavram/route aynı anlamda kullanılmalı (bkz. "Kavram Standardı"
+   bölümü — "İş Emirleri" vs "Görevlerim" ayrımı, 2026-07-13'te kesinleşti).
 4. **Performans** — gereksiz sorgu/döngü varsa iyileştir, ama ölçülmeden "iyileştirme" adı
    altında yeniden yazma yapma.
 5. **Web/mobil uyumu** — bir ekranda değişen her mantık diğer platformda da uygulanmalı.
@@ -113,17 +113,26 @@ Her denetim sonunda `CHANGELOG.md`, `VERSIONING.md`, `ROADMAP.md`, `KNOWN_BUGS.m
 kendisi kod/dosya değiştirmez, commit oluşturmaz — sadece bulguları belgeler; bulguların
 düzeltilmesi ayrı, kullanıcı onaylı bir iş turu olarak ele alınır.
 
-## Kavram Standardı (2026-07-03'te netleşti)
-- **"İşlerim"** = bana atanmış işler/görevler listesi (`mytasks.php` / `mobile/mytasks.php`).
-  **"Görevlerim" ifadesi artık kullanılmaz.**
+## Kavram Standardı (2026-07-13'te güncellendi — "UX TERMINOLOGY FIX")
+2026-07-03 kararı "İşlerim" ile "İş Takip"i aynı menüde yakın adlarla bırakmıştı; kullanıcı
+karışıklığı bildirdi (sol menüde iki benzer isim). 2026-07-13'te KESİN terminoloji kararıyla
+değiştirildi — aşağıdaki isimler artık geçerli, **eskileri ("İşlerim" bu bağlamda, "İş Takip")
+bir daha kullanılmaz.** Route/dosya adı/tablo adı/yetki anahtarı DEĞİŞMEDİ, sadece görünen isim:
+- **"İş Emirleri"** (eski adı: "İş Takip") = şirketin operasyonel iş kayıtları — müşteri işleri,
+  iş emirleri, termin/sorumlu/durum takibi (`jobs.php`, `jobs` tablosu). Alt açıklama: "Müşteri
+  işleri ve operasyon takibi".
+- **"Görevlerim"** (eski adı: "İşlerim") = kullanıcıya atanmış kişisel görev/hatırlatma listesi,
+  çek vadesi gibi kullanıcı aksiyonu bekleyen kayıtlar dahil (`mytasks.php` / `mobile/mytasks.php`).
+  Alt açıklama: "Bana atanan görevler ve hatırlatmalar".
 - **"İş Ekle"** = başka bir personele iş/görev atama ekranı (`task_new.php` / `mobile/task_new.php`,
   admin veya `tasks` yetkili kullanıcı için).
 - **"Kendime İş Ekle"** = kullanıcının kendine iş kaydı oluşturduğu AYRI ekran
   (`mytask_new.php` / `mobile/mytask_new.php`), `tasks` yetkisi istemez.
 - **"Notlarım" / "Kendime Not Ekle"** = kişisel not sistemi (`notes.php` web,
   `mobile/mytasks.php` içine gömülü panel mobilde), `tasks` tablosuyla karışmaz.
-- **"İşler"** = üretim/iş takip listesi (`jobs.php`, `jobs` tablosu) — "İşlerim" ile KARIŞTIRILMAZ,
-  farklı tablo (`jobs` vs `tasks`), farklı ekran.
+- `jobs.php`'ye açılan TÜM etiketler (web sidebar, dashboard kartı, mobil kartlar, sayfa başlığı,
+  rapor adı) tek isimde birleşti: **"İş Emirleri"**. Eskiden aynı ekrana "İş Takip", "İş Merkezi"
+  ve sade "İşler" gibi üç ayrı isimle gidiliyordu — bkz. `memory/features.md` 2026-07-13 kaydı.
 
 ## Mobil UX Standardı (2026-07-04'ten itibaren — UX SPRINT-001)
 - **Liste ekranı = sadece listeleme.** Bir liste ekranındaki kart/satır tekil bir "Detay" ekranına

@@ -29,7 +29,7 @@ if(!$isAdmin){ $where[]='j.responsible_personnel_id=?'; $params[]=$myPid?:-1; } 
 $where[]=$statusMap[$s] ?? $statusMap['aktif'];
 $sql="SELECT j.*, c.name customer, p.name responsible FROM jobs j LEFT JOIN contacts c ON c.id=j.customer_id LEFT JOIN personnel p ON p.id=j.responsible_personnel_id WHERE ".implode(' AND ',$where).' ORDER BY j.id DESC LIMIT 120';
 
-topx('İş Takip');
+topx('İş Emirleri');
 $tones=['Yeni'=>'#3b82f6','Devam Ediyor'=>'#a855f7','Bekliyor'=>'#eab308','Tamamlandı'=>'#22c55e','Teslim Edildi'=>'#22c55e','İptal'=>'#94a3b8'];
 $tabs=['aktif'=>'Aktif','bekleyen'=>'Bekleyen','devam'=>'Devam Eden','tamam'=>'Tamamlanan','iptal'=>'İptal','tumu'=>'Tümü'];
 if($isAdmin) $tabs['atanmamis']='Atanmamış';

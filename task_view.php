@@ -1,5 +1,5 @@
 <?php
-// Görev Detayı (web) — "İşlerim" Detay ekranı. Mobil paritesi: mobile/task_view.php.
+// Görev Detayı (web) — "Görevlerim" Detay ekranı. Mobil paritesi: mobile/task_view.php.
 // GET bilinçli olarak KORUMASIZ (job_view.php ile aynı desen, boot.php page_module_map yorumu) —
 // personel kendine atanan görevi bildirimden/mesajdan açabilsin diye. Yazma işlemleri (durum/
 // düzenle/sil/yorum/dosya) task_can_edit()/task_can_delete() ile sahiplik kontrollüdür.
@@ -79,7 +79,7 @@ $gec = !empty($task['due_date']) && $task['due_date']<date('Y-m-d') && !in_array
     <?php if($canEdit && $task['status']!=='Tamamlandı'): ?>
       <form method="post" style="display:inline"><button class="btn" name="task_status" value="Tamamlandı" style="background:#16a34a;color:#fff">✓ Tamamla</button></form>
     <?php endif; ?>
-    <a class="btn ghost" href="mytasks.php">← İşlerim</a>
+    <a class="btn ghost" href="mytasks.php">← Görevlerim</a>
   </div>
 </section>
 

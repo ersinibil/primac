@@ -2,6 +2,36 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
+## UX TERMINOLOGY FIX — "İş Takip"/"İşlerim" karışıklığı çözüldü: DEV görsel doğrulama bekliyor (2026-07-13)
+Kullanıcı bildirimi: sol menüde "İşlerim" ve "İş Takip" isimleri birbirine çok yakındı, operasyonel
+iş kayıtları (jobs.php) ile kullanıcıya atanmış kişisel görev/hatırlatmalar (mytasks.php) arasında
+karışıklık yaratıyordu — üstelik jobs.php'ye giden yolun kendisi de üç farklı isimle anılıyordu
+("İş Takip" sayfa başlığı/mobil, "İş Merkezi" web sidebar, sade "İşler" dashboard kartı/mobil kart).
+
+Kesin terminoloji kararı (route/dosya/tablo/yetki anahtarı DEĞİŞMEDİ, sadece görünen isim):
+- **"İş Takip" / "İş Merkezi" / "İşler" (jobs.php'ye giden TÜM etiketler) → "İş Emirleri"**
+  (alt açıklama: "Müşteri işleri ve operasyon takibi").
+- **"İşlerim" → "Görevlerim"** (alt açıklama: "Bana atanan görevler ve hatırlatmalar").
+
+Değişen dosyalar: `layout_top.php` (sol menü + rapor linki), `jobs.php`/`mytasks.php` (h1 + alt
+açıklama), `mytask_new.php`, `task_view.php`, `report_lib.php` (modül adı + rapor başlığı),
+`contact_view.php` (cari-iş geçmişi başlığı sadeleştirildi), `dashboard.php` (modül kartı + "Son
+İşler" bölümü linki), `mobile/index.php`, `mobile/more.php`, `mobile/jobs.php`,
+`mobile/mytasks.php`, `mobile/task_view.php`, `mobile/uretim_new.php` (WhatsApp/iç mesaj bildirim
+metni), artı ilgili `tasks_lib.php`/`search_lib.php` yorumları. `PROJECT_RULES.md`'deki "Kavram
+Standardı" bölümü (2026-07-03'te "Görevlerim ifadesi artık kullanılmaz" diyen ESKİ kararı) bu yeni
+kararla güncellendi — bilinçli bir tersine çevirme, unutkanlık değil.
+
+Kapsam dışı bırakılanlar (kasıtlı, dokunulmadı): dashboard'daki "Bugün Teslim"/"Geciken İş"/
+"Bekleyen İş" gibi KPI kart adları (bunlar "iş" kelimesini genel sayaç anlamında kullanıyor, menü/
+sayfa kimliği değil); çek vadesi gibi kayıtların "Görevlerim" altında kalması (mevcut
+`daily_reminder_lib.php` mantığına dokunulmadı, zaten doğru gruplanıyordu).
+
+Doğrulama: `php -l` tüm 17 değişen PHP dosyasında temiz; `git diff` ile her satırın SADECE
+görünen metin olduğu, hiçbir href/route/SQL/yetki anahtarının değişmediği teyit edildi. Bu bir
+metin/terminoloji değişikliği olduğu için önceki oturumun "Drag&Drop/Modal/.../Buton-davranışları"
+USER TEST kuralı kapsamına girmiyor (interaktif davranış yok), ama DEV üzerinde kısa bir görsel
+tarama önerilir: sol menü, jobs.php/mytasks.php başlıkları, dashboard kartı, mobil "Menü" ekranı.
 ## WEB UI ALIGNMENT & NAVIGATION SPRINT 001 — Dashboard sürükle-bırak + sol menü sadeleştirme + ortak tasarım dili: USER TEST BEKLİYOR (2026-07-13)
 Bu sprintten itibaren PRIMAC OTS'ta ad-hoc "Patch" isimlendirmesi bırakıldı, kalıcı bir Sprint
 sistemine geçildi (SECURITY/FINANCE/UX/MOBILE/PERFORMANCE/INTEGRATION/REPORTING/REFACTOR SPRINT) —

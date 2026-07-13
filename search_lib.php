@@ -168,9 +168,9 @@ if (!function_exists('search_run')) {
             $out['files'] = $s->fetchAll();
         } catch (Throwable $e) {} }
 
-        // Görevler (tasks) — 'jobs' tablosundan AYRI (bkz. PROJECT_RULES.md kavram standardı: "İşler"
-        // ≠ "İşlerim"/görevler). "Görev" modül adının kendisi yazılırsa son görevler listelensin (aynı
-        // desen). 'tasks' yetkisiyle korunuyor.
+        // Görevler (tasks) — 'jobs' tablosundan AYRI (bkz. PROJECT_RULES.md kavram standardı: "İş
+        // Emirleri" ≠ "Görevlerim"). "Görev" modül adının kendisi yazılırsa son görevler listelensin
+        // (aynı desen). 'tasks' yetkisiyle korunuyor.
         $taskModuleMatch = in_array($qNorm, ['görev','görevler','görevlerim'], true);
         if (function_exists('user_can') && user_can('tasks')) { try {
             $sql = "SELECT t.id, t.title, t.description, t.status, t.priority, t.due_date, t.job_id,

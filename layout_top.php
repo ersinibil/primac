@@ -206,7 +206,7 @@ input,select,textarea{font-size:16px}
         <a href="dashboard.php" <?=($cur==='dashboard.php'?'class="active"':'')?>><span>🏛</span> Komuta Merkezi</a>
         <a href="takvim.php" <?=($cur==='takvim.php'?'class="active"':'')?>><span>📅</span> Takvim</a>
         <a href="notes.php" <?=($cur==='notes.php'?'class="active"':'')?>><span>📝</span> Notlarım</a>
-        <a href="mytasks.php" <?=($cur==='mytasks.php'?'class="active"':'')?>><span>✅</span> İşlerim</a>
+        <a href="mytasks.php" <?=($cur==='mytasks.php'?'class="active"':'')?>><span>✅</span> Görevlerim</a>
 
         <?php
         /* Taksonomi — 4 grup (2026-07-03: kullanıcı isteğiyle 6 gruptan sadeleştirildi).
@@ -246,7 +246,7 @@ input,select,textarea{font-size:16px}
         <details <?=(in_array($cur,$personelIsTakip_pages)?'open':'')?>><summary><span>🧭</span> İş / Üretim</summary>
             <div class="sub">
                 <?php if(user_can('jobs')): ?>
-                <a href="jobs.php" <?=($cur==='jobs.php'?'class="active"':'')?>><span>📁</span> İş Merkezi</a>
+                <a href="jobs.php" <?=($cur==='jobs.php'?'class="active"':'')?>><span>📁</span> İş Emirleri</a>
                 <a href="job_new.php" <?=($cur==='job_new.php'?'class="active"':'')?>><span>➕</span> Yeni İş</a>
                 <a href="takvim.php" <?=($cur==='takvim.php'?'class="active"':'')?>><span>📅</span> Takvim</a>
                 <a href="approval_waiting.php" <?=($cur==='approval_waiting.php'?'class="active"':'')?>><span>🔍</span> Müşteri Onayları</a>
@@ -269,7 +269,7 @@ input,select,textarea{font-size:16px}
                 <?php endif; ?>
                 <?php if(user_can('report')): ?>
                 <a href="gunluk_rapor.php" <?=($cur==='gunluk_rapor.php'?'class="active"':'')?>><span>📅</span> Günlük İş Raporu</a>
-                <a href="report.php?modul=is"><span>📊</span> İş Takip Raporu</a>
+                <a href="report.php?modul=is"><span>📊</span> İş Emirleri Raporu</a>
                 <a href="report.php?modul=gorevler"><span>📊</span> Görevler Raporu</a>
                 <a href="report.php?modul=personel"><span>📊</span> Personel Performansı</a>
                 <?php endif; ?>

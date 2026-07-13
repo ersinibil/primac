@@ -19,10 +19,10 @@
 <div style="font-weight:900;margin:16px 4px 8px">🧭 İş / Üretim</div>
 <div class="grid">
   <?php
-  card('İşlerim','Bana atanan işler','✅','mytasks.php','green');
+  card('Görevlerim','Bana atanan görevler ve hatırlatmalar','✅','mytasks.php','green');
   card('Kendime İş Ekle','Kendine iş kaydı oluştur','➕','mytask_new.php','green');
   if(user_can('jobs')) {
-    card('İşler','İş takibi','📋','jobs.php','green');
+    card('İş Emirleri','Müşteri işleri ve operasyon takibi','📋','jobs.php','green');
     card('Üretim','Aşama panosu','🏭','uretim.php','red');
     card('Takvim','Termin takvimi','📅','calendar.php','blue');
     card('Müşteri Onayı','Onay bekleyen dosyalar','⏳','approval_waiting.php','yellow');
@@ -43,7 +43,7 @@
   }
   if($isAdmin || user_can('report')) {
     card('Günlük Rapor','Bugünkü iş özeti','📅','gunluk_rapor.php','blue');
-    card('İş Takip Raporu','Açılan·tamamlanan·geciken','📋','report.php?modul=is','purple');
+    card('İş Emirleri Raporu','Açılan·tamamlanan·geciken','📋','report.php?modul=is','purple');
     card('Personel Raporu','Performans/KPI','👷','report.php?modul=personel','orange');
   }
   ?>
