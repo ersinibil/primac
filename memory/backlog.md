@@ -97,16 +97,6 @@
   Bunlar mevcut anahtarlar (taşıma, rotasyon değil) — repo artık GitHub'a bağlı olduğu için kodda
   sabit durması sızıntı riski (bkz. [[deploy]]). Kullanıcı seyahatte, dönünce elle eklenecek.
 
-## Web'de "Görevlerim" sayfası yok — mobilde var (mytasks.php)
-- 2026-07-03 (takvim/tasks incelemesi sırasında bulundu): mobilde personel kendi görevlerini
-  `mobile/mytasks.php`'de görüyor (yetki gerektirmez, sadece kendi `personnel_id`'sine bakar).
-  Web'de karşılığı YOK — web'de görevler sadece `tasks.php` üzerinden görünüyor ve bu sayfa
-  `page_module_map()`'te `'tasks'` modülüne bağlı, yani `tasks` yetkisi verilmemiş bir personel
-  kendine atanan görevi web'den göremiyor (dashboard'daki "Açık Görev" kartı ve takvimdeki 🎯
-  madde bu kullanıcılar için tıklanamaz/düz metin bırakıldı, bkz. features.md). Kalıcı çözüm:
-  web'e de `mytasks.php` benzeri, yetki gerektirmeyen bir "Görevlerim" sayfası eklenmeli (CLAUDE.md
-  kural 7 — parite). Kapsam/tasarım henüz netleşmedi.
-
 ## Mobil parite eksiği — work_center.php, trade_documents.php, design.php sadece web'de
 - 2026-07-03 (commit `1ff6f1e`): bu üç sayfa web sol menüsüne ve `boot.php` yetki eşlemesine
   eklendi (bkz. features.md). Ama mobilde hiç karşılığı yok (`mobile/work_center.php`,
