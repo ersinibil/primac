@@ -170,7 +170,7 @@ ekranlara eklendi.
   ekrana geri dönüş, sistem kaynaklı hareketlerde doğru kaynak linki, bekleyen satışta Düzenle/Sil
   kapalı, mobil parite) — PASS. **CLOSED.**
 
-## Flow Unification 001 — Alış/Satış Belgesi Akışını Finance Core ile Birleştirme: USER TEST BEKLİYOR (2026-07-11)
+## Flow Unification 001 — Alış/Satış Belgesi Akışını Finance Core ile Birleştirme: CLOSED — USER TEST PASS (2026-07-11, testi 2026-07-14)
 Kullanıcı bir BUG REPORT ile başlattı: `ALI-20260707-5177` (bir alış belgesi) `contact_view.php`
 "Bu Cariye Ait İşler"de görünmüyordu ve `purchase.php` "Son Alışlar"da yoktu, ama "Belge" ekranında
 vardı. Kök neden analizi (kod yazmadan, önce) doğruladı: ana menüde aynı işi (alış/satış girişi)
@@ -231,10 +231,11 @@ finans/stok etkisini üretmez.
   document_id kilidinin edit/delete'i doğru reddettiği ve normal (belgesiz) kayıtlarda regresyon
   olmadığı doğrulandı. Ece/Selin/Elif paralel incelemeden geçti (üçü de en az bir gerçek bulgu
   verdi, hepsi aynı turda düzeltildi).
-- Commit: `d518103`. USER TEST: DEV/primac.tr'de kullanıcı testi BEKLİYOR — bkz. [[backlog]]
-  "Flow Unification 001 DEV PASS takibi açık" (8 senaryo: belge oluşturma her iki tip, belgeye
-  ödeme girme, stok fazlası belge denemesi, finans yetkisiz kullanıcı, eski belgeye dokunulmadığı,
-  Son Alışlar/Satışlar'da belge rozeti/link, cari ekranında Alış/Satış Belgeleri bölümü).
+- Commit: `d518103`. **USER TEST PASS (2026-07-14):** kullanıcı DEV/primac.tr'de 8 maddelik test
+  paketini çalıştırdı (satış/alış belgesi oluşturma, cari ekranında Alış/Satış Belgeleri bölümü,
+  Son Alışlar/Satışlar'da "🧾 Belgeyi Aç" linki, stok fazlası onaysız-red/onaylı-kabul, yetki
+  regresyonu, eski belgeye (`ALI-20260707-5177` dahil) dokunulmadığı, belgenin artık ödeme
+  almadığı) — PASS. **CLOSED.**
 
 ## Kontrollü Negatif Stok Politikası: CLOSED (WEB) (2026-07-11)
 USER TEST: Web PASS (2026-07-11) / Mobile Pending → Mobile Regression Sprint'e eklendi (bkz. backlog.md).

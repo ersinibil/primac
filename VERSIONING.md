@@ -78,6 +78,11 @@ netleştirildi — bkz. `ROADMAP.md` "Security Roadmap"):
 
 ## Current Development Version
 **v1.1.0-dev** (primac.tr) — ortam ayrımından SONRAKİ ilk geliştirme turu
++ **Flow Unification 001: PASS** (2026-07-11, commit `d518103`, USER TEST: PASS 2026-07-14):
+  alış/satış belgesi akışı ile hızlı satış/alış akışı tek finans/stok çekirdeğinde birleşti
+  (`stock_lib.php` + `finance_movements`), `trade_documents` artık sadece belge/PDF katmanı.
+  Review'da bulunan `document_id` edit/delete backend kilidi açığı aynı turda kapatıldı. Detay →
+  `CHANGELOG.md`, `memory/features.md`.
 + **Finance CRUD UX Patch 001: PASS** (2026-07-12, commit `1cb9e31`, USER TEST: PASS 2026-07-14):
   finans hareketi düzenle/sil artık cari + hesap detay ekranlarından da erişilebilir (Son
   İşlemler'e gitmeye gerek yok), sistem kaynaklı hareketlerde doğru kaynak linki gösteriliyor.

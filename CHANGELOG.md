@@ -3,6 +3,17 @@
 Bu dosya `memory/features.md`'nin (tam gerekçe/kod detayıyla) kök dizindeki kısa özetidir — hızlı
 taramak için. Detaylı "neden böyle yapıldı" analizleri için `memory/features.md`'ye bakın.
 
+## Flow Unification 001: CLOSED (2026-07-11, commit `d518103`, USER TEST: PASS 2026-07-14)
+Alış/satış belgesi akışı ile hızlı satış/alış akışı artık TEK finans/stok çekirdeğini paylaşıyor:
+`stock_lib.php::stock_create_purchase()`/`stock_create_sale()` + `finance_movements`. Kök neden
+bir bug raporuyla bulundu (`ALI-20260707-5177` bir alış belgesi cari/rapor ekranlarında hiç
+görünmüyordu) — aynı işi yapan iki habersiz veri modeli aynı anda canlıydı. `trade_documents`
+artık kendi finans/stok etkisi üretmiyor, sadece belge/PDF katmanı. Review'da bulunan gerçek bir
+güvenlik açığı da aynı turda kapatıldı: `document_id`'li kayıtların edit/delete kilidi backend'de
+hiç kontrol edilmiyordu (crafted POST ile bypass edilebilirdi) — dört fonksiyona
+`document_id IS NOT NULL` kilidi eklendi, mobil dahil. Migration YOK. Detay → `memory/features.md`,
+`memory/bugs.md`.
+
 ## Finance CRUD UX Patch 001: CLOSED (2026-07-12, commit `1cb9e31`, USER TEST: PASS 2026-07-14)
 Bir finans hareketini (tahsilat/ödeme) düzenlemek/silmek artık "Raporlar > Son İşlemler" yolunu
 bilmeyi gerektirmiyor — cari detay ve hesap (kasa/banka) detay ekranları da manuel hareketlerde

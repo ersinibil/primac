@@ -4,11 +4,11 @@
 
 ## AKTİF ÖNCELİK SIRASI (kullanıcı kararı, 2026-07-14 — "ÇALIŞMA PLANI GÜNCELLEMESİ")
 Yeni özellik/sprint açılmadan önce bu sıra tamamlanacak: ~~1) Finance CRUD UX Patch 001~~ **PASS,
-CLOSED (2026-07-14)** → **2) Flow Unification 001** DEV PASS (şimdi aktif) → **3) Migration
-042/043** DEV doğrulaması → **4) Mobile Regression Sprint** (Finance Core + Kontrollü Negatif Stok
-mobil testi). Aşağıdaki maddeler şimdilik BEKLEMEDE: "Yaklaşan İşler" widget'ı, mobil çapraz
-navigasyon, `deleted_at` filtre genişletmesi, VAPID yapılandırması, mobil karşılığı olmayan
-ekranlar.
+CLOSED (2026-07-14)** → ~~2) Flow Unification 001~~ **PASS, CLOSED (2026-07-14)** → **3) Migration
+042/043** DEV doğrulaması (şimdi aktif) → **4) Mobile Regression Sprint** (Finance Core +
+Kontrollü Negatif Stok mobil testi). Aşağıdaki maddeler şimdilik BEKLEMEDE: "Yaklaşan İşler"
+widget'ı, mobil çapraz navigasyon, `deleted_at` filtre genişletmesi, VAPID yapılandırması, mobil
+karşılığı olmayan ekranlar.
 
 ## "Yaklaşan İşler / Yaklaşan Vadeler" widget'ı — resmi backlog maddesi (2026-07-13)
 - Dashboard Tarih Mantığı KARAR'ının (bkz. [[features]] "Dashboard Tarih Mantığı Düzeltmesi")
@@ -27,17 +27,12 @@ ekranlar.
   `mobile/purchase.php`'ye taşınmadı (Ece'nin bulgusu, sprint CLOSED — bkz. [[features]]). Basit
   `<a>` linkleri oldukları için teknik engel yok, istenirse ayrı küçük bir iş olarak eklenebilir.
 
-## Flow Unification 001 DEV PASS takibi açık (2026-07-11)
-- Kod tamamlandı, yerel MariaDB'de 6 zorunlu senaryo + document_id edit/delete kilidi PASS, Ece/
-  Selin/Elif incelemesinden geçti, commit `d518103`, push edildi, guncelleme.zip/MD5 hazır — bkz.
-  [[bugs]] "Çözüldü" ve [[features]] "Flow Unification 001". Kullanıcının DEV/primac.tr'de gerçek
-  kullanıcı testi (8 test senaryosu: bkz. features.md) yapıp PASS vermesi bekleniyor; PASS
-  gelmeden CLOSED yazılmayacak.
-- Küçük artık (düşük öncelik, bu sprintin kapsamı dışında bırakıldı): `mobile/sales.php` hâlâ
-  kendi inline satış-oluşturma mantığını taşıyor, yeni `stock_create_sale()` ortak fonksiyonuna
-  bağlanmadı (Ece/Elif incelemesinde bulundu). Sonuç şu an tutarlı (aynı kurallar, aynı
-  `finance_movements` şekli) ama kod paylaşımı yok — ileride `stock_create_sale()`'e bağlanırsa
-  hem bakım kolaylaşır hem çekirdekte yapılacak gelecekteki düzeltmeler otomatik mobile yansır.
+## mobile/sales.php stock_create_sale() ortak fonksiyonuna bağlanmadı (2026-07-11, düşük öncelik)
+- Flow Unification 001 CLOSED (bkz. [[features]]) — ama `mobile/sales.php` hâlâ kendi inline
+  satış-oluşturma mantığını taşıyor, yeni `stock_create_sale()` ortak fonksiyonuna bağlanmadı
+  (Ece/Elif incelemesinde bulundu). Sonuç şu an tutarlı (aynı kurallar, aynı `finance_movements`
+  şekli) ama kod paylaşımı yok — ileride `stock_create_sale()`'e bağlanırsa hem bakım kolaylaşır
+  hem çekirdekte yapılacak gelecekteki düzeltmeler otomatik mobile yansır.
 
 ## Kontrollü Negatif Stok Politikası — küçük polish notu (2026-07-11)
 - Özelliğin kendisi CLOSED (WEB) — bkz. features.md. Tek açık kalan, düşük öncelikli not: şu an
