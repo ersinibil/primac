@@ -2,6 +2,13 @@
 
 <!-- Açık geliştirme görevleri. Kapanan madde buradan silinip memory/features.md'ye taşınır. -->
 
+## AKTİF ÖNCELİK SIRASI (kullanıcı kararı, 2026-07-14 — "ÇALIŞMA PLANI GÜNCELLEMESİ")
+Yeni özellik/sprint açılmadan önce bu sıra tamamlanacak: **1) Finance CRUD UX Patch 001** DEV PASS
+→ **2) Flow Unification 001** DEV PASS → **3) Migration 042/043** DEV doğrulaması → **4) Mobile
+Regression Sprint** (Finance Core + Kontrollü Negatif Stok mobil testi). Aşağıdaki maddeler
+şimdilik BEKLEMEDE: "Yaklaşan İşler" widget'ı, mobil çapraz navigasyon, `deleted_at` filtre
+genişletmesi, VAPID yapılandırması, mobil karşılığı olmayan ekranlar.
+
 ## "Yaklaşan İşler / Yaklaşan Vadeler" widget'ı — resmi backlog maddesi (2026-07-13)
 - Dashboard Tarih Mantığı KARAR'ının (bkz. [[features]] "Dashboard Tarih Mantığı Düzeltmesi")
   4 numaralı iş kuralı: "Bugün Yapılacaklar", "Gecikenler", "Açık İşler" yanında dördüncü kavram
