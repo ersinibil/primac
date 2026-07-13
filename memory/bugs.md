@@ -17,6 +17,28 @@
 
 ## Çözüldü
 
+- **Dashboard tarih mantığı: "Bugün" ile "Geciken"/tarihsiz-açık kavramları karışıyordu**
+  (2026-07-13, kullanıcı BUG REPORT — resmi ürün kararı ile netleşti): `daily_reminder_lib.php`'nin
+  sabah hatırlatması ("🌅 Bugün yapılacakların") ve yönetici günlük özet raporunun (job/task
+  sayaçları) hiçbir tarih filtresi yoktu — sadece açık durum (`status NOT IN (kapanmış)`)
+  kontrol ediliyordu, `ORDER BY due_date` sadece SIRALIYORDU, FİLTRELEMİYORDU. Sonuç: ileri
+  tarihli bir termin (örn. 31.07 vadeli bir iş, 13.07'de) "bugün" olarak gösteriliyordu. Düzeltme:
+  jobs/tasks sorguları artık `due_date=CURDATE()` (Bugün Yapılacaklar) ve ayrı
+  `due_date IS NOT NULL AND due_date<CURDATE()` (Gecikenler) olarak İKİ AYRI, birbirine
+  karışmayan sorguya bölündü — kişisel bildirim artık "Bugün yapılacakların:" ve "⚠️ Gecikenler:"
+  diye iki ayrı başlık altında gösteriyor; yönetici özet tablosuna da geciken-ama-bugünü-olmayan
+  personelin artık düşmediği bir düzeltme eklendi (önceden sadece bugün işi/görevi olmayan
+  personel, geciken işi olsa bile tablodan tamamen kayboluyordu). `gunluk_rapor.php` +
+  `mobile/gunluk_rapor.php`'nin kendisi zaten çoğunlukla doğruydu (stat kartları "Açık İş"/
+  "Bekleyen Görev" diyor, tarih iddiası yok) — sadece boş-durum mesajı "Bugün bekleyen iş/görev
+  yok" diyordu, sayfanın kendi diliyle tutarlı olsun diye "Açık iş/görev yok" yapıldı.
+  **Bilinçli olarak yapılmayanlar**: jobs/tasks'ta literal `status='Bekliyor'` filtresi
+  KULLANILMADI — bu değer o tablolarda hiç var olmayan bir status (gerçek değerler: Yeni/Teklif/
+  Onay Bekliyor/Planlandı/Devam Ediyor/Dışarıda/Montajda/Tamamlandı — jobs; Açık/Atandı/Devam
+  Ediyor/Tamamlandı/İptal — tasks; "Bekliyor" sadece `finance_movements.status`'ta var), literal
+  uygulanırsa her zaman 0 kayıt dönerdi — mevcut "kapanmış durumları dışla" filtresi (zaten doğru
+  "Açık İşler" tanımı) korundu. "Yaklaşan İşler" yeni widget olarak eklenmedi, ayrı backlog
+  maddesi (bkz. [[backlog]]).
 - **contact_report.php sol menüde yanlış yetki şartına bağlıydı** (2026-07-13, WEB UI ALIGNMENT &
   NAVIGATION SPRINT 001, commit `9bdff1e`, Elif/parity-auditor'da bulundu): `layout_top.php`'de
   `contacts_report.php` linki `user_can('report')` şartı altında gösteriliyordu, ama gerçek sayfa

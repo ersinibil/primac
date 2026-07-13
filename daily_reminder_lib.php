@@ -19,28 +19,57 @@ function check_daily_reminders($pdo, $force=false){
     }catch(Throwable $e){ return; }
     if(!$users) return;
 
+    // DASHBOARD TARİH MANTIĞI düzeltmesi (2026-07-13, resmi ürün kararı): "Bugün Yapılacaklar",
+    // "Gecikenler", "Açık İşler", "Yaklaşan İşler" sistem genelinde birbirine karıştırılmayacak —
+    // her biri kendi kesin tarih filtresiyle ayrı sorgulanır. Öncesinde job/task sorgularının HİÇ
+    // tarih filtresi yoktu (sadece açık durum), ama mesaj "Bugün bekleyen işlerin" diyordu — ileri
+    // tarihli (örn. 2 hafta sonraki) bir termin bile "bugün" olarak gösteriliyordu.
     $jobStmt=$pdo->prepare("SELECT job_no,title,due_date FROM jobs
         WHERE responsible_personnel_id=? AND status NOT IN ('Tamamlandı','Teslim Edildi','İptal')
-        ORDER BY (due_date IS NULL), due_date LIMIT 25");
+          AND due_date=CURDATE()
+        ORDER BY job_no LIMIT 25");
+    $jobStmtGeciken=$pdo->prepare("SELECT job_no,title,due_date FROM jobs
+        WHERE responsible_personnel_id=? AND status NOT IN ('Tamamlandı','Teslim Edildi','İptal')
+          AND due_date IS NOT NULL AND due_date<CURDATE()
+        ORDER BY due_date ASC LIMIT 25");
     $taskStmt=$pdo->prepare("SELECT title,due_date FROM tasks
         WHERE personnel_id=? AND status NOT IN ('Tamamlandı','İptal')
-        ORDER BY (due_date IS NULL), due_date LIMIT 25");
+          AND due_date=CURDATE()
+        ORDER BY title LIMIT 25");
+    $taskStmtGeciken=$pdo->prepare("SELECT title,due_date FROM tasks
+        WHERE personnel_id=? AND status NOT IN ('Tamamlandı','İptal')
+          AND due_date IS NOT NULL AND due_date<CURDATE()
+        ORDER BY due_date ASC LIMIT 25");
     $insN=$pdo->prepare("INSERT INTO internal_notifications(title,message,target_user_id,action_url,is_read) VALUES(?,?,?,?,0)");
 
     foreach($users as $u){
         $pid=(int)$u['personnel_id'];
         try{ $jobStmt->execute([$pid]); $jobs=$jobStmt->fetchAll(); }catch(Throwable $e){ $jobs=[]; }
         try{ $taskStmt->execute([$pid]); $tasks=$taskStmt->fetchAll(); }catch(Throwable $e){ $tasks=[]; }
-        if(!$jobs && !$tasks) continue;
+        try{ $jobStmtGeciken->execute([$pid]); $jobsGeciken=$jobStmtGeciken->fetchAll(); }catch(Throwable $e){ $jobsGeciken=[]; }
+        try{ $taskStmtGeciken->execute([$pid]); $tasksGeciken=$taskStmtGeciken->fetchAll(); }catch(Throwable $e){ $tasksGeciken=[]; }
+        if(!$jobs && !$tasks && !$jobsGeciken && !$tasksGeciken) continue;
 
-        $lines=['🌅 Günaydın '.$u['name'].'! Bugün bekleyen işlerin:'];
-        foreach($jobs as $j){ $lines[]='• '.$j['title'].($j['job_no']?' ('.$j['job_no'].')':'').($j['due_date']?' — termin '.$j['due_date']:''); }
-        foreach($tasks as $t){ $lines[]='◦ Görev: '.$t['title'].($t['due_date']?' — '.$t['due_date']:''); }
+        $lines=['🌅 Günaydın '.$u['name'].'!'];
+        if($jobs || $tasks){
+            $lines[]='';
+            $lines[]='Bugün yapılacakların:';
+            foreach($jobs as $j){ $lines[]='• '.$j['title'].($j['job_no']?' ('.$j['job_no'].')':''); }
+            foreach($tasks as $t){ $lines[]='◦ Görev: '.$t['title']; }
+        }
+        if($jobsGeciken || $tasksGeciken){
+            $lines[]='';
+            $lines[]='⚠️ Gecikenler:';
+            foreach($jobsGeciken as $j){ $lines[]='• '.$j['title'].($j['job_no']?' ('.$j['job_no'].')':'').' — termin '.$j['due_date']; }
+            foreach($tasksGeciken as $t){ $lines[]='◦ Görev: '.$t['title'].' — termin '.$t['due_date']; }
+        }
         $msg=implode("\n",$lines);
         $uid=(int)$u['id'];
+        $title = ($jobsGeciken || $tasksGeciken) ? '🌅 Bugün yapılacakların + Gecikenler' : '🌅 Bugün yapılacakların';
+        $pushBody = (count($jobs)+count($tasks)).' bugün · '.(count($jobsGeciken)+count($tasksGeciken)).' geciken';
 
-        try{ $insN->execute(['🌅 Bugün bekleyen işlerin',$msg,$uid,'mytasks.php']); }catch(Throwable $e){}
-        if($hasPush){ try{ push_to_user($uid,'🌅 Bugün bekleyen işlerin',count($jobs).' iş · '.count($tasks).' görev','mytasks.php'); }catch(Throwable $e){} }
+        try{ $insN->execute([$title,$msg,$uid,'mytasks.php']); }catch(Throwable $e){}
+        if($hasPush){ try{ push_to_user($uid,$title,$pushBody,'mytasks.php'); }catch(Throwable $e){} }
         if(!empty($u['phone']) && function_exists('wa_send')){ try{ wa_send($u['phone'],$msg); }catch(Throwable $e){} }
     }
 
@@ -50,10 +79,13 @@ function check_daily_reminders($pdo, $force=false){
     if($admins){
         try{ $pers=$pdo->query("SELECT id,name FROM personnel WHERE COALESCE(active,1)=1 ORDER BY name")->fetchAll(); }
         catch(Throwable $e){ $pers=[]; }
-        $jc=$pdo->prepare("SELECT COUNT(*) c FROM jobs WHERE responsible_personnel_id=? AND status NOT IN('Tamamlandı','Teslim Edildi','İptal')");
-        $tc=$pdo->prepare("SELECT COUNT(*) c FROM tasks WHERE personnel_id=? AND status NOT IN('Tamamlandı','İptal')");
+        // "Bugün" burada gerçekten bugün demek — daha önce tarih filtresi yoktu, ileri
+        // tarihli işler de "bugünkü" sayılıyordu (bkz. dosya başındaki not).
+        $jc=$pdo->prepare("SELECT COUNT(*) c FROM jobs WHERE responsible_personnel_id=? AND status NOT IN('Tamamlandı','Teslim Edildi','İptal') AND due_date=CURDATE()");
+        $tc=$pdo->prepare("SELECT COUNT(*) c FROM tasks WHERE personnel_id=? AND status NOT IN('Tamamlandı','İptal') AND due_date=CURDATE()");
+        $jcGeciken=$pdo->prepare("SELECT COUNT(*) c FROM jobs WHERE responsible_personnel_id=? AND status NOT IN('Tamamlandı','Teslim Edildi','İptal') AND due_date IS NOT NULL AND due_date<CURDATE()");
 
-        // Geciken işler
+        // Geciken işler (şirket geneli toplam — ayrı, "bugün" ile karışmayan bir kavram)
         $geciken=0;
         try{ $geciken=(int)$pdo->query("SELECT COUNT(*) c FROM jobs WHERE due_date<CURDATE() AND status NOT IN('Tamamlandı','Teslim Edildi','İptal')")->fetch()['c']; }catch(Throwable $e){}
 
@@ -61,13 +93,16 @@ function check_daily_reminders($pdo, $force=false){
         foreach($pers as $p){
             try{ $jc->execute([$p['id']]); $nj=(int)$jc->fetch()['c']; }catch(Throwable $e){ $nj=0; }
             try{ $tc->execute([$p['id']]); $nt=(int)$tc->fetch()['c']; }catch(Throwable $e){ $nt=0; }
-            if($nj || $nt){ $persRows[]=[$p['name'],$nj,$nt]; $anyWork=true; $topIs+=$nj; $topGov+=$nt; }
+            try{ $jcGeciken->execute([$p['id']]); $ng=(int)$jcGeciken->fetch()['c']; }catch(Throwable $e){ $ng=0; }
+            // Bugün işi/görevi olmasa da geciken işi varsa yine de tabloda görünsün (öncesinde
+            // sadece $nj/$nt'ye bakıldığı için sadece geciken işi olan personel listeden düşüyordu).
+            if($nj || $nt || $ng){ $persRows[]=[$p['name'],$nj,$nt,$ng]; $anyWork=true; $topIs+=$nj; $topGov+=$nt; }
         }
 
         // Metin raporu (iç mesaj + WA)
         $rep=['📊 GÜNLÜK İŞ RAPORU — '.date('d.m.Y'),''];
-        foreach($persRows as $r){ $rep[]='• '.$r[0].': '.$r[1].' iş · '.$r[2].' görev'; }
-        if(!$anyWork) $rep[]='Bugün bekleyen iş/görev yok. 🎉';
+        foreach($persRows as $r){ $rep[]='• '.$r[0].': '.$r[1].' iş · '.$r[2].' görev'.($r[3]?' (+'.$r[3].' geciken)':''); }
+        if(!$anyWork) $rep[]='Bugün yapılacak iş/görev yok. 🎉';
         if($geciken) $rep[]='⚠️ Geciken iş: '.$geciken;
         $rep[]=''; $rep[]='📄 Detaylı rapor: '.base_url().'gunluk_rapor.php';
         $rmsg=implode("\n",$rep);
@@ -92,10 +127,10 @@ function check_daily_reminders($pdo, $force=false){
         $tableRows='';
         foreach($persRows as $r){
             $tableRows.='<tr><td style="padding:8px 12px;border-bottom:1px solid #f1f5f9">'.htmlspecialchars($r[0]).'</td>'
-                .'<td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;text-align:center;font-weight:700;color:#2563eb">'.$r[1].'</td>'
+                .'<td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;text-align:center;font-weight:700;color:#2563eb">'.$r[1].($r[3]?" <span style='color:#dc2626;font-size:11px;font-weight:700'>(+{$r[3]} geciken)</span>":'').'</td>'
                 .'<td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;text-align:center;font-weight:700;color:#7c3aed">'.$r[2].'</td></tr>';
         }
-        if(!$tableRows) $tableRows='<tr><td colspan="3" style="padding:12px;text-align:center;color:#16a34a">Bugün bekleyen iş/görev yok 🎉</td></tr>';
+        if(!$tableRows) $tableRows='<tr><td colspan="3" style="padding:12px;text-align:center;color:#16a34a">Bugün yapılacak iş/görev yok 🎉</td></tr>';
         $gecikenHtml=$geciken?"<p style='margin:0 0 16px;background:#fee2e2;color:#991b1b;border-radius:8px;padding:10px 14px'>⚠️ <b>{$geciken} geciken iş</b> — <a href='{$reportUrl}' style='color:#991b1b'>raporda gör</a></p>":'';
         $html='<!doctype html><html><head><meta charset="utf-8"></head><body style="margin:0;background:#f5f7fb;font-family:-apple-system,Arial,sans-serif">
 <div style="max-width:580px;margin:24px auto;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.08)">

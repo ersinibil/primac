@@ -104,7 +104,7 @@ topx('Günlük İş Raporu');
             </tbody>
         </table>
         <?php else: ?>
-        <div style="text-align:center;color:#6b7280;padding:16px">Bugün bekleyen iş/görev yok 🎉</div>
+        <div style="text-align:center;color:#6b7280;padding:16px">Açık iş/görev yok 🎉</div>
         <?php endif; ?>
     </div>
 

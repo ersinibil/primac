@@ -160,7 +160,7 @@ require __DIR__.'/layout_top.php';
             </tbody>
         </table>
         <?php else: ?>
-        <div style="text-align:center;color:#6b7280;padding:20px">Bugün bekleyen iş/görev yok 🎉</div>
+        <div style="text-align:center;color:#6b7280;padding:20px">Açık iş/görev yok 🎉</div>
         <?php endif; ?>
     </div>
 
