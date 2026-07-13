@@ -326,7 +326,9 @@ Migration YOK bu sprintte — sadece kod değişti.
   settles_movement_id altyapısı — bu sprintte KULLANILMADI, "satış kaydı değişmeden kalır" kararı
   yüzünden gerek kalmadı), `c363727` (İş 3, migration'sız kısmi önlemler), `d3252b2` (İş 2,
   trade_document_new.php + web-mobil parite).
-- Açık kalan: migration 042/043 DEV PASS takibi ve mobil doğrulama → [[backlog]].
+- Migration 042/043 DEV doğrulaması: **USER TEST PASS (2026-07-14)** — kullanıcı `migrate.php`'yi
+  primac.tr'de çalıştırdı, hata yok, normal satış/alış işlemleri sorunsuz tamamlandı. **CLOSED.**
+  Mobil doğrulama hâlâ açık → [[backlog]] "Mobile Regression Sprint".
 
 ## Görev Detayı — "Çek / Senet Bilgileri" Kartı: CLOSED (2026-07-07)
 Kullanıcı isteği: takvimdeki Çek/Senet Vadesi görev kartının UX'i yetersizdi — tür/numara/cari/

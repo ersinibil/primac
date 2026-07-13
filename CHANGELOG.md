@@ -3,6 +3,14 @@
 Bu dosya `memory/features.md`'nin (tam gerekçe/kod detayıyla) kök dizindeki kısa özetidir — hızlı
 taramak için. Detaylı "neden böyle yapıldı" analizleri için `memory/features.md`'ye bakın.
 
+## Migration 042/043 DEV Doğrulaması: CLOSED (2026-07-14, USER TEST: PASS)
+`042_finance_movements_settles_link.sql` (`settles_movement_id`, ileriye dönük altyapı, henüz
+yazma yolu yok) ve `043_stock_movements_line_pricing.sql` (`stock_movements.unit_price`/
+`vat_rate`, satış düzenleme özelliğinin altyapısı) kullanıcı tarafından `migrate.php` ile DEV'de
+çalıştırıldı, hatasız uygulandı, normal satış/alış akışları regresyon vermedi. Kod tarafı zaten
+`SHOW COLUMNS` ile savunmalıydı (migration çalışmasa da bozulmuyordu) — bu doğrulama sadece
+DEV DB'sinin gerçek şemayla eşleştiğini teyit etti.
+
 ## Flow Unification 001: CLOSED (2026-07-11, commit `d518103`, USER TEST: PASS 2026-07-14)
 Alış/satış belgesi akışı ile hızlı satış/alış akışı artık TEK finans/stok çekirdeğini paylaşıyor:
 `stock_lib.php::stock_create_purchase()`/`stock_create_sale()` + `finance_movements`. Kök neden

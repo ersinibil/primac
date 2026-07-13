@@ -4,11 +4,13 @@
 
 ## AKTİF ÖNCELİK SIRASI (kullanıcı kararı, 2026-07-14 — "ÇALIŞMA PLANI GÜNCELLEMESİ")
 Yeni özellik/sprint açılmadan önce bu sıra tamamlanacak: ~~1) Finance CRUD UX Patch 001~~ **PASS,
-CLOSED (2026-07-14)** → ~~2) Flow Unification 001~~ **PASS, CLOSED (2026-07-14)** → **3) Migration
-042/043** DEV doğrulaması (şimdi aktif) → **4) Mobile Regression Sprint** (Finance Core +
-Kontrollü Negatif Stok mobil testi). Aşağıdaki maddeler şimdilik BEKLEMEDE: "Yaklaşan İşler"
-widget'ı, mobil çapraz navigasyon, `deleted_at` filtre genişletmesi, VAPID yapılandırması, mobil
-karşılığı olmayan ekranlar.
+CLOSED (2026-07-14)** → ~~2) Flow Unification 001~~ **PASS, CLOSED (2026-07-14)** → ~~3) Migration
+042/043 DEV doğrulaması~~ **PASS, CLOSED (2026-07-14)** → **4) Mobile Regression Sprint** (Finance
+Core + Kontrollü Negatif Stok mobil testi) — kullanıcı 2026-07-14'te bu sıraya **FINANCE ACCOUNT
+LIST FILTER UX**'i araya soktu (bkz. aşağıdaki madde), Mobile Regression Sprint bu iş bitince
+devam edecek. Aşağıdaki maddeler şimdilik BEKLEMEDE: "Yaklaşan İşler" widget'ı, mobil çapraz
+navigasyon, `deleted_at` filtre genişletmesi, VAPID yapılandırması, mobil karşılığı olmayan
+ekranlar.
 
 ## "Yaklaşan İşler / Yaklaşan Vadeler" widget'ı — resmi backlog maddesi (2026-07-13)
 - Dashboard Tarih Mantığı KARAR'ının (bkz. [[features]] "Dashboard Tarih Mantığı Düzeltmesi")
@@ -40,13 +42,6 @@ karşılığı olmayan ekranlar.
   " ⚠️ Stok Yetersiz (Onaylandı)" metni ile sağlanıyor (migrationsız, düşük riskli tercih).
   İstenirse ileride Son Satışlar listesinde gerçek bir rozet/filtre (örn. "Tedarik Bekliyor")
   eklenebilir — bu turun kapsamı dışında bırakıldı (kullanıcı: "büyük UI refactor yapma").
-
-## Migration 042 (settles_movement_id) ve 043 (satır bazlı fiyat/KDV) DEV PASS takibi açık
-- İkisi de primac.tr'ye deploy edilen kod tabanında hazır (sale-edit özelliği migration 043'e
-  bağımlı) ama kullanıcının DEV'de `migrate.php`'yi çalıştırıp teknik doğrulama yapması Finance
-  Core Stabilization commit'inden (`d02665b`, migration İÇERMİYOR) BAĞIMSIZ ayrı ayrı takip
-  ediliyor. Her ikisi de yerel MariaDB sandbox'ta idempotency + fonksiyonel senaryolarla test
-  edildi (bkz. features.md), ama DEV üzerinde kullanıcı PASS'ı gelmeden CLOSED yazılmayacak.
 
 ## Mobile Regression Sprint — Finance Core + Kontrollü Negatif Stok mobil doğrulaması (2026-07-11)
 - Finance Core Stabilization (satış/alış artık ödeme yapmıyor, cari bakiye formülü düzeltmesi —

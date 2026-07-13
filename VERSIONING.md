@@ -78,6 +78,9 @@ netleştirildi — bkz. `ROADMAP.md` "Security Roadmap"):
 
 ## Current Development Version
 **v1.1.0-dev** (primac.tr) — ortam ayrımından SONRAKİ ilk geliştirme turu
++ **Migration 042/043 DEV Doğrulaması: PASS** (2026-07-14): `settles_movement_id` +
+  `stock_movements.unit_price`/`vat_rate` kolonları DEV'de `migrate.php` ile hatasız uygulandı,
+  regresyon yok. Detay → `CHANGELOG.md`.
 + **Flow Unification 001: PASS** (2026-07-11, commit `d518103`, USER TEST: PASS 2026-07-14):
   alış/satış belgesi akışı ile hızlı satış/alış akışı tek finans/stok çekirdeğinde birleşti
   (`stock_lib.php` + `finance_movements`), `trade_documents` artık sadece belge/PDF katmanı.
