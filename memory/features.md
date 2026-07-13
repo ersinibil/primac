@@ -2,7 +2,7 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
-## UX TERMINOLOGY FIX — "İş Takip"/"İşlerim" karışıklığı çözüldü: DEV görsel doğrulama bekliyor (2026-07-13)
+## UX TERMINOLOGY FIX — "İş Takip"/"İşlerim" karışıklığı çözüldü: CLOSED — USER TEST PASS (2026-07-13)
 Kullanıcı bildirimi: sol menüde "İşlerim" ve "İş Takip" isimleri birbirine çok yakındı, operasyonel
 iş kayıtları (jobs.php) ile kullanıcıya atanmış kişisel görev/hatırlatmalar (mytasks.php) arasında
 karışıklık yaratıyordu — üstelik jobs.php'ye giden yolun kendisi de üç farklı isimle anılıyordu
@@ -28,10 +28,12 @@ sayfa kimliği değil); çek vadesi gibi kayıtların "Görevlerim" altında kal
 `daily_reminder_lib.php` mantığına dokunulmadı, zaten doğru gruplanıyordu).
 
 Doğrulama: `php -l` tüm 17 değişen PHP dosyasında temiz; `git diff` ile her satırın SADECE
-görünen metin olduğu, hiçbir href/route/SQL/yetki anahtarının değişmediği teyit edildi. Bu bir
-metin/terminoloji değişikliği olduğu için önceki oturumun "Drag&Drop/Modal/.../Buton-davranışları"
-USER TEST kuralı kapsamına girmiyor (interaktif davranış yok), ama DEV üzerinde kısa bir görsel
-tarama önerilir: sol menü, jobs.php/mytasks.php başlıkları, dashboard kartı, mobil "Menü" ekranı.
+görünen metin olduğu, hiçbir href/route/SQL/yetki anahtarının değişmediği teyit edildi.
+
+**USER TEST PASS (2026-07-13):** Kullanıcı DEV'de doğruladı — İş Emirleri doğru ekrana gidiyor,
+Görevlerim doğru ekrana gidiyor, çek vadesi ve kişisel hatırlatmalar Görevlerim altında doğru
+kalıyor, web/mobil terminoloji ayrımı anlaşılır ve doğru. **CLOSED.**
+
 ## WEB UI ALIGNMENT & NAVIGATION SPRINT 001 — Dashboard sürükle-bırak + sol menü sadeleştirme + ortak tasarım dili: USER TEST BEKLİYOR (2026-07-13)
 Bu sprintten itibaren PRIMAC OTS'ta ad-hoc "Patch" isimlendirmesi bırakıldı, kalıcı bir Sprint
 sistemine geçildi (SECURITY/FINANCE/UX/MOBILE/PERFORMANCE/INTEGRATION/REPORTING/REFACTOR SPRINT) —
