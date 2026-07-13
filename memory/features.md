@@ -2,7 +2,7 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
-## FINANCE ACCOUNT LIST FILTER UX — Hesaplar ekranına tür/durum/banka/arama filtresi: USER TEST BEKLİYOR (2026-07-14)
+## FINANCE ACCOUNT LIST FILTER UX — Hesaplar ekranına tür/durum/banka/arama filtresi: CLOSED — USER TEST PASS (2026-07-14)
 Sorun: `finance_accounts.php` (Banka/Kasa/Kredi Kartı/POS hepsi) tek tabloda karışık listeleniyordu,
 tür bazlı ayrım için sadece 5 sabit sekme vardı (Tümü/Bankalar/Kasalar/Kredi Kartları/POS), durum
 (aktif/pasif) veya banka adına göre filtre hiç yoktu, arama yoktu.
@@ -66,10 +66,10 @@ turda kapatıldı.
 injection denemesi, GARANTİ/Garanti gruplama, geçersiz type/status whitelist düşüşü) — hepsi
 PASS. `php -l` 4 dosyada temiz.
 
-**USER TEST BEKLİYOR:** kullanıcının DEV/primac.tr'de Kasalar/Banka Hesapları/Kredi Kartları/
-Aktif-Pasif/banka adı/arama filtrelerinin gerçekten çalıştığını, `finance.php`'nin eski derin
-linklerinin (Bankalar/Kasalar/Kredi Kartları/POS kartları) hâlâ doğru çalıştığını, filtreliyken
-Ekstre/Düzenle/Sil davranışının bozulmadığını doğrulamadan CLOSED yazılmayacak.
+**USER TEST PASS (2026-07-14):** kullanıcı DEV'de doğruladı — Tümü/Kasalar/Banka Hesapları/
+Kredi Kartları/Diğer sekmeleri, Aktif/Pasif filtresi, banka filtresi, arama, birleşik filtreler
+hepsi çalışıyor; mevcut Ekstre/Düzenle/Sil davranışları bozulmadı; web ve mobil varsayılan
+davranışları (Tümü / sadece Aktif) korunmuş. **CLOSED.**
 
 ## UX TERMINOLOGY FIX — "İş Takip"/"İşlerim" karışıklığı çözüldü: CLOSED — USER TEST PASS (2026-07-13)
 Kullanıcı bildirimi: sol menüde "İşlerim" ve "İş Takip" isimleri birbirine çok yakındı, operasyonel

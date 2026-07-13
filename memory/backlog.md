@@ -6,24 +6,17 @@
 Yeni özellik/sprint açılmadan önce bu sıra tamamlanacak: ~~1) Finance CRUD UX Patch 001~~ **PASS,
 CLOSED (2026-07-14)** → ~~2) Flow Unification 001~~ **PASS, CLOSED (2026-07-14)** → ~~3) Migration
 042/043 DEV doğrulaması~~ **PASS, CLOSED (2026-07-14)** → **4) Mobile Regression Sprint** (Finance
-Core + Kontrollü Negatif Stok mobil testi) — kullanıcı 2026-07-14'te bu sıraya **FINANCE ACCOUNT
-LIST FILTER UX**'i araya soktu (bkz. aşağıdaki madde), Mobile Regression Sprint bu iş bitince
-devam edecek. Aşağıdaki maddeler şimdilik BEKLEMEDE: "Yaklaşan İşler" widget'ı, mobil çapraz
-navigasyon, `deleted_at` filtre genişletmesi, VAPID yapılandırması, mobil karşılığı olmayan
-ekranlar.
+Core + Kontrollü Negatif Stok mobil testi, şimdi aktif) — araya giren ~~FINANCE ACCOUNT LIST
+FILTER UX~~ **PASS, CLOSED (2026-07-14)** işi bitti. Aşağıdaki maddeler şimdilik BEKLEMEDE:
+"Yaklaşan İşler" widget'ı, mobil çapraz navigasyon, `deleted_at` filtre genişletmesi, VAPID
+yapılandırması, mobil karşılığı olmayan ekranlar.
 
-## FINANCE ACCOUNT LIST FILTER UX DEV PASS takibi açık (2026-07-14)
-- Kod tamamlandı (tür/durum/banka/arama filtresi, `finance_accounts.php` + `mobile/kasa.php` +
-  `finance_account_view.php` + `finance_lib.php`), yerel MariaDB sandbox'ta 15 zorunlu senaryo +
-  ek kontroller PASS, Selin/Ece incelemesinden geçti (kritik/yüksek bulgu yok, tek düşük öncelik
-  not aynı turda kapatıldı — bkz. [[features]]). Kullanıcının DEV/primac.tr'de Kasalar/Banka
-  Hesapları/Kredi Kartları/Aktif-Pasif/banka adı/arama filtrelerini, `finance.php`'nin eski derin
-  linklerinin hâlâ çalıştığını, filtreliyken Ekstre/Düzenle/Sil davranışının bozulmadığını test
-  edip PASS vermesi bekleniyor; PASS gelmeden CLOSED yazılmayacak.
-- Bilinçli kapsam dışı bırakılan (düşük risk/değer): hesap "🗑 Sil" (`sil.php?t=account` üzerinden,
-  sadece `finance_account_view.php`'nin kendi Sil butonu) hâlâ filtresiz listeye dönüyor — `sil.php`
-  paylaşılan bir dosya olduğu için dokunulmadı, listenin kendi inline Sil'i zaten filtre bağlamını
-  koruyor.
+## finance_accounts sil.php akışı filtre bağlamını korumuyor (2026-07-14, düşük öncelik)
+- FINANCE ACCOUNT LIST FILTER UX CLOSED (bkz. [[features]]) — ama hesap "🗑 Sil" işlemi
+  (`sil.php?t=account` üzerinden, sadece `finance_account_view.php`'nin kendi Sil butonu) hâlâ
+  filtresiz `finance_accounts.php?deleted=1`'e dönüyor. `sil.php` paylaşılan, çok sayıda başka
+  akışın kullandığı bir dosya olduğu için bilinçli olarak dokunulmadı (listenin kendi inline
+  Sil'i zaten filtre bağlamını otomatik koruyor). İstenirse ayrı küçük bir iş olarak ele alınabilir.
 
 ## "Yaklaşan İşler / Yaklaşan Vadeler" widget'ı — resmi backlog maddesi (2026-07-13)
 - Dashboard Tarih Mantığı KARAR'ının (bkz. [[features]] "Dashboard Tarih Mantığı Düzeltmesi")
