@@ -2,14 +2,16 @@
 
 <!-- Açık geliştirme görevleri. Kapanan madde buradan silinip memory/features.md'ye taşınır. -->
 
-## AKTİF ÖNCELİK SIRASI (kullanıcı kararı, 2026-07-14 — "ÇALIŞMA PLANI GÜNCELLEMESİ")
-Yeni özellik/sprint açılmadan önce bu sıra tamamlanacak: ~~1) Finance CRUD UX Patch 001~~ **PASS,
-CLOSED (2026-07-14)** → ~~2) Flow Unification 001~~ **PASS, CLOSED (2026-07-14)** → ~~3) Migration
-042/043 DEV doğrulaması~~ **PASS, CLOSED (2026-07-14)** → **4) Mobile Regression Sprint** (Finance
-Core + Kontrollü Negatif Stok mobil testi, şimdi aktif) — araya giren ~~FINANCE ACCOUNT LIST
-FILTER UX~~ **PASS, CLOSED (2026-07-14)** işi bitti. Aşağıdaki maddeler şimdilik BEKLEMEDE:
-"Yaklaşan İşler" widget'ı, mobil çapraz navigasyon, `deleted_at` filtre genişletmesi, VAPID
-yapılandırması, mobil karşılığı olmayan ekranlar.
+## AKTİF ÖNCELİK SIRASI — TAMAMLANDI (kullanıcı kararı, 2026-07-14 — "ÇALIŞMA PLANI GÜNCELLEMESİ")
+~~1) Finance CRUD UX Patch 001~~ **PASS, CLOSED** → ~~2) Flow Unification 001~~ **PASS, CLOSED**
+→ ~~3) Migration 042/043 DEV doğrulaması~~ **PASS, CLOSED** → ~~araya giren FINANCE ACCOUNT LIST
+FILTER UX~~ **PASS, CLOSED** → ~~araya giren TOPBAR MESSAGE BADGE GHOST COUNT~~ **USER TEST
+PASS/DEV PASS, CLOSED** → ~~4) Mobile Regression Sprint~~ **CLOSED (kod+sandbox doğrulaması)**.
+Tüm sıra bitti (2026-07-14). Sıradaki iş: **UX SPRINT 002** (dashboard/genel arayüz mimari analizi,
+şu an Faz A — analiz/mimari raporu, bu fazda kod/commit/push/zip YOK; rapor ayrıca teslim edildi,
+repo'ya işlenmedi). Aşağıdaki maddeler hâlâ BEKLEMEDE: "Yaklaşan İşler" widget'ı, mobil çapraz
+navigasyon, `deleted_at` filtre genişletmesi, VAPID yapılandırması, mobil karşılığı olmayan
+ekranlar.
 
 ## MESSAGING CHANNEL SEMANTICS — İş/görev atamalarının Mesajlar kanalından çıkarılması (2026-07-14)
 - TOPBAR MESSAGE BADGE GHOST COUNT bug fix'i (bkz. [[features]] / [[bugs]]) sadece kendine-atama
