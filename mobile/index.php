@@ -33,6 +33,10 @@ try {
 } catch(Throwable $e) { $__pulseOk = false; }
 $__pulse = dashboard_pulse_state($__pulseOk, $__pulseOverdue, $isAdmin||user_can('jobs'), $__pulseCriticalStock, $isAdmin||user_can('stock'));
 
+// UX SPRINT 002 — PHASE B4: Hızlı İşlemler — web ile aynı, boot.php'deki paylaşılan tanım+ayrım
+// listesini kullanıyor (mobilin kendi $isAdmin değişkeniyle, dosyanın mevcut deseniyle tutarlı).
+$__qaSplit = dashboard_quick_actions_split(function($perm) use($isAdmin){ return $isAdmin||user_can($perm); });
+
 if($isAdmin){
   $contacts=mc("SELECT COUNT(*) c FROM contacts");
   $stock=mc("SELECT COUNT(*) c FROM stock_items");
@@ -56,6 +60,36 @@ $__pc=$__pulseColors[$__pulse['level']];
   <a href="#gecikme-uyari" style="flex:0 0 auto;font-size:11px;font-weight:800;text-decoration:none;color:<?=$__pc['fgtext']?>;background:rgba(255,255,255,.5);padding:5px 10px;border-radius:999px">İncele</a>
   <?php endif; ?>
 </div>
+
+<!-- ── Hızlı İşlemler — UX SPRINT 002 PHASE B4 (mobil sade sürüm) ── -->
+<?php
+$__qaByCat=[];
+foreach($__qaSplit['primary'] as $__qa){ $__qaByCat[$__qa['category']][]=$__qa; }
+?>
+<div class="panel">
+  <b>⚡ Hızlı İşlemler</b>
+  <?php foreach(['TİCARET','FİNANS','OPERASYON','İLETİŞİM'] as $__qaCat): if(empty($__qaByCat[$__qaCat])) continue; ?>
+  <div style="margin-top:10px">
+    <div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--c-muted);margin-bottom:6px"><?=htmlspecialchars($__qaCat)?></div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px">
+      <?php foreach($__qaByCat[$__qaCat] as $__qa): ?>
+      <a class="btn" style="padding:10px 12px;font-size:13px" href="<?=htmlspecialchars($__qa['mobileUrl'] ?? $__qa['url'])?>"><?=$__qa['icon']?> <?=htmlspecialchars($__qa['label'])?></a>
+      <?php endforeach; ?>
+    </div>
+  </div>
+  <?php endforeach; ?>
+  <?php if($__qaSplit['overflow']): ?>
+  <details style="margin-top:10px">
+    <summary style="font-size:12px;font-weight:800;color:var(--c-muted);cursor:pointer">Diğer İşlemler (<?=count($__qaSplit['overflow'])?>)</summary>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">
+      <?php foreach($__qaSplit['overflow'] as $__qa): ?>
+      <a class="btn" style="padding:10px 12px;font-size:13px" href="<?=htmlspecialchars($__qa['mobileUrl'] ?? $__qa['url'])?>"><?=$__qa['icon']?> <?=htmlspecialchars($__qa['label'])?></a>
+      <?php endforeach; ?>
+    </div>
+  </details>
+  <?php endif; ?>
+</div>
+
 <?php if($isAdmin): ?>
   <div class="panel"><b>Online Takip ve Yönetim Sistemi</b><p class="small">Yönetici paneli · Web sürümü ayrı butondadır.</p>
   <div class="grid">

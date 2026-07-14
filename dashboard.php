@@ -112,6 +112,12 @@ try {
 } catch(Throwable $e) { $__pulseOk = false; }
 $__pulse = dashboard_pulse_state($__pulseOk, $__pulseOverdue, is_admin()||user_can('jobs'), $__pulseCriticalStock, is_admin()||user_can('stock'));
 
+// UX SPRINT 002 — PHASE B4: Hızlı İşlemler — tanım+ayrım listesi boot.php'de merkezi (mobil ile ortak).
+$__qaSplit = dashboard_quick_actions_split(function($perm){ return is_admin()||user_can($perm); });
+$__qaCategoryOrder = ['TİCARET','FİNANS','OPERASYON','İLETİŞİM'];
+$__qaByCategory = [];
+foreach($__qaSplit['primary'] as $__qa){ $__qaByCategory[$__qa['category']][] = $__qa; }
+
 $open=safe_count("SELECT COUNT(*) c FROM jobs WHERE status NOT IN ('Tamamlandı','İptal','Teslim Edildi')");
 $todayDue=safe_count("SELECT COUNT(*) c FROM jobs WHERE due_date=CURDATE() AND status NOT IN ('Tamamlandı','İptal','Teslim Edildi')");
 $late=safe_count("SELECT COUNT(*) c FROM jobs WHERE due_date IS NOT NULL AND due_date<CURDATE() AND status NOT IN ('Tamamlandı','İptal','Teslim Edildi')");
@@ -238,14 +244,26 @@ a.alert-stat-link:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(16
 .pulse-row.pulse-red .pulse-link{color:#991b1b}
 .pulse-row.pulse-neutral{background:#f8fafc;border-color:#e2e8f0;color:#475569}
 @media(max-width:640px){.pulse-row{padding:10px 12px}.pulse-row .pulse-text{font-size:12.5px}}
+
+/* ── Hızlı İşlemler — UX SPRINT 002 PHASE B4 ── */
+.qa-panel{margin:12px 0 18px}
+.qa-panel .panel-head-sm{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.qa-panel .panel-head-sm h2{font-size:15px;margin:0}
+.qa-categories{display:flex;flex-wrap:wrap;gap:18px 28px}
+.qa-category{min-width:180px}
+.qa-cat-label{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin-bottom:8px}
+.qa-cat-actions{display:flex;flex-wrap:wrap;gap:8px}
+.qa-overflow{margin-top:14px;border-top:1px solid #eef2f6;padding-top:12px}
+.qa-overflow summary{cursor:pointer;font-size:12px;font-weight:800;color:#475569;list-style:none}
+.qa-overflow summary::-webkit-details-marker{display:none}
+.qa-overflow summary::before{content:'▸ ';color:#94a3b8}
+.qa-overflow[open] summary::before{content:'▾ '}
+.qa-overflow .qa-cat-actions{margin-top:10px}
+@media(max-width:640px){.qa-categories{gap:14px}.qa-category{min-width:140px}}
 </style>
 
 <div class="panel-head page-header">
 <h1>Komuta Merkezi</h1>
-<div class="actions">
-<a class="btn quick-action" href="job_new.php">+ Yeni İş</a>
-<a class="btn secondary quick-action" href="request_new.php">+ Talep</a>
-</div>
 </div>
 
 <div class="pulse-row pulse-<?=h($__pulse['level'])?>">
@@ -255,6 +273,32 @@ a.alert-stat-link:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(16
 <a href="#" class="pulse-link" onclick="return dashboardPulseScrollToCritical();">İncele</a>
 <?php endif; ?>
 </div>
+
+<section class="panel qa-panel">
+<div class="panel-head-sm"><h2>⚡ Hızlı İşlemler</h2></div>
+<div class="qa-categories">
+<?php foreach($__qaCategoryOrder as $__qaCat): if(empty($__qaByCategory[$__qaCat])) continue; ?>
+<div class="qa-category">
+<div class="qa-cat-label"><?=h($__qaCat)?></div>
+<div class="qa-cat-actions">
+<?php foreach($__qaByCategory[$__qaCat] as $__qa): ?>
+<a class="btn secondary quick-action" href="<?=h($__qa['url'])?>"><?=$__qa['icon']?> <?=h($__qa['label'])?></a>
+<?php endforeach; ?>
+</div>
+</div>
+<?php endforeach; ?>
+</div>
+<?php if($__qaSplit['overflow']): ?>
+<details class="qa-overflow">
+<summary>Diğer İşlemler (<?=count($__qaSplit['overflow'])?>)</summary>
+<div class="qa-cat-actions">
+<?php foreach($__qaSplit['overflow'] as $__qa): ?>
+<a class="btn secondary quick-action" href="<?=h($__qa['url'])?>"><?=$__qa['icon']?> <?=h($__qa['label'])?></a>
+<?php endforeach; ?>
+</div>
+</details>
+<?php endif; ?>
+</section>
 
 <div class="dash-reset-bar">
 <button type="button" class="btn small secondary" onclick="resetDashboardOrder('tiles')">↺ Kart Sırası</button>

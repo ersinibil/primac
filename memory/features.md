@@ -2,6 +2,60 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
+## UX SPRINT 002 — Phase B4: Dashboard Hızlı İşlemler (Quick Actions): DEV PASS — USER TEST BEKLİYOR (2026-07-14)
+Amaç: Kullanıcı Nabız Satırı'ndan durumu gördükten sonra en sık yaptığı işlemleri tek tıkla
+başlatabilsin. Mevcut 2 buton (+ Yeni İş, + Talep) page-header'dan kaldırılıp, yerine kategorili
+9 aksiyonluk bir "Hızlı İşlemler" paneline (OPERASYON kategorisi içinde) taşındı — işlev/hedef URL
+değişmedi, sadece konum/görsel genişledi.
+
+**9 aksiyon / 4 kategori:** TİCARET (Yeni Satış→`sales.php`, Yeni Alış→`purchase.php`, Yeni
+Teklif→`teklif.php`), FİNANS (Yeni Tahsilat→`finance_new.php?direction=in`, Yeni
+Ödeme→`finance_new.php?direction=out`), OPERASYON (Yeni İş→`job_new.php`, Yeni
+Görev→`task_new.php`, Yeni Talep→`request_new.php`), İLETİŞİM (Yeni Mesaj→`messages.php`).
+Hepsi zaten var olan route'lar — yeni sayfa/endpoint/backend/migration YOK.
+
+**Merkezi tanım (`boot.php`, web+mobil ortak):** `dashboard_quick_action_defs()` — 9 aksiyonun
+öncelik-sıralı sabit listesi (key/category/label/icon/url/perm). `dashboard_quick_actions_split
+($canSee, $cap=7)` — yetkili/görünür aksiyonları önceliğe göre primary (en fazla 7) ve overflow
+("Diğer İşlemler") olarak ikiye bölüyor (kullanıcı talebi: "en fazla 6-8 işlem aynı anda, fazlası
+açılır menüde" — dashboard zamanla yeni aksiyon eklendikçe kalabalıklaşmasın diye). 15 senaryolu
+otomatik test (DB'siz, saf fonksiyon) ile doğrulandı: admin (9 görünür → 7 primary + 2 overflow:
+teklif+mesaj), yetkisiz kullanıcı (sadece perm=null olanlar: talep+mesaj, overflow yok), kısmi
+yetki, cap sınırı — hepsi PASS.
+
+**Yetki filtreleme:** Her aksiyonun `perm` alanı GERÇEK sayfa korumasıyla tek tek doğrulandı
+(`page_module_map()` veya sayfanın kendi inline `require_permission()`/`block_personel()`'i) —
+`job`→jobs, `satis`/`alis`→stock, `tahsilat`/`odeme`→finance, `gorev`→tasks (task_new.php'nin
+kendi `require_permission('tasks')`'ı, page_module_map'te yok ama korumalı), `teklif`→teklif,
+`talep`/`mesaj`→perm yok (gerçekten korumasız sayfalar, yanlış "herkese açık" işaretleme yok).
+Yetkisiz kullanıcıya buton hiç gösterilmiyor, 403'e düşen link üretilmedi.
+
+**Mobil karar:** AYNI FAZDA yapıldı, `mobile/index.php`'ye sade (kategori mini-başlıklı, drag/
+sıralama yok) bir panel eklendi, aynı merkezi tanım+split fonksiyonu kullanılıyor. **Kritik route
+farkı bulundu ve düzeltildi:** web Tahsilat/Ödeme için `finance_new.php?direction=in|out`
+kullanıyor ama `mobile/finance_new.php` HİÇ YOK — mobilde bunların karşılığı ayrı, kendi dosyaları
+olan `collection.php`/`payment.php`. Bu iki aksiyon için tanım listesine `mobileUrl` override
+eklendi (`dashboard.php` hiç kullanmıyor, sadece `mobile/index.php` `$a['mobileUrl']??$a['url']`
+ile devreye alıyor) — diğer 7 aksiyon için aynı dosya adı hem kökte hem `mobile/` altında var
+olduğu için relative path doğrudan çalışıyor. Tüm 9×2 (web+mobil) hedef dosyanın gerçekten
+diskte var olduğu `file_exists()` ile doğrulandı, 3 incelemeci de bağımsız teyit etti.
+
+**"Yeni Talep"/"Yeni Görev" mobilde ilk kez quick-launch oldu** — daha önce mobile/index.php'de
+bu sayfalara doğrudan link yoktu (sadece nav kartları vardı), var olan bir özelliği bozmadı.
+
+**Değiştirilen dosyalar:** `boot.php` (+40 satır), `dashboard.php` (+52 satır, panel kaldırma +
+yeni kategorili grid + CSS), `mobile/index.php` (+34 satır).
+
+**İnceleme:** Ece PASS, Selin PASS (9 aksiyonun perm ataması tek tek gerçek sayfa korumasıyla
+eşleştirildi, XSS/CSRF bulgusu yok), Elif PASS (mobileUrl'in her iki render noktasında doğru
+uygulandığı, web'de hiç kullanılmadığı, kategori sırasının web/mobil tutarlı olduğu doğrulandı).
+Bloklayıcı bulgu yok, sadece bilgi notları (boot.php vs *_lib.php yerleşimi — Phase B3 emsaliyle
+tutarlı; job butonunun artık jobs iznine bağlanması — zaten sunucu tarafında korunuyordu, "ölü
+tıklama" önlendi).
+
+**DEV PASS (2026-07-14).** USER TEST BEKLİYOR — kullanıcı DEV'de (primac.tr) doğrulamadan CLOSED
+yazılmayacak.
+
 ## UX SPRINT 002 — Phase B3: Dashboard Nabız Satırı: CLOSED — USER TEST PASS / DEV PASS (2026-07-14)
 Amaç: Komuta Merkezi açıldığında kullanıcı ilk 1-2 saniyede günün genel durumunu tek cümlede
 anlayabilsin — mevcut "Dikkat / Geciken İşler & Kritik Stok" bölümü kaldırılmadı/yeniden

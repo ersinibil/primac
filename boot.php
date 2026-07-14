@@ -369,6 +369,46 @@ function dashboard_pulse_state($ok, $overdueCount, $showOverdue, $criticalStockC
     return ['level'=>'yellow','icon'=>'🟡','message'=>'Bugün dikkat gerektiren '.$total.' konu var: '.$dist.'.','hasDetail'=>true];
 }
 
+// UX SPRINT 002 — PHASE B4 (2026-07-14): Dashboard Hızlı İşlemler — tanım listesi TEK yerde, web
+// (dashboard.php) VE mobil (mobile/index.php) ortak kullanır. Sıra = öncelik sırası (önce olan
+// daha "önemli" sayılır, primary/overflow ayrımı bu sıraya göre yapılır). Her satır zaten var olan
+// bir route'a işaret eder — yeni sayfa/endpoint YOK. 'perm'=>null = herkese açık (request_new.php/
+// messages.php'nin kendi sayfa kodunda da hiç yetki kontrolü yok, tutarlı). 'url' web kökü
+// içindir; mobil için AYNI dosya adı mobile/ altında da varsa (job_new/sales/purchase/teklif/
+// task_new/request_new/messages) relative path zaten doğru sayfaya çözümlenir. Tahsilat/Ödeme
+// istisna: web'de finance_new.php?direction=in|out var ama mobile/finance_new.php YOK — mobilde
+// bunların karşılığı ayrı, kendi dosyaları olan collection.php/payment.php — bu yüzden
+// 'mobileUrl' ile override ediliyor (çağıran taraf mobile/index.php'de $a['mobileUrl']??$a['url']
+// kullanmalı).
+function dashboard_quick_action_defs(){
+    return [
+        ['key'=>'job',      'category'=>'OPERASYON', 'label'=>'Yeni İş',       'icon'=>'📋', 'url'=>'job_new.php',                   'perm'=>'jobs'],
+        ['key'=>'satis',    'category'=>'TİCARET',    'label'=>'Yeni Satış',    'icon'=>'🧾', 'url'=>'sales.php',                     'perm'=>'stock'],
+        ['key'=>'tahsilat', 'category'=>'FİNANS',     'label'=>'Yeni Tahsilat', 'icon'=>'💰', 'url'=>'finance_new.php?direction=in',  'perm'=>'finance', 'mobileUrl'=>'collection.php'],
+        ['key'=>'alis',     'category'=>'TİCARET',    'label'=>'Yeni Alış',     'icon'=>'📦', 'url'=>'purchase.php',                  'perm'=>'stock'],
+        ['key'=>'odeme',    'category'=>'FİNANS',     'label'=>'Yeni Ödeme',    'icon'=>'💸', 'url'=>'finance_new.php?direction=out', 'perm'=>'finance', 'mobileUrl'=>'payment.php'],
+        ['key'=>'gorev',    'category'=>'OPERASYON', 'label'=>'Yeni Görev',    'icon'=>'🎯', 'url'=>'task_new.php',                  'perm'=>'tasks'],
+        ['key'=>'talep',    'category'=>'OPERASYON', 'label'=>'Yeni Talep',    'icon'=>'📨', 'url'=>'request_new.php',               'perm'=>null],
+        ['key'=>'teklif',   'category'=>'TİCARET',    'label'=>'Yeni Teklif',   'icon'=>'📄', 'url'=>'teklif.php',                    'perm'=>'teklif'],
+        ['key'=>'mesaj',    'category'=>'İLETİŞİM',   'label'=>'Yeni Mesaj',    'icon'=>'💬', 'url'=>'messages.php',                  'perm'=>null],
+    ];
+}
+
+// Yetkili (görünür) aksiyonları önceliğe göre primary (en fazla $cap) ve overflow ("Diğer
+// İşlemler") olarak ikiye böler — dashboard zamanla yeni aksiyon eklendikçe kalabalıklaşmasın diye.
+// $canSee: function(string $perm): bool — çağıran taraf is_admin()/user_can() ile kendi kontrolünü
+// verir (web/mobil admin tanımı farklı olduğu için burada sabitlenmiyor).
+function dashboard_quick_actions_split($canSee, $cap=7){
+    $visible = [];
+    foreach(dashboard_quick_action_defs() as $a){
+        if($a['perm']===null || $canSee($a['perm'])) $visible[] = $a;
+    }
+    if(count($visible) <= $cap){
+        return ['primary'=>$visible, 'overflow'=>[]];
+    }
+    return ['primary'=>array_slice($visible,0,$cap), 'overflow'=>array_slice($visible,$cap)];
+}
+
 /* ---- "Beni Hatırla" — oturum atsa bile çerezle otomatik giriş (telefon/PWA) ---- */
 function remember_install(){
     try{ if(!db()->query("SHOW COLUMNS FROM app_users LIKE 'remember_token'")->fetch())
