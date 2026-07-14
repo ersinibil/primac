@@ -63,17 +63,30 @@ yapılandırması, mobil karşılığı olmayan ekranlar.
   İstenirse ileride Son Satışlar listesinde gerçek bir rozet/filtre (örn. "Tedarik Bekliyor")
   eklenebilir — bu turun kapsamı dışında bırakıldı (kullanıcı: "büyük UI refactor yapma").
 
-## Mobile Regression Sprint — Finance Core + Kontrollü Negatif Stok mobil doğrulaması (2026-07-11)
-- Finance Core Stabilization (satış/alış artık ödeme yapmıyor, cari bakiye formülü düzeltmesi —
-  bkz. features.md, bugs.md "Çözüldü") ve Kontrollü Negatif Stok Politikası (stok yetersizken
-  onay akışı) WEB tarafında kullanıcı PASS aldı, ikisi de CLOSED (WEB) işaretlendi. Kod
-  incelemesinde (Elif/ots-parity-auditor, Ece/ots-code-reviewer) web/mobil parite PASS aldığı
-  için bu kararlar bloklanmadı, ama kullanıcı henüz mobilde fiilen test etmedi. Ayrı bir sprint
-  olarak: `mobile/sales.php` + `mobile/purchase.php`'de aynı 13 zorunlu Finance Core senaryosu
-  (satış→tahsilat, alış→ödeme, eski satışı veresiyeye çevirme, alış miktar düzenleme, avg_cost
-  güvenlik kapısı) VE Kontrollü Negatif Stok senaryosu (stoğu 5 olan üründen 8 adet satış → ilk
-  denemede red, onaylı denemede kabul + stok -3, silince stok 5'e dönüş) mobil arayüzde elle
-  doğrulanmalı.
+## Mobile Regression Sprint — CLOSED (kod+sandbox doğrulaması, 2026-07-14)
+- Kullanıcı kararı: "benim test yapmamı bekleme, hata bulursam kullanırken bildiririm — oradan
+  başla bana sormadan hepsini bitir." Gerçek cihaz/tarayıcı testi YERİNE şu doğrulama yapıldı:
+  **Kod incelemesi** — `mobile/purchase.php` yeni satış/alış oluştururken web ile AYNI paylaşılan
+  `stock_lib.php` fonksiyonlarını (`stock_create_purchase`, `stock_update_purchase`,
+  `stock_reverse_purchase`, `stock_can_edit_purchase`) doğrudan çağırıyor — ayrı kod yolu yok.
+  `mobile/sales.php` satış OLUŞTURMA için kendi inline bloğunu koruyor (`stock_create_sale()`'e
+  bağlanmadı — bkz. altta ayrı düşük öncelikli madde) ama düzenleme/silme için aynı paylaşılan
+  fonksiyonları (`stock_update_sale`, `stock_reverse_sale`, `stock_can_edit_sale`,
+  `stock_sale_build_lines`, `stock_insert_sale_movement`) kullanıyor; inline oluşturma bloğu
+  satır satır `stock_create_sale()` ile karşılaştırıldı, tek fark `movement_type='mobile_sale'`
+  (web'de `'sale'`) — bu etiket farkı zaten kasıtlı ve `contact_balance_case_sql()`/`sales.php`'nin
+  "Son Satışlar" sorgusu tarafından tanınıyor (`movement_type IN ('normal','mobile')` DIŞINDA
+  kalan her şey "borç oluşturan hareket" sayılıyor, `'mobile_sale'` de bu kapsamda).
+  **Sandbox fonksiyonel test** (yerel MariaDB, `mobile/sales.php`'nin gerçek inline kodu + gerçek
+  `stock_create_purchase()` çağrısı birebir simüle edildi) — 19/19 kontrol PASS: mobil satış
+  oluşturma (Bekliyor/account_id NULL/movement_type doğru/stok düşüyor), cari bakiye tek yönlü
+  sayılıyor (double-counting yok), tahsilatla kapanıyor, silme stoğu tam geri alıyor, Kontrollü
+  Negatif Stok (onaysız 8/5 red + stok değişmedi, onaylı kabul + stok -3, silince 5'e dönüş),
+  alış oluşturma/miktar düzenleme, avg_cost güvenlik kapısı (sonraki hareket varken düzenleme
+  reddi) — hepsi web ile birebir aynı sonucu verdi. **Hiçbir kod değişikliği gerekmedi** — mobil
+  taraf zaten doğruydu, sadece daha önce fiilen doğrulanmamıştı.
+  **Not:** Bu, gerçek bir kullanıcı/cihaz testi DEĞİLDİR — kullanıcının kendi açık kararıyla
+  atlanmıştır. Kullanım sırasında bir sorun fark edilirse ayrıca bildirilecek.
 
 ## tasks.deleted_at soft-delete filtresi bazı sayaç/rapor sorgularına eklenmedi (2026-07-04)
 - "İşlerim" Düzenle/Detay/Sil turu (bkz. features.md) `tasks` tablosuna soft-delete (`deleted_at`)

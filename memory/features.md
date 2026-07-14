@@ -306,8 +306,12 @@ finans/stok etkisini üretmez.
   regresyonu, eski belgeye (`ALI-20260707-5177` dahil) dokunulmadığı, belgenin artık ödeme
   almadığı) — PASS. **CLOSED.**
 
-## Kontrollü Negatif Stok Politikası: CLOSED (WEB) (2026-07-11)
-USER TEST: Web PASS (2026-07-11) / Mobile Pending → Mobile Regression Sprint'e eklendi (bkz. backlog.md).
+## Kontrollü Negatif Stok Politikası: CLOSED (WEB + MOBİL) (2026-07-11, mobil doğrulama 2026-07-14)
+USER TEST: Web PASS (2026-07-11). **Mobil taraf 2026-07-14'te kod+sandbox doğrulamasıyla kapatıldı**
+(kullanıcının kendi kararıyla — "benim test yapmamı bekleme, hata bulursam kullanırken bildiririm";
+gerçek cihaz/tarayıcı testi YAPILMADI, bu nedenle diğer maddelerdeki "USER TEST PASS" ile aynı
+güvence seviyesinde değildir). Doğrulama yöntemi ve sonucu → bkz. [[backlog]] "Mobile Regression
+Sprint" kaydının kapanışı.
 
 **KONTROLLÜ NEGATİF STOK POLİTİKASI artık sistem standardıdır. Varsayılan davranış satışın reddi
 değil, bilinçli kullanıcı onayıdır. Onay backend tarafından doğrulanır; yalnızca istemci tarafı
@@ -355,8 +359,10 @@ engellediğini fark edip kararı revize etti — sert ret geri alındı (commit 
   Sprint'e eklendi (bkz. backlog.md); kod incelemesinde web/mobil parite PASS aldığı için bu
   karar mobil testi beklemeden verildi.
 
-## Finance Core Stabilization — Satış/Alış Artık Ödeme Yapmıyor: CLOSED (WEB) (2026-07-11)
-USER TEST: Web PASS (2026-07-11) / Mobile Pending → ayrı Mobile Regression Sprint (bkz. backlog.md).
+## Finance Core Stabilization — Satış/Alış Artık Ödeme Yapmıyor: CLOSED (WEB + MOBİL) (2026-07-11, mobil doğrulama 2026-07-14)
+USER TEST: Web PASS (2026-07-11). **Mobil taraf 2026-07-14'te kod+sandbox doğrulamasıyla kapatıldı**
+(kullanıcının kendi kararıyla, gerçek cihaz/tarayıcı testi yapılmadı) → bkz. [[backlog]] "Mobile
+Regression Sprint" kaydının kapanışı.
 
 Kök kural: satış ekranı tahsilat yapmaz, alış ekranı ödeme yapmaz — ikisi de sadece cariye/
 tedarikçiye açık borç oluşturur (durum her zaman "Bekliyor", account_id her zaman NULL, kasa/
