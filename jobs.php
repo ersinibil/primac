@@ -16,12 +16,15 @@ $statusMap=[
   'bekleyen'=>"j.status IN ('Yeni','Bekliyor')",'devam'=>"j.status='Devam Ediyor'",
   'tamam'=>"j.status IN ('Tamamlandı','Teslim Edildi')",'iptal'=>"j.status='İptal'",
   'gec'=>"j.due_date IS NOT NULL AND j.due_date<CURDATE() AND j.status NOT IN ('Tamamlandı','Teslim Edildi','İptal')",
+  // Dashboard "Bugün Teslim" kartının hedefi (2026-07-14) — Dashboard Date Logic düzeltmesiyle
+  // aynı CURDATE() mantığı: sadece bugün vadeli, henüz kapanmamış işler.
+  'bugun'=>"j.due_date IS NOT NULL AND j.due_date=CURDATE() AND j.status NOT IN ('Tamamlandı','Teslim Edildi','İptal')",
   'tumu'=>"1",
 ];
 $where=[$statusMap[$s]??$statusMap['aktif']]; $params=[];
 if($type){ $where[]="j.job_type=?"; $params[]=$type; }
 $sqlWhere='WHERE '.implode(' AND ',$where);
-$tabs=['aktif'=>'Aktif','bekleyen'=>'Bekleyen','devam'=>'Devam Eden','tamam'=>'Tamamlanan','iptal'=>'İptal','gec'=>'Geciken','tumu'=>'Tümü'];
+$tabs=['aktif'=>'Aktif','bekleyen'=>'Bekleyen','devam'=>'Devam Eden','tamam'=>'Tamamlanan','iptal'=>'İptal','gec'=>'Geciken','bugun'=>'Bugün Teslim','tumu'=>'Tümü'];
 ?>
 <div class="panel-head"><h1>İş Emirleri</h1><a class="btn" href="job_new.php">+ Yeni İş</a></div>
 <p class="muted">Müşteri işleri ve operasyon takibi</p>

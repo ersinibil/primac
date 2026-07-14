@@ -103,7 +103,7 @@ $myMsg=unread_msg(); $myNotif=unread_notif();
     </div>
   </div>
   <?php if($overdue_count > 0): ?>
-  <a href="jobs.php?filter=late" style="display:block;margin-top:8px;padding:8px;background:#f3f4f6;border-radius:var(--radius-sm);text-align:center;text-decoration:none;color:var(--c-accent);font-weight:700;font-size:12px">Geciken İşleri Gör →</a>
+  <a href="jobs.php?s=gec" style="display:block;margin-top:8px;padding:8px;background:#f3f4f6;border-radius:var(--radius-sm);text-align:center;text-decoration:none;color:var(--c-accent);font-weight:700;font-size:12px">Geciken İşleri Gör →</a>
   <?php endif; ?>
 </div>
 <?php endif; ?>

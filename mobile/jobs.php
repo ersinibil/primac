@@ -21,6 +21,9 @@ $statusMap=[
   'devam'   => "j.status='Devam Ediyor'",
   'tamam'   => "j.status IN ('Tamamlandı','Teslim Edildi')",
   'iptal'   => "j.status='İptal'",
+  // Web jobs.php ile parite (2026-07-14, dashboard filtre linki düzeltmesi) — aynı CURDATE() mantığı.
+  'gec'     => "j.due_date IS NOT NULL AND j.due_date<CURDATE() AND j.status NOT IN ('Tamamlandı','Teslim Edildi','İptal')",
+  'bugun'   => "j.due_date IS NOT NULL AND j.due_date=CURDATE() AND j.status NOT IN ('Tamamlandı','Teslim Edildi','İptal')",
   'tumu'    => "1",
   'atanmamis'=> "(j.responsible_personnel_id IS NULL OR j.responsible_personnel_id=0)",
 ];
@@ -31,7 +34,7 @@ $sql="SELECT j.*, c.name customer, p.name responsible FROM jobs j LEFT JOIN cont
 
 topx('İş Emirleri');
 $tones=['Yeni'=>'#3b82f6','Devam Ediyor'=>'#a855f7','Bekliyor'=>'#eab308','Tamamlandı'=>'#22c55e','Teslim Edildi'=>'#22c55e','İptal'=>'#94a3b8'];
-$tabs=['aktif'=>'Aktif','bekleyen'=>'Bekleyen','devam'=>'Devam Eden','tamam'=>'Tamamlanan','iptal'=>'İptal','tumu'=>'Tümü'];
+$tabs=['aktif'=>'Aktif','bekleyen'=>'Bekleyen','devam'=>'Devam Eden','tamam'=>'Tamamlanan','iptal'=>'İptal','gec'=>'Geciken','bugun'=>'Bugün Teslim','tumu'=>'Tümü'];
 if($isAdmin) $tabs['atanmamis']='Atanmamış';
 ?>
 <div class="panel" style="padding:10px;display:flex;gap:8px"><a class="btn dark" style="flex:1;text-align:center" href="job_new.php">+ Yeni İş</a><a class="btn" style="flex:0 0 auto;background:#334155;color:#fff" href="calendar.php">📅</a><a class="btn" style="flex:0 0 auto;background:#334155;color:#fff" href="report.php?modul=is">📊</a></div>

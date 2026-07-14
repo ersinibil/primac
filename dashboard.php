@@ -197,6 +197,8 @@ function cmd_card($title,$value,$desc,$url,$tone='blue'){
 .alert-stat{background:#fff;border-radius:8px;padding:10px;text-align:center;border:1px solid rgba(0,0,0,.05)}
 .alert-stat .stat-value{font-size:18px;font-weight:900;color:#101828}
 .alert-stat .stat-label{font-size:11px;color:#667085;margin-top:2px}
+a.alert-stat-link{display:block;text-decoration:none;cursor:pointer;transition:transform .12s ease,box-shadow .12s ease}
+a.alert-stat-link:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(16,24,40,.1)}
 .overdue-jobs-list{background:#fff;border-radius:8px;padding:8px 0}
 .overdue-job-item{padding:10px 12px;border-bottom:1px solid #f2f4f7;display:flex;justify-content:space-between;align-items:center;font-size:12px}
 .overdue-job-item:last-child{border-bottom:0}
@@ -440,14 +442,28 @@ ob_start();
 <div class="alert-panel <?=$overdue_count > 0 ? 'critical' : ''?>">
     <h3>⚠️ Acil Dikkat Gerektiren Maddeler</h3>
     <div class="alert-summary">
+        <?php if($overdue_count > 0): ?>
+        <a class="alert-stat alert-stat-link" href="jobs.php?s=gec">
+            <div class="stat-value" style="color:#ef4444"><?=$overdue_count?></div>
+            <div class="stat-label">Geciken İş</div>
+        </a>
+        <?php else: ?>
         <div class="alert-stat">
-            <div class="stat-value" style="color:<?=$overdue_count > 0 ? '#ef4444' : '#a0aec0'?>"><?=$overdue_count?></div>
+            <div class="stat-value" style="color:#a0aec0"><?=$overdue_count?></div>
             <div class="stat-label">Geciken İş</div>
         </div>
+        <?php endif; ?>
+        <?php if($critical_stock > 0): ?>
+        <a class="alert-stat alert-stat-link" href="stock.php?critical=1">
+            <div class="stat-value" style="color:#f97316"><?=$critical_stock?></div>
+            <div class="stat-label">Kritik Stok</div>
+        </a>
+        <?php else: ?>
         <div class="alert-stat">
-            <div class="stat-value" style="color:<?=$critical_stock > 0 ? '#f97316' : '#a0aec0'?>"><?=$critical_stock?></div>
+            <div class="stat-value" style="color:#a0aec0"><?=$critical_stock?></div>
             <div class="stat-label">Kritik Stok</div>
         </div>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -500,14 +516,14 @@ ob_start();
 ?>
 <section class="command-grid">
 <?php
-cmd_card('Bugün Teslim', $todayDue, 'Bugün terminli açık işler', 'jobs.php?filter=today', 'red');
-cmd_card('Geciken İş', $late, 'Termin tarihi geçmiş işler', 'jobs.php?filter=late', 'orange');
+cmd_card('Bugün Teslim', $todayDue, 'Bugün terminli açık işler', 'jobs.php?s=bugun', 'red');
+cmd_card('Geciken İş', $late, 'Termin tarihi geçmiş işler', 'jobs.php?s=gec', 'orange');
 cmd_card('Müşteri Onayı', $approval, 'Onay bekleyen dosyalar', 'approval_waiting.php', 'yellow');
 cmd_card('Dış Atölye', $external, 'Dışarıdaki açık işler', 'external.php', 'blue');
 cmd_card('Üretimde', $production, '3D / UV / Lazer açık işler', 'production.php', 'purple');
 cmd_card('Kritik Stok', $stock, 'Kritik seviyedeki stoklar', 'stock.php?critical=1', 'red');
 cmd_card('Açık Görev', $tasks, 'Personel açık görevleri', 'tasks.php', 'teal');
-cmd_card('Bekleyen İş', $open, 'Tüm açık işler', 'jobs.php?filter=open', 'green');
+cmd_card('Bekleyen İş', $open, 'Tüm açık işler', 'jobs.php?s=aktif', 'green');
 ?>
 </section>
 <?php
@@ -602,7 +618,7 @@ ob_start();
 <section class="panel">
 <div class="panel-head">
     <h2><span class="section-icon">🔴</span> Bugün Teslim</h2>
-    <a class="btn small secondary" href="jobs.php?filter=today">Tümü</a>
+    <a class="btn small secondary" href="jobs.php?s=bugun">Tümü</a>
 </div>
 <?php
 try{
@@ -635,7 +651,7 @@ if($rows):
 <section class="panel">
 <div class="panel-head">
     <h2><span class="section-icon">🟠</span> Geciken İşler</h2>
-    <a class="btn small secondary" href="jobs.php?filter=late">Tümü</a>
+    <a class="btn small secondary" href="jobs.php?s=gec">Tümü</a>
 </div>
 <?php
 try{

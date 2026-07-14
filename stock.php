@@ -3,10 +3,12 @@ require_once __DIR__.'/layout_top.php';
 
 $categoryId=(int)($_GET['category_id'] ?? 0);
 $pasifDahil=isset($_GET['pasif_dahil']);
+$criticalOnly=isset($_GET['critical']);
 $where=[];
 $params=[];
 if($categoryId){ $where[]='s.category_id=?'; $params[]=$categoryId; }
 if(!$pasifDahil){ $where[]='(s.active IS NULL OR s.active=1)'; }
+if($criticalOnly){ $where[]='s.quantity<=s.critical_level'; }
 $sqlWhere=$where ? 'WHERE '.implode(' AND ',$where) : '';
 
 $categories=db()->query("SELECT * FROM product_categories WHERE active=1 ORDER BY name")->fetchAll();
@@ -54,6 +56,7 @@ $categories=db()->query("SELECT * FROM product_categories WHERE active=1 ORDER B
 </select>
 </label>
 <label style="align-self:end"><input type="checkbox" name="pasif_dahil" value="1" <?=$pasifDahil?'checked':''?> style="width:auto"> Pasif Dahil</label>
+<label style="align-self:end"><input type="checkbox" name="critical" value="1" <?=$criticalOnly?'checked':''?> style="width:auto"> Sadece Kritik Stok</label>
 <div style="align-self:end"><button class="btn secondary">Filtrele</button></div>
 </form>
 </section>
