@@ -2,6 +2,50 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
+## UX SPRINT 002 — Phase B2: Dashboard Priority Layout: CLOSED — USER TEST PASS / DEV PASS (2026-07-14)
+Sprint 3 saf analiz raporundan (Faz A Architecture Report, Faz B Dashboard Experience Design
+Report, Product Design Report) sonra ilk uygulama turu. Amaç: `dashboard.php`'nin ("Komuta
+Merkezi") 10 bölümünün varsayılan render sırasını, Product Design raporunda tanımlanan 5
+psikolojik dikkat katmanına (Nabız Satırı → Bugün → Hazır Eylemler → Durum → Analiz) göre yeniden
+düzenlemek — büyük refactor/yeni widget/yeni sorgu/yeni migration OLMADAN.
+
+**Uygulama:** Tek değişiklik noktası `user_prefs_lib.php::dashboard_section_keys()` — bu fonksiyon
+hem `dashboard.php`'nin varsayılan bölüm sırasını hem `ajax_dashboard_order.php`'nin whitelist
+kontrolünü besleyen tek doğru kaynak (repo genelinde grep ile doğrulandı, başka kullanım yok).
+Dizideki 10 anahtar (module_tiles, month_comparison, six_month_trend, critical_alerts,
+operation_kpis, notes, recent_actions, live_notifications, today_and_late_lists, recent_jobs)
+AYNEN kaldı, sadece sırası değişti: critical_alerts, today_and_late_lists, module_tiles,
+operation_kpis, live_notifications, recent_actions, notes, month_comparison, six_month_trend,
+recent_jobs. `ajax_dashboard_order.php`'nin whitelist kontrolü `in_array()` (sıradan bağımsız)
+olduğu için etkilenmedi; `dashboard.php`'deki `array_intersect($__savedSectionOrder,...)` mantığı
+zaten önce kullanıcının KAYITLI sürükle-bırak sırasını koruyor, bu değişiklik SADECE hiç
+kişiselleştirme yapmamış (veya kısmi kaydı olan) kullanıcıların varsayılan görünümünü etkiliyor —
+"Varsayılana Dön" butonu artık yeni sırayı veriyor. Section_order/tile_order altyapısı, drag-drop
+JS'i, sorgular ve yetki sistemi hiç değişmedi.
+
+**İnceleme:** Ece (code-review) PASS, Selin (security) PASS, Elif (parity/yetki) PASS — üçünde de
+engelleyici bulgu yok (Elif'in notu: `dashboard.php`'nin `page_module_map()`'te hiç yer almaması
+kasıtlı, önceden var olan bir tasarım kararı, bu sprintin konusu değil).
+
+**Yan bulgu → ayrı bugfix'e dönüştü:** USER TEST sırasında kullanıcı, `critical_alerts`
+bölümündeki "Kritik Stok: 2" sayısının tıklanamadığını ve `stock.php?critical=1` linkinin
+(operation_kpis'teki "Kritik Stok" kartında zaten vardı) hiçbir filtre uygulamadığını fark etti.
+Kök neden araştırıldı: `stock.php` `critical` GET parametresini hiç okumuyordu (dead link);
+aynı desende `jobs.php?filter=today/late/open` linkleri de `jobs.php`'de hiç işlenmeyen bir
+`filter` parametresine gidiyordu (jobs.php sadece `s`/`type` okuyor). Düzeltme: `jobs.php`'nin
+zaten var olan `$statusMap`/`s` tab mekanizmasına yeni bir `'bugun'` anahtarı eklendi
+(`due_date=CURDATE()`, Dashboard Date Logic düzeltmesiyle aynı mantık) — yeni paralel bir
+parametre icat edilmedi, var olan 'gec'/'aktif' tabları kullanıldı; `stock.php`'ye `critical`
+parametresi gerçekten bağlandı (`quantity<=critical_level`) + filtre formuna "Sadece Kritik Stok"
+checkbox'ı eklendi; `dashboard.php`'nin hem operation_kpis hem critical_alerts linkleri düzeltilen
+route'lara güncellendi, critical_alerts'teki sayılar artık (>0 ise) tıklanabilir link. Ece/Selin/
+Elif üçü de PASS.
+
+**USER TEST PASS (2026-07-14):** Kullanıcı DEV'de doğruladı — "Dikkat / Geciken İşler & Kritik
+Stok" bölümü en üste geldi, "Bugün Teslim & Geciken İşler" ikinci katmana taşındı, bölüm
+içerikleri/veriler/linkler bozulmadı, yeni sıra görsel olarak doğrulandı. **DEV PASS. Phase B2
+CLOSED.**
+
 ## FINANCE ACCOUNT LIST FILTER UX — Hesaplar ekranına tür/durum/banka/arama filtresi: CLOSED — USER TEST PASS (2026-07-14)
 Sorun: `finance_accounts.php` (Banka/Kasa/Kredi Kartı/POS hepsi) tek tabloda karışık listeleniyordu,
 tür bazlı ayrım için sadece 5 sabit sekme vardı (Tümü/Bankalar/Kasalar/Kredi Kartları/POS), durum
