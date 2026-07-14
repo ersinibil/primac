@@ -38,11 +38,18 @@ function user_pref_delete($pdo, $userId, $key) {
 
 // Komuta Merkezi'nin gerçek ana bölümleri — tek doğru kaynak (dashboard.php render sırası VE
 // ajax_dashboard_order.php'nin whitelist kontrolü buradan okur, iki ayrı yerde tekrarlanıp
-// birbirinden sapma riski taşımaz). Sıra = varsayılan (kullanıcı hiç özelleştirmemişse) sıra.
+// birbirinden sapma riski taşımaz). Sıra = varsayılan (kullanıcı hiç özelleştirmemişse) sıra —
+// kullanıcı sürükleyip kendi sırasını kaydettiyse bu sıraya dokunulmaz (bkz. dashboard.php
+// $__savedSectionOrder / array_intersect mantığı).
+// UX SPRINT 002 — PHASE B2 (2026-07-14): Dashboard Priority Layout — sıra, Product Design
+// raporundaki 5 dikkat katmanına göre yeniden düzenlendi: 1) Nabız Satırı (critical_alerts)
+// 2) Bugün (today_and_late_lists) 3) Hazır Eylemler (module_tiles) 4) Durum (operation_kpis,
+// live_notifications, recent_actions, notes) 5) Analiz (month_comparison, six_month_trend,
+// recent_jobs). Sadece sıra değişti — hiçbir anahtar eklenmedi/çıkarılmadı/yeniden adlandırılmadı.
 function dashboard_section_keys() {
     return [
-        'module_tiles', 'month_comparison', 'six_month_trend', 'critical_alerts',
-        'operation_kpis', 'notes', 'recent_actions', 'live_notifications',
-        'today_and_late_lists', 'recent_jobs',
+        'critical_alerts', 'today_and_late_lists', 'module_tiles',
+        'operation_kpis', 'live_notifications', 'recent_actions', 'notes',
+        'month_comparison', 'six_month_trend', 'recent_jobs',
     ];
 }
