@@ -330,6 +330,45 @@ function next_job_no(){ return 'PR-' . date('Y') . '-' . str_pad((string)random_
 function safe_count($sql){ try { return (int)(db()->query($sql)->fetch()['c'] ?? 0); } catch(Throwable $e){ return 0; } }
 function safe_sum($sql){ try { return (float)(db()->query($sql)->fetch()['s'] ?? 0); } catch(Throwable $e){ return 0; } }
 
+// UX SPRINT 002 — PHASE B3 (2026-07-14): Dashboard Nabız Satırı — durum/eşik mantığı TEK yerde,
+// web (dashboard.php) VE mobil (mobile/index.php) ortak kullanır (ikisi de boot.php'yi zaten
+// require ediyor — mobile/common.php üzerinden). Eşikler burada sabit, başka yerde tekrarlanmaz.
+// Çağıran taraf sorumluluğu: $overdueCount/$criticalStockCount'u KENDİ try/catch'iyle çeksin
+// ($ok=false hata durumunu bildirsin — safe_count() hatayı sessizce 0'a çevirdiği için burada
+// KULLANILMAZ, aksi halde "veri yok" ile "gerçekten sıfır" ayırt edilemez) ve $showOverdue/
+// $showCriticalStock'u kendi yetki kontrolüyle (is_admin()||user_can('jobs') / user_can('stock'))
+// belirlesin — bu fonksiyon zaten-filtrelenmiş sayılarla çalışır, yetkisiz veri asla bu fonksiyona
+// GERÇEK değeriyle girmemeli (görünmüyorsa 0+show=false geçilir).
+function dashboard_pulse_state($ok, $overdueCount, $showOverdue, $criticalStockCount, $showCriticalStock){
+    if(!$ok){
+        return ['level'=>'neutral','icon'=>'⚪','message'=>'Günlük durum özeti şu anda alınamadı.','hasDetail'=>false];
+    }
+    if(!$showOverdue && !$showCriticalStock){
+        return ['level'=>'neutral','icon'=>'⚪','message'=>'Bugün için özet bilgi bulunmuyor.','hasDetail'=>false];
+    }
+
+    $overdue = $showOverdue ? max(0,(int)$overdueCount) : 0;
+    $critical = $showCriticalStock ? max(0,(int)$criticalStockCount) : 0;
+    $total = $overdue + $critical;
+
+    // Merkezi eşikler — dağınık magic number yok, tek tanım:
+    $OVERDUE_RED_THRESHOLD = 3; // tek başına geciken iş sayısı buna ulaşırsa KIRMIZI
+    $TOTAL_RED_THRESHOLD = 4;   // toplam kritik konu buna ulaşırsa KIRMIZI
+
+    $parts = [];
+    if($overdue > 0) $parts[] = $overdue.' geciken iş';
+    if($critical > 0) $parts[] = $critical.' kritik stok';
+    $dist = implode(', ', $parts);
+
+    if($total === 0){
+        return ['level'=>'green','icon'=>'🟢','message'=>'Bugün kritik durum görünmüyor. Operasyon kontrol altında.','hasDetail'=>false];
+    }
+    if($overdue >= $OVERDUE_RED_THRESHOLD || $total >= $TOTAL_RED_THRESHOLD){
+        return ['level'=>'red','icon'=>'🔴','message'=>'Bugün müdahale gerektiren '.$total.' konu var: '.$dist.'.','hasDetail'=>true];
+    }
+    return ['level'=>'yellow','icon'=>'🟡','message'=>'Bugün dikkat gerektiren '.$total.' konu var: '.$dist.'.','hasDetail'=>true];
+}
+
 /* ---- "Beni Hatırla" — oturum atsa bile çerezle otomatik giriş (telefon/PWA) ---- */
 function remember_install(){
     try{ if(!db()->query("SHOW COLUMNS FROM app_users LIKE 'remember_token'")->fetch())

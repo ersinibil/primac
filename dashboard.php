@@ -102,6 +102,16 @@ try {
 $overdue_count = safe_count("SELECT COUNT(*) c FROM jobs WHERE due_date IS NOT NULL AND due_date<CURDATE() AND status NOT IN ('Tamamlandı','İptal','Teslim Edildi')");
 $critical_stock = safe_count("SELECT COUNT(*) c FROM stock_items WHERE quantity <= critical_level");
 
+// UX SPRINT 002 — PHASE B3: Nabız Satırı verisi — safe_count() hatayı sessizce 0'a çevirdiği için
+// (yukarıdaki $overdue_count/$critical_stock TEKRAR kullanılmıyor), burada ayrı, hataya duyarlı
+// bir okuma yapılıyor — aynı sorgular, sadece $__pulseOk ile hata durumu ayırt edilebiliyor.
+$__pulseOk = true; $__pulseOverdue = 0; $__pulseCriticalStock = 0;
+try {
+    $__pulseOverdue = (int)($pdo->query("SELECT COUNT(*) c FROM jobs WHERE due_date IS NOT NULL AND due_date<CURDATE() AND status NOT IN ('Tamamlandı','İptal','Teslim Edildi')")->fetch()['c'] ?? 0);
+    $__pulseCriticalStock = (int)($pdo->query("SELECT COUNT(*) c FROM stock_items WHERE quantity<=critical_level")->fetch()['c'] ?? 0);
+} catch(Throwable $e) { $__pulseOk = false; }
+$__pulse = dashboard_pulse_state($__pulseOk, $__pulseOverdue, is_admin()||user_can('jobs'), $__pulseCriticalStock, is_admin()||user_can('stock'));
+
 $open=safe_count("SELECT COUNT(*) c FROM jobs WHERE status NOT IN ('Tamamlandı','İptal','Teslim Edildi')");
 $todayDue=safe_count("SELECT COUNT(*) c FROM jobs WHERE due_date=CURDATE() AND status NOT IN ('Tamamlandı','İptal','Teslim Edildi')");
 $late=safe_count("SELECT COUNT(*) c FROM jobs WHERE due_date IS NOT NULL AND due_date<CURDATE() AND status NOT IN ('Tamamlandı','İptal','Teslim Edildi')");
@@ -214,6 +224,20 @@ a.alert-stat-link:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(16
 .dash-reset-bar{display:flex;gap:8px;justify-content:flex-end;margin:0 0 6px}
 
 @media(max-width:960px){.command-grid,.mini-grid,.kpi-comparison-grid{grid-template-columns:1fr}}
+
+/* ── Nabız Satırı — UX SPRINT 002 PHASE B3 — sabit üst özet, sürüklenemez, section değil ── */
+.pulse-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-radius:14px;padding:12px 16px;margin:12px 0;border:1px solid transparent}
+.pulse-row .pulse-icon{font-size:18px;line-height:1;flex:0 0 auto}
+.pulse-row .pulse-text{flex:1 1 auto;min-width:0;font-size:13px;font-weight:700}
+.pulse-row .pulse-link{flex:0 0 auto;font-size:12px;font-weight:800;text-decoration:none;white-space:nowrap;padding:6px 12px;border-radius:999px;background:rgba(255,255,255,.55)}
+.pulse-row.pulse-green{background:#f0fdf4;border-color:#bbf7d0;color:#166534}
+.pulse-row.pulse-green .pulse-link{color:#166534}
+.pulse-row.pulse-yellow{background:#fffbeb;border-color:#fde68a;color:#92400e}
+.pulse-row.pulse-yellow .pulse-link{color:#92400e}
+.pulse-row.pulse-red{background:#fef2f2;border-color:#fecaca;color:#991b1b}
+.pulse-row.pulse-red .pulse-link{color:#991b1b}
+.pulse-row.pulse-neutral{background:#f8fafc;border-color:#e2e8f0;color:#475569}
+@media(max-width:640px){.pulse-row{padding:10px 12px}.pulse-row .pulse-text{font-size:12.5px}}
 </style>
 
 <div class="panel-head page-header">
@@ -222,6 +246,14 @@ a.alert-stat-link:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(16
 <a class="btn quick-action" href="job_new.php">+ Yeni İş</a>
 <a class="btn secondary quick-action" href="request_new.php">+ Talep</a>
 </div>
+</div>
+
+<div class="pulse-row pulse-<?=h($__pulse['level'])?>">
+<span class="pulse-icon" aria-hidden="true"><?=$__pulse['icon']?></span>
+<span class="pulse-text"><?=h($__pulse['message'])?></span>
+<?php if($__pulse['hasDetail']): ?>
+<a href="#" class="pulse-link" onclick="return dashboardPulseScrollToCritical();">İncele</a>
+<?php endif; ?>
 </div>
 
 <div class="dash-reset-bar">
@@ -809,6 +841,13 @@ function resetDashboardOrder(type){
     headers: {'Content-Type':'application/x-www-form-urlencoded','X-CSRF-Token': window.CSRF_TOKEN},
     body: 'order_type=' + type + '&reset=1'
   }).then(function(){ location.reload(); }).catch(function(){ location.reload(); });
+}
+
+// Nabız Satırı "İncele" — yeni detay ekranı yok, mevcut kritik bölüme yumuşak scroll (UX SPRINT 002 PHASE B3)
+function dashboardPulseScrollToCritical(){
+  var target = document.querySelector('.dash-section[data-key="critical_alerts"]');
+  if(target){ target.scrollIntoView({behavior:'smooth', block:'start'}); }
+  return false;
 }
 </script>
 

@@ -2,6 +2,53 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
+## UX SPRINT 002 — Phase B3: Dashboard Nabız Satırı: DEV PASS — USER TEST BEKLİYOR (2026-07-14)
+Amaç: Komuta Merkezi açıldığında kullanıcı ilk 1-2 saniyede günün genel durumunu tek cümlede
+anlayabilsin — mevcut "Dikkat / Geciken İşler & Kritik Stok" bölümü kaldırılmadı/yeniden
+yazılmadı, onun ÜSTÜNE sabit (sürüklenemez, section_order'a dahil olmayan) bir özet satırı eklendi.
+
+**Veri kaynakları:** Geciken iş sayısı + kritik stok sayısı — ikisi de zaten var olan sorgular
+(`jobs.due_date<CURDATE()`, `stock_items.quantity<=critical_level`), yeni tablo/migration yok.
+`safe_count()`/`mc()` hatayı sessizce 0'a çevirdiği için (yanlış "yeşil" riski), Nabız Satırı için
+AYRI, kendi try/catch'i olan bir okuma eklendi — böylece "veri yok" ile "gerçekten sıfır" ayırt
+edilebiliyor.
+
+**Merkezi eşik/durum mantığı:** `boot.php::dashboard_pulse_state($ok, $overdueCount, $showOverdue,
+$criticalStockCount, $showCriticalStock)` — web (`dashboard.php`) ve mobil (`mobile/index.php`)
+ORTAK kullanıyor (mobil zaten `common.php` üzerinden root `boot.php`'yi require ediyor, yeni
+require eklenmedi). Eşikler TEK yerde: toplam kritik konu 0→YEŞİL, 1-3→SARI, geciken tek başına
+≥3 VEYA toplam ≥4→KIRMIZI. `$ok=false` (sorgu hatası) veya hiçbir kategori kullanıcıya görünür
+değilse (aşağıya bkz.) NÖTR/gri durum — asla yanlış "her şey yolunda" mesajı YOK.
+
+**Yetki filtreleme:** Geciken iş `is_admin()||user_can('jobs')`, kritik stok `is_admin()||
+user_can('stock')` şartına bağlı — yetkisi olmayan kategori sayı olarak da, metinde de HİÇ
+görünmüyor (fonksiyon içinde zorla 0'a çekiliyor, çağıran taraf ne geçerse geçsin). 12 senaryolu
+otomatik test (DB'siz, saf fonksiyon testi) ile doğrulandı — tüm senaryolar PASS (yeşil/sarı/
+kırmızı geçişleri, yetkisiz veri sızmama, hata durumunda nötr, admin tam görünürlük).
+
+**Web/mobil karar:** AYNI FAZDA mobil sürüm de yapıldı (ertelenmedi) — gerekçe: mobil zaten aynı
+ham sayıları ($overdue_count, $crit) gösteriyordu, sadece tek cümle özete çevrilmedi; parite borcu
+düşük olsa da maliyet de düşüktü (paylaşılan fonksiyon sayesinde). Mobil sade sürüm: sıralama/
+widget yönetimi yok, sadece tek panel + aynı 🟢/🟡/🔴 renk dili (mevcut `--c-success/--c-warn/
+--c-danger/--c-muted` CSS değişkenleri, yeni değişken eklenmedi).
+
+**"İncele" linki:** Yeni ekran YOK — web'de mevcut `critical_alerts` bölümüne `scrollIntoView`
+(küçük JS), mobilde var olan "⚠️ Dikkat" paneline yeni eklenen `#gecikme-uyari` anchor'ı.
+
+**Değiştirilen dosyalar:** `boot.php` (+39 satır, yeni paylaşılan fonksiyon), `dashboard.php`
+(+39 satır, veri+HTML+CSS+JS), `mobile/index.php` (+27 satır, veri+HTML).
+
+**İnceleme:** Ece (code-review) PASS, Selin (security) PASS yeni kod için — ama Selin/Ece/Elif
+üçü de bağımsız olarak aynı pre-existing bulguyu teyit etti: altındaki `critical_alerts`/mobil
+"Dikkat" paneli hâlâ yetkisiz-görünür (bkz. [[backlog]] "critical_alerts... Phase B4 takip
+maddesi") — kullanıcı kararıyla Phase B3 kapsamı DIŞINDA bırakıldı, Phase B4'e resmi backlog
+maddesi olarak taşındı. Elif (parity) PASS, ek not: mobilin kendi `$isAdmin` değişkeni ile merkezi
+`is_admin()` arasında `'yönetici'` (unicode) varyantı farkı var — pratikte erişilemez/ölü kod yolu,
+Phase B3'ün ürettiği bir sorun değil, ayrı not düşüldü.
+
+**DEV PASS (2026-07-14).** USER TEST BEKLİYOR — kullanıcı DEV'de (primac.tr) doğrulamadan CLOSED
+yazılmayacak.
+
 ## UX SPRINT 002 — Phase B2: Dashboard Priority Layout: CLOSED — USER TEST PASS / DEV PASS (2026-07-14)
 Sprint 3 saf analiz raporundan (Faz A Architecture Report, Faz B Dashboard Experience Design
 Report, Product Design Report) sonra ilk uygulama turu. Amaç: `dashboard.php`'nin ("Komuta

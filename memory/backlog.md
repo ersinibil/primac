@@ -2,6 +2,22 @@
 
 <!-- Açık geliştirme görevleri. Kapanan madde buradan silinip memory/features.md'ye taşınır. -->
 
+## critical_alerts (web) + "Gecikme Uyarı" paneli (mobil) hâlâ yetkisiz-görünür — Phase B4 takip maddesi (2026-07-14)
+UX SPRINT 002 Phase B3 (Dashboard Nabız Satırı) incelemesinde Selin (security) tarafından bulundu,
+Ece ve Elif de bağımsız olarak teyit etti: `dashboard.php`'nin "Dikkat - Geciken İşler & Kritik
+Stok" bölümü (`data-key="critical_alerts"`) ve `mobile/index.php`'nin "⚠️ Dikkat" paneli, hâlâ
+sadece ham `$overdue_count > 0 || $critical_stock > 0` koşuluyla render ediliyor — `is_admin() ||
+user_can('jobs')` / `user_can('stock')` gibi hiçbir yetki kontrolü yok. `dashboard.php` zaten
+`page_module_map()`'te yer almadığı için (bilinçli tasarım, herkese açık ana sayfa) `jobs`/`stock`
+yetkisi olmayan bir kullanıcı bile ham sayıları VE (web'de) en kritik 5 geciken işin iş no/başlık/
+termin bilgisini görebiliyor. Bu, Phase B3'te eklenen Nabız Satırı'nın (rol bazlı doğru şekilde
+filtrelenmiş, 3 incelemeci de doğruladı) hemen altında — kullanıcı pulse satırında "özet bilgi
+yok" görse bile sayfayı kaydırıp aynı/daha fazla bilgiyi görebiliyor. Phase B3 kapsamında BİLİNÇLİ
+olarak dokunulmadı (kullanıcının kendi talimatı: "Kritik bölümün kendisi yine mevcut sıralanabilir
+bölüm olarak kalmalı") — düzeltme UX SPRINT 002 **Phase B4 (Rol bazlı varsayılan görünüm)**'ün
+doğal kapsamı. Öneri: `dashboard.php:473` ve `mobile/index.php:118` render koşuluna
+`(is_admin()||user_can('jobs'))`/`(is_admin()||user_can('stock'))` bazlı görünürlük eklenmesi.
+
 ## AKTİF ÖNCELİK SIRASI — TAMAMLANDI (kullanıcı kararı, 2026-07-14 — "ÇALIŞMA PLANI GÜNCELLEMESİ")
 ~~1) Finance CRUD UX Patch 001~~ **PASS, CLOSED** → ~~2) Flow Unification 001~~ **PASS, CLOSED**
 → ~~3) Migration 042/043 DEV doğrulaması~~ **PASS, CLOSED** → ~~araya giren FINANCE ACCOUNT LIST

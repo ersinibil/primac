@@ -23,6 +23,16 @@ $prevM = getKpiMetricsMobile($pdo, $prevMonthStart, $prevMonthEnd);
 // Kritik stok her zaman gerekli (hem admin hem personel için uyarı panelinde)
 $crit=mc("SELECT COUNT(*) c FROM stock_items WHERE quantity<=critical_level");
 
+// UX SPRINT 002 — PHASE B3: Nabız Satırı — web dashboard.php ile aynı, boot.php'deki paylaşılan
+// dashboard_pulse_state() ile hesaplanıyor. mc() hatayı sessizce 0'a çevirdiği için burada ayrı,
+// hataya duyarlı bir okuma yapılıyor (aynı sorgular, sadece $__pulseOk ile ayırt edilebiliyor).
+$__pulseOk = true; $__pulseOverdue = 0; $__pulseCriticalStock = 0;
+try {
+    $__pulseOverdue = (int)($pdo->query("SELECT COUNT(*) c FROM jobs WHERE status NOT IN ('Tamamlandı','İptal','Teslim Edildi') AND due_date IS NOT NULL AND due_date<CURDATE()")->fetch()['c'] ?? 0);
+    $__pulseCriticalStock = (int)($pdo->query("SELECT COUNT(*) c FROM stock_items WHERE quantity<=critical_level")->fetch()['c'] ?? 0);
+} catch(Throwable $e) { $__pulseOk = false; }
+$__pulse = dashboard_pulse_state($__pulseOk, $__pulseOverdue, $isAdmin||user_can('jobs'), $__pulseCriticalStock, $isAdmin||user_can('stock'));
+
 if($isAdmin){
   $contacts=mc("SELECT COUNT(*) c FROM contacts");
   $stock=mc("SELECT COUNT(*) c FROM stock_items");
@@ -30,7 +40,22 @@ if($isAdmin){
   $topName=''; try{ $tp=db()->query("SELECT p.name, COUNT(*) c FROM jobs j JOIN personnel p ON p.id=j.responsible_personnel_id WHERE j.status IN ('Tamamlandı','Teslim Edildi') GROUP BY p.id ORDER BY c DESC LIMIT 1")->fetch(); if($tp)$topName=$tp['name'].' ('.$tp['c'].')'; }catch(Throwable $e){}
 }
 $myMsg=unread_msg(); $myNotif=unread_notif();
+$__pulseColors=[
+  'green'  =>['fg'=>'var(--c-success)','bg'=>'var(--c-success-bg)','fgtext'=>'var(--c-success-text)'],
+  'yellow' =>['fg'=>'var(--c-warn)','bg'=>'var(--c-warn-bg)','fgtext'=>'#78350f'],
+  'red'    =>['fg'=>'var(--c-danger)','bg'=>'var(--c-danger-bg)','fgtext'=>'var(--c-danger-text)'],
+  'neutral'=>['fg'=>'var(--c-muted)','bg'=>'rgba(148,163,184,.15)','fgtext'=>'var(--c-muted)'],
+];
+$__pc=$__pulseColors[$__pulse['level']];
 ?>
+<!-- ── Nabız Satırı — UX SPRINT 002 PHASE B3 (mobil sade sürüm) ── -->
+<div class="panel" style="background:<?=$__pc['bg']?>;border-color:<?=$__pc['fg']?>;display:flex;align-items:center;gap:8px;padding:12px 14px">
+  <span style="font-size:16px;line-height:1"><?=$__pulse['icon']?></span>
+  <span style="flex:1;font-size:12.5px;font-weight:700;color:<?=$__pc['fgtext']?>"><?=htmlspecialchars($__pulse['message'])?></span>
+  <?php if($__pulse['hasDetail']): ?>
+  <a href="#gecikme-uyari" style="flex:0 0 auto;font-size:11px;font-weight:800;text-decoration:none;color:<?=$__pc['fgtext']?>;background:rgba(255,255,255,.5);padding:5px 10px;border-radius:999px">İncele</a>
+  <?php endif; ?>
+</div>
 <?php if($isAdmin): ?>
   <div class="panel"><b>Online Takip ve Yönetim Sistemi</b><p class="small">Yönetici paneli · Web sürümü ayrı butondadır.</p>
   <div class="grid">
@@ -91,7 +116,7 @@ $myMsg=unread_msg(); $myNotif=unread_notif();
 
 <!-- ── Gecikme Uyarı (Mobil) ── -->
 <?php if($overdue_count > 0 || $crit > 0): ?>
-<div class="panel" style="border-left:4px solid var(--c-danger)"><b style="color:var(--c-danger)">⚠️ Dikkat</b>
+<div class="panel" id="gecikme-uyari" style="border-left:4px solid var(--c-danger)"><b style="color:var(--c-danger)">⚠️ Dikkat</b>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;font-size:12px">
     <div style="background:var(--c-danger-bg);border-radius:var(--radius-sm);padding:10px;text-align:center">
       <span style="color:var(--c-danger);font-weight:700;font-size:16px;display:block"><?=$overdue_count?></span>
