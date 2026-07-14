@@ -98,11 +98,10 @@
   Ediyor/Tamamlandı/İptal — tasks; "Bekliyor" sadece `finance_movements.status`'ta var), literal
   uygulanırsa her zaman 0 kayıt dönerdi — mevcut "kapanmış durumları dışla" filtresi (zaten doğru
   "Açık İşler" tanımı) korundu. "Yaklaşan İşler" yeni widget olarak eklenmedi, ayrı backlog
-  maddesi (bkz. [[backlog]]). **USER TEST BEKLİYOR** (2026-07-13'te kullanıcı netleştirdi: düzeltme
-  öncesinde üretilmiş ESKİ günlük bildirim geçerli test SAYILMAZ; gerçek test 2026-07-14 sabahı
-  üretilecek YENİ bildirim üzerinden yapılacak — beklenen: gelecek vadeli kayıt "Bugün
-  Yapılacaklar"da görünmez, bugün vadeli kayıt görünür, geçmiş vadeli kayıt "Gecikenler"de görünür.
-  Bu üç sonuç doğrulanmadan CLOSED yazılmayacak.).
+  maddesi (bkz. [[backlog]]). **USER TEST PASS / DEV PASS (2026-07-14): CLOSED.** 2026-07-14 sabahı
+  üretilen YENİ günlük bildirim/rapor üzerinden gerçek veriyle doğrulandı: 31.07.2026 vadeli çek
+  artık "Bugün Yapılacaklar"da görünmüyor, günlük rapor doğru şekilde "Bugün yapılacak iş/görev
+  yok." üretiyor. Beklenen tarih filtresi davranışı tam olarak sağlandı.
 - **contact_report.php sol menüde yanlış yetki şartına bağlıydı** (2026-07-13, WEB UI ALIGNMENT &
   NAVIGATION SPRINT 001, commit `9bdff1e`, Elif/parity-auditor'da bulundu): `layout_top.php`'de
   `contacts_report.php` linki `user_can('report')` şartı altında gösteriliyordu, ama gerçek sayfa

@@ -186,8 +186,9 @@ doğruladı: ana bölümler blok halinde sürüklenebiliyor, sıra kullanıcı t
 sayfa yenilendiğinde korunuyor, tile-drag section-drag ile çakışmıyor, kullanıcı etkileşimleri
 (link/grafik/buton) bozulmuyor. Sprint durumu: Dashboard Tile Drag PASS, Dashboard Section Drag
 PASS, Navigation UX PASS, Web UI Alignment PASS. **Sprint CLOSED.** (Not: Dashboard Tarih Mantığı düzeltmesi bu sprintin kapsamında
-DEĞİLDİR, ayrı bir bugfix turu — bkz. `memory/bugs.md`; o iş hâlâ USER TEST BEKLİYOR, yarınki
-(2026-07-14) yeni günlük bildirim ile ayrı doğrulanacak.)
+DEĞİLDİR, ayrı bir bugfix turu — bkz. `memory/bugs.md`. **Güncelleme (2026-07-14): o iş de USER TEST
+PASS / DEV PASS ile CLOSED oldu** — 2026-07-14 sabahı üretilen yeni günlük bildirimde tarih filtresi
+gerçek veriyle doğrulandı, detay için `memory/bugs.md`.)
 
 ## Finance CRUD UX Patch 001 — Finans Hareketi Düzenle/Sil Her Ekrandan Erişilebilir: CLOSED — USER TEST PASS (2026-07-12, testi 2026-07-14)
 Sorun: bir finans hareketini (tahsilat/ödeme) düzenlemek/silmek için kullanıcının "Raporlar >
