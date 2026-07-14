@@ -42,8 +42,8 @@
 ## Çözüldü
 
 - **TOPBAR MESSAGE BADGE GHOST COUNT — kendine iş/görev atama, Mesajlar sayacını kalıcı olarak
-  1 artırıyordu** (2026-07-14, kullanıcı BUG REPORT — kök neden raporu + resmi düzeltme kararı ile
-  netleşti): kullanıcı kendisine bir iş/görev atadığında (`task_new.php`/`mobile/task_new.php`
+  1 artırıyordu: CLOSED — USER TEST PASS / DEV PASS** (2026-07-14, kullanıcı BUG REPORT — kök
+  neden raporu + resmi düzeltme kararı ile netleşti): kullanıcı kendisine bir iş/görev atadığında (`task_new.php`/`mobile/task_new.php`
   "İş Ekle", `job_new.php` sorumlu personel kendisi, `requests.php` kendi talebini kendi
   onaylama/reddetme) `internal_messages` tablosuna `sender_user_id=receiver_user_id` olan bir satır
   yazılıyordu. Bu satır Mesajlar ekranının liste sorgusunda (`messages.php`, kendini her zaman
@@ -73,9 +73,9 @@
   "yeni mesaj" toast sorgusunun ghost korumasına sahip olmaması). Daha geniş "iş/görev
   atamalarının Mesajlar kanalından tamamen çıkarılması" kararı bilinçli olarak bu turun kapsamı
   DIŞINDA bırakıldı, ayrı **MESSAGING CHANNEL SEMANTICS** backlog maddesi olarak kaydedildi (bkz.
-  [[backlog]]). Migration YOK. **USER TEST BEKLİYOR** — kullanıcının DEV'de kendine görev/iş
-  atadığında mesaj sayacının artmadığını, başka kullanıcıdan gelen gerçek mesajın sayacı hâlâ
-  artırdığını doğrulamadan CLOSED yazılmayacak.
+  [[backlog]]). Migration YOK. **USER TEST PASS / DEV PASS (2026-07-14):** kullanıcı DEV'de
+  doğruladı — kendine iş atadığında bildirim oluştu, mesaj oluşmadı, mesaj sayacı artmadı. Beklenen
+  davranış tam olarak sağlandı. **CLOSED.**
 
 - **Dashboard tarih mantığı: "Bugün" ile "Geciken"/tarihsiz-açık kavramları karışıyordu**
   (2026-07-13, kullanıcı BUG REPORT — resmi ürün kararı ile netleşti): `daily_reminder_lib.php`'nin
