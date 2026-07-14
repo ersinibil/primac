@@ -2,7 +2,7 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
-## UX SPRINT 002 — Phase B3: Dashboard Nabız Satırı: DEV PASS — USER TEST BEKLİYOR (2026-07-14)
+## UX SPRINT 002 — Phase B3: Dashboard Nabız Satırı: CLOSED — USER TEST PASS / DEV PASS (2026-07-14)
 Amaç: Komuta Merkezi açıldığında kullanıcı ilk 1-2 saniyede günün genel durumunu tek cümlede
 anlayabilsin — mevcut "Dikkat / Geciken İşler & Kritik Stok" bölümü kaldırılmadı/yeniden
 yazılmadı, onun ÜSTÜNE sabit (sürüklenemez, section_order'a dahil olmayan) bir özet satırı eklendi.
@@ -46,8 +46,10 @@ maddesi olarak taşındı. Elif (parity) PASS, ek not: mobilin kendi `$isAdmin` 
 `is_admin()` arasında `'yönetici'` (unicode) varyantı farkı var — pratikte erişilemez/ölü kod yolu,
 Phase B3'ün ürettiği bir sorun değil, ayrı not düşüldü.
 
-**DEV PASS (2026-07-14).** USER TEST BEKLİYOR — kullanıcı DEV'de (primac.tr) doğrulamadan CLOSED
-yazılmayacak.
+**USER TEST PASS (2026-07-14):** Kullanıcı DEV'de (primac.tr) doğruladı — Nabız Satırı doğru
+görüntüleniyor, renk durumu doğru çalışıyor, "İncele" bağlantısı doğru bölüme yönlendiriyor,
+dashboard mimarisi bozulmadı, section drag davranışı korunuyor, Pulse alanı sabit üst bölüm olarak
+doğru çalışıyor, kullanıcı deneyimi beklendiği gibi. **DEV PASS. Phase B3 CLOSED.**
 
 ## UX SPRINT 002 — Phase B2: Dashboard Priority Layout: CLOSED — USER TEST PASS / DEV PASS (2026-07-14)
 Sprint 3 saf analiz raporundan (Faz A Architecture Report, Faz B Dashboard Experience Design
