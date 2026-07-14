@@ -4,6 +4,30 @@
 
 ## Açık
 
+- **`mobile/requests.php`'de kendine-onay/red durumunda hiçbir bildirim oluşmuyor (parite sapması,
+  düşük öncelik, 2026-07-14 TOPBAR MESSAGE BADGE GHOST COUNT fix'inde Ece'nin review'unda
+  bulundu)**: `mobile/requests.php:45` — `if($owner && $owner!==$ME){ notify_user(...); INSERT
+  internal_messages; }` — hem bildirimi hem mesajı TEK guard'da sarıyor, yani kendi talebini
+  kendisi onaylayan/reddeden admin mobilde HİÇBİR bildirim almıyor. Web tarafında (`requests.php`)
+  aynı tarihte yapılan fix'te bilinçli olarak `internal_notifications`/`notify_user()` guard'ın
+  DIŞINDA tutuldu (kural: "kendine atamada bile bildirim oluşmaya devam etmeli") — bu yüzden aynı
+  senaryo artık web'de bildirim üretiyor, mobilde üretmiyor. Kullanıcının kendi ürün kuralıyla
+  ("internal notification davranışı korunsun") çelişiyor ama bu turun kapsamı dışında bırakıldı
+  (kullanıcı sadece `job_new.php`/`task_new.php`/`mobile/task_new.php`/`requests.php` istedi).
+  Düzeltme: `mobile/requests.php`'de `notify_user()` çağrısını guard'ın dışına, internal_messages
+  INSERT'ini guard'ın içinde bırakacak şekilde ayırmak (web ile aynı desen).
+- **Aynı "sender=receiver ghost mesaj" deseni iki dokunulmamış dosyada teorik olarak tekrarlanabilir
+  (düşük öncelik, Selin'in aynı review'unda bulundu)**: `mobile/request_new.php:59` (talep
+  oluşturma → admine mesaj) ve `mobile/uretim_new.php:37` — alıcı ile gönderen aynı kullanıcı
+  olabilecek senaryolarda (örn. tek admin kendi talebini oluşturursa) aynı sayaç deseni yeniden
+  üretilebilir. 2026-07-14 fix'i sadece 4 adı geçen dosyayı (+3 sayaç sorgusunu) kapsadı, bu ikisi
+  kapsam dışı bırakıldı.
+- **`mobile/poll.php`'nin "yeni mesaj" toast/ses sorgusu ghost-satır korumasına sahip değil (çok
+  düşük öncelik, Ece'nin review'unda bulundu)**: `mobile/poll.php`'deki `$sinceMsg` bazlı "yeni
+  mesaj" sorgusu (ayrı bir sorgu, sayaç sorgusu DEĞİL) `sender_user_id<>receiver_user_id` koşulunu
+  içermiyor — var olan (silinmemiş) bir ghost kayıt için istemci teorik olarak bir kerelik
+  toast/ses görebilir. Kullanıcının "sadece sayaç sorgularını düzelt" talimatı kapsamında bilinçli
+  olarak dokunulmadı.
 - **Sabit migration/temizlik anahtarı**: `migrate.php` ve `temizle.php` içinde aynı sabit kodlanmış
   `acans-migrate-2026` anahtarı var. Admin oturumu zaten yeterli yetki kontrolü sağlıyor, anahtar sadece
   kurulum-öncesi (kullanıcı yokken) bypass amaçlı. Düşük risk ama repo genel erişime açılırsa (public repo)
@@ -16,6 +40,42 @@
   (target_user_id IS NULL OR target_user_id=?)` şeklinde oturum kullanıcısı kontrolü eklenmeli.
 
 ## Çözüldü
+
+- **TOPBAR MESSAGE BADGE GHOST COUNT — kendine iş/görev atama, Mesajlar sayacını kalıcı olarak
+  1 artırıyordu** (2026-07-14, kullanıcı BUG REPORT — kök neden raporu + resmi düzeltme kararı ile
+  netleşti): kullanıcı kendisine bir iş/görev atadığında (`task_new.php`/`mobile/task_new.php`
+  "İş Ekle", `job_new.php` sorumlu personel kendisi, `requests.php` kendi talebini kendi
+  onaylama/reddetme) `internal_messages` tablosuna `sender_user_id=receiver_user_id` olan bir satır
+  yazılıyordu. Bu satır Mesajlar ekranının liste sorgusunda (`messages.php`, kendini her zaman
+  hariç tutan `u.id<>$me` JOIN'i) hiçbir zaman görünmüyordu ama okunmamış mesaj SAYACINDA
+  sayılıyordu — normal kullanımda temizlenemeyen kalıcı bir "hayalet" sayı.
+  **Kesin karar (dar yama + kök neden düzeltmesi birlikte):**
+  1) 3 sayaç sorgusuna (`layout_top.php`, `mobile/common.php::unread_msg()`, `mobile/poll.php`)
+     `AND sender_user_id<>receiver_user_id` eklendi — var olan ghost kayıtlar SİLİNMEDEN sayaçtan
+     düşürüldü (backfill/DELETE/UPDATE yok).
+  2) 4 kaynak dosyada (`job_new.php`, `task_new.php`, `mobile/task_new.php`, `requests.php`)
+     `internal_messages` INSERT'i artık `if($senderId!==$receiverId){...}` koşuluyla sarmalı —
+     kendine atamada/onayda mesaj ARTIK HİÇ OLUŞMUYOR. `notify_user()`/`internal_notifications`
+     INSERT'i bilinçli olarak guard'ın DIŞINDA bırakıldı — kendine atamada bile Bildirimler
+     kanalı çalışmaya devam ediyor (ürün kuralı: "internal notification davranışı korunsun").
+  3) Başka bir personele/kullanıcıya atama/onay YOLUNDA hiçbir davranış değişmedi — mevcut
+     dual-write (hem Bildirimler hem Mesajlar) korundu, kullanıcının kendi kararıyla.
+  `mobile/requests.php`'ye HİÇ dokunulmadı — zaten önceden var olan `if($owner!==$ME)` guard'ı bu
+  spesifik ghost-bug'a karşı bağışıktı (ama guard hem notify hem mesajı birlikte sardığı için
+  ayrı, önceden var olan bir parite sorunu ortaya çıkardı, bkz. "Açık" bölümü).
+  Test: yerel MariaDB sandbox'ta 10 zorunlu senaryo (15 kontrol noktası) — kendine atama/onay/red
+  (mesaj oluşmuyor, sayaç 0), başkasına atama (mesaj oluşuyor, sayaç artıyor, liste sorgusunda
+  görünüyor), manuel gerçek mesaj (regresyon yok), var olan ghost kayıt (silinmeden sayaçtan
+  düşüyor), okundu-işaretleme sonrası sayaç düşüşü — hepsi PASS. Selin (security) ve Ece
+  (code-reviewer) incelemesinden geçti, kritik/yüksek bulgu yok — 3 düşük öncelikli, kapsam dışı
+  bulgu "Açık" bölümüne not edildi (mobile/requests.php parite sapması, mobile/request_new.php +
+  mobile/uretim_new.php'de aynı desenin teorik olarak tekrarlanabilmesi, mobile/poll.php'nin ayrı
+  "yeni mesaj" toast sorgusunun ghost korumasına sahip olmaması). Daha geniş "iş/görev
+  atamalarının Mesajlar kanalından tamamen çıkarılması" kararı bilinçli olarak bu turun kapsamı
+  DIŞINDA bırakıldı, ayrı **MESSAGING CHANNEL SEMANTICS** backlog maddesi olarak kaydedildi (bkz.
+  [[backlog]]). Migration YOK. **USER TEST BEKLİYOR** — kullanıcının DEV'de kendine görev/iş
+  atadığında mesaj sayacının artmadığını, başka kullanıcıdan gelen gerçek mesajın sayacı hâlâ
+  artırdığını doğrulamadan CLOSED yazılmayacak.
 
 - **Dashboard tarih mantığı: "Bugün" ile "Geciken"/tarihsiz-açık kavramları karışıyordu**
   (2026-07-13, kullanıcı BUG REPORT — resmi ürün kararı ile netleşti): `daily_reminder_lib.php`'nin

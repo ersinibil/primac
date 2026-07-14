@@ -8,7 +8,10 @@ try { $notifCount = function_exists('notif_unread_count') ? notif_unread_count(d
 // web'de karşılığı hiç yoktu (kullanıcı bildirimi: "web'de mesaj bildirimi gelmiyor").
 $unreadMsgCount = 0;
 try {
-    $s = db()->prepare("SELECT COUNT(*) c FROM internal_messages WHERE receiver_user_id=? AND is_read=0 AND sender_user_id IS NOT NULL");
+    // TOPBAR MESSAGE BADGE GHOST COUNT düzeltmesi (2026-07-14): sender=receiver (kendine-atama
+    // kenar durumu) bir "gerçek" mesaj değildir, Mesajlar ekranında hiç görünmez (messages.php'nin
+    // liste sorgusu u.id<>$me ile kendini hariç tutar) — bu yüzden sayaçta da sayılmamalı.
+    $s = db()->prepare("SELECT COUNT(*) c FROM internal_messages WHERE receiver_user_id=? AND is_read=0 AND sender_user_id IS NOT NULL AND sender_user_id<>receiver_user_id");
     $s->execute([$__me]);
     $unreadMsgCount = (int)($s->fetch()['c'] ?? 0);
 } catch(Throwable $e) {}

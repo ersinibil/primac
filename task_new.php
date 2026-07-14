@@ -30,7 +30,13 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             $ruid=(int)$urow['id'];
             // mytasks.php'ye link — atanan personelin 'tasks' yetkisi olmayabilir, tasks.php onu kilitler
             if(function_exists('notify_user')) notify_user($ruid,'📋 Yeni görev: '.$title,($pname?$pname.' · ':'').($_POST['description']??''),'mytasks.php');
-            try{ $sid=$_SESSION['user']['id']??null; $pdo->prepare("INSERT INTO internal_messages(sender_user_id,receiver_user_id,message,is_read) VALUES(?,?,?,0)")->execute([$sid,$ruid,'📋 Yeni görev: '.$title.($_POST['due_date']?"\n📅 Termin: ".$_POST['due_date']:'').(trim($_POST['description']??'')?"\n".trim($_POST['description']):'')]); }catch(Throwable $e){}
+            // TOPBAR MESSAGE BADGE GHOST COUNT düzeltmesi (2026-07-14): kendine atama (atayan =
+            // atanan) durumunda internal_messages'a YAZILMAZ — bildirim (yukarıdaki notify_user)
+            // yine oluşur, sadece Mesajlar ekranında hiç görünemeyecek bir "hayalet" kayıt önlenir.
+            $sid=(int)($_SESSION['user']['id']??0);
+            if($sid!==$ruid){
+                try{ $pdo->prepare("INSERT INTO internal_messages(sender_user_id,receiver_user_id,message,is_read) VALUES(?,?,?,0)")->execute([$sid?:null,$ruid,'📋 Yeni görev: '.$title.($_POST['due_date']?"\n📅 Termin: ".$_POST['due_date']:'').(trim($_POST['description']??'')?"\n".trim($_POST['description']):'')]); }catch(Throwable $e){}
+            }
         }
         try{ if(function_exists('activity_log')) activity_log('Görev','Atama',$pname.' · '.$title,'','task',$tid,'task_view.php?id='.$tid,'📋'); }catch(Throwable $e){}
 

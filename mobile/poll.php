@@ -26,7 +26,9 @@ if(($_GET['typing'] ?? '')==='1' && (int)($_GET['to'] ?? 0)){
 
 try{
     // Sayaçlar
-    $s=$pdo->prepare("SELECT COUNT(*) c FROM internal_messages WHERE receiver_user_id=? AND is_read=0 AND sender_user_id IS NOT NULL");
+    // TOPBAR MESSAGE BADGE GHOST COUNT düzeltmesi (2026-07-14): sender=receiver (kendine-atama
+    // kenar durumu) Mesajlar ekranında hiç görünmez, sayaçta da sayılmamalı.
+    $s=$pdo->prepare("SELECT COUNT(*) c FROM internal_messages WHERE receiver_user_id=? AND is_read=0 AND sender_user_id IS NOT NULL AND sender_user_id<>receiver_user_id");
     $s->execute([$me]); $out['msg_unread']=(int)$s->fetch()['c'];
     try{ $out['notif_unread']=function_exists('notif_unread_count')?notif_unread_count($pdo,$me):0; }catch(Throwable $e){}
 

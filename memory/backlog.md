@@ -11,6 +11,20 @@ FILTER UX~~ **PASS, CLOSED (2026-07-14)** işi bitti. Aşağıdaki maddeler şim
 "Yaklaşan İşler" widget'ı, mobil çapraz navigasyon, `deleted_at` filtre genişletmesi, VAPID
 yapılandırması, mobil karşılığı olmayan ekranlar.
 
+## MESSAGING CHANNEL SEMANTICS — İş/görev atamalarının Mesajlar kanalından çıkarılması (2026-07-14)
+- TOPBAR MESSAGE BADGE GHOST COUNT bug fix'i (bkz. [[features]] / [[bugs]]) sadece kendine-atama
+  kenar durumunu düzeltti — daha geniş bir mimari soru AÇIK kaldı: iş/görev ataması (`job_new.php`,
+  `task_new.php`, `mobile/task_new.php`) ve talep onay/red (`requests.php`) hâlâ BAŞKA bir
+  personele/kullanıcıya atandığında/onaylandığında `internal_messages`'a da yazmaya (dual-write)
+  devam ediyor — yani bunlar teknik olarak birer sistem/iş olayı olsa da, hâlâ Mesajlar ekranında
+  "sanki biri size yazmış gibi" görünüyorlar. Kullanıcının kendi "Kesin ürün kuralı"na göre
+  ("Gerçek kullanıcıdan kullanıcıya yazışma → Mesajlar; iş/görev atama, sistem uyarısı veya
+  hatırlatma → Bildirimler") bu dual-write tamamen kaldırılıp sadece `internal_notifications`'a
+  (Bildirimler) taşınmalı. Bu, kullanıcı tarafından BİLİNÇLİ olarak bu turun kapsamı DIŞINDA
+  bırakıldı ("bu daha geniş karar bu bug fix kapsamında uygulanmasın") — ayrı bir onay/tur
+  gerektirir, kullanıcı deneyimi açısından mevcut alışkanlığı (görev atandığında Mesajlar'da da
+  görünmesi) değiştireceği için dikkatli ele alınmalı.
+
 ## finance_accounts sil.php akışı filtre bağlamını korumuyor (2026-07-14, düşük öncelik)
 - FINANCE ACCOUNT LIST FILTER UX CLOSED (bkz. [[features]]) — ama hesap "🗑 Sil" işlemi
   (`sil.php?t=account` üzerinden, sadece `finance_account_view.php`'nin kendi Sil butonu) hâlâ

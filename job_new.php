@@ -96,12 +96,16 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 $ru->execute([$_POST['responsible_personnel_id']]);
                 $ruid=(int)($ru->fetch()['id'] ?? 0);
                 if($ruid){
-                    $senderId=$_SESSION['user']['id'] ?? null;
+                    $senderId=(int)($_SESSION['user']['id'] ?? 0);
                     $msgText="🆕 Yeni iş atandı: ".$jobNo." — ".trim($_POST['title'])
                         .($_POST['due_date']?"\n📅 Termin: ".$_POST['due_date']:'')
                         .($customerName!=='-'?"\n👤 Müşteri: ".$customerName:'');
                     try{ $pdo->prepare("INSERT INTO internal_notifications(title,message,target_user_id,action_url,is_read) VALUES(?,?,?,?,0)")->execute(['Yeni İş Atandı',$msgText,$ruid,'job_view.php?id='.$jobId]); }catch(Throwable $e){}
-                    try{ $pdo->prepare("INSERT INTO internal_messages(sender_user_id,receiver_user_id,message,is_read) VALUES(?,?,?,0)")->execute([$senderId,$ruid,$msgText]); }catch(Throwable $e){}
+                    // TOPBAR MESSAGE BADGE GHOST COUNT düzeltmesi (2026-07-14): kendini sorumlu
+                    // seçme durumunda internal_messages'a YAZILMAZ — bildirim yine oluşur.
+                    if($senderId!==$ruid){
+                        try{ $pdo->prepare("INSERT INTO internal_messages(sender_user_id,receiver_user_id,message,is_read) VALUES(?,?,?,0)")->execute([$senderId?:null,$ruid,$msgText]); }catch(Throwable $e){}
+                    }
                     if(function_exists('push_to_user')){ try{ push_to_user($ruid,'Yeni İş Atandı',$jobNo.' — '.trim($_POST['title']),'job_view.php?id='.$jobId); }catch(Throwable $e){} }
                 }
             }catch(Throwable $e){}
