@@ -2,7 +2,7 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
-## MOBILE UX BUGFIX SPRINT — Nabız linki + Mesajlar taşma: KOD İNCELEME PASS — USER TEST BEKLİYOR (2026-07-15)
+## MOBILE UX BUGFIX SPRINT — Nabız linki + Mesajlar taşma: CLOSED — USER TEST PASS / DEV PASS (2026-07-15)
 Phase B4'ün mobil USER TEST'i sırasında kullanıcı 2 ayrı hata buldu.
 
 **Bug 1 — Mobil Nabız/Dikkat linki çalışmıyordu — İKİ TURLU düzeltme, 1. tur USER TEST FAIL aldı:**
@@ -61,10 +61,20 @@ otomatik `require_permission('stock')`'uyla defense-in-depth korunduğu doğrula
 (3 senaryo — tek geciken/tek kritik/ikisi birden — kod okunarak doğrulandı, dokunma alanı yeterli,
 görsel dil korunmuş, mobile/messages.php'ye dokunulmadığı teyit edildi).
 
-**KOD İNCELEME PASS (2026-07-15). Gerçek USER TEST BEKLİYOR** — bu proje kuralı gereği ("bkz.
-`feedback_evolution_not_revolution`: teknik PASS tek başına yeterli değil, gerçek kullanıcı testi
-şart") DEV PASS/CLOSED yazılmayacak, önceki fiziksel cihaz FAIL'i sonrası kullanıcı bu revizyonu
-gerçek cihazda doğrulamadan.
+**USER TEST PASS (2026-07-15):** Gerçek fiziksel cihaz testi tamamlandı. Doğrulanan davranış:
+sadece kritik stok varken Nabız doğrudan `mobile/stock.php?critical=1`'e gidiyor ve gerçek
+filtreli ürün listesini gösteriyor; sadece geciken iş varken ilgili geciken işler ekranına
+yönlendirme çalışıyor; iki sorun birlikte olduğunda Dikkat panelindeki iki kutu ayrı ayrı
+çalışıyor; kullanıcı artık pasif bir panelde bırakılmıyor, ilgili kayıt listesine ulaşıyor; mobil
+mesaj taşma düzeltmesi de korunuyor. (Not: önceki test turunda "kod doğru ama sunucu eski"
+görünen ara adım — deploy paketinin primac.tr'ye yüklenip `guncelle.php` ile uygulanması —
+kullanıcı tarafından tamamlandıktan sonra bu gerçek test yapıldı.)
+
+**DEV PASS. Sprint CLOSED.**
+
+**Uygulama commit'i:** `fe52b59` (fix: make mobile pulse alerts actionable — 2. tur revizyon,
+gerçek kök nedeni çözen sürüm). 1. tur commit'i `96787fa` (fix: mobile pulse link and messages
+overflow — Bug 2/mesaj taşması + Bug 1'in ilk, eksik kalan denemesi).
 
 ## UX SPRINT 002 — Phase B4: Dashboard Hızlı İşlemler (Quick Actions): DEV PASS — USER TEST BEKLİYOR (2026-07-14)
 Amaç: Kullanıcı Nabız Satırı'ndan durumu gördükten sonra en sık yaptığı işlemleri tek tıkla
