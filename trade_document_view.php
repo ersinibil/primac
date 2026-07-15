@@ -20,6 +20,15 @@ if(!$d){
 $it=$pdo->prepare("SELECT * FROM trade_document_items WHERE document_id=?");
 $it->execute([$id]);
 $items=$it->fetchAll();
+
+// PDP-001 (2026-07-15): "Ödenen/Tahsil" kartı trade_documents.paid_amount gösteriyordu — bu kolon
+// trade_document_new.php'de HER ZAMAN 0 ile INSERT ediliyor ve hiçbir yerde güncellenmiyor (Flow
+// Unification 001 kararıyla belge artık ödeme kabul etmiyor, gerçek ödeme akışı finance_movements
+// üzerinden cari bazlı işliyor) — yani bu kart yapısal olarak her zaman ₺0 gösteriyordu, gerçek bir
+// ölçüm değildi. Aynı ₺0'ı "gerçek zamanlı" gibi tekrar üretmek yerine, carinin zaten doğru
+// hesaplanan (contacts_lib.php::contact_balance) gerçek bakiyesi gösteriliyor.
+require_once __DIR__.'/contacts_lib.php';
+$contactBalance = $d['contact_id'] ? contact_balance($pdo, $d['contact_id']) : 0;
 ?>
 
 <div class="panel-head">
@@ -34,7 +43,7 @@ $items=$it->fetchAll();
 <div class="card"><small>Tip</small><strong><?=h($d['document_type']==='purchase'?'Alış':'Satış')?></strong></div>
 <div class="card"><small>Cari</small><strong><?=h($d['contact_name'] ?: '-')?></strong></div>
 <div class="card"><small>Genel Toplam</small><strong><?=money($d['grand_total'])?></strong></div>
-<div class="card"><small>Ödenen/Tahsil</small><strong><?=money($d['paid_amount'])?></strong></div>
+<div class="card"><small>Cari Bakiyesi</small><strong><?=money($contactBalance)?></strong></div>
 </div>
 
 <section class="panel">
