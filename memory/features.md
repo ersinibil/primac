@@ -67,7 +67,14 @@ birebir geri getirilerek düzeltildi, final turda Ece/Selin/Elif üçü de PASS 
 sprintten önce de vardı, dokunulmadı (bir kullanıcı web'de "Çok Acil" seçip mobilde tekrar
 kaydederse öncelik sessizce düşebilir — ayrı bir gelecek sprint konusu).
 
-## DS-002A — HEADER MIGRATION PILOT: KOD İNCELEME PASS — USER TEST BEKLİYOR (2026-07-15)
+## DS-002A — HEADER MIGRATION PILOT: CLOSED — USER TEST PASS / DEV PASS (2026-07-15)
+**Kapanış notu:** İlk USER TEST raporu ("ne değişti neyi test edeceğim" geri bildirimi üzerine) somut
+primac.tr navigasyon adımları + karşılaştırma noktalarıyla yeniden sunuldu. Kullanıcı "evet test ok"
+onayı verdi — checklist'in madde madde tekrar gözden geçirilmesi istenmedi, kullanıcı bu onayı yeterli
+kabul etti ("dediğin gibi ilerle" ile teyit, UX-001 sprintine geçmeden önce). Bu nedenle DEV PASS bu
+informal ama açık onaya dayanıyor — sonraki bir sprintte (UX-001) bu 8 ekranın header'ı GÖRSEL olarak
+da değişecek, bu yüzden DS-002A'nın kendi (yapısal migration) kapsamının burada net kapatılması önemli:
+ileride bir sorun çıkarsa hangi sprintin sebep olduğu ayrıştırılabilsin.
 Design System Sprint 001'in ilk gerçek "eski ekranı migrate et" adımı. Kapsam bilinçli olarak
 küçük tutuldu: tüm proje değil, 8 pilot ekran.
 
