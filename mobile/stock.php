@@ -2,16 +2,25 @@
 require_once 'common.php';
 $pdo=db();
 $pasifDahil=isset($_GET['pasif_dahil']);
+// MOBILE UX BUGFIX SPRINT (2026-07-15): web stock.php ile aynı düzeltme — critical=1 artık
+// gerçekten filtreliyor (daha önce mobil "Dikkat" panelinden kritik stoğa giden hiçbir yol yoktu).
+$criticalOnly=isset($_GET['critical']);
 topx('Stok');
 echo '<div class="panel" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">';
 echo '<a class="btn dark" href="product_new.php">+ Yeni Ürün</a>';
 echo '<a class="btn" href="report.php?modul=stok" style="background:#334155;color:#fff">📊 Rapor</a>';
 echo '<button class="btn" id="barcodeBtn" onclick="ACANS_BARCODE_TOGGLE()" style="background:#8b5cf6;color:#fff;display:none">📷 Barkod Okut</button>';
-echo '<form method="get" style="margin:0;display:flex;align-items:center;gap:6px"><label style="font-size:13px;color:#94a3b8;display:flex;align-items:center;gap:4px"><input type="checkbox" name="pasif_dahil" value="1"'.($pasifDahil?' checked':'').' onchange="this.form.submit()" style="width:auto"> Pasif Dahil</label></form>';
+echo '<form method="get" style="margin:0;display:flex;align-items:center;gap:10px;flex-wrap:wrap">';
+echo '<label style="font-size:13px;color:#94a3b8;display:flex;align-items:center;gap:4px"><input type="checkbox" name="pasif_dahil" value="1"'.($pasifDahil?' checked':'').' onchange="this.form.submit()" style="width:auto"> Pasif Dahil</label>';
+echo '<label style="font-size:13px;color:#94a3b8;display:flex;align-items:center;gap:4px"><input type="checkbox" name="critical" value="1"'.($criticalOnly?' checked':'').' onchange="this.form.submit()" style="width:auto"> Sadece Kritik</label>';
+echo '</form>';
 echo '</div>';
 try{
     $sql="SELECT id,name,quantity,unit,sale_price,critical_level,active FROM stock_items";
-    if(!$pasifDahil) $sql.=" WHERE (active IS NULL OR active=1)";
+    $conditions=[];
+    if(!$pasifDahil) $conditions[]="(active IS NULL OR active=1)";
+    if($criticalOnly) $conditions[]="quantity<=critical_level";
+    if($conditions) $sql.=" WHERE ".implode(' AND ',$conditions);
     $sql.=" ORDER BY name LIMIT 200";
     $rows=$pdo->query($sql)->fetchAll();
     foreach($rows as $r){

@@ -38,6 +38,22 @@ $__pulseShowJobs = $isAdmin||user_can('jobs');
 $__pulseShowStock = $isAdmin||user_can('stock');
 $__pulse = dashboard_pulse_state($__pulseOk, $__pulseOverdue, $__pulseShowJobs, $__pulseCriticalStock, $__pulseShowStock);
 
+// MOBILE UX BUGFIX SPRINT (2026-07-15, revizyon): $overdue_count/$crit (satır 4/24, "Gecikme
+// Uyarı" panelinin GÖSTERDİĞİ sayılar) üzerinden — pulse'ın kendi hataya-duyarlı kopyaları değil,
+// panelde görünen sayılarla birebir tutarlı olsun diye. Nabız'ın "İncele" hedefini belirlemek için
+// kullanılıyor: TEK sorun varsa doğrudan o listeye, İKİSİ varsa Dikkat paneline (orada iki kutu
+// ayrı ayrı tıklanabilir), HİÇBİRİ yoksa link yok.
+$__gecikmeShowOverdue = $__pulseShowJobs && $overdue_count > 0;
+$__gecikmeShowCritical = $__pulseShowStock && $crit > 0;
+$__pulseTarget = null;
+if($__gecikmeShowOverdue && $__gecikmeShowCritical){
+    $__pulseTarget = '#gecikme-uyari';
+} elseif($__gecikmeShowOverdue){
+    $__pulseTarget = 'jobs.php?s=gec';
+} elseif($__gecikmeShowCritical){
+    $__pulseTarget = 'stock.php?critical=1';
+}
+
 // UX SPRINT 002 — PHASE B4: Hızlı İşlemler — web ile aynı, boot.php'deki paylaşılan tanım+ayrım
 // listesini kullanıyor (mobilin kendi $isAdmin değişkeniyle, dosyanın mevcut deseniyle tutarlı).
 $__qaSplit = dashboard_quick_actions_split(function($perm) use($isAdmin){ return $isAdmin||user_can($perm); });
@@ -58,11 +74,13 @@ $__pulseColors=[
 $__pc=$__pulseColors[$__pulse['level']];
 ?>
 <!-- ── Nabız Satırı — UX SPRINT 002 PHASE B3 (mobil sade sürüm) ── -->
-<!-- MOBILE UX BUGFIX SPRINT (2026-07-15): hasDetail=true iken PANELİN TAMAMI <a> — önceki sürümde
-     sadece küçük "İncele" pill'i linkti, kullanıcı panelin geneline dokununca tepki yoktu. İç içe
-     link üretmemek için "İncele" artık ayrı bir <a> değil, aynı dış <a>'nın içindeki düz bir <span>. -->
-<?php if($__pulse['hasDetail']): ?>
-<a href="#gecikme-uyari" class="panel" style="background:<?=$__pc['bg']?>;border-color:<?=$__pc['fg']?>;display:flex;align-items:center;gap:8px;padding:12px 14px;text-decoration:none;color:<?=$__pc['fgtext']?>">
+<!-- MOBILE UX BUGFIX SPRINT (2026-07-15, revizyon — USER TEST FAIL sonrası): panel artık sadece
+     Dikkat bölümüne scroll etmiyor, $__pulseTarget'a göre AKSİYON ALINABİLİR hedefe gidiyor: tek
+     sorun varsa ilgili listeye doğrudan (jobs.php?s=gec veya stock.php?critical=1), iki sorun
+     varsa Dikkat paneline (orada artık iki kutu ayrı ayrı tıklanabilir, aşağı bkz). İç içe link
+     üretmemek için "İncele" ayrı bir <a> değil, aynı dış <a>'nın içindeki düz bir <span>. -->
+<?php if($__pulseTarget !== null): ?>
+<a href="<?=htmlspecialchars($__pulseTarget)?>" class="panel" style="background:<?=$__pc['bg']?>;border-color:<?=$__pc['fg']?>;display:flex;align-items:center;gap:8px;padding:12px 14px;text-decoration:none;color:<?=$__pc['fgtext']?>">
   <span style="font-size:16px;line-height:1"><?=$__pulse['icon']?></span>
   <span style="flex:1;font-size:12.5px;font-weight:700;color:<?=$__pc['fgtext']?>"><?=htmlspecialchars($__pulse['message'])?></span>
   <span style="flex:0 0 auto;font-size:11px;font-weight:800;color:<?=$__pc['fgtext']?>;background:rgba(255,255,255,.5);padding:5px 10px;border-radius:999px">İncele</span>
@@ -162,36 +180,30 @@ foreach($__qaSplit['primary'] as $__qa){ $__qaByCat[$__qa['category']][]=$__qa; 
 </div>
 
 <!-- ── Gecikme Uyarı (Mobil) ── -->
-<!-- MOBILE UX BUGFIX SPRINT (2026-07-15): panel artık $__pulseShowJobs/$__pulseShowStock ile
-     yetki filtreli render ediyor — Phase B3 incelemesinde Selin/Ece/Elif'in bağımsız flag'lediği
-     "Nabız yetkisiz veriyi gizliyor ama altındaki bu panel gizlemiyor" sızıntısı, "İncele" linki
-     gerçekten çalışır hale getirilince aktif olarak erişilebilir olduğu için burada kapatıldı
-     (web tarafındaki eşdeğer critical_alerts bölümü hâlâ backlog'da, bu turun kapsamı dışı).
-     scroll-margin-top: mobile/common.php'deki sticky .top header'ın (~130px) hedefi
-     kapatmasını önlüyor — "İncele" linkinin native anchor scroll'u artık header'ın ALTINA iniyor. -->
-<?php
-$__gecikmeShowOverdue = $__pulseShowJobs && $overdue_count > 0;
-$__gecikmeShowCritical = $__pulseShowStock && $crit > 0;
-?>
+<!-- MOBILE UX BUGFIX SPRINT (2026-07-15, revizyon — USER TEST FAIL sonrası): iki kutu artık
+     ayrı ayrı <a> — kutunun TAMAMI aksiyon alınabilir hedefe gidiyor (eski ayrı "gör" butonları
+     kaldırıldı, aynı hedefe giden iki tıklama alanı olmasın diye). $__gecikmeShowOverdue/
+     $__gecikmeShowCritical yukarıda (Nabız hedefi hesabıyla birlikte) TEK yerde hesaplanıyor,
+     burada tekrar hesaplanmıyor. Yetkisiz kategori hiç render edilmiyor (Phase B3 incelemesinde
+     flag'lenen sızıntı — web tarafındaki eşdeğeri hâlâ backlog'da, bu turun kapsamı dışı).
+     scroll-margin-top: sticky .top header'ın (~130px) hedefi kapatmasını önlüyor — çift-sorun
+     durumunda Nabız'ın #gecikme-uyari scroll'u header'ın ALTINA iniyor. -->
 <?php if($__gecikmeShowOverdue || $__gecikmeShowCritical): ?>
 <div class="panel" id="gecikme-uyari" style="border-left:4px solid var(--c-danger);scroll-margin-top:130px"><b style="color:var(--c-danger)">⚠️ Dikkat</b>
   <div style="display:grid;grid-template-columns:<?=($__gecikmeShowOverdue && $__gecikmeShowCritical)?'1fr 1fr':'1fr'?>;gap:8px;margin-top:8px;font-size:12px">
     <?php if($__gecikmeShowOverdue): ?>
-    <div style="background:var(--c-danger-bg);border-radius:var(--radius-sm);padding:10px;text-align:center">
+    <a href="jobs.php?s=gec" style="display:block;background:var(--c-danger-bg);border-radius:var(--radius-sm);padding:10px;text-align:center;text-decoration:none">
       <span style="color:var(--c-danger);font-weight:700;font-size:16px;display:block"><?=$overdue_count?></span>
-      <span style="color:#667085;font-size:11px">Geciken İş</span>
-    </div>
+      <span style="color:#667085;font-size:11px">Geciken İş ›</span>
+    </a>
     <?php endif; ?>
     <?php if($__gecikmeShowCritical): ?>
-    <div style="background:#fed7aa;border-radius:var(--radius-sm);padding:10px;text-align:center">
+    <a href="stock.php?critical=1" style="display:block;background:#fed7aa;border-radius:var(--radius-sm);padding:10px;text-align:center;text-decoration:none">
       <span style="color:#d97706;font-weight:700;font-size:16px;display:block"><?=$crit?></span>
-      <span style="color:#667085;font-size:11px">Kritik Stok</span>
-    </div>
+      <span style="color:#667085;font-size:11px">Kritik Stok ›</span>
+    </a>
     <?php endif; ?>
   </div>
-  <?php if($__gecikmeShowOverdue): ?>
-  <a href="jobs.php?s=gec" style="display:block;margin-top:8px;padding:8px;background:#f3f4f6;border-radius:var(--radius-sm);text-align:center;text-decoration:none;color:var(--c-accent);font-weight:700;font-size:12px">Geciken İşleri Gör →</a>
-  <?php endif; ?>
 </div>
 <?php endif; ?>
 

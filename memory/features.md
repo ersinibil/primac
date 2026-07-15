@@ -2,17 +2,28 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
-## MOBILE UX BUGFIX SPRINT — Nabız linki + Mesajlar taşma: DEV PASS — USER TEST BEKLİYOR (2026-07-15)
-Phase B4'ün mobil USER TEST'i sırasında kullanıcı 2 ayrı hata buldu, ikisi de bu turda düzeltildi.
+## MOBILE UX BUGFIX SPRINT — Nabız linki + Mesajlar taşma: KOD İNCELEME PASS — USER TEST BEKLİYOR (2026-07-15)
+Phase B4'ün mobil USER TEST'i sırasında kullanıcı 2 ayrı hata buldu.
 
-**Bug 1 — Mobil Nabız/Dikkat linki çalışmıyordu:** Kök neden iki katmanlıydı. (a) Panel bir
-`<div>` idi, içinde sadece küçük bir "İncele" pill'i `<a href="#gecikme-uyari">` vardı — panelin
-genişine dokunmak hiçbir şey yapmıyordu. (b) Hedef (`#gecikme-uyari`) `mobile/common.php`'deki
-`.top{position:sticky;top:0;z-index:50}` sticky header'ın arkasında kalıyordu (native anchor
-scroll teknik olarak çalışıyordu ama hedef görsel olarak header'ın altında/arkasında kayboluyordu).
-Düzeltme: `hasDetail===true` iken panelin TAMAMI tek bir `<a href="#gecikme-uyari" class="panel">`
-oldu (eski pill artık iç içe link olmasın diye düz `<span>`), hedefe `scroll-margin-top:130px`
-eklendi. `hasDetail===false` iken panel hâlâ düz `<div>` (yanıltıcı/işlevsiz link yok).
+**Bug 1 — Mobil Nabız/Dikkat linki çalışmıyordu — İKİ TURLU düzeltme, 1. tur USER TEST FAIL aldı:**
+
+*1. tur (ilk kök neden, kısmen yanlış):* Panel bir `<div>` idi, içinde sadece küçük bir "İncele"
+pill'i `<a href="#gecikme-uyari">` vardı — panelin genişine dokunmak hiçbir şey yapmıyordu. Hedef
+(`#gecikme-uyari`) da `.top{position:sticky}` header'ın arkasında kalıyordu. Düzeltme: panelin
+tamamı `<a href="#gecikme-uyari">` yapıldı, `scroll-margin-top:130px` eklendi. **Gerçek cihazda
+USER TEST FAIL aldı** — kullanıcı: "teknik anchor davranışı çalışsa bile ürün davranışı
+başarısız — Dikkat paneli SADECE SAYI gösteriyor, kritik stoğun HANGİ ürünler olduğunu görebileceği
+bir yere gitmiyordu (kutunun altında sadece 'Geciken İşleri Gör' linki vardı, kritik stok için
+hiç link yoktu — bu asıl kök nedendi, scroll/anchor sorunu değildi)."
+
+*2. tur (gerçek kök neden, düzeltildi):* Nabız artık AKSİYON ALINABİLİR hedefe gidiyor —
+tek sorun varsa (sadece geciken iş VEYA sadece kritik stok) doğrudan ilgili listeye
+(`jobs.php?s=gec` / `stock.php?critical=1`), ikisi birden varsa Dikkat paneline (`#gecikme-uyari`)
+iniyor ama artık paneldeki İKİ KUTU da ayrı ayrı `<a>` (kutunun tamamı kendi listesine gidiyor,
+eski ayrı "gör" butonları kaldırıldı — aynı hedefe giden 2. tıklama alanı olmasın diye). Hiçbiri
+yoksa (yeşil) link yok. `mobile/stock.php`'ye `critical` GET parametresi eklendi — daha önce hiç
+işlenmiyordu (web `stock.php`'deki aynı düzeltmenin mobil karşılığı, bu sprintten önce zaten
+yapılmıştı), yani "sadece kritik stok" senaryosunda gidilecek gerçek bir filtreli hedef artık var.
 
 **Yan bulgu, aynı turda kapatıldı:** "Gecikme Uyarı (Mobil)" paneli hiçbir yetki kontrolü olmadan
 render ediliyordu (Phase B3 incelemesinde Selin/Ece/Elif'in flag'lediği, Phase B4'e ertelenen
@@ -34,15 +45,26 @@ Genel `overflow-x:hidden` gibi körlemesine önlemler EKLENMEDİ — sadece kök
 320/375/390/430px için statik CSS analiziyle doğrulandı (matematiksel olarak taşma imkânsız hale
 geldi, her katmanda min-width:0 zinciri kuruldu).
 
-**Değiştirilen dosyalar:** `mobile/index.php`, `mobile/messages.php`.
+**Değiştirilen dosyalar:** `mobile/index.php`, `mobile/messages.php` (Bug 2, 1. tur — bu turda
+tekrar dokunulmadı), `mobile/stock.php` (2. tur, `critical` filtresi).
 
-**İnceleme:** Ece PASS (1 kozmetik öneri — dış `<a>`'ya açık `color` eklenmesi, uygulandı), Selin
-PASS (yetki sızıntısı tamamen kapandı, CSRF/nested-link/sibling-element kontrolleri doğrulandı),
-Elif PASS (web ile anlamca uyumlu, 4 viewport genişliğinde taşma yok, Gruplar listesi regresyonu
-yok, backlog tutarlılığı doğrulandı — belge güncelleme notu bu turda uygulandı).
+**1. tur inceleme:** Ece PASS (1 kozmetik öneri — dış `<a>`'ya açık `color` eklenmesi, uygulandı),
+Selin PASS (yetki sızıntısı tamamen kapandı, CSRF/nested-link/sibling-element kontrolleri
+doğrulandı), Elif PASS (web ile anlamca uyumlu, 4 viewport genişliğinde taşma yok, Gruplar listesi
+regresyonu yok, backlog tutarlılığı doğrulandı). **Ama teknik/kod incelemesi PASS olması ürün
+davranışının doğru olduğu anlamına gelmiyor** — gerçek cihaz USER TEST'i FAIL verdi (yukarıda).
 
-**DEV PASS (2026-07-15).** USER TEST BEKLİYOR — kullanıcı fiziksel cihazda doğrulamadan CLOSED
-yazılmayacak.
+**2. tur (revizyon) inceleme:** Ece PASS ($__pulseTarget if/elseif zinciri, iç içe link yok,
+tekrar hesaplama kalmadı), Selin PASS (stok/jobs yetkisi olmayan kullanıcı için ilgili hedefin
+if/elseif zincirinde hiç seçilemediği, `mobile/stock.php`'nin `boot.php`'nin basename-bazlı
+otomatik `require_permission('stock')`'uyla defense-in-depth korunduğu doğrulandı), Elif PASS
+(3 senaryo — tek geciken/tek kritik/ikisi birden — kod okunarak doğrulandı, dokunma alanı yeterli,
+görsel dil korunmuş, mobile/messages.php'ye dokunulmadığı teyit edildi).
+
+**KOD İNCELEME PASS (2026-07-15). Gerçek USER TEST BEKLİYOR** — bu proje kuralı gereği ("bkz.
+`feedback_evolution_not_revolution`: teknik PASS tek başına yeterli değil, gerçek kullanıcı testi
+şart") DEV PASS/CLOSED yazılmayacak, önceki fiziksel cihaz FAIL'i sonrası kullanıcı bu revizyonu
+gerçek cihazda doğrulamadan.
 
 ## UX SPRINT 002 — Phase B4: Dashboard Hızlı İşlemler (Quick Actions): DEV PASS — USER TEST BEKLİYOR (2026-07-14)
 Amaç: Kullanıcı Nabız Satırı'ndan durumu gördükten sonra en sık yaptığı işlemleri tek tıkla
