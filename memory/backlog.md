@@ -2,21 +2,28 @@
 
 <!-- Açık geliştirme görevleri. Kapanan madde buradan silinip memory/features.md'ye taşınır. -->
 
-## critical_alerts (web) + "Gecikme Uyarı" paneli (mobil) hâlâ yetkisiz-görünür — Phase B4 takip maddesi (2026-07-14)
+## critical_alerts (web) hâlâ yetkisiz-görünür — mobil kısmı KAPANDI (2026-07-14, mobil düzeltme 2026-07-15)
 UX SPRINT 002 Phase B3 (Dashboard Nabız Satırı) incelemesinde Selin (security) tarafından bulundu,
 Ece ve Elif de bağımsız olarak teyit etti: `dashboard.php`'nin "Dikkat - Geciken İşler & Kritik
 Stok" bölümü (`data-key="critical_alerts"`) ve `mobile/index.php`'nin "⚠️ Dikkat" paneli, hâlâ
-sadece ham `$overdue_count > 0 || $critical_stock > 0` koşuluyla render ediliyor — `is_admin() ||
-user_can('jobs')` / `user_can('stock')` gibi hiçbir yetki kontrolü yok. `dashboard.php` zaten
-`page_module_map()`'te yer almadığı için (bilinçli tasarım, herkese açık ana sayfa) `jobs`/`stock`
-yetkisi olmayan bir kullanıcı bile ham sayıları VE (web'de) en kritik 5 geciken işin iş no/başlık/
-termin bilgisini görebiliyor. Bu, Phase B3'te eklenen Nabız Satırı'nın (rol bazlı doğru şekilde
-filtrelenmiş, 3 incelemeci de doğruladı) hemen altında — kullanıcı pulse satırında "özet bilgi
-yok" görse bile sayfayı kaydırıp aynı/daha fazla bilgiyi görebiliyor. Phase B3 kapsamında BİLİNÇLİ
-olarak dokunulmadı (kullanıcının kendi talimatı: "Kritik bölümün kendisi yine mevcut sıralanabilir
-bölüm olarak kalmalı") — düzeltme UX SPRINT 002 **Phase B4 (Rol bazlı varsayılan görünüm)**'ün
-doğal kapsamı. Öneri: `dashboard.php:473` ve `mobile/index.php:118` render koşuluna
-`(is_admin()||user_can('jobs'))`/`(is_admin()||user_can('stock'))` bazlı görünürlük eklenmesi.
+sadece ham `$overdue_count > 0 || $critical_stock > 0` koşuluyla render ediliyordu — hiçbir yetki
+kontrolü yoktu.
+
+**Mobil kısmı KAPANDI (MOBILE UX BUGFIX SPRINT, 2026-07-15):** Nabız Satırı "İncele" linkini
+gerçekten çalışır hale getirme turunda, `mobile/index.php`'nin "⚠️ Dikkat" paneli de
+`$__pulseShowJobs`/`$__pulseShowStock` (`is_admin()||user_can('jobs')` / `user_can('stock')`) ile
+yetki-filtreli hale getirildi — yetkisiz kategori artık panelde hiç görünmüyor, grid tek kutu
+kalırsa otomatik tek sütuna düşüyor. Ece/Selin/Elif üçü de PASS verdi.
+
+**Web kısmı hâlâ AÇIK:** `dashboard.php`'nin `critical_alerts` bölümü (satır ~546) hâlâ hiçbir
+yetki kontrolü olmadan render ediliyor — `jobs`/`stock` yetkisi olmayan bir kullanıcı hâlâ ham
+sayıları VE en kritik 5 geciken işin iş no/başlık/termin bilgisini görebiliyor. `dashboard.php`
+zaten `page_module_map()`'te yer almadığı için (bilinçli tasarım, herkese açık ana sayfa) bu
+davranış devam ediyor. Phase B3/B4 kapsamında BİLİNÇLİ olarak dokunulmadı (kullanıcının kendi
+talimatı: "Kritik bölümün kendisi yine mevcut sıralanabilir bölüm olarak kalmalı") — düzeltme UX
+SPRINT 002 **Phase B4 (Rol bazlı varsayılan görünüm)**'ün doğal kapsamı, hâlâ AÇIK. Öneri:
+`dashboard.php`'nin critical_alerts render koşuluna `(is_admin()||user_can('jobs'))`/
+`(is_admin()||user_can('stock'))` bazlı görünürlük eklenmesi (mobildeki desenin aynısı).
 
 ## AKTİF ÖNCELİK SIRASI — TAMAMLANDI (kullanıcı kararı, 2026-07-14 — "ÇALIŞMA PLANI GÜNCELLEMESİ")
 ~~1) Finance CRUD UX Patch 001~~ **PASS, CLOSED** → ~~2) Flow Unification 001~~ **PASS, CLOSED**

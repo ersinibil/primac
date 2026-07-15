@@ -144,12 +144,14 @@ if ($with) {
 topx($thread ? 'Grup' : ($with ? 'Sohbet' : 'Mesajlar'));
 ?>
 <style>
-.chat-list{display:flex;flex-direction:column;gap:8px}
-.chat-row{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:12px;text-decoration:none;color:#fff}
+.chat-list{display:flex;flex-direction:column;gap:8px;min-width:0}
+.chat-row-wrap{display:flex;align-items:center;gap:6px;min-width:0}
+.chat-row{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:12px;text-decoration:none;color:#fff;min-width:0}
 .av{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;flex:0 0 auto;color:#fff}
 .chat-row .meta{flex:1;min-width:0}
-.chat-row .meta b{display:block}
+.chat-row .meta b{display:block;overflow-wrap:anywhere}
 .chat-row .meta small{color:#94a3b8;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chat-del-btn{flex:0 0 auto;background:rgba(248,113,113,.12);color:#f87171;border:0;border-radius:14px;width:46px;height:46px;font-size:18px}
 .unread-badge{background:#22c55e;color:#06281a;border-radius:999px;min-width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:12px;padding:0 6px}
 .thread{display:flex;flex-direction:column;gap:8px;padding-bottom:90px}
 .bubble{max-width:80%;padding:10px 13px;border-radius:18px;font-size:15px;line-height:1.35;word-wrap:break-word}
@@ -619,7 +621,7 @@ document.getElementById('msgform').addEventListener('submit',function(e){
 <?php endif; ?>
 <div class="chat-list">
 <?php foreach($rows as $r): $nm=$r['full_name'] ?: $r['username']; ?>
-    <div style="display:flex;align-items:center;gap:6px">
+    <div class="chat-row-wrap">
       <a class="chat-row" href="messages.php?with=<?=$r['id']?>" style="flex:1">
         <div class="av" style="background:<?=avatar_color((int)$r['id'])?>"><?=htmlspecialchars(mb_strtoupper(mb_substr($nm,0,1)))?></div>
         <div class="meta">
@@ -628,7 +630,7 @@ document.getElementById('msgform').addEventListener('submit',function(e){
         </div>
         <?php if($r['unread']>0): ?><span class="unread-badge"><?=$r['unread']?></span><?php endif; ?>
       </a>
-      <?php if($r['last_msg']): ?><button onclick="delConvList(<?=$r['id']?>)" style="flex:0 0 auto;background:rgba(248,113,113,.12);color:#f87171;border:0;border-radius:14px;width:46px;height:46px;font-size:18px">🗑</button><?php endif; ?>
+      <?php if($r['last_msg']): ?><button onclick="delConvList(<?=$r['id']?>)" class="chat-del-btn">🗑</button><?php endif; ?>
     </div>
 <?php endforeach; ?>
 <?php if(!$rows): ?><div style="text-align:center;color:#94a3b8;padding:30px">Mesajlaşılacak başka kullanıcı yok.</div><?php endif; ?>

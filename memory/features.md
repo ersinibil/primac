@@ -2,6 +2,48 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
+## MOBILE UX BUGFIX SPRINT — Nabız linki + Mesajlar taşma: DEV PASS — USER TEST BEKLİYOR (2026-07-15)
+Phase B4'ün mobil USER TEST'i sırasında kullanıcı 2 ayrı hata buldu, ikisi de bu turda düzeltildi.
+
+**Bug 1 — Mobil Nabız/Dikkat linki çalışmıyordu:** Kök neden iki katmanlıydı. (a) Panel bir
+`<div>` idi, içinde sadece küçük bir "İncele" pill'i `<a href="#gecikme-uyari">` vardı — panelin
+genişine dokunmak hiçbir şey yapmıyordu. (b) Hedef (`#gecikme-uyari`) `mobile/common.php`'deki
+`.top{position:sticky;top:0;z-index:50}` sticky header'ın arkasında kalıyordu (native anchor
+scroll teknik olarak çalışıyordu ama hedef görsel olarak header'ın altında/arkasında kayboluyordu).
+Düzeltme: `hasDetail===true` iken panelin TAMAMI tek bir `<a href="#gecikme-uyari" class="panel">`
+oldu (eski pill artık iç içe link olmasın diye düz `<span>`), hedefe `scroll-margin-top:130px`
+eklendi. `hasDetail===false` iken panel hâlâ düz `<div>` (yanıltıcı/işlevsiz link yok).
+
+**Yan bulgu, aynı turda kapatıldı:** "Gecikme Uyarı (Mobil)" paneli hiçbir yetki kontrolü olmadan
+render ediliyordu (Phase B3 incelemesinde Selin/Ece/Elif'in flag'lediği, Phase B4'e ertelenen
+bilinen sızıntı — bkz. [[backlog]]). "İncele" linkini çalışır hale getirmek bu paneli daha
+erişilebilir kıldığı için, `$__pulseShowJobs`/`$__pulseShowStock` (`is_admin()||user_can('jobs')`
+/ `user_can('stock')`) ile panel görünürlüğü VE her stat kutusu ayrı ayrı yetki-filtreli hale
+getirildi — yetkisiz kategori artık ne sayı ne link olarak hiç görünmüyor. **Backlog maddesinin
+mobil yarısı KAPANDI, web yarısı (`dashboard.php`'nin critical_alerts bölümü) hâlâ Phase B4'e
+açık** (bkz. [[backlog]]).
+
+**Bug 2 — mobile/messages.php mesaj listesinde silme butonu taşıyordu:** Kök neden: `.chat-row`
+(flex:1) bir dış flex `<div>` içinde silme butonuyla yan yana kullanılıyordu ama kendisinde
+`min-width:0` yoktu (sadece iç `.meta`'da vardı) — flex item'ların varsayılan `min-width:auto`'su
+içeriğin doğal genişliğinin altına küçülmeyi engelliyordu; isim (`<b>`) de hiç taşma koruması
+içermiyordu. Düzeltme: `.chat-row`'a `min-width:0`, `.chat-row .meta b`'ye `overflow-wrap:anywhere`
+(isim kesilmiyor, sarılıyor), eski inline-style dış wrapper/buton artık paylaşılan
+`.chat-row-wrap`/`.chat-del-btn` class'ları (aynı görsel sonuç, min-width:0 zinciri tam).
+Genel `overflow-x:hidden` gibi körlemesine önlemler EKLENMEDİ — sadece kök nedene özel 2 kural.
+320/375/390/430px için statik CSS analiziyle doğrulandı (matematiksel olarak taşma imkânsız hale
+geldi, her katmanda min-width:0 zinciri kuruldu).
+
+**Değiştirilen dosyalar:** `mobile/index.php`, `mobile/messages.php`.
+
+**İnceleme:** Ece PASS (1 kozmetik öneri — dış `<a>`'ya açık `color` eklenmesi, uygulandı), Selin
+PASS (yetki sızıntısı tamamen kapandı, CSRF/nested-link/sibling-element kontrolleri doğrulandı),
+Elif PASS (web ile anlamca uyumlu, 4 viewport genişliğinde taşma yok, Gruplar listesi regresyonu
+yok, backlog tutarlılığı doğrulandı — belge güncelleme notu bu turda uygulandı).
+
+**DEV PASS (2026-07-15).** USER TEST BEKLİYOR — kullanıcı fiziksel cihazda doğrulamadan CLOSED
+yazılmayacak.
+
 ## UX SPRINT 002 — Phase B4: Dashboard Hızlı İşlemler (Quick Actions): DEV PASS — USER TEST BEKLİYOR (2026-07-14)
 Amaç: Kullanıcı Nabız Satırı'ndan durumu gördükten sonra en sık yaptığı işlemleri tek tıkla
 başlatabilsin. Mevcut 2 buton (+ Yeni İş, + Talep) page-header'dan kaldırılıp, yerine kategorili

@@ -31,7 +31,12 @@ try {
     $__pulseOverdue = (int)($pdo->query("SELECT COUNT(*) c FROM jobs WHERE status NOT IN ('Tamamlandı','İptal','Teslim Edildi') AND due_date IS NOT NULL AND due_date<CURDATE()")->fetch()['c'] ?? 0);
     $__pulseCriticalStock = (int)($pdo->query("SELECT COUNT(*) c FROM stock_items WHERE quantity<=critical_level")->fetch()['c'] ?? 0);
 } catch(Throwable $e) { $__pulseOk = false; }
-$__pulse = dashboard_pulse_state($__pulseOk, $__pulseOverdue, $isAdmin||user_can('jobs'), $__pulseCriticalStock, $isAdmin||user_can('stock'));
+// MOBILE UX BUGFIX SPRINT (2026-07-15): $__pulseShowJobs/$__pulseShowStock ayrı değişkenlere
+// çıkarıldı — hem pulse hesaplamasında hem aşağıdaki "Gecikme Uyarı" panelinin kendi yetki
+// filtresinde (bkz. aşağı) tekrar kullanılıyor, aynı iki kontrol iki yerde ayrı ayrı yazılmasın.
+$__pulseShowJobs = $isAdmin||user_can('jobs');
+$__pulseShowStock = $isAdmin||user_can('stock');
+$__pulse = dashboard_pulse_state($__pulseOk, $__pulseOverdue, $__pulseShowJobs, $__pulseCriticalStock, $__pulseShowStock);
 
 // UX SPRINT 002 — PHASE B4: Hızlı İşlemler — web ile aynı, boot.php'deki paylaşılan tanım+ayrım
 // listesini kullanıyor (mobilin kendi $isAdmin değişkeniyle, dosyanın mevcut deseniyle tutarlı).
@@ -53,13 +58,21 @@ $__pulseColors=[
 $__pc=$__pulseColors[$__pulse['level']];
 ?>
 <!-- ── Nabız Satırı — UX SPRINT 002 PHASE B3 (mobil sade sürüm) ── -->
+<!-- MOBILE UX BUGFIX SPRINT (2026-07-15): hasDetail=true iken PANELİN TAMAMI <a> — önceki sürümde
+     sadece küçük "İncele" pill'i linkti, kullanıcı panelin geneline dokununca tepki yoktu. İç içe
+     link üretmemek için "İncele" artık ayrı bir <a> değil, aynı dış <a>'nın içindeki düz bir <span>. -->
+<?php if($__pulse['hasDetail']): ?>
+<a href="#gecikme-uyari" class="panel" style="background:<?=$__pc['bg']?>;border-color:<?=$__pc['fg']?>;display:flex;align-items:center;gap:8px;padding:12px 14px;text-decoration:none;color:<?=$__pc['fgtext']?>">
+  <span style="font-size:16px;line-height:1"><?=$__pulse['icon']?></span>
+  <span style="flex:1;font-size:12.5px;font-weight:700;color:<?=$__pc['fgtext']?>"><?=htmlspecialchars($__pulse['message'])?></span>
+  <span style="flex:0 0 auto;font-size:11px;font-weight:800;color:<?=$__pc['fgtext']?>;background:rgba(255,255,255,.5);padding:5px 10px;border-radius:999px">İncele</span>
+</a>
+<?php else: ?>
 <div class="panel" style="background:<?=$__pc['bg']?>;border-color:<?=$__pc['fg']?>;display:flex;align-items:center;gap:8px;padding:12px 14px">
   <span style="font-size:16px;line-height:1"><?=$__pulse['icon']?></span>
   <span style="flex:1;font-size:12.5px;font-weight:700;color:<?=$__pc['fgtext']?>"><?=htmlspecialchars($__pulse['message'])?></span>
-  <?php if($__pulse['hasDetail']): ?>
-  <a href="#gecikme-uyari" style="flex:0 0 auto;font-size:11px;font-weight:800;text-decoration:none;color:<?=$__pc['fgtext']?>;background:rgba(255,255,255,.5);padding:5px 10px;border-radius:999px">İncele</a>
-  <?php endif; ?>
 </div>
+<?php endif; ?>
 
 <!-- ── Hızlı İşlemler — UX SPRINT 002 PHASE B4 (mobil sade sürüm) ── -->
 <?php
@@ -149,19 +162,34 @@ foreach($__qaSplit['primary'] as $__qa){ $__qaByCat[$__qa['category']][]=$__qa; 
 </div>
 
 <!-- ── Gecikme Uyarı (Mobil) ── -->
-<?php if($overdue_count > 0 || $crit > 0): ?>
-<div class="panel" id="gecikme-uyari" style="border-left:4px solid var(--c-danger)"><b style="color:var(--c-danger)">⚠️ Dikkat</b>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;font-size:12px">
+<!-- MOBILE UX BUGFIX SPRINT (2026-07-15): panel artık $__pulseShowJobs/$__pulseShowStock ile
+     yetki filtreli render ediyor — Phase B3 incelemesinde Selin/Ece/Elif'in bağımsız flag'lediği
+     "Nabız yetkisiz veriyi gizliyor ama altındaki bu panel gizlemiyor" sızıntısı, "İncele" linki
+     gerçekten çalışır hale getirilince aktif olarak erişilebilir olduğu için burada kapatıldı
+     (web tarafındaki eşdeğer critical_alerts bölümü hâlâ backlog'da, bu turun kapsamı dışı).
+     scroll-margin-top: mobile/common.php'deki sticky .top header'ın (~130px) hedefi
+     kapatmasını önlüyor — "İncele" linkinin native anchor scroll'u artık header'ın ALTINA iniyor. -->
+<?php
+$__gecikmeShowOverdue = $__pulseShowJobs && $overdue_count > 0;
+$__gecikmeShowCritical = $__pulseShowStock && $crit > 0;
+?>
+<?php if($__gecikmeShowOverdue || $__gecikmeShowCritical): ?>
+<div class="panel" id="gecikme-uyari" style="border-left:4px solid var(--c-danger);scroll-margin-top:130px"><b style="color:var(--c-danger)">⚠️ Dikkat</b>
+  <div style="display:grid;grid-template-columns:<?=($__gecikmeShowOverdue && $__gecikmeShowCritical)?'1fr 1fr':'1fr'?>;gap:8px;margin-top:8px;font-size:12px">
+    <?php if($__gecikmeShowOverdue): ?>
     <div style="background:var(--c-danger-bg);border-radius:var(--radius-sm);padding:10px;text-align:center">
       <span style="color:var(--c-danger);font-weight:700;font-size:16px;display:block"><?=$overdue_count?></span>
       <span style="color:#667085;font-size:11px">Geciken İş</span>
     </div>
+    <?php endif; ?>
+    <?php if($__gecikmeShowCritical): ?>
     <div style="background:#fed7aa;border-radius:var(--radius-sm);padding:10px;text-align:center">
       <span style="color:#d97706;font-weight:700;font-size:16px;display:block"><?=$crit?></span>
       <span style="color:#667085;font-size:11px">Kritik Stok</span>
     </div>
+    <?php endif; ?>
   </div>
-  <?php if($overdue_count > 0): ?>
+  <?php if($__gecikmeShowOverdue): ?>
   <a href="jobs.php?s=gec" style="display:block;margin-top:8px;padding:8px;background:#f3f4f6;border-radius:var(--radius-sm);text-align:center;text-decoration:none;color:var(--c-accent);font-weight:700;font-size:12px">Geciken İşleri Gör →</a>
   <?php endif; ?>
 </div>
