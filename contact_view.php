@@ -141,6 +141,14 @@ if(($c['representative_mode'] ?? '')!=='anonim'){
 // (ters işaretle sayılır), aksi halde "satış + kendi tahsilatı" çift sayılırdı.
 require_once __DIR__.'/contacts_lib.php';
 $balance=contact_balance($pdo, $id);
+
+// PDP-001 (2026-07-15): "Tahsilat" kartı $in değişkeni hiç tanımlanmadan kullanılıyordu (her
+// zaman boş/₺0 basıyordu). Bu cariden yapılan gerçek tahsilat toplamı bağlandı.
+try{
+    $inSt=$pdo->prepare("SELECT COALESCE(SUM(amount),0) s FROM finance_movements WHERE contact_id=? AND direction='in'");
+    $inSt->execute([$id]);
+    $in=(float)$inSt->fetchColumn();
+}catch(Throwable $e){ $in=0; }
 ?>
 
 <style>
