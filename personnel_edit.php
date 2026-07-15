@@ -2,12 +2,19 @@
 require_once __DIR__.'/boot.php';
 require_login();
 require_once __DIR__.'/personnel_lib.php';
+require_once __DIR__.'/share_lib.php';
 
 $pdo=db();
 $id=(int)($_GET['id'] ?? 0);
 $error='';
 $ok='';
+$waCred='';
 $hasCvCol = personnel_has_cv_column($pdo);
+// PDP-001 (2026-07-15): mobile/personnel_view.php ile aynı yetki mantığı — şifre/hesap işlemleri
+// admin'e VEYA admin'in ayrıca 'personnel_accounts' yetkisi verdiği bir "alt yönetici"ye açık.
+// Web'de bu yetkinin daha önce hiç karşılığı yoktu (users.php page_module_map'te tam 'users'
+// istiyor, alt-yönetici oraya hiç giremiyordu) — bu personnel_accounts izni web'de işlevsizdi.
+$canManageAccounts = is_admin() || user_can('personnel_accounts');
 
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['regen_telegram_code'])){
     try{
@@ -52,7 +59,28 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['clear_cv'])){
     }catch(Throwable $e){ $error=$e->getMessage(); }
 }
 
-if($_SERVER['REQUEST_METHOD']==='POST' && !isset($_POST['regen_telegram_code']) && !isset($_POST['clear_telegram_binding']) && !isset($_POST['save_perms']) && !isset($_POST['clear_cv'])){
+if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['make_login']) && trim($_POST['username']??'')!=='' && trim($_POST['password']??'')!==''){
+    // PDP-001: paylaşılan işlem personnel_lib.php::personnel_create_login() — yetki kontrolü burada.
+    try{
+        if(!$canManageAccounts) throw new Exception('Bu işlem için yönetici yetkisi gerekir.');
+        $res=personnel_create_login($pdo, $id, $_POST['username'], $_POST['password']);
+        $ok='Giriş hesabı oluşturuldu.';
+        $waCred=cred_wa($res['phone'], trim($_POST['username']), $_POST['password']);
+    }catch(Throwable $e){ $error=$e->getMessage(); }
+}
+
+if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['reset_pw']) && trim($_POST['newpw']??'')!==''){
+    // PDP-001: paylaşılan işlem personnel_lib.php::personnel_reset_password() — yetki kontrolü burada,
+    // hedef hesap fonksiyon içinde her zaman $id üzerinden DB'den çözülür (IDOR'a kapalı).
+    try{
+        if(!$canManageAccounts) throw new Exception('Bu işlem için yönetici yetkisi gerekir.');
+        $res=personnel_reset_password($pdo, $id, $_POST['newpw']);
+        $ok='Şifre güncellendi.';
+        $waCred=cred_wa($res['phone'], $res['username'], $_POST['newpw']);
+    }catch(Throwable $e){ $error=$e->getMessage(); }
+}
+
+if($_SERVER['REQUEST_METHOD']==='POST' && !isset($_POST['regen_telegram_code']) && !isset($_POST['clear_telegram_binding']) && !isset($_POST['save_perms']) && !isset($_POST['clear_cv']) && !isset($_POST['make_login']) && !isset($_POST['reset_pw'])){
     try{
         $cvPath = $hasCvCol ? personnel_handle_cv_upload() : null;
 
@@ -203,7 +231,7 @@ if($hasCvCol) $tabLabels['dosyalar']='📎 Dosyalar';
 $tabLabels['performans']='📈 Performans';
 $tabLabels['maas']='💰 Maaş/Avans/Prim';
 $tabLabels['hareket']='🧾 Hareket Geçmişi';
-if(user_can('users')) $tabLabels['giris']='🔑 Giriş Hesabı';
+if(user_can('users') || $canManageAccounts) $tabLabels['giris']='🔑 Giriş Hesabı';
 
 $tab = isset($_GET['tab']) ? (string)$_GET['tab'] : 'genel';
 if(!array_key_exists($tab,$tabLabels)) $tab='genel';
@@ -219,6 +247,7 @@ if(!array_key_exists($tab,$tabLabels)) $tab='genel';
 
 <?php if($error): ?><div class="alert"><?=h($error)?></div><?php endif; ?>
 <?php if($ok): ?><div class="ok"><?=h($ok)?></div><?php endif; ?>
+<?php if($waCred): ?><a href="<?=h($waCred)?>" target="_blank" rel="noopener" class="btn" style="background:#16a34a;color:#fff;margin-bottom:12px">📲 Giriş bilgisini WhatsApp ile gönder</a><?php endif; ?>
 
 <div class="cards">
 <div class="card"><small>Rol</small><strong><?=h($p['role'] ?: '-')?></strong></div>
@@ -426,9 +455,42 @@ if(!array_key_exists($tab,$tabLabels)) $tab='genel';
 </section>
 <?php endif; ?>
 
-<?php if(user_can('users') && $tab==='giris'): ?>
+<?php
+// PDP-001: 'users' yetkisi tam olmayan ama 'personnel_accounts' yetkisi verilmiş bir alt-yönetici
+// users.php'ye hiç giremediği için (page_module_map tam 'users' istiyor) o ekrandaki hesap
+// oluşturma/şifre sıfırlama işini hiç yapamıyordu. Bu blok SADECE o boşluğu kapatır — zaten
+// user_can('users') olan (dolayısıyla users.php'yi kullanabilen) admin/yetkili için hiçbir şey
+// değişmez, mevcut akış (aşağıdaki "Yetkiler" bölümü) birebir korunuyor.
+$showInlineAccountMgmt = $canManageAccounts && !user_can('users');
+?>
+<?php if((user_can('users') || $canManageAccounts) && $tab==='giris'): ?>
 <section class="panel">
-<h2>🔑 Giriş Hesabı — 🔐 Yetkiler (Modül Erişimi)</h2>
+<h2>🔑 Giriş Hesabı<?=user_can('users')?' — 🔐 Yetkiler (Modül Erişimi)':''?></h2>
+
+<?php if($showInlineAccountMgmt): ?>
+  <?php if($staffUserId): ?>
+  <h3 style="font-size:15px;margin:0 0 8px">🔒 Şifre Sıfırla</h3>
+  <form method="post" style="max-width:360px;margin-bottom:18px">
+    <input type="hidden" name="reset_pw" value="1">
+    <label>Yeni Şifre</label>
+    <input type="password" name="newpw" required minlength="4" style="width:100%">
+    <button class="btn" style="margin-top:8px">Şifreyi Güncelle</button>
+  </form>
+  <?php else: ?>
+  <h3 style="font-size:15px;margin:0 0 8px">➕ Giriş Hesabı Oluştur</h3>
+  <p class="muted" style="margin:0 0 10px">Bu personelin henüz giriş hesabı yok.</p>
+  <form method="post" style="max-width:360px;margin-bottom:18px">
+    <input type="hidden" name="make_login" value="1">
+    <label>Kullanıcı Adı</label>
+    <input name="username" required style="width:100%">
+    <label>Şifre</label>
+    <input type="password" name="password" required minlength="4" style="width:100%">
+    <button class="btn" style="margin-top:8px">Hesap Oluştur</button>
+  </form>
+  <?php endif; ?>
+<?php endif; ?>
+
+<?php if(user_can('users')): ?>
 <?php if($staffRole==='admin' || $staffRole==='yonetici'): ?>
   <p class="muted" style="margin:0">Bu personelin giriş rolü <b><?=h($staffRole)?></b> — tüm modüllere yetkili. Kısıtlamak için <a href="users.php">Kullanıcılar</a> ekranından rolünü "Personel" yapın.</p>
 <?php elseif($staffUserId): ?>
@@ -448,6 +510,8 @@ if(!array_key_exists($tab,$tabLabels)) $tab='genel';
 <?php else: ?>
   <p class="muted" style="margin:0">Bu personelin giriş hesabı yok. Yetki vermek için önce <a href="users.php?personnel_id=<?=$id?>&full_name=<?=urlencode($p['name'])?>&phone=<?=urlencode($p['phone']??'')?>">Kullanıcı &amp; Yetki</a> ekranından hesap oluşturup bu personele bağlayın (ad/telefon otomatik dolacak).</p>
 <?php endif; ?>
+<?php endif; ?>
+
 </section>
 <?php endif; ?>
 
