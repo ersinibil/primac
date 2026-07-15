@@ -183,7 +183,7 @@ function page_module_map(){
         // NOT: job_view.php / task detayları KORUMASIZ — personel kendine atanan işi/görevi
         // bildirimden açabilsin diye. Liste/oluşturma sayfaları yetkiye bağlı.
         'jobs.php'=>'jobs','job_new.php'=>'jobs','job_edit.php'=>'jobs',
-        'takvim.php'=>'jobs','production.php'=>'jobs','assembly.php'=>'jobs','external.php'=>'jobs',
+        'takvim.php'=>'jobs','calendar.php'=>'jobs','production.php'=>'jobs','assembly.php'=>'jobs','external.php'=>'jobs',
         'approval_waiting.php'=>'jobs','work_center.php'=>'jobs','design.php'=>'jobs',
         'tasks.php'=>'tasks',
         'contacts.php'=>'contacts','contact_new.php'=>'contacts','contact_view.php'=>'contacts','contacts_report.php'=>'contacts',
