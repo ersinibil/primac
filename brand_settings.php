@@ -2,7 +2,10 @@
 require_once __DIR__.'/boot.php';
 require_once __DIR__.'/share_lib.php';
 require_login();
-if(!is_admin()){ http_response_code(403); echo '<h2>Bu sayfa yalnızca yöneticilere açıktır.</h2>'; exit; }
+// PDP-001 (2026-07-15): sol menüdeki "Logo / Marka" linki zaten user_can('users') şartıyla
+// gösteriliyor (layout_top.php) — buradaki gate sadece is_admin() olunca 'users' yetkili
+// admin-olmayanlar linki görüp tıklayınca 403 alıyordu. Gate menüyle birebir hizalandı.
+if(!is_admin() && !user_can('users')){ http_response_code(403); echo '<h2>Bu sayfa yalnızca yöneticilere açıktır.</h2>'; exit; }
 
 // uploads/ yazılabilir güvencesi
 $uploads = __DIR__.'/uploads';

@@ -1,6 +1,10 @@
 <?php
 require_once 'common.php';
-if(!$isAdmin){ header('Location: index.php'); exit; }
+// PDP-001 (2026-07-15): web tarafındaki brand_settings.php ile aynı düzeltme — mobil menüde
+// (more.php) bu kart zaten user_can('users') şartıyla gösteriliyordu, ama sayfanın kendisi
+// sadece $isAdmin ile kilitliydi. 'users' yetkili-ama-admin-olmayan biri kartı görüp tıklayınca
+// sessizce index.php'ye atılıyordu. Gate menüyle hizalandı.
+if(!$isAdmin && !user_can('users')){ header('Location: index.php'); exit; }
 require_once __DIR__.'/../share_lib.php';
 
 $uploads = __DIR__.'/../uploads';
