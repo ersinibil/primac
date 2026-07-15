@@ -20,7 +20,7 @@ try {
         echo '<div class="panel muted" style="text-align:center;padding:24px">Onay bekleyen dosya yok.</div>';
     }
     foreach ($rows as $r) {
-        $share = 'http://acanstr.com/erp/public_file.php?token=' . htmlspecialchars($r['share_token'] ?? '', ENT_QUOTES);
+        $share = base_url().'public_file.php?token=' . htmlspecialchars($r['share_token'] ?? '', ENT_QUOTES);
         $tarih = htmlspecialchars(substr($r['created_at'] ?? '', 0, 10));
         echo '<div class="panel" style="padding:13px">';
         // Başlık satırı: iş no + başlık
@@ -41,7 +41,7 @@ try {
         // Durum rozeti + müşteri linki
         echo '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">';
         echo '<span style="background:#fef3c7;color:#92400e;border-radius:10px;padding:4px 10px;font-size:12px;font-weight:900">⏳ Onay Bekliyor</span>';
-        echo '<a class="btn" href="' . $share . '" target="_blank" style="padding:9px 14px;font-size:13px;flex:0 0 auto;background:#2563eb;color:#fff">🔗 Müşteri Linki</a>';
+        echo '<a class="btn" href="' . htmlspecialchars($share, ENT_QUOTES) . '" target="_blank" style="padding:9px 14px;font-size:13px;flex:0 0 auto;background:#2563eb;color:#fff">🔗 Müşteri Linki</a>';
         echo '</div>';
         echo '</div>';
     }

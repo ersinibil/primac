@@ -294,8 +294,8 @@ $fs=$pdo->prepare("SELECT * FROM job_files WHERE job_id=? ORDER BY id DESC");
 $fs->execute([$id]);
 $files=$fs->fetchAll();
 foreach($files as $f):
-$share='http://acanstr.com/erp/public_file.php?token='.$f['share_token'];
-$download='http://acanstr.com/erp/'.$f['file_path'];
+$share=base_url().'public_file.php?token='.$f['share_token'];
+$download=base_url().$f['file_path'];
 ?>
 <tr>
 <td><a href="<?=h($download)?>" target="_blank"><?=h($f['original_name'])?></a></td>
@@ -325,6 +325,8 @@ $download='http://acanstr.com/erp/'.$f['file_path'];
   <div style="display:flex;gap:10px"><div style="flex:1"><label>İş Tipi</label>
     <select name="job_type" style="width:100%"><?php foreach(['karma'=>'Karma','3d_imalat'=>'3D İmalat','uv_baski'=>'UV Baskı','lazer'=>'Lazer','grafik_tasarim'=>'Grafik','montaj'=>'Montaj','dis_atolye'=>'Dış Atölye'] as $k=>$v): ?><option value="<?=$k?>" <?=($j['job_type']??'')===$k?'selected':''?>><?=$v?></option><?php endforeach; ?></select></div>
     <div style="flex:1"><label>Termin</label><input type="date" name="due_date" value="<?=h($j['due_date']??'')?>" style="width:100%"></div></div>
+  <label>Öncelik</label>
+  <select name="priority" style="width:100%"><?php foreach(['Normal','Acil','Çok Acil','Düşük'] as $pr): ?><option <?=($j['priority']??'Normal')===$pr?'selected':''?>><?=$pr?></option><?php endforeach; ?></select>
   <label>Açıklama</label><textarea name="description" rows="3" style="width:100%"><?=h($j['description']??'')?></textarea>
   <button class="btn" name="save_job" value="1" style="margin-top:8px">💾 Kaydet</button>
 </form>

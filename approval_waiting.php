@@ -12,7 +12,7 @@
 try{
 $rows=db()->query("SELECT f.*, j.job_no, j.title job_title FROM job_files f LEFT JOIN jobs j ON j.id=f.job_id WHERE f.approval_status='Müşteri Onayı Bekliyor' ORDER BY f.id DESC")->fetchAll();
 foreach($rows as $r){
-$share='http://acanstr.com/erp/public_file.php?token='.$r['share_token'];
+$share=base_url().'public_file.php?token='.$r['share_token'];
 echo "<tr>
 <td><a href='job_view.php?id=".h($r['job_id'])."'>".h($r['job_no'])."<br>".h($r['job_title'])."</a></td>
 <td>".h($r['original_name'])."</td>
