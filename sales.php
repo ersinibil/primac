@@ -142,13 +142,10 @@ $products  = $pdo->query(
 require_once __DIR__.'/layout_top.php';
 ?>
 
-<div class="panel-head page-header">
-<h1>Hızlı Satış</h1>
-<div class="actions">
+<?php ds_page_header('Hızlı Satış', '', '', '
 <a class="btn secondary quick-action" href="purchase.php">🛒 Satın Alma</a>
 <a class="btn secondary quick-action" href="trade_document_new.php?type=sale">🧾 Satış Belgesi</a>
-</div>
-</div>
+', true); ?>
 
 <?php if ($ok): ?>
 <div class="ok"><?= $ok ?></div>

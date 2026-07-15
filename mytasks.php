@@ -45,7 +45,7 @@ if($_SERVER['REQUEST_METHOD']==='POST' && (int)($_POST['tid']??0)){
 $f=$_GET['f']??'open';
 require_once __DIR__.'/layout_top.php';
 ?>
-<div class="panel-head"><h1>✅ Görevlerim</h1></div>
+<?php ds_page_header('✅ Görevlerim'); ?>
 <p class="muted">Bana atanan görevler ve hatırlatmalar — tüm görevler için (yetkiniz varsa) <a href="tasks.php">Görevler</a> sayfasına bakın.</p>
 <?php if(!empty($_GET['ok'])): ?><div class="ok">İş eklendi.</div><?php endif; ?>
 

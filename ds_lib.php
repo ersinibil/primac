@@ -13,8 +13,13 @@ function ds_styles(){
 // $icon ve $actionsHtml BİLEREK escape edilmiyor (ikon/aksiyon HTML'i taşımak için) — bu
 // parametrelere yalnızca geliştirici-kontrollü sabit string/HTML geçilmeli, ASLA $_GET/$_POST/DB
 // verisi. Kullanıcı/veri kaynaklı her şey (title, subtitle) zaten h() ile escape ediliyor.
-function ds_page_header($title, $icon='', $subtitle='', $actionsHtml=''){
-    echo '<div class="ds-page-header">';
+// $bordered: orijinal projede iki panel-head varyantı var — düz (border yok, çoğunluk, ~47
+// dosya) ve `.page-header` eklentili (border-bottom'lu, azınlık, ~5 dosya). Varsayılan false
+// (düz) daha yaygın deseni yansıtır; border'lı ekranlar (dashboard/sales/purchase/finance/
+// contact_view tarzı) $bordered=true geçmeli. DS-002A code-review'da (Ece) bu ayrımın
+// gözetilmediği, tüm ekranlara koşulsuz border uygulandığı tespit edilip düzeltildi.
+function ds_page_header($title, $icon='', $subtitle='', $actionsHtml='', $bordered=false){
+    echo '<div class="ds-page-header'.($bordered?' ds-page-header--bordered':'').'">';
     echo '<div class="ds-page-header-id">';
     if($icon!=='') echo '<span class="ds-page-header-icon">'.$icon.'</span>';
     echo '<div class="ds-page-header-text"><h1>'.h($title).'</h1>';

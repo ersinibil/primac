@@ -21,15 +21,26 @@
       kullanılmadığı için override bloğu da inert). */
 
 /* ── 1. Header (Page Header) ────────────────────────────────────────────── */
-.ds-page-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;border-bottom:1px solid #eef2f6;padding-bottom:14px;margin-bottom:18px}
-.ds-page-header-id{display:flex;align-items:center;gap:10px;min-width:0}
-.ds-page-header-icon{font-size:26px;line-height:1;flex:0 0 auto}
-.ds-page-header-text{min-width:0}
-.ds-page-header-text h1,.ds-page-header-text h2{margin:0;font-size:20px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ds-page-header-sub{color:var(--c-muted,#667085);font-size:13px;margin-top:2px}
+/* DS-002A (2026-07-15) düzeltmesi: orijinal kodda İKİ farklı panel-head varyantı var —
+   (1) düz `.panel-head` (layout_top.php:113: flex+gap:12px+margin-bottom:12px, border YOK)
+   (2) `.panel-head.page-header` (yukarıya ek olarak layout_top.php:185: border-bottom+
+   padding-bottom:14px+margin-bottom:18px override). Ece code-review'da (DS-002A) bu ayrımın
+   gözden kaçtığı, `.ds-page-header`'ın koşulsuz "bordered" versiyonu uyguladığı tespit edildi —
+   4/8 pilot ekranı (mytasks/mytask_new/task_view/external, hepsi orijinalde düz panel-head)
+   gereksiz bir ayraç çizgisi kazanacaktı. Düzeltme: taban kural artık düz varyant, bordered
+   hâli `--bordered` modifier'ına taşındı — `ds_page_header()`'ın 5. parametresi ($bordered)
+   hangisinin uygulanacağını seçiyor (bkz. ds_lib.php). h1 font-size/margin (layout_top.php:109)
+   ve `.actions{display:flex;gap:8px;flex-wrap:wrap}` (layout_top.php:133) kalibrasyonu
+   değişmedi. */
+.ds-page-header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.ds-page-header--bordered{border-bottom:1px solid #eef2f6;padding-bottom:14px;margin-bottom:18px}
+.ds-page-header-id{display:flex;align-items:center;gap:10px}
+.ds-page-header-icon{font-size:26px;margin-right:8px}
+.ds-page-header-text h1{margin:10px 0 18px;font-size:30px}
+.ds-page-header-sub{color:var(--c-muted,#667085);font-size:13px;margin-top:-10px}
 
 /* ── 2. Action Bar ───────────────────────────────────────────────────────── */
-.ds-action-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.ds-action-bar{display:flex;gap:8px;flex-wrap:wrap}
 
 /* ── 3. Card (genel içerik kartı) ────────────────────────────────────────── */
 .ds-card{background:#fff;border-radius:20px;box-shadow:0 8px 28px rgba(16,24,40,.06);border:1px solid #eef2f6;padding:18px;color:#101828}

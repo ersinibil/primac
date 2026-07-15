@@ -154,9 +154,11 @@ $balance=contact_balance($pdo, $id);
 @media(max-width:960px){.rep-mode,.rep-list{grid-template-columns:1fr}}
 </style>
 
-<div class="panel-head page-header">
-<h1><?=h($c['name'])?></h1>
-<div class="actions">
+<?php
+// DS-002A: koşullu aksiyon bloğu 100% aynı kod, sadece ob_start()/ob_get_clean() ile
+// yakalanıp ds_page_header()'a veriliyor — mantık/koşullar hiç değişmedi.
+ob_start();
+?>
 <a class="btn quick-action" href="finance_new.php?direction=in&contact_id=<?=$id?>">+ Tahsilat</a>
 <a class="btn secondary quick-action" href="finance_new.php?direction=out&contact_id=<?=$id?>">+ Ödeme</a>
 <a class="btn quick-action" href="report.php?modul=cari_detay&ref=<?=$id?>">📊 Cari Raporu</a>
@@ -174,8 +176,10 @@ $balance=contact_balance($pdo, $id);
 </form>
 <?php endif; ?>
 <?=delete_button('contact',$id)?>
-</div>
-</div>
+<?php
+$__actions = ob_get_clean();
+ds_page_header($c['name'], '', '', $__actions, true);
+?>
 
 <?php if($error): ?><div class="alert"><?=h($error)?></div><?php endif; ?>
 <?php if($ok): ?><div class="ok"><?=h($ok)?></div><?php endif; ?>

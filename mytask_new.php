@@ -25,7 +25,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 
 require_once __DIR__.'/layout_top.php';
 ?>
-<div class="panel-head"><h1>➕ Kendime İş Ekle</h1></div>
+<?php ds_page_header('➕ Kendime İş Ekle'); ?>
 <p class="muted">Bu iş sadece sana atanır, <a href="mytasks.php">Görevlerim</a> listende görünür.</p>
 
 <?php if($error): ?><div class="alert"><?=h($error)?></div><?php endif; ?>

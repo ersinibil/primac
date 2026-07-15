@@ -2,6 +2,53 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
+## DS-002A — HEADER MIGRATION PILOT: KOD İNCELEME PASS — USER TEST BEKLİYOR (2026-07-15)
+Design System Sprint 001'in ilk gerçek "eski ekranı migrate et" adımı. Kapsam bilinçli olarak
+küçük tutuldu: tüm proje değil, 8 pilot ekran.
+
+**Envanter (arka plan ajanı, dosya:satır kanıtlı):** 64 web-root sayfası + 62 mobil ekran tarandı.
+Web'de 3 gerçek varyant: Grup A `.page-header` (5 dosya, border'lı), Grup B `.panel-head`+bare h1
+(47 dosya, 45'i border'sız), Grup C tamamen wrapper'sız h1 (10 dosya). Kritik bulgu: **gerçek
+ikon-slot'u (`.page-header-icon`) veya ayrı subtitle alanını kullanan SIFIR dosya var** — tüm
+"ikon"lar h1 metni içine gömülü emoji, "subtitle" gibi görünen şeyler ya header'ın dışında (link
+içeren `<p class="muted">`) ya da hiç yok. Mobilde fragmantasyon YOK — 62 ekranın tamamı tek
+`topx()` fonksiyonundan geçiyor; bu yüzden mobil migration bu pilotun kapsamı dışında bırakıldı
+(topx()'e dokunmak 62 ekranı aynı anda etkiler, ayrı "DS-002B Mobile Header" sprinti önerildi).
+
+**Pilot seçimi (8 ekran, bilinçli çeşitlilik):** sales.php/finance.php (Grup A, çoklu statik
+aksiyon), purchase.php (Grup A, koşullu title+aksiyon), contact_view.php (Grup A, en karmaşık —
+6 koşullu aksiyon + admin-only inline form, `ob_start()/ob_get_clean()` ile byte-birebir
+yakalandı), mytasks.php/mytask_new.php (Grup B, emoji+0 aksiyon, en düşük risk), task_view.php
+(Grup B, dinamik DB başlığı, 0 aksiyon), external.php (Grup B, tek statik aksiyon).
+**dashboard.php bilinçli olarak dışarıda bırakıldı** — yapısal olarak en basit örnek olsa da en
+yüksek trafikli sayfa; ds_page_header() önce düşük-riskli ekranlarda kanıtlanmalı.
+
+**Kök neden bulgusu + düzeltme (Ece code-review, HIGH → düzeltildi):** İlk uygulamada
+`.ds-page-header` koşulsuz "bordered" (`.panel-head.page-header` — border-bottom+18px margin)
+stilini uyguluyordu. Gerçekte iki ayrı orijinal varyant var: düz `.panel-head` (border yok,
+47 dosyanın çoğu) ve `.page-header` eklentili (border'lı, 5 dosya). 4 pilot ekranı (mytasks/
+mytask_new/task_view/external, hepsi orijinalde düz) gereksiz bir ayraç çizgisi kazanacaktı.
+Düzeltme: `ds_page_header()`'a `$bordered=false` (5. parametre, varsayılan false = yaygın düz
+desen) eklendi, `.ds-page-header--bordered` modifier class'ı ayrıştırıldı, sadece 4 gerçekten
+border'lı ekran (sales/finance/purchase/contact_view) `true` geçiyor. Ece re-review'da PASS.
+
+**Doğrulama:** İzole test scripti (boot.php'siz, DB'siz) ile 8 senaryonun `ds_page_header()`
+çıktısı üretildi — koşullu bloklar (purchase.php edit modu, contact_view.php WhatsApp if/elseif +
+admin toggle formu + delete_button()) birebir doğru dallandı, XSS testi (`task_view.php`'ye
+deneme `<script>` geçildi) doğru escape edildi, double-escape riski yok. CSS `.ds-page-header`/
+`.ds-action-bar`/h1 font-size-margin gerçek `layout_top.php` değerleriyle (109/113/133/185.
+satırlar) birebir kalibre edildi.
+
+**Review: Ece/Selin/Elif → üçü de PASS** (Ece'nin HIGH bulgusu düzeltilip re-review'da kapandı).
+Selin: proje genelinde zaten var olan CSRF-yokluğu durumu bu sprintle ilgisiz, migration ne
+ekledi ne kaldırdı. Elif: mobil taraf `git diff` ile sıfır etkilendi doğrulandı, `finance.php`'nin
+zaten önceden var olan bir mobil karşılığı olmadığı (bu sprintle ilgisiz) not edildi.
+
+**Kapsam dışı bırakılanlar (bilinçli):** Mobil (62 ekran, ayrı sprint), dashboard.php (trafik),
+report.php + login-tipi 5 özel sayfa (page-header paradigmasına hiç uymuyor), contacts.php'nin
+kendine özgü `.crm-hero` deseni (4. bir varyant, ayrı ele alınmalı), sub-section `<h2>` başlıkları
+(panel-head kullanan ama sayfa-seviyesi olmayan ~50+ iç bölüm başlığı — kapsam dışı).
+
 ## DESIGN SYSTEM SPRINT 001 / PHASE A — FOUNDATION COMPONENTS: CLOSED — USER TEST PASS / DEV PASS (2026-07-15)
 USER TEST: primac.tr'ye guncelleme.zip yüklendi, guncelle.php çalıştırıldı, kullanıcı tüm siteyi
 kontrol edip hiçbir ekranın görünümünün değişmediğini onayladı (bu sprintin tam da hedefiydi).

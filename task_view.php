@@ -58,7 +58,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 require_once __DIR__.'/layout_top.php';
 $gec = !empty($task['due_date']) && $task['due_date']<date('Y-m-d') && !in_array($task['status'],['Tamamlandı','İptal']);
 ?>
-<div class="panel-head"><h1><?=h($task['title'])?></h1></div>
+<?php ds_page_header($task['title']); ?>
 <?php if(!empty($_SESSION['task_err'])): ?><div class="alert"><?=h($_SESSION['task_err'])?></div><?php unset($_SESSION['task_err']); endif; ?>
 
 <section class="panel">

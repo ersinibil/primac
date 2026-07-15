@@ -92,15 +92,17 @@ require_once __DIR__.'/layout_top.php';
 <style>
 .notice{background:#dcfce7;color:#14532d;padding:12px 16px;border-radius:10px;margin:14px 0;font-size:14px}
 </style>
-<div class="panel-head page-header">
-<h1><?=$editMode?'✏️ Alışı Düzenle':'Satın Alma'?></h1>
-<?php if(!$editMode): ?>
-<div class="actions">
+<?php
+$__title = $editMode ? '✏️ Alışı Düzenle' : 'Satın Alma';
+$__actions = '';
+if(!$editMode){
+    $__actions = '
 <a class="btn secondary quick-action" href="sales.php">🧾 Satış</a>
 <a class="btn secondary quick-action" href="trade_document_new.php?type=purchase">🛒 Alış Belgesi</a>
-</div>
-<?php endif; ?>
-</div>
+';
+}
+ds_page_header($__title, '', '', $__actions, true);
+?>
 
 <?php if($ok): ?>
 <div class="notice"><?=htmlspecialchars($ok)?></div>

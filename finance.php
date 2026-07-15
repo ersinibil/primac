@@ -39,15 +39,12 @@ $pos=safe_sum("SELECT COALESCE(SUM(current_balance),0) s FROM finance_accounts W
 @media(max-width:960px){.command-grid{grid-template-columns:1fr}}
 </style>
 
-<div class="panel-head page-header">
-<h1>Finans Paneli</h1>
-<div class="actions">
+<?php ds_page_header('Finans Paneli', '', '', '
 <a class="btn quick-action" href="finance_new.php?direction=in">+ Tahsilat</a>
 <a class="btn secondary quick-action" href="finance_new.php?direction=out">+ Ödeme</a>
 <a class="btn secondary quick-action" href="finance_transfer.php">+ Transfer</a>
 <a class="btn secondary quick-action" href="finance_accounts.php">Hesaplar</a>
-</div>
-</div>
+', true); ?>
 
 <?php if(isset($_GET['deleted'])): ?><div class="ok">Finans hareketi silindi, hesap bakiyesi güncellendi.</div><?php endif; ?>
 
