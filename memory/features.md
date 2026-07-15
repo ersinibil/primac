@@ -2,6 +2,71 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
+## PDP-001 — VERİ BÜTÜNLÜĞÜ & GÜVEN: KOD İNCELEME PASS — USER TEST BEKLİYOR (2026-07-15)
+PRIMAC OTS PRODUCT AUDIT v1.0 raporunun (genel skor 4.6/10) 9 programlı yol haritasındaki
+PDP-001'in (rapora göre "en başa alınan" program — sessiz veri hataları her programdan önce
+giderilmeli) uygulanması. Kullanıcının "raporu tamamlayarak mı ilerlemeliyiz" sorusuna verilen
+öneri üzerine başlatıldı: DS-001/DS-002A (Component Library/Header) zaten devam ederken, raporun
+kendi önerdiği PDP-001 (Data Integrity) sırasının atlanmış olması fark edildi, bu mini-sprintle
+telafi edildi. 9 madde, hepsi kod üzerinde doğrulanarak (rapordaki 3-kelimelik ipuçlarından kök
+neden analiziyle) tam olarak nerede/neden bozuk olduğu tespit edildi:
+
+1. **job_view.php — İş önceliği sessizce sıfırlanıyordu.** "İşi Düzenle" formunda `priority` alanı
+   hiç yoktu → her kayıtta `$_POST['priority']??'Normal'` ile mevcut değer (Acil/Çok Acil/Düşük)
+   fark ettirmeden 'Normal'e dönüyordu. Mobil (`mobile/job_view.php`) zaten doğruydu — form alanı
+   web'de eksikti. job_new.php'nin 4 seçenekli seti (`Normal/Acil/Çok Acil/Düşük`) ile forma eklendi.
+2. **3 dosyada ölü `acanstr.com/erp` linki.** job_view.php (müşteri dosya paylaşım/indirme linki),
+   approval_waiting.php, mobile/approval_waiting.php — kaldırılan eski domain'e sabit yazılmış
+   linkler `base_url()` ile dinamik hale getirildi (DEV/PROD otomatik doğru çalışır).
+3. **Mobil Takvim yetki açığı.** `page_module_map()`'te web'in takvim.php'si `'jobs'` istiyordu,
+   mobil karşılığı `mobile/calendar.php` (dosya adı farklı olduğu için) haritada hiç yoktu — herhangi
+   bir login'li kullanıcı (jobs yetkisi olmasa bile) mobil takvime girebiliyordu. `boot.php`'ye
+   `'calendar.php'=>'jobs'` eklendi.
+4. **brand_settings admin-gate çelişkisi (web+mobil).** Sol menü/mobil "Logo/Marka" kartı zaten
+   `user_can('users')` şartıyla gösteriliyordu, ama sayfaların kendisi (`brand_settings.php` VE
+   `mobile/brand_settings.php`) sadece `is_admin()` ile kilitliydi — 'users' yetkili-ama-admin-olmayan
+   biri linki görüp tıklayınca engelleniyordu. Her iki platformda da gate menüyle hizalandı.
+5. **trade_documents.php + contacts.php'de "ölü" KPI kartları.** trade_documents.php'nin "Cari"
+   kartı sabit "↔" simgesi, contacts.php'nin "Finans Hareketleri" kartı sabit "₺" simgesi
+   gösteriyordu — gerçek veri yoktu. İkisine de gerçek `safe_count()` sorgusu bağlandı.
+6. **contact_view.php — "Tahsilat" kartı her zaman ₺0.** `$in` değişkeni dosyada HİÇ tanımlanmamıştı
+   (PHP notice + her zaman boş). Bu cariye ait gerçek tahsilat toplamı (prepared statement) hesaplanıp
+   `$in`'e atandı.
+7. **trade_document_view.php — "Ödenen/Tahsil" yapısal olarak her zaman ₺0.** `trade_documents.
+   paid_amount` kolonu `trade_document_new.php`'de HER ZAMAN literal `0` ile INSERT ediliyor,
+   hiçbir yerde güncellenmiyor (Flow Unification 001 kararıyla belge artık ödeme kabul etmiyor).
+   Aynı ₺0'ı "gerçek zamanlı hesaplama" görünümünde tekrar üretmek yanıltıcı olacağından, kart
+   "Cari Bakiyesi" olarak değiştirildi — `contacts_lib.php::contact_balance()` (zaten doğrulanmış
+   fonksiyon) ile carinin gerçek bakiyesi gösteriliyor.
+8. **personnel_accounts yetkisi web'de tamamen işlevsizdi.** Mobilde (`mobile/personnel_view.php`)
+   "alt yönetici" (admin olmayan ama `personnel_accounts` yetkili biri) şifre sıfırlayabiliyor/hesap
+   açabiliyordu; web'in tek karşılığı `users.php` `page_module_map()`'te tam `'users'` istediği için
+   bu alt-yönetici oraya hiç giremiyordu. `personnel_edit.php`'ye `$canManageAccounts = is_admin() ||
+   user_can('personnel_accounts')` ile korunan, SADECE bu boşluğu kapatan yeni bir "Giriş Hesabı"
+   alt-bölümü eklendi (mevcut admin/`user_can('users')` akışı — izin checkbox'ları — hiç değişmedi,
+   `$showInlineAccountMgmt = $canManageAccounts && !user_can('users')` ile ayrıştırıldı). Paylaşılan
+   iş mantığı `personnel_lib.php::personnel_create_login()/personnel_reset_password()`'a çıkarıldı
+   (CLAUDE.md kural 5). WhatsApp ile giriş bilgisi gönderme (`cred_wa()`) mobildeki gibi eklendi.
+9. **accounting.php — hesapsız (Kasa/Banka'sız) muhasebe kayıtları sessizce Finans'a yansımıyordu.**
+   Kullanıcı onayıyla eklendi: bu kayıtlara artık "⚠️ Hesaba bağlı değil" uyarı rozeti gösteriliyor
+   (mevcut badge CSS deseni kullanıldı, Finans'a yansımadığı açıkça belirtiliyor).
+
+**Review süreci (rapor gereği "her biri izole, toplu commit yapılmamalı"):** Ece/Selin/Elif paralel
+ilk turda çalıştırıldı — Selin ve Elif ilk turda PASS, Ece 3 gerçek bulgu buldu (mobile/
+approval_waiting.php'de eksik `htmlspecialchars`, personnel_edit.php'nin mantığının `*_lib.php`'ye
+çıkarılmaması — kural 5 ihlali, ve kendi bulduğu ek bir parite boşluğu: mobile/brand_settings.php'de
+web'dekiyle AYNI admin-gate/menü çelişkisi). Üçü de düzeltildi (+ Elif'in ayrıca bulduğu, mobildeki
+WhatsApp kimlik-bilgisi gönderme linkinin web portuna hiç taşınmadığı eksikliği de tamamlandı).
+Re-review turunda Elif ayrıca `personnel_reset_password()`'daki bir JOIN yönü farkını buldu (SQL
+birleştirilirken mobildeki iki-sorgulu akışın OR-yedek-yol'u sessizce ölü koda dönüşmüştü — nadir
+edge-case, ACANS/PRIMAC ayrı DB'ler için risk taşıyordu) — mobildeki orijinal iki-sorgulu desen
+birebir geri getirilerek düzeltildi, final turda Ece/Selin/Elif üçü de PASS verdi.
+
+**Kapsam dışı bırakılan, backlog'a düşülen bulgular (bu sprintte DOKUNULMADI):** web (`Normal/Acil/
+Çok Acil/Düşük`) ile mobil (`Normal/Yüksek/Acil`) arasındaki iş önceliği seçenek seti farkı — bu
+sprintten önce de vardı, dokunulmadı (bir kullanıcı web'de "Çok Acil" seçip mobilde tekrar
+kaydederse öncelik sessizce düşebilir — ayrı bir gelecek sprint konusu).
+
 ## DS-002A — HEADER MIGRATION PILOT: KOD İNCELEME PASS — USER TEST BEKLİYOR (2026-07-15)
 Design System Sprint 001'in ilk gerçek "eski ekranı migrate et" adımı. Kapsam bilinçli olarak
 küçük tutuldu: tüm proje değil, 8 pilot ekran.

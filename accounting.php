@@ -413,7 +413,7 @@ foreach($entries as $e):
       <?=h(date('d.m.Y',strtotime($e['entry_date'])))?>
       <?php if($e['contact_name']): ?> · 🤝 <?=h($e['contact_name'])?><?php endif; ?>
       <?php if($e['pers_name']): ?> · 👷 <?=h($e['pers_name'])?><?php endif; ?>
-      <?php if($e['acc_name']): ?> · 🏦 <?=h($e['acc_name'])?><?php endif; ?>
+      <?php if($e['acc_name']): ?> · 🏦 <?=h($e['acc_name'])?><?php else: ?> · <span class="badge status-badge yellow" title="Bu kayıt bir Kasa/Banka hesabına bağlı değil, Finans'taki hesap bakiyelerine yansımaz">⚠️ Hesaba bağlı değil</span><?php endif; ?>
       <?php if($e['reference_no']): ?> · #<?=h($e['reference_no'])?><?php endif; ?>
     </div>
     <?php if($e['description']): ?><div style="font-size:12px;color:#374151;margin-top:2px"><?=h($e['description'])?></div><?php endif; ?>
