@@ -36,7 +36,7 @@ if(in_array($type,['purchase','sale'])){
 <a class="command-card blue" href="trade_documents.php"><small>Tüm Belgeler</small><strong><?=safe_count("SELECT COUNT(*) c FROM trade_documents")?></strong><span>Alış ve satış hareketleri</span></a>
 <a class="command-card purple" href="trade_documents.php?type=purchase"><small>Alış</small><strong><?=safe_count("SELECT COUNT(*) c FROM trade_documents WHERE document_type='purchase'")?></strong><span>Tedarikçi alışları</span></a>
 <a class="command-card green" href="trade_documents.php?type=sale"><small>Satış</small><strong><?=safe_count("SELECT COUNT(*) c FROM trade_documents WHERE document_type='sale'")?></strong><span>Müşteri satışları</span></a>
-<a class="command-card orange" href="contacts.php"><small>Cari</small><strong>↔</strong><span>Cari hesaplara yansır</span></a>
+<a class="command-card orange" href="contacts.php"><small>Cari</small><strong><?=safe_count("SELECT COUNT(DISTINCT contact_id) c FROM trade_documents WHERE contact_id IS NOT NULL")?></strong><span>Belgesi olan cari sayısı</span></a>
 </section>
 
 <section class="panel">

@@ -59,6 +59,8 @@ $balExprC = contact_balance_case_sql('f');
 $totalBalance=safe_sum("SELECT COALESCE(SUM(balance),0) s FROM (SELECT c.id, COALESCE(c.opening_balance,0)+COALESCE(SUM($balExprC),0) balance FROM contacts c LEFT JOIN finance_movements f ON f.contact_id=c.id GROUP BY c.id) x");
 $totalReceivable=safe_sum("SELECT COALESCE(SUM(CASE WHEN balance>0 THEN balance ELSE 0 END),0) s FROM (SELECT c.id, COALESCE(c.opening_balance,0)+COALESCE(SUM($balExprC),0) balance FROM contacts c LEFT JOIN finance_movements f ON f.contact_id=c.id GROUP BY c.id) x");
 $totalPayable=safe_sum("SELECT COALESCE(SUM(CASE WHEN balance<0 THEN -balance ELSE 0 END),0) s FROM (SELECT c.id, COALESCE(c.opening_balance,0)+COALESCE(SUM($balExprC),0) balance FROM contacts c LEFT JOIN finance_movements f ON f.contact_id=c.id GROUP BY c.id) x");
+// PDP-001 (2026-07-15): bu kart eskiden sabit "₺" gösteriyordu — bu ayki gerçek cari hareket sayısı bağlandı.
+$movementsThisMonth=safe_count("SELECT COUNT(*) c FROM finance_movements WHERE contact_id IS NOT NULL AND MONTH(movement_date)=MONTH(CURDATE()) AND YEAR(movement_date)=YEAR(CURDATE())");
 ?>
 
 <section class="crm-tabs">
@@ -79,8 +81,8 @@ $totalPayable=safe_sum("SELECT COALESCE(SUM(CASE WHEN balance<0 THEN -balance EL
     </a>
     <a class="crm-card crm-orange" href="finance.php">
         <small>Finans Hareketleri</small>
-        <strong>₺</strong>
-        <span>Tahsilat, ödeme ve transferler</span>
+        <strong><?=$movementsThisMonth?></strong>
+        <span>Bu ay cariye bağlı hareket</span>
     </a>
 </section>
 
