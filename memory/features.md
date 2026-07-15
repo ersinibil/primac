@@ -2,7 +2,14 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
-## DESIGN SYSTEM SPRINT 001 / PHASE A — FOUNDATION COMPONENTS: KOD İNCELEME PASS — USER TEST BEKLİYOR (2026-07-15)
+## DESIGN SYSTEM SPRINT 001 / PHASE A — FOUNDATION COMPONENTS: CLOSED — USER TEST PASS / DEV PASS (2026-07-15)
+USER TEST: primac.tr'ye guncelleme.zip yüklendi, guncelle.php çalıştırıldı, kullanıcı tüm siteyi
+kontrol edip hiçbir ekranın görünümünün değişmediğini onayladı (bu sprintin tam da hedefiydi).
+Ek teknik doğrulama: `curl https://primac.tr/assets/css/ds-foundation.css` → `HTTP 200,
+text/css, 8442 bytes` — build edilen dosyayla birebir aynı boyut, canlıda gerçekten erişilebilir.
+Not: bu sprint davranış değiştirmeyen saf altyapı eklemesi olduğu için (grep ile kod seviyesinde
+web VE mobilde sıfır kullanım kanıtlanmıştı) tek deploy paketi + tam-site kontrolü, normalde ayrı
+istenen web/mobil USER TEST ayrımının yerine geçti — DEV PASS bu gerekçeyle birlikte verildi.
 İki önceki analiz-only rapordan (PRIMAC OTS DESIGN SYSTEM 001, PRIMAC OTS PRODUCT AUDIT v1.0)
 sonra ilk kod sprinti — amaç hiçbir ekranı yeniden tasarlamak değil, projeye ilk kez ortak/harici
 bir "foundation component" katmanı eklemek (repo'da daha önce hiç harici CSS dosyası yoktu — her
