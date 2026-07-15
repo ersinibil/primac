@@ -2,6 +2,53 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
+## DESIGN SYSTEM SPRINT 001 / PHASE A — FOUNDATION COMPONENTS: KOD İNCELEME PASS — USER TEST BEKLİYOR (2026-07-15)
+İki önceki analiz-only rapordan (PRIMAC OTS DESIGN SYSTEM 001, PRIMAC OTS PRODUCT AUDIT v1.0)
+sonra ilk kod sprinti — amaç hiçbir ekranı yeniden tasarlamak değil, projeye ilk kez ortak/harici
+bir "foundation component" katmanı eklemek (repo'da daha önce hiç harici CSS dosyası yoktu — her
+iki raporun da #1 kök nedeni). "Evolution, not Revolution" + "hiçbir ekranın görünümü bu sprintte
+değişmeyecek" kısıtı harfiyen uygulandı: tamamı yeni, hiçbir mevcut markup'ta kullanılmayan `ds-`
+ön ekli bir isim alanı seçildi (grep ile doğrulandı — sıfır çakışma).
+
+**Yeni dosyalar:**
+- `assets/css/ds-foundation.css` — projenin ilk harici stylesheet'i. 8 kategori: Header (Page
+  Header), Action Bar, Card, KPI Card, Button, Badge/Status, Form, Table. Web (açık tema) +
+  mobil (koyu tema) ikisini birden destekliyor: renkler `var(--c-accent, #fallback)` deseniyle
+  (mobil zaten `--c-*` token'larını tanımlıyor, web'de fallback devreye giriyor); arkaplan/kenarlık
+  gibi ışık-yönü-tersine-dönen durumlar için `body.mobile-shell .ds-*` override bloğu var.
+- `ds_lib.php` — paylaşılan PHP yardımcıları: `ds_styles()`, `ds_page_header()`, `ds_action_bar()`,
+  `ds_kpi_card()`, `ds_badge()` (mevcut `status_tone()`'u YENİDEN KULLANIR, mantığı tekrarlamaz),
+  `ds_button()`, `ds_table_open()/close()`. `boot.php`'den `is_file()` guard'ıyla require ediliyor
+  → hem web hem mobil (`mobile/common.php` zaten `boot.php`'yi require ediyor) otomatik erişiyor.
+
+**Değişen dosyalar (sadece 3 satır ekleme, mantık değişmedi):**
+- `boot.php` — `ds_lib.php` require satırı.
+- `layout_top.php` (web) — `<head>`'e `ds_styles()` çağrısı.
+- `mobile/common.php` — `topx()`'in `<head>`'ine aynı çağrı + `<body class="mobile-shell">` (JS
+  tarafında `chat-mode`/`kb` class'larının `classList.add()` ile eklendiği doğrulandı — `body.
+  className` hiçbir yerde topyekûn overwrite edilmiyor, çakışma riski yok).
+
+**Bilinçli kapsam dışı bırakılanlar (mevcut, önceden var olan 2 gerçek bug tespit edildi ama
+DOKUNULMADI — "hiçbir ekran değişmeyecek" kısıtı gereği, gelecek "kademeli geçiş" sprintine
+bırakıldı):** (1) `mobile/sales.php`/`mobile/purchase.php` zaten `badge()`/`status_tone()`
+çağırıyor ama mobilde `.badge` CSS'i hiç yok — bu iki ekranda badge'ler bugün stilsiz render
+oluyor. (2) `.btn.dark` web'de 7 dosyada kullanılıyor ama hiç tanımlı değil (mobilde tanımlı).
+İkisi de PRIMAC OTS PRODUCT AUDIT v1.0'ın PDP-001 Data Integrity & Trust programına birebir
+uyuyor — ayrı, çok küçük bir sonraki adım olarak değerlendirilebilir.
+
+**Review: Ece/Selin/Elif üçü de PASS** (blocker yok). Ece: `ds_button()`'ın `$attrs` parametresine
+güvenilmeyen veri geçirilmemesi uyarısı istendi → eklendi. Selin: `$icon`/`$actionsHtml`/`$html`
+parametrelerinin bilinçli-olarak-escape'siz olduğu netleştirilsin istendi → eklendi. Elif: mobil
+koyu kabukta `.ds-card`/`.ds-kpi-card`/`.ds-badge`/`.ds-btn`'nin özel kontrast override'ı almadığı
+notu düşüldü (mevcut mobil `.card`/`.blue` deseniyle tutarlı, bilinçli — ileride gerçek ekranlara
+uygulanırken tekrar gözden geçirilecek). `grep` ile doğrulandı: `ds-` sınıflarını hiçbir mevcut
+dosya kullanmıyor, bu fonksiyonları hiçbir ekran çağırmıyor — kod bugün tamamen inert.
+
+**USER TEST NASIL YAPILIR:** Bu sprintte hiçbir ekranın görünümü değişmediği için klasik "ekrana
+bak" testi anlamsız — asıl doğrulama, deploy sonrası tüm web+mobil ekranların AYNEN eskisi gibi
+göründüğünü teyit etmek (regresyon yok) + `assets/css/ds-foundation.css`'in tarayıcıdan 200 OK ile
+erişilebilir olduğunu (Network sekmesinden) görmek.
+
 ## MOBILE UX BUGFIX SPRINT — Nabız linki + Mesajlar taşma: CLOSED — USER TEST PASS / DEV PASS (2026-07-15)
 Phase B4'ün mobil USER TEST'i sırasında kullanıcı 2 ayrı hata buldu.
 

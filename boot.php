@@ -477,6 +477,10 @@ remember_check();
 
 // İşlem kaydı (kim ne yaptı) — web genelinde aktif olsun (mobilde common.php yüklüyor)
 if(is_file(__DIR__.'/activity_lib.php')) require_once __DIR__.'/activity_lib.php';
+// DESIGN SYSTEM SPRINT 001 / PHASE A (2026-07-15) — yeni "ds-" foundation component yardımcıları.
+// Saf ek: hiçbir mevcut ekran bu fonksiyonları çağırmıyor, boot.php'ye eklenmesi web+mobil
+// (mobile/common.php zaten boot.php'yi require ediyor) her ikisine de erişim sağlar.
+if(is_file(__DIR__.'/ds_lib.php')) require_once __DIR__.'/ds_lib.php';
 // Geciken iş otomatik bildirimi (saatte bir, dosya kilidi ile) — giriş yapılmışsa
 if(!empty($_SESSION['user']) && is_file(__DIR__.'/job_overdue_lib.php')){ require_once __DIR__.'/job_overdue_lib.php'; try{ check_overdue_jobs(db()); }catch(Throwable $e){} }
 // Sabah hatırlatma (09:30 sonrası ilk girişte, günde 1 kez) — kesin 09:30 için cPanel cron → cron.php?key=acans-cron-2026

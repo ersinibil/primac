@@ -47,6 +47,9 @@ $__faviconType = ['png'=>'image/png','jpg'=>'image/jpeg','jpeg'=>'image/jpeg','w
 ?>
 <link rel="icon" type="<?=$__faviconType?>" href="<?=h($__favicon)?>?v=<?=@filemtime(__DIR__.'/'.$__favicon)?>">
 <link rel="apple-touch-icon" href="<?=h($__favicon)?>?v=<?=@filemtime(__DIR__.'/'.$__favicon)?>">
+<?php /* DESIGN SYSTEM SPRINT 001 / PHASE A (2026-07-15) — yeni "ds-" foundation stylesheet.
+   Sadece yeni sınıflar tanımlar, mevcut hiçbir class'a dokunmaz — bu satır hiçbir ekranın
+   bugünkü görünümünü değiştirmez. */ if(function_exists('ds_styles')) ds_styles(); ?>
 <style>
 *{box-sizing:border-box}
 html,body{max-width:100%;overflow-x:hidden}
