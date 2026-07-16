@@ -2,6 +2,48 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
+## PX-001 — Home Screen v1.1: KOD İNCELEME PASS — PİLOT KULLANICI TESTİ BEKLİYOR (2026-07-16)
+Product Owner "Philosophy Reset" programı (ERP hissi eleştirisi → 6 konsept → Konsept 02
+Akış+03 Bugün+06 Spotlight sentezi → Home Screen mockup → dondu → "artık ekran çizmeyi bırakın,
+gerçek veriyle çalıştırın") sürecinin ilk gerçek-kod çıktısı. Mockup aşaması resmen kapandı, bu
+artık canlı sorgulara bağlı bir pilot ekran — commit `b82f47a`.
+
+**Yeni `home_lib.php`** — Hero+Sırada+Devam Et'i üreten TEK kaynak, hem `dashboard.php` (web) hem
+`mobile/index.php` (mobil) buradan besleniyor. `home_build_queue()`: gecikmiş iş (300+gün puanı),
+gecikmiş görev (250), onay bekleyen dosya (150), bugünkü görev (120), kritik stok (90) — en yüksek
+puan "hero", kalanı "Sırada" kuyruğu (web 4, mobil 2 — `platform` parametresiyle). `home_build_
+continue()`: son güncellenen açık iş / son eklenen cari / son oluşturulan teklif → "Devam Et".
+
+**Bilinçli basitleştirmeler (mockup'tan gerçek koda geçerken netleşen gerçeklik payı):**
+- "Taslak İş" (mockup'ta vardı) kaldırıldı — karşılığı olan bir view-tracking/taslak altyapısı
+  projede yok, icat edilmedi.
+- Spotlight arama bu turda eklenmedi — ayrı, gerçek bir çapraz-modül arama altyapısı gerektiriyor;
+  mevcut NAV-001B Launcher zaten bir erişim yolu sağlıyor.
+- Sorgular kullanıcıya değil MODÜL YETKİSİNE göre filtreli (global "iş kuyruğu", kişiye özel görev
+  listesi değil) — mevcut legacy `dashboard_pulse_state()` deseniyle tutarlı, Selin'in review'da
+  doğruladığı gibi güvenlik açığı değil, ileride "sadece benim işlerim" beklentisi doğarsa ayrı bir
+  ürün kararı gerektirecek bir not.
+
+**`dashboard.php`'ye İLK KEZ `nav_layout_mode` (compact/legacy) ayrımı eklendi** — önceden bu ayrım
+sadece mobilde vardı (NAV-001B). Legacy dal (mevcut Komuta Merkezi — KPI karşılaştırma/trend/renkli
+kart grid'i) `git diff`'te SIFIR silme satırıyla birebir korundu, sadece if/else ile sarmalandı.
+`mobile/index.php`'nin NAV-001B'den kalma basit stat-özeti compact dalı tamamen bu yeni tasarımla
+değiştirildi (aynı `$__navMode` mekanizması, içerik değişti).
+
+**Review: Ece/Selin/Elif üçü de PASS.** Ece: PHP 7.2 uyumu, her sorgu try/catch korumalı, iki
+platform da aynı fonksiyonları çağırıyor (kopya sorgu yok). Selin: XSS/SQLi yok, yetki kontrolleri
+(`$isAdmin||$canSee(...)`) her sorgu bloğunda doğru, global sorgu tasarımı mevcut ürün felsefesiyle
+tutarlı. Elif: `page_module_map()` ile tüm link hedeflerinin yetki gereksinimi eşleşiyor, bilinen 3
+parite bug sınıfından (block_personel çakışması/mobil-otomatik-yönlendirme/kopya sorgu) hiçbiri
+tekrarlanmadı, web `$isAdmin`/mobil `$isAdmin` tanım farkının (boot.php'de zaten belgelenmiş,
+kasıtlı mimari) PX-001 tarafından yeni bir sapma eklemeden doğru tekrarlandığı doğrulandı.
+
+**Sıradaki adım:** PX-001B — Job Detail Experience (İş Detay ekranı) gerçek koda geçiş. Şema
+araştırması tamamlandı (`jobs` tablosunda adet/miktar alanı yok, ayrı temsilci/üretim/montaj rol
+kolonları yok — sadece tek `responsible_personnel_id`; web `job_view.php` zaman çizelgesi için
+kendi `job_logs` tablosunu, mobil `mobile/job_view.php` `activity_logs`'u kullanıyor — iki farklı
+kaynak, pilot ekran için birleştirilmesi gerekiyor) — uygulama henüz başlamadı.
+
 ## NAV-001 v3 — Sidebar/Command Launcher çakışması giderildi: KOD İNCELEME PASS — USER TEST BEKLİYOR (2026-07-16)
 NAV-001B'nin USER TEST'e hiç çıkmamış pilotu üzerinde, Product Owner'ın "Sidebar ve Command
 Launcher aynı navigasyon hedefini asla tekrar göstermeyecek" kararıyla küçük ama mimari olarak

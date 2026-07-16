@@ -2,6 +2,24 @@
 
 <!-- Açık geliştirme görevleri. Kapanan madde buradan silinip memory/features.md'ye taşınır. -->
 
+## PX-001B-ÖN — job_view.php/mobile/job_view.php İKİ FARKLI zaman çizelgesi kaynağı kullanıyor (2026-07-16)
+Şema araştırmasında bulundu: web `job_view.php` (satır 371) zaman çizelgesi için kendi `job_logs`
+tablosunu (`add_log()` ile yazılıyor) kullanıyor; mobil `mobile/job_view.php` (satır 304) ise
+`activity_logs` tablosunu (`entity_type='job'`, genel `activity_log()`/`activity_recent()`
+altyapısı) kullanıyor — iki ekran birbirinin yazdığı olayları GÖRMÜYOR. Yeni pilot İş Detay
+ekranı (PX-001B) için TEK kaynak seçilmesi gerekiyor — `activity_logs` daha zengin/genel altyapı
+olduğu için (zaten `activity_recent()`/`activity_row_html()` hazır) aday, ama eski iki ekranın
+kendi `job_logs`/`activity_logs` yazma davranışı bu turda DEĞİŞTİRİLMEYECEK (kapsam dışı, ayrı bir
+parite/birleştirme kararı gerektirir).
+
+## PX-001 — Home Screen "Devam Et"/"Sırada" global sorgu, kişiye özel değil (2026-07-16, Selin review notu)
+`home_lib.php`'deki sorgular modül YETKİSİNE göre filtreli ama kayıt SAHİPLİĞİNE göre değil — yani
+"gecikmiş iş" sistemdeki EN gecikmiş işi gösteriyor, o kullanıcıya atanan işi değil. Bu, mevcut
+legacy `dashboard_pulse_state()` deseniyle tutarlı bilinçli bir tasarım (güvenlik açığı değil).
+**Karar verilmedi** — ileride "satış temsilcisi sadece KENDİ cirosunu/işini görmeli" gibi bir ürün
+beklentisi doğarsa, `home_build_queue()`/`home_build_continue()`'a `responsible_personnel_id`/
+`created_by` bazlı bir filtre eklenmesi ayrı bir ürün kararı ve tur gerektirir.
+
 ## PARITY-003 — Mobil Command Launcher'da bazı satırlar mobilde var olmayan URL'lere gidiyor (2026-07-16, Elif NAV-001 v3 review notu)
 `nav_taxonomy()`'nin `url` alanları NAV-001B'den beri hiç değişmedi (bu turda da dokunulmadı) — ama
 `mobile/more.php`'nin compact Launcher'ı bu URL'leri `../` öneki olmadan doğrudan basıyor, yani href
