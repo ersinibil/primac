@@ -15,8 +15,15 @@
 // ile genişletildi (df-* çıktısı üretebilir), yeni ds_priority() eklendi. ds_page_header()/
 // ds_badge() DEĞİŞMEDİ (mevcut $icon parametresi zaten ds_icon() çıktısını taşıyabiliyor).
 
+// PX-001A DÜZELTME (2026-07-16): "?v=1" DS-002A'dan beri sabitti — dosya her sprintte değişti ama
+// versiyon dizesi hiç değişmediği için tarayıcı/CDN eski bir kopyayı sonsuza dek önbellekte
+// tutabiliyordu (primac.tr'de canlı olarak gözlemlendi: df-* sınıfları hiç uygulanmamış, ds_icon()
+// SVG'leri stilsiz/dev boyutta render olmuş). Artık gerçek dosyanın mtime'ı — her CSS değişikliği
+// otomatik olarak yeni bir versiyon dizesi, dolayısıyla zorunlu yeniden-indirme üretiyor.
 function ds_styles(){
-    echo '<link rel="stylesheet" href="'.h(base_url().'assets/css/ds-foundation.css').'?v=1">';
+    $__path = __DIR__.'/assets/css/ds-foundation.css';
+    $__v = is_file($__path) ? filemtime($__path) : 1;
+    echo '<link rel="stylesheet" href="'.h(base_url().'assets/css/ds-foundation.css').'?v='.(int)$__v.'">';
 }
 
 // $icon ve $actionsHtml BİLEREK escape edilmiyor (ikon/aksiyon HTML'i taşımak için) — bu
