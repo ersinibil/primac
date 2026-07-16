@@ -95,6 +95,16 @@ function ds_priority($priority, $label=null){
     return '<span class="df-priority">'.$dot.h($label).'</span>';
 }
 
+// PX-001B (2026-07-16): checks_notes_status_tone() gibi eski 'blue/green/purple/red/gray' renk
+// isimleri döndüren fonksiyonlarla df-badge (success/warning/danger/info) arasında köprü. Bilinçli
+// olarak checks_notes_lib.php'ye DEĞİL buraya kondu — bu sprintin kapsamı checks_notes_* mantığını
+// kapsamıyor, bu sadece görsel bir eşleme (Ece/Elif review notu — task_view.php + mobile'de
+// tekrarlanan aynı diziyi tek yere çıkarır).
+function ds_tone_map($legacyTone){
+    $map=['blue'=>'info','green'=>'success','purple'=>'info','red'=>'danger','gray'=>'info'];
+    return $map[$legacyTone] ?? 'info';
+}
+
 // DS-003A (2026-07-16): self-hosted SVG ikon altyapısı — harici CDN/istek yok. $name SABİT bir
 // whitelist dizisine karşı aranır, asla kullanıcı/veri kaynaklı ham SVG/path enjekte edilmez.
 // İkon varsayılan olarak dekoratiftir (aria-hidden) — yalnızca metin/etiketle birlikte kullanılır.

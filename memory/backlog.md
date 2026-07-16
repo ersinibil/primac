@@ -2,14 +2,25 @@
 
 <!-- Açık geliştirme görevleri. Kapanan madde buradan silinip memory/features.md'ye taşınır. -->
 
+## PARITY-002 — task_view.php'de "Gönder" (WhatsApp) sadece mobilde var (2026-07-16, Elif PX-001B review notu)
+`mobile/task_view.php`'de bir "Gönder" (WhatsApp, `wa_link()`) aksiyonu var, web `task_view.php`'de
+hiç karşılığı yok — `job_view.php`/`mobile/job_view.php` ikisi de `share_buttons()` kullanırken
+task_view bu konvansiyonun dışında kalmış. **PX-001B'de eklenmedi**, önceki sprintte (commit
+`8400335`) mobil liste kartından buraya taşınırken web tarafı hiç eklenmemiş — bilinçli mi
+gözden kaçmış mı netleşmedi. Ayrıca mobildeki Gönder linki `pphone` boşsa da koşulsuz render
+oluyor (işlevsiz `wa.me` linki) — küçük bir kozmetik kusur, aynı notun parçası.
+**Karar verilmedi** — ürün kararıysa (mobil-only bilinçli) kapatılabilir, değilse `ots-feature-dev`
+(Kerem) ile web'e `share_buttons()` eklenmesi + boş-telefon koşulu düşünülebilir.
+
 ## NAV-001 — Adaptive Workspace & Optional Module Navigation (2026-07-16, Product Owner notu)
 Product Owner'ın PX-001A sırasında değerli bulduğu ama kapsamı büyütmemek için AYRI bir Epic'e
 ertelediği bir fikir — bu oturumda henüz detaylandırılmadı (sadece isim + niyet not edildi).
 Muhtemel motivasyon: sol menüde çok sayıda modül var (Komuta Merkezi/Takvim/Notlarım/Görevlerim/
 Mesajlar/İş-Üretim/Ticaret/Finans/Raporlama/Genel Sistem Yönetimi) — "adaptive" ve "optional module
 navigation" isimlendirmesi, kullanıcıya göre uyarlanabilir/gizlenebilir bir nav yapısına işaret
-ediyor olabilir. **Kapsam netleşmedi, PX-001A DEV PASS aldıktan sonra ayrı bir Epic olarak ele
-alınacak** — bu notun ötesinde bir karar/analiz yok, sonraki oturumda Product Owner'la netleştirilmeli.
+ediyor olabilir. **Kapsam netleşmedi.** PX-001A 2026-07-16'da DEV PASS/CLOSED aldı; Product Owner
+kararıyla NAV-001'e dönüş **PX-001B (Task View Product Redesign) tamamlandıktan sonraya**
+ertelendi — bu notun ötesinde bir karar/analiz yok, sonraki oturumda Product Owner'la netleştirilmeli.
 
 ## PARITY-001 — Görevlerim / Notlarım Web-Mobil Kapsam Farkı (2026-07-16)
 PRODUCT DESIGN BLUEPRINT uygulama sprintinde (mytasks.php) kök neden analizi sırasında bulundu:

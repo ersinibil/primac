@@ -336,3 +336,21 @@ body.mobile-shell .df-tab--active{background:var(--df-accent);color:#fff;box-sha
 .df-toolbar-links{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--df-ink-500)}
 .df-toolbar-links a{color:var(--df-ink-500);text-decoration:none}
 .df-toolbar-links a:hover{color:var(--df-ink-900);text-decoration:underline}
+
+/* ── PX-001B EKİ (2026-07-16) — task_view.php Visual Language uygulaması ────────────────────
+   mytasks.php'nin doğal devamı: aynı df-badge/ds_priority/df-panel dili tekrar kullanılıyor.
+   Ek Product Kararı: bilgi hiyerarşisi — birincil (durum+termin) / ikincil (öncelik/personel/
+   iş/oluşturan) aynı ağırlıkta görünmemeli. Yalnızca task_view.php + mobile/task_view.php'yi
+   etkiler. */
+.df-task-stack{display:flex;flex-direction:column;gap:var(--df-space-4)}
+.df-task-desc{color:var(--df-ink-600);font-size:var(--df-type-body-size);line-height:1.5;margin:0 0 var(--df-space-4)}
+.df-task-primary{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+.df-task-due{display:inline-flex;align-items:center;gap:4px;font-size:13px;color:var(--df-ink-600);font-weight:600}
+.df-task-due .df-icon{opacity:.8}
+.df-task-due.is-overdue{color:var(--df-danger-ink)}
+.df-task-meta{display:flex;flex-wrap:wrap;gap:6px 16px;color:var(--df-ink-500);font-size:var(--df-type-caption-size)}
+.df-task-meta a{color:var(--df-ink-500)}
+.df-task-meta a:hover{color:var(--df-ink-900)}
+/* Aksiyon şeridi — bilgi panelinden SONRA gelir (Ek Karar 1), flex-wrap ile taşma yerine satır
+   kırılır (mytasks.php'deki min-width:auto taşma dersinden — asla flex:1+nowrap kombinasyonu). */
+.df-task-actions{display:flex;flex-wrap:wrap;gap:10px}

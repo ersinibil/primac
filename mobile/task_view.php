@@ -52,69 +52,72 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 
 topx($task['title']);
 $geç = !empty($task['due_date']) && $task['due_date']<date('Y-m-d') && !in_array($task['status'],['Tamamlandı','İptal']);
+$__tone = task_status_tone($task['status']);
+$__showStart = $canEdit && $task['status']!=='Devam Ediyor' && $task['status']!=='Tamamlandı';
+$__showComplete = $canEdit && $task['status']!=='Tamamlandı';
 ?>
 <?php if(!empty($_SESSION['task_err'])): ?><div class="err"><?=htmlspecialchars($_SESSION['task_err'])?></div><?php unset($_SESSION['task_err']); endif; ?>
 
-<div class="panel" style="padding:12px">
-  <h2 style="margin:0 0 6px"><?=htmlspecialchars($task['title'])?></h2>
-  <?php if($task['description']): ?><p class="muted"><?=nl2br(htmlspecialchars($task['description']))?></p><?php endif; ?>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0;font-size:13px">
-    <div><span class="muted">Durum</span><br><?=htmlspecialchars($task['status'])?></div>
-    <div><span class="muted">Öncelik</span><br><?=htmlspecialchars($task['priority'])?></div>
-    <div><span class="muted">Personel</span><br><?=htmlspecialchars($task['pname']??'-')?></div>
-    <div><span class="muted">Termin</span><br><span style="color:<?=($geç?'#f87171':'inherit')?>"><?=htmlspecialchars($task['due_date']??'-').($geç?' ⏰':'')?></span></div>
-    <?php if($task['job_no']): ?><div><span class="muted">İş No</span><br><?=htmlspecialchars($task['job_no'])?></div><?php endif; ?>
-    <div><span class="muted">Oluşturan</span><br><?=htmlspecialchars($task['creator_name']?:$task['creator_username']?:'-')?></div>
-    <?php if($task['updated_by']): ?><div><span class="muted">Son Güncelleyen</span><br><?=htmlspecialchars($task['updater_name']?:$task['updater_username']?:'-')?></div><?php endif; ?>
-  </div>
+<div class="df-task-stack">
 
-  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
-    <?php if($task['job_real']): ?><a class="btn" href="job_view.php?id=<?=(int)$task['job_real']?>" style="background:#334155;color:#fff;flex:1">📋 İş Detayı</a><?php endif; ?>
-    <?php
-    // PRODUCT DESIGN BLUEPRINT / mytasks.php sprinti (2026-07-16): "📲 Gönder" liste kartından
-    // kaldırıldı (Mobil UX Standardı — tekil aksiyon), buraya taşındı. task_fetch() zaten pphone
-    // seçiyor (tasks_lib.php), yeni bir sorgu gerekmedi.
-    $__waTxt="📝 Görev: ".$task['title'].($task['job_no']?"\nİş: ".$task['job_no']:'')."\nDurum: ".$task['status'].($task['due_date']?"\nTermin: ".$task['due_date']:'').($task['description']?"\n".$task['description']:'');
-    ?>
-    <a class="btn" href="<?=htmlspecialchars(wa_link($__waTxt,$task['pphone']??''))?>" target="_blank" rel="noopener" style="background:#16a34a;color:#fff;flex:1">📲 Gönder</a>
-    <?php if($canEdit && $task['status']!=='Devam Ediyor' && $task['status']!=='Tamamlandı'): ?>
-      <form method="post" style="flex:1;margin:0"><button class="btn" name="task_status" value="Devam Ediyor" style="width:100%;background:#2563eb;color:#fff">▶ Başla</button></form>
-    <?php endif; ?>
-    <?php if($canEdit && $task['status']!=='Tamamlandı'): ?>
-      <form method="post" style="flex:1;margin:0"><button class="btn dark" name="task_status" value="Tamamlandı" style="width:100%">✓ Tamamla</button></form>
-    <?php endif; ?>
+<div class="df-panel">
+  <h2 class="df-list-row-title" style="margin:0 0 8px"><?=htmlspecialchars($task['title'])?></h2>
+  <?php if($task['description']): ?><p class="df-task-desc"><?=nl2br(htmlspecialchars($task['description']))?></p><?php endif; ?>
+  <div class="df-task-primary">
+    <span class="df-badge df-badge--<?=htmlspecialchars($__tone)?>"><?=htmlspecialchars($task['status'])?></span>
+    <?php if($task['due_date']): ?><span class="df-task-due<?=($geç?' is-overdue':'')?>"><?=ds_icon('calendar',13)?> <?=htmlspecialchars($task['due_date']).($geç?' · Gecikti':'')?></span><?php endif; ?>
   </div>
+  <div class="df-task-meta">
+    <?php if($task['priority'] && $task['priority']!=='Normal'): ?><span><?=ds_priority($task['priority'],$task['priority'])?></span><?php endif; ?>
+    <span>Personel: <?=htmlspecialchars($task['pname']??'-')?></span>
+    <?php if($task['job_no']): ?><span>İş: <?=htmlspecialchars($task['job_no'])?></span><?php endif; ?>
+    <span>Oluşturan: <?=htmlspecialchars($task['creator_name']?:$task['creator_username']?:'-')?></span>
+    <?php if($task['updated_by']): ?><span>Güncelleyen: <?=htmlspecialchars($task['updater_name']?:$task['updater_username']?:'-')?></span><?php endif; ?>
+  </div>
+</div>
+
+<?php
+// PRODUCT DESIGN BLUEPRINT / mytasks.php sprinti (2026-07-16): "Gönder" liste kartından
+// kaldırıldı (Mobil UX Standardı — tekil aksiyon), buraya taşındı. task_fetch() zaten pphone
+// seçiyor (tasks_lib.php), yeni bir sorgu gerekmedi.
+$__waTxt="Görev: ".$task['title'].($task['job_no']?"\nİş: ".$task['job_no']:'')."\nDurum: ".$task['status'].($task['due_date']?"\nTermin: ".$task['due_date']:'').($task['description']?"\n".$task['description']:'');
+?>
+<div class="df-task-actions">
+  <?php if($task['job_real']): ?><a class="df-btn df-btn--secondary" href="job_view.php?id=<?=(int)$task['job_real']?>">İş Detayı</a><?php endif; ?>
+  <a class="df-btn df-btn--secondary" href="<?=htmlspecialchars(wa_link($__waTxt,$task['pphone']??''))?>" target="_blank" rel="noopener"><?=ds_icon('send',15)?> Gönder</a>
+  <?php if($__showStart): ?><form method="post" style="margin:0"><button type="submit" class="df-btn df-btn--primary" name="task_status" value="Devam Ediyor">Başla</button></form><?php endif; ?>
+  <?php if($__showComplete): ?><form method="post" style="margin:0"><button type="submit" class="df-btn df-btn--warn" name="task_status" value="Tamamlandı"><?=ds_icon('check',15)?> Tamamla</button></form><?php endif; ?>
 </div>
 
 <?php if($canSeeFinance && $cn):
   $cnTypeOpts=checks_notes_types();
   $cnStatusOpts=checks_notes_statuses($cn['direction'] ?? 'alinan');
-  $cnIcon = $cn['type']==='senet' ? '📝' : '🧾';
+  $cnStatusTone=ds_tone_map(checks_notes_status_tone($cn['status']));
   $cnOverdue = $cn['status']==='portfoyde' && $cn['due_date'] && $cn['due_date']<date('Y-m-d');
 ?>
-<div class="panel" style="padding:12px">
-  <h3 style="margin:0 0 6px"><?=$cnIcon?> Çek / Senet Bilgileri</h3>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0;font-size:13px">
-    <div><span class="muted">Tür</span><br><?=htmlspecialchars($cnTypeOpts[$cn['type']] ?? $cn['type'])?></div>
-    <div><span class="muted">Çek/Senet No</span><br><?=htmlspecialchars($cn['number'] ?: '-')?></div>
-    <div><span class="muted">Cari</span><br><?=htmlspecialchars($cn['contact_name'] ?: 'Cari seçilmedi')?></div>
-    <div><span class="muted">Banka</span><br><?=htmlspecialchars($cn['bank_name'] ?: '-')?></div>
-    <div><span class="muted">Tutar</span><br><?=mm($cn['amount'])?></div>
-    <div><span class="muted">Vade</span><br><span style="color:<?=($cnOverdue?'#f87171':'inherit')?>"><?=htmlspecialchars($cn['due_date'] ?: 'Vadesiz').($cnOverdue?' ⚠️':'')?></span></div>
-    <div class="full" style="grid-column:1/-1"><span class="muted">Portföy Durumu</span><br><?=htmlspecialchars($cnStatusOpts[$cn['status']] ?? $cn['status'])?></div>
+<div class="df-panel">
+  <h3 class="df-text-subtitle" style="margin:0 0 8px">Çek / Senet Bilgileri</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;font-size:13px">
+    <div><span class="df-text-caption">Tür</span><br><?=htmlspecialchars($cnTypeOpts[$cn['type']] ?? $cn['type'])?></div>
+    <div><span class="df-text-caption">Çek/Senet No</span><br><?=htmlspecialchars($cn['number'] ?: '-')?></div>
+    <div><span class="df-text-caption">Cari</span><br><?=htmlspecialchars($cn['contact_name'] ?: 'Cari seçilmedi')?></div>
+    <div><span class="df-text-caption">Banka</span><br><?=htmlspecialchars($cn['bank_name'] ?: '-')?></div>
+    <div><span class="df-text-caption">Tutar</span><br><?=mm($cn['amount'])?></div>
+    <div><span class="df-text-caption">Vade</span><br><span class="df-task-due<?=($cnOverdue?' is-overdue':'')?>"><?=htmlspecialchars($cn['due_date'] ?: 'Vadesiz')?></span></div>
+    <div style="grid-column:1/-1"><span class="df-text-caption">Portföy Durumu</span><br><span class="df-badge df-badge--<?=htmlspecialchars($cnStatusTone)?>"><?=htmlspecialchars($cnStatusOpts[$cn['status']] ?? $cn['status'])?></span></div>
   </div>
-  <?php if($cn['notes']): ?><p class="muted" style="margin-top:0"><?=nl2br(htmlspecialchars($cn['notes']))?></p><?php endif; ?>
+  <?php if($cn['notes']): ?><p class="df-task-desc" style="margin-top:0"><?=nl2br(htmlspecialchars($cn['notes']))?></p><?php endif; ?>
   <?php if(!empty($cn['finance_movement_id'])): ?>
-    <a class="btn" href="check_note_view.php?id=<?=(int)$cn['id']?>" style="display:block;text-align:center;background:#334155;color:#fff;margin-top:8px">💰 Finans Kaydına Git</a>
+    <a class="df-btn df-btn--secondary" href="check_note_view.php?id=<?=(int)$cn['id']?>" style="display:flex;width:100%">Finans Kaydına Git</a>
   <?php else: ?>
-    <p class="muted" style="margin-top:8px">⚠️ Finans hareketi oluşturulamadı</p>
+    <p class="df-text-caption" style="margin-top:8px">Finans hareketi oluşturulamadı</p>
   <?php endif; ?>
 </div>
 <?php endif; ?>
 
 <?php if($canEdit): ?>
-<details class="panel" style="padding:12px">
-  <summary style="cursor:pointer;font-weight:900;user-select:none">✏️ Düzenle</summary>
+<details class="df-panel">
+  <summary style="cursor:pointer;font-weight:700;user-select:none">Düzenle</summary>
   <form method="post" style="display:flex;flex-direction:column;gap:10px;margin-top:12px">
     <input type="text" name="title" value="<?=htmlspecialchars($task['title'])?>" placeholder="Başlık" required>
     <textarea name="description" placeholder="Açıklama" rows="3"><?=htmlspecialchars($task['description']??'')?></textarea>
@@ -141,77 +144,78 @@ $geç = !empty($task['due_date']) && $task['due_date']<date('Y-m-d') && !in_arra
       ?>
     </select>
     <?php endif; ?>
-    <button class="btn dark" name="edit_task" style="width:100%">💾 Kaydet</button>
+    <button type="submit" class="df-btn df-btn--primary" name="edit_task" style="width:100%">Kaydet</button>
   </form>
 </details>
 <?php endif; ?>
 
 <?php if($canDelete): ?>
-<details class="panel" style="padding:12px;border-color:#f87171">
-  <summary style="cursor:pointer;font-weight:900;user-select:none;color:#f87171">🗑 Sil</summary>
-  <p class="muted" style="margin:12px 0">Görev silinecek (kalıcı olarak kaldırılmaz, listelerden gizlenir).</p>
+<details class="df-panel">
+  <summary style="cursor:pointer;font-weight:700;user-select:none;color:var(--df-danger-ink)">Sil</summary>
+  <p class="df-text-caption" style="margin:12px 0">Görev silinecek (kalıcı olarak kaldırılmaz, listelerden gizlenir).</p>
   <form method="post" onsubmit="return confirm('Görev silinsin mi?')">
-    <button class="btn" name="delete_task" style="width:100%;background:#7f1d1d;color:#fff">🗑 Sil</button>
+    <button type="submit" class="df-btn df-btn--danger" style="width:100%"><?=ds_icon('trash',15)?> Sil</button>
   </form>
 </details>
 <?php endif; ?>
 
-<div class="panel" style="padding:12px">
-  <b>💬 Yorumlar</b>
+<div class="df-panel">
+  <h3 class="df-text-subtitle" style="margin:0 0 8px">Yorumlar</h3>
   <?php if($canEdit): ?>
   <form method="post" style="margin-top:10px">
     <textarea name="comment" rows="2" placeholder="Yorum ekle..." required></textarea>
-    <button class="btn dark" name="comment_add" style="width:100%">Ekle</button>
+    <button type="submit" class="df-btn df-btn--primary" name="comment_add" style="width:100%">Ekle</button>
   </form>
   <?php endif; ?>
   <?php
   $comments=task_comments_list($pdo,$id);
-  if(!$comments) echo '<p class="muted" style="margin-top:10px">Henüz yorum yok.</p>';
+  if(!$comments) echo '<p class="df-text-caption" style="margin-top:10px">Henüz yorum yok.</p>';
   foreach($comments as $c){
-    echo '<div style="margin-top:10px;border-top:1px solid rgba(255,255,255,.12);padding-top:8px">';
-    echo '<small class="muted">'.htmlspecialchars($c['full_name']?:$c['username']?:'Sistem').' · '.htmlspecialchars(date('d.m.Y H:i',strtotime($c['created_at']))).'</small>';
+    echo '<div style="margin-top:10px;border-top:1px solid var(--df-hairline);padding-top:8px">';
+    echo '<small class="df-text-caption">'.htmlspecialchars($c['full_name']?:$c['username']?:'Sistem').' · '.htmlspecialchars(date('d.m.Y H:i',strtotime($c['created_at']))).'</small>';
     echo '<div>'.nl2br(htmlspecialchars($c['comment'])).'</div>';
     echo '</div>';
   }
   ?>
 </div>
 
-<div class="panel" style="padding:12px">
-  <b>📎 Dosyalar</b>
+<div class="df-panel">
+  <h3 class="df-text-subtitle" style="margin:0 0 8px">Dosyalar</h3>
   <?php if($canEdit): ?>
   <form method="post" enctype="multipart/form-data" style="margin-top:10px">
     <input type="file" name="task_file" required>
-    <button class="btn dark" name="file_upload" style="width:100%">Yükle</button>
+    <button type="submit" class="df-btn df-btn--primary" name="file_upload" style="width:100%">Yükle</button>
   </form>
   <?php endif; ?>
   <?php
   $files=task_files_list($pdo,$id);
-  if(!$files) echo '<p class="muted" style="margin-top:10px">Henüz dosya eklenmemiş.</p>';
+  if(!$files) echo '<p class="df-text-caption" style="margin-top:10px">Henüz dosya eklenmemiş.</p>';
   foreach($files as $f){
-    echo '<div style="display:flex;align-items:center;gap:8px;margin-top:10px;border-top:1px solid rgba(255,255,255,.12);padding-top:8px">';
-    echo '<a href="../'.htmlspecialchars($f['file_path']).'" target="_blank" rel="noopener" style="flex:1;color:#93c5fd">📄 '.htmlspecialchars($f['original_name']).'</a>';
-    if($canEdit) echo '<form method="post" style="margin:0" onsubmit="return confirm(\'Dosya silinsin mi?\')"><input type="hidden" name="file_delete" value="'.(int)$f['id'].'"><button class="btn" style="background:#7f1d1d;color:#fff;padding:8px 10px">🗑</button></form>';
+    echo '<div style="display:flex;align-items:center;gap:8px;margin-top:10px;border-top:1px solid var(--df-hairline);padding-top:8px">';
+    echo '<a href="../'.htmlspecialchars($f['file_path']).'" target="_blank" rel="noopener" style="flex:1">'.htmlspecialchars($f['original_name']).'</a>';
+    if($canEdit) echo '<form method="post" style="margin:0" onsubmit="return confirm(\'Dosya silinsin mi?\')"><input type="hidden" name="file_delete" value="'.(int)$f['id'].'"><button type="submit" class="df-icon-btn" aria-label="Dosyayı sil" style="color:var(--df-danger-ink)">'.ds_icon('trash',15).'</button></form>';
     echo '</div>';
   }
   ?>
 </div>
 
-<div class="panel" style="padding:12px">
-  <b>📜 Geçmiş / Hareket Kayıtları</b>
+<div class="df-panel">
+  <h3 class="df-text-subtitle" style="margin:0 0 8px">Geçmiş / Hareket Kayıtları</h3>
   <?php
   try{
     $logs = function_exists('activity_recent') ? activity_recent(50,'task',$id) : [];
   }catch(Throwable $e){ $logs=[]; }
-  if(!$logs) echo '<p class="muted" style="margin-top:10px">Henüz kayıt yok.</p>';
+  if(!$logs) echo '<p class="df-text-caption" style="margin-top:10px">Henüz kayıt yok.</p>';
   foreach($logs as $l){
-    echo '<div style="display:flex;gap:8px;align-items:flex-start;margin-top:10px;border-top:1px solid rgba(255,255,255,.12);padding-top:8px">';
+    echo '<div style="display:flex;gap:8px;align-items:flex-start;margin-top:10px;border-top:1px solid var(--df-hairline);padding-top:8px">';
     echo '<span style="font-size:15px">'.htmlspecialchars($l['icon']?:'•').'</span>';
-    echo '<div style="flex:1;min-width:0"><b>'.htmlspecialchars($l['action']).'</b> <small class="muted">'.htmlspecialchars($l['user_name']?:'Sistem').'</small>';
-    if($l['title']) echo '<br><small class="muted">'.htmlspecialchars($l['title']).'</small>';
-    echo '</div><small class="muted" style="white-space:nowrap">'.htmlspecialchars(date('d.m H:i',strtotime($l['created_at']))).'</small>';
+    echo '<div style="flex:1;min-width:0"><b>'.htmlspecialchars($l['action']).'</b> <small class="df-text-caption">'.htmlspecialchars($l['user_name']?:'Sistem').'</small>';
+    if($l['title']) echo '<br><small class="df-text-caption">'.htmlspecialchars($l['title']).'</small>';
+    echo '</div><small class="df-text-caption" style="white-space:nowrap">'.htmlspecialchars(date('d.m H:i',strtotime($l['created_at']))).'</small>';
     echo '</div>';
   }
   ?>
 </div>
 
+</div>
 <?php botx(); ?>

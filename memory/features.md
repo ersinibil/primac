@@ -2,6 +2,53 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
+## PX-001B — TASK VIEW PRODUCT REDESIGN: KOD İNCELEME PASS — USER TEST BEKLİYOR (2026-07-16)
+mytasks.php'nin (PX-001A, CLOSED) doğal devamı — task_view.php (web) + mobile/task_view.php aynı
+`df-badge`/`ds_priority()`/`df-panel`/`ds_icon()` Foundation diline taşındı. Kapsam sadece bu iki
+dosya + `ds-foundation.css`'e küçük bir ek; `task_can_*`, POST handler'lar, `checks_notes_*`
+mantığı, dosya yükleme, geçmiş kayıt, route, DB, yetki sistemi **değişmedi** (üç review ajanı da
+doğruladı).
+
+**Ek Product Kararı 1 (bilgi aksiyondan önce gelmeli):** Başla/Tamamla artık `ds_page_header()`
+action slot'unda DEĞİL — bilgi panelinin (durum/termin/öncelik/personel/iş/oluşturan) hemen
+altında ayrı bir `.df-task-actions` şeridinde. Header artık sadece navigasyon ("← Görevlerim")
+taşıyor. Koşul mantığı (`$__showStart`/`$__showComplete`) orijinal `if` bloklarıyla birebir aynı,
+sadece konumu değişti.
+
+**Ek Product Kararı 2 (gerçek bilgi hiyerarşisi):** Eski düz 3-kolon grid (Durum/Öncelik/Personel/
+Termin/İş No/Oluşturan/Güncelleyen hepsi aynı ağırlıkta) kaldırıldı. Yeni ikili katman: birincil
+(`df-task-primary` — durum badge'i + termin/"Gecikti" caption'ı, daha büyük/belirgin) / ikincil
+(`df-task-meta` — öncelik/personel/iş/oluşturan/güncelleyen, küçük caption satırı).
+
+**Diğer kararlar (hepsi onaylı, hepsi uygulandı):** durum dili `task_status_tone()`+`df-badge`
+(tasks_lib.php'deki mevcut fonksiyon, yeniden yazılmadı); öncelik `ds_priority()`; "GECİKMİŞ" bold
+kırmızı → sessiz "Gecikti" caption; emoji temizliği SADECE gerçek aksiyonlarda `ds_icon()`
+(Tamamla→check, Sil→trash, Termin→calendar, mobil Gönder→send), bölüm başlıkları (Yorumlar/
+Dosyalar/Geçmiş/Çek-Senet) ikonsuz düz metin kaldı; `.panel`→`.df-panel` (disclosure/`<details>`
+yapısı korundu); Kaydet/Sil/Tamamla/Başla ham `<button type="submit">` (ds_button() $url=null
+tuzağına düşülmedi — PX-001A'da bulunan bilinen hata bu turda tekrarlanmadı); mobilde Gönder/İş
+Detayı/Başla/Tamamla sabit hex renkler yerine `df-btn` varyantlarına geçti, taşma riski
+`.df-task-actions{flex-wrap:wrap}` ile önceden bilinçli olarak engellendi (mytasks.php'deki
+min-width:auto dersinden).
+
+**Review: Ece/Selin/Elif → üçü de PASS**, kritik/yüksek bulgu yok. Ece+Elif ortak bir düşük
+öncelikli DRY notu verdi (checks_notes tonu→df-badge eşlemesi web+mobilde birebir kopyaydı) —
+`checks_notes_lib.php`'ye DEĞİL (kapsam dışı), `ds_lib.php`'ye yeni `ds_tone_map()` fonksiyonu
+olarak çıkarıldı, her iki dosya da şimdi bunu çağırıyor. Elif ayrıca PX-001B'den ÖNCEKİ bir parite
+notu buldu (mobilde "Gönder" WhatsApp aksiyonu var, webde hiç yok — commit `8400335`'ten kalma,
+bu turda eklenmedi) → `PARITY-002` olarak backlog'a not düşüldü, bu sprintin kapsamına alınmadı.
+
+**Statik doğrulama:** web (desktop 980px + tablet 768px) ve mobil (390px normal senaryo + 360px
+"4 buton aynı anda" en dar senaryo, iframe tekniğiyle) — hiçbir genişlikte taşma yok, aksiyon
+şeridi 360px'te 2 satıra sorunsuz kırılıyor.
+
+## PX-001A — MYTASKS PRODUCT REDESIGN: USER TEST PASS / DEV PASS / CLOSED (2026-07-16)
+Product Owner kararı: PX-001A resmen kapatıldı. mytasks.php artık PRIMAC OTS'nin resmi referans
+Product Screen'i — sonraki ekranlar bilgi mimarisi/görsel hiyerarşi/tipografi/spacing/action
+mantığı bakımından bu ekranı referans alacak. Sonraki sprint: **PX-001B — Task View Product
+Redesign** (task_view.php + mobile/task_view.php, mytasks.php'nin doğal devamı). NAV-001
+backlog'da PX-001B tamamlanana kadar bekliyor.
+
 ## PX-001A — MYTASKS VISUAL REVISION (2. tur): KOD İNCELEME PASS — USER TEST BEKLİYOR (2026-07-16)
 İlk PX-001A turu (aşağıdaki madde) DEV PASS'a çok yakınken Product Owner "ekran hâlâ liste gibi
 hissediyor, çalışma alanı hissi istiyorum" revizyonunu istedi — sadece görsel/bilgi hiyerarşisi,
@@ -47,7 +94,7 @@ eşlemesi web+mobil'de birebir kopyalanmıştı — `tasks_lib.php`'ye `task_my_
 bulgu hiç olmadı). Selin: yeni `task_my_stats()` sorgusu tam prepared statement + sabit metin,
 sadece `$pid` (oturum sahibinin kendi personel id'si) parametresi, bilgi sızıntısı riski yok.
 
-## PX-001A — MYTASKS PRODUCT REDESIGN: KOD İNCELEME PASS — USER TEST BEKLİYOR (2026-07-16)
+## PX-001A — MYTASKS PRODUCT REDESIGN (1. tur, ilk Foundation taşıma): KOD İNCELEME PASS (2026-07-16)
 DS-003A (Visual Language Foundation) onaylandıktan sonraki ilk gerçek ekran uygulaması —
 mytasks.php (web/tablet) + mobile/mytasks.php'nin görsel katmanı tamamen `df-*` Foundation
 token/bileşen sistemine taşındı. Blueprint Sprint 1'in IA/workflow kararları (satır-içi hızlı-ekle,
