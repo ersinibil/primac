@@ -5,6 +5,10 @@
 // aynen kullanır, sadece yeni "ds-badge" CSS sınıfını basar. Hiçbir mevcut ekran bu fonksiyonları
 // çağırmıyor; bu dosya bugün hiçbir sayfanın görünümünü değiştirmez — kademeli geçiş (eski
 // ekranların bu standarda taşınması) sonraki bir sprintin işi.
+//
+// DS-003A EKİ (2026-07-16): ds_icon() — Visual Language Foundation'ın onaylanan ikon standardının
+// PHP karşılığı, "df-" (design foundation) CSS namespace'iyle eşleşir (bkz. ds-foundation.css dosya
+// sonu). Diğer ds_*() fonksiyonları gibi bugün hiçbir ekran tarafından çağrılmıyor — inert.
 
 function ds_styles(){
     echo '<link rel="stylesheet" href="'.h(base_url().'assets/css/ds-foundation.css').'?v=1">';
@@ -58,6 +62,38 @@ function ds_button($label,$url=null,$variant='',$extraClass='',$attrs=''){
         return '<a class="'.h($cls).'" href="'.h($url).'"'.($attrs?' '.$attrs:'').'>'.h($label).'</a>';
     }
     return '<button type="button" class="'.h($cls).'"'.($attrs?' '.$attrs:'').'>'.h($label).'</button>';
+}
+
+// DS-003A (2026-07-16): self-hosted SVG ikon altyapısı — harici CDN/istek yok. $name SABİT bir
+// whitelist dizisine karşı aranır, asla kullanıcı/veri kaynaklı ham SVG/path enjekte edilmez.
+// İkon varsayılan olarak dekoratiftir (aria-hidden) — yalnızca metin/etiketle birlikte kullanılır.
+// İkon TEK içerik olarak bir buton/linke konursa çağıran taraf aria-label eklemeli. Hiçbir ekran
+// bugün bu fonksiyonu çağırmıyor (bkz. Visual Language Foundation, madde 9) — ekran uygulamaları
+// PX-001A ve sonraki sprintlerin işi.
+function ds_icon($name, $size=20, $class=''){
+    static $__ds_icons = [
+        'check'=>'<polyline points="4 13 10 19 20 6"/>',
+        'plus'=>'<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',
+        'close'=>'<line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/>',
+        'chevron-right'=>'<polyline points="9 6 15 12 9 18"/>',
+        'chevron-down'=>'<polyline points="6 9 12 15 18 9"/>',
+        'edit'=>'<path d="M4 20v-3.5L16 5a2 2 0 0 1 3 3L7.5 19.5 4 20z"/>',
+        'trash'=>'<polyline points="4 7 20 7"/><path d="M6 7v13a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7M9 7V4h6v3"/>',
+        'search'=>'<circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/>',
+        'bell'=>'<path d="M18 8a6 6 0 1 0-12 0c0 6-2.5 7-2.5 7h17S18 14 18 8z"/><path d="M10 21a2 2 0 0 0 4 0"/>',
+        'calendar'=>'<rect x="4" y="5" width="16" height="16" rx="2"/><line x1="4" y1="10" x2="20" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/>',
+        'phone'=>'<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/>',
+        'send'=>'<line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>',
+        'menu-dots'=>'<circle cx="6" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="18" cy="12" r="1.4"/>',
+        'user'=>'<circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6"/>',
+        'home'=>'<path d="M4 11 12 4l8 7"/><path d="M6 10v9h12v-9"/>',
+        'info'=>'<circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="13"/><circle cx="12" cy="16" r="0.6" fill="currentColor"/>',
+        'filter'=>'<line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/>',
+    ];
+    if(!isset($__ds_icons[$name])) return '';
+    $size = (int)$size; if($size<1) $size=20;
+    $cls = trim('df-icon '.$class);
+    return '<span class="'.h($cls).'" style="width:'.$size.'px;height:'.$size.'px" aria-hidden="true"><svg viewBox="0 0 24 24">'.$__ds_icons[$name].'</svg></span>';
 }
 
 function ds_table_open($headers){

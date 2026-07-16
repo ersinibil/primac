@@ -2,6 +2,53 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
+## DS-003A — VISUAL LANGUAGE FOUNDATION IMPLEMENTATION: KOD İNCELEME PASS — USER TEST BEKLİYOR (2026-07-16)
+"PRIMAC OTS Visual Language Foundation v1" dökümanının (Design System Sprint 003 — Typography/
+Spacing/Surface/Radius/Shadow/Color/Button/Badge/Icon/Motion/State/Manifesto, Product Owner
+onaylı, Artifact+PDF olarak teslim edilmişti) İNERT kod uygulaması. Bu sprintte HİÇBİR ekran
+yeniden tasarlanmadı — sadece ortak token/bileşen altyapısı eklendi, mytasks.php dahil hiçbir
+mevcut ekranın görünümü/davranışı değişmedi (başarı kriteri buydu).
+
+**Namespace kararı:** Yeni her şey `df-` (design foundation) ön ekiyle isimlendirildi — mevcut
+`ds-` (Phase A, DS-002A'dan beri bazı ekranlarda kullanılıyor: `.ds-btn`, `.ds-list-row`, `.ds-menu`
+vb.) ile KARIŞTIRILMASIN diye bilinçli ayrım. İki namespace bir süre paralel yaşayacak, ekranlar
+`df-`'a taşındıkça `ds-` kademeli terk edilecek (PX-001A ve sonrası).
+
+**assets/css/ds-foundation.css** — dosya sonuna yeni bir blok: `--df-type-*` (7 seviye tipografi
+ölçeği), `--df-space-1..8` (4/8pt grid), `--df-radius-sm/md/lg/pill` (8/14/20/999px), `--df-shadow-
+none/sm/md/lg`, `--df-canvas/surface/surface-sunken/hairline/ink-900/600/500/300` (light varsayılan
+`:root`, dark override `body.mobile-shell{...}` — aynı dosya zaten `ds_styles()` üzerinden hem
+web hem mobil sayfalarda yükleniyor, `mobile/common.php`'ye ayrıca kopyalamaya gerek kalmadı),
+`--df-accent/success/warning` (mevcut `--c-*` değerlerine `var(...,fallback)` ile bağlı, DEĞİŞMEDİ),
+`--df-danger:#DC2626` (BİLİNÇLİ yeni/bağımsız değer — kodda daha önce iki farklı danger kırmızısı
+vardı: `#ef4444` mobil / `#b42318` `.ds-btn--danger` web; bu birleştirme SADECE yeni `df-*`
+bileşenlerinde geçerli, eskilerine dokunulmadı), `--df-info` (yeni kategori), `--df-ease-standard`
++ `--df-dur-instant/fast/base/slow` (motion). Artı yeni bileşen sınıfları: `.df-btn`(+varyantlar
+primary/secondary/ghost/danger/warn, boyutlar sm/lg), `.df-icon-btn`, `.df-fab`, `.df-badge`
+(+success/warning/danger/info), `.df-priority`/`.df-priority-dot` (nokta+metin, çubuk değil),
+`.df-count-badge`, `.df-dot`, `.df-icon` (svg boyut/çizgi yardımcı sınıfı), `.df-surface`
+(+elevated/overlay/drawer), `.df-empty`/`.df-empty-icon`/`.df-empty-title`/`.df-empty-desc`,
+`.df-skel` (loading skeleton, `prefers-reduced-motion` saygılı).
+
+**ds_lib.php** — yeni `ds_icon($name,$size=20,$class='')`: self-hosted inline SVG ikon üretici,
+CDN yok. 17 ikon (`check/plus/close/chevron-right/chevron-down/edit/trash/search/bell/calendar/
+phone/send/menu-dots/user/home/info/filter`), TAMAMEN sabit whitelist dizisine (`isset()`) karşı
+aranıyor — `$name` hiçbir zaman ham SVG/path üretimine karışmıyor. `$class` `h()` ile escape,
+`$size` `(int)` cast. Varsayılan `aria-hidden="true"` (dekoratif) — ikon tek içerik olarak
+kullanılırsa çağıran taraf `aria-label` eklemeli (yorumda not edildi).
+
+**Review: Ece/Selin/Elif → üçü de PASS, kritik/yüksek/orta bulgu yok.** Ece'nin tek notu LOW/
+non-blocking (bileşen boyutlarının — icon-btn 38px, fab 56px, empty-icon 44px — `--df-space-*`
+grid'ine değil doğrudan px'e bağlanması; kasıtlı bırakıldı, sabit bileşen boyutu için normal).
+Elif özellikle doğruladı: `--df-*` hiçbir mevcut `--radius-*`/`--c-*` (mobile/common.php:53) token
+adını ele geçirmiyor, `.df-*`/`ds_icon()` proje genelinde grep'te sıfır çağrı — inert varsayımı
+doğrulandı. Selin: SVG whitelist güvenli, CDN/harici kaynak yok, mevcut inline-style deseniyle
+tutarlı, yeni saldırı yüzeyi yok.
+
+**Sonraki sprint (PX-001A — Görevlerim Redesign):** Foundation bu sprintle CLOSED olduktan sonra
+mytasks.php + mobile/mytasks.php, Product Design Blueprint + bu Visual Language Foundation +
+resmi Mobil UX Standardı BİRLİKTE uygulanacak — ilk gerçek `df-*` ekran taşıması.
+
 ## PRODUCT DESIGN BLUEPRINT — mytasks.php (Görevlerim) Sprint 1: KOD İNCELEME PASS — USER TEST BEKLİYOR (2026-07-16)
 "PRIMAC OTS Product Design Blueprint v1"in (23 platform-standardı + 8 pilot ekranın Desktop/
 Tablet/Mobile tek-akış tasarımı, Product Owner onaylı) ilk uygulama sprinti. Önceki DS-002A/UX-001

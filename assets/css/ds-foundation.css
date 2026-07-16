@@ -18,7 +18,17 @@
       topx() fonksiyonu artık <body class="mobile-shell"> basıyor — SADECE bu dosyanın
       hedeflemesi için eklendi, başka hiçbir mevcut CSS kuralı bu class'ı kullanmıyor, dolayısıyla
       bugün hiçbir mobil ekranda görünüm değişikliği yok (ds-* class'ları hiçbir yerde
-      kullanılmadığı için override bloğu da inert). */
+      kullanılmadığı için override bloğu da inert).
+
+   DS-003A EKİ (2026-07-16): "Visual Language Foundation" onayından sonra dosyanın sonuna TAMAMEN
+   AYRI bir "df-" (design foundation) namespace'i eklendi. "ds-" (yukarıdaki, Phase A) ile
+   KARIŞTIRILMASIN: ds-* zaten bazı ekranlarda kullanılıyor (mytasks.php vb.), df-* ise bugün HİÇ
+   kullanılmıyor — token değerleri kasıtlı olarak farklı (örn. df-radius-sm:8px vs mevcut buton
+   radius'u 12px). İkisi bir süre paralel yaşayacak; ekranlar df-*'a taşındıkça ds-* kademeli
+   olarak terk edilecek (bkz. PX-001A ve sonrası). Bu dosyaya eklenen CSS zaten hem web (light)
+   hem mobil (dark, ds_styles() → mobile/common.php topx() üzerinden aynı dosyayı yüklüyor)
+   sayfalarında otomatik olarak mevcut — mobile/common.php'nin kendi --radius-*/--c-* token'larına
+   HİÇ dokunulmadı, dolayısıyla mobil hiçbir ekranda da görünüm değişikliği yok. */
 
 /* ── 1. Header (Page Header) ────────────────────────────────────────────── */
 /* DS-002A (2026-07-15) düzeltmesi: orijinal kodda İKİ farklı panel-head varyantı var —
@@ -146,3 +156,116 @@ body.mobile-shell .ds-table{background:rgba(255,255,255,.06)}
 body.mobile-shell .ds-table th{background:rgba(255,255,255,.08);color:var(--c-muted,#94a3b8);border-bottom-color:rgba(255,255,255,.12)}
 body.mobile-shell .ds-table td{color:#fff;border-bottom-color:rgba(255,255,255,.08)}
 body.mobile-shell .ds-table tr:hover td{background:rgba(255,255,255,.06)}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   DS-003A — VISUAL LANGUAGE FOUNDATION (df- namespace, 2026-07-16)
+   PRIMAC OTS Visual Language Foundation v1 onaylandı, bu blok onun İNERT kod karşılığı: yalnızca
+   token + temel bileşen sınıfları. Hiçbir ekran bugün .df-* sınıflarını kullanmıyor — ekran
+   dönüşümleri (mytasks.php dahil) PX-001A ve sonraki sprintlerin işi. Renk token'larından
+   değişmeyenler (accent/success/warning) mevcut --c-* değerlerine var(...,fallback) ile bağlandı
+   ki tek bir yerden yönetilsin; danger kasıtlı olarak YENİ ve bağımsız bir değer (#DC2626) —
+   kodda daha önce iki farklı danger kırmızısı vardı (#ef4444 mobil / #b42318 ds-btn--danger web),
+   bu birleştirme yalnızca yeni df-* bileşenlerinde geçerli, eski .ds-btn--danger'a dokunulmadı.
+   ═══════════════════════════════════════════════════════════════════════ */
+:root{
+  /* Typography */
+  --df-type-display-size:30px;--df-type-display-weight:750;--df-type-display-lh:1.2;
+  --df-type-title-size:22px;--df-type-title-weight:700;--df-type-title-lh:1.25;
+  --df-type-section-size:17px;--df-type-section-weight:650;--df-type-section-lh:1.3;
+  --df-type-subtitle-size:15px;--df-type-subtitle-weight:600;--df-type-subtitle-lh:1.35;
+  --df-type-body-size:14px;--df-type-body-weight:450;--df-type-body-lh:1.5;
+  --df-type-caption-size:12.5px;--df-type-caption-weight:500;--df-type-caption-lh:1.4;
+  --df-type-micro-size:11px;--df-type-micro-weight:700;--df-type-micro-lh:1.2;
+  /* Spacing — 4/8pt grid */
+  --df-space-1:4px;--df-space-2:8px;--df-space-3:12px;--df-space-4:16px;
+  --df-space-5:24px;--df-space-6:32px;--df-space-7:48px;--df-space-8:64px;
+  /* Radius */
+  --df-radius-sm:8px;--df-radius-md:14px;--df-radius-lg:20px;--df-radius-pill:999px;
+  /* Shadow — yalnızca gerçekten yükselen bileşenlerde */
+  --df-shadow-none:none;--df-shadow-sm:0 2px 8px rgba(16,24,40,.06);
+  --df-shadow-md:0 8px 24px rgba(16,24,40,.12);--df-shadow-lg:0 16px 40px rgba(16,24,40,.18);
+  /* Surface — varsayılan (web/light) */
+  --df-canvas:#F7F8FA;--df-surface:#FFFFFF;--df-surface-sunken:#F2F4F7;--df-hairline:#E4E7EC;
+  --df-ink-900:#101828;--df-ink-600:#475467;--df-ink-500:#667085;--df-ink-300:#98A2B3;
+  /* Color */
+  --df-accent:var(--c-accent,#2563EB);--df-accent-ink:#FFFFFF;
+  --df-accent-soft:#EFF4FF;--df-accent-soft-ink:#1D4ED8;
+  --df-success:var(--c-success,#16A34A);--df-success-soft:var(--c-success-bg,#DCFCE7);--df-success-ink:#166534;
+  --df-warning:var(--c-warn,#F59E0B);--df-warning-soft:var(--c-warn-bg,#FEF3C7);--df-warning-ink:#92400E;
+  --df-danger:#DC2626;--df-danger-soft:#FEE2E2;--df-danger-ink:#991B1B;
+  --df-info:#0EA5E9;--df-info-soft:#E0F2FE;--df-info-ink:#075985;
+  /* Motion — hızlı, sessiz, sıçramasız */
+  --df-ease-standard:cubic-bezier(.2,.8,.2,1);
+  --df-dur-instant:100ms;--df-dur-fast:150ms;--df-dur-base:220ms;--df-dur-slow:300ms;
+}
+/* Dark (mobil chrome) yön değişimi — yalnızca ışık yönü tersine dönen token'lar yeniden tanımlanır */
+body.mobile-shell{
+  --df-canvas:#0B1220;--df-surface:#101E38;--df-surface-sunken:rgba(255,255,255,.06);--df-hairline:rgba(255,255,255,.12);
+  --df-ink-900:#F8FAFC;--df-ink-600:#B6C0CE;--df-ink-500:#94A3B8;--df-ink-300:#5C6779;
+  --df-accent-soft:rgba(37,99,235,.20);--df-accent-soft-ink:#8FB1FF;
+  --df-success-soft:rgba(22,163,74,.18);--df-success-ink:#6FE3A0;
+  --df-warning-soft:rgba(245,158,11,.18);--df-warning-ink:#FBBF62;
+  --df-danger-soft:rgba(220,38,38,.18);--df-danger-ink:#FF9C9C;
+  --df-info-soft:rgba(14,165,233,.18);--df-info-ink:#7DD8FF;
+}
+@media (prefers-reduced-motion:reduce){
+  .df-btn,.df-icon-btn,.df-fab,.df-badge,.df-skel{transition-duration:.01ms!important;animation-duration:.01ms!important}
+}
+
+/* Typography utility classes (opt-in) */
+.df-text-display{font-size:var(--df-type-display-size);font-weight:var(--df-type-display-weight);line-height:var(--df-type-display-lh)}
+.df-text-title{font-size:var(--df-type-title-size);font-weight:var(--df-type-title-weight);line-height:var(--df-type-title-lh)}
+.df-text-section{font-size:var(--df-type-section-size);font-weight:var(--df-type-section-weight);line-height:var(--df-type-section-lh)}
+.df-text-subtitle{font-size:var(--df-type-subtitle-size);font-weight:var(--df-type-subtitle-weight);line-height:var(--df-type-subtitle-lh)}
+.df-text-body{font-size:var(--df-type-body-size);font-weight:var(--df-type-body-weight);line-height:var(--df-type-body-lh)}
+.df-text-caption{font-size:var(--df-type-caption-size);font-weight:var(--df-type-caption-weight);line-height:var(--df-type-caption-lh);color:var(--df-ink-500)}
+.df-text-micro{font-size:var(--df-type-micro-size);font-weight:var(--df-type-micro-weight);line-height:var(--df-type-micro-lh);text-transform:uppercase;letter-spacing:.05em;color:var(--df-ink-500)}
+
+/* Button — yeni namespace, PX-001A'dan itibaren ekran taşımaları burayı kullanacak */
+.df-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:0;cursor:pointer;font-family:inherit;font-weight:600;text-decoration:none;height:38px;padding:0 16px;border-radius:var(--df-radius-sm);font-size:13.5px;transition:background var(--df-dur-fast) var(--df-ease-standard),border-color var(--df-dur-fast) var(--df-ease-standard),transform var(--df-dur-instant) var(--df-ease-standard)}
+.df-btn:active{transform:scale(.97)}
+.df-btn--sm{height:32px;padding:0 12px;font-size:12.5px}
+.df-btn--lg{height:44px;padding:0 20px;font-size:14.5px}
+.df-btn--primary{background:var(--df-accent);color:var(--df-accent-ink)}
+.df-btn--secondary{background:var(--df-surface-sunken);color:var(--df-ink-900);border:1px solid var(--df-hairline)}
+.df-btn--ghost{background:transparent;color:var(--df-ink-600)}
+.df-btn--ghost:hover{background:var(--df-surface-sunken);color:var(--df-ink-900)}
+.df-btn--danger{background:var(--df-danger);color:#fff}
+.df-btn--warn{background:var(--df-warning-soft);color:var(--df-warning-ink)}
+.df-icon-btn{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:var(--df-radius-sm);background:transparent;color:var(--df-ink-600);border:0;cursor:pointer;transition:background var(--df-dur-fast) var(--df-ease-standard)}
+.df-icon-btn:hover{background:var(--df-surface-sunken)}
+/* .df-fab konumlandırmasını (right/bottom) kullanan ekran kendi context'ine göre verir */
+.df-fab{position:fixed;width:56px;height:56px;border-radius:50%;background:var(--df-accent);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:var(--df-shadow-md);border:0;cursor:pointer;font-size:22px}
+
+/* Badge — dört ayrı dil: Status / Priority / Count / Dot */
+.df-badge{display:inline-flex;align-items:center;gap:5px;font-size:var(--df-type-caption-size);font-weight:650;padding:4px 10px;border-radius:var(--df-radius-pill)}
+.df-badge--success{background:var(--df-success-soft);color:var(--df-success-ink)}
+.df-badge--warning{background:var(--df-warning-soft);color:var(--df-warning-ink)}
+.df-badge--danger{background:var(--df-danger-soft);color:var(--df-danger-ink)}
+.df-badge--info{background:var(--df-info-soft);color:var(--df-info-ink)}
+.df-priority{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600}
+.df-priority-dot{width:6px;height:6px;border-radius:50%;flex:0 0 auto;display:inline-block}
+.df-priority-dot--urgent{background:var(--df-danger)}
+.df-priority-dot--high{background:var(--df-warning)}
+.df-priority-dot--normal{background:var(--df-ink-300)}
+.df-count-badge{min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--df-danger);color:#fff;font-size:10.5px;font-weight:800;display:inline-flex;align-items:center;justify-content:center}
+.df-dot{width:6px;height:6px;border-radius:50%;display:inline-block;background:var(--df-accent)}
+
+/* Icon — boyut/çizgi standardı, işaretleme ds_icon() (ds_lib.php) ile eşleşir */
+.df-icon{display:inline-flex;flex:0 0 auto}
+.df-icon svg{width:100%;height:100%;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+
+/* Surface — Base(varsayılan, gölgesiz)/Elevated/Overlay/Drawer */
+.df-surface{background:var(--df-surface);border-radius:var(--df-radius-md)}
+.df-surface--elevated{box-shadow:var(--df-shadow-sm);border:1px solid var(--df-hairline)}
+.df-surface--overlay{box-shadow:var(--df-shadow-md)}
+.df-surface--drawer{box-shadow:var(--df-shadow-lg);border-radius:var(--df-radius-lg)}
+
+/* Empty / Loading / Error / First-use — ortak iskelet */
+.df-empty{text-align:center;padding:var(--df-space-6) var(--df-space-4)}
+.df-empty-icon{width:44px;height:44px;border-radius:50%;background:var(--df-surface-sunken);display:flex;align-items:center;justify-content:center;margin:0 auto var(--df-space-3);color:var(--df-ink-500)}
+.df-empty--error .df-empty-icon{background:var(--df-danger-soft);color:var(--df-danger-ink)}
+.df-empty-title{font-size:var(--df-type-subtitle-size);font-weight:var(--df-type-subtitle-weight);margin-bottom:4px;color:var(--df-ink-900)}
+.df-empty-desc{font-size:var(--df-type-caption-size);color:var(--df-ink-500);line-height:1.5;margin-bottom:var(--df-space-4)}
+.df-skel{background:var(--df-surface-sunken);border-radius:6px;height:12px;margin-bottom:8px;animation:df-pulse 1.4s ease-in-out infinite}
+@keyframes df-pulse{0%,100%{opacity:.5}50%{opacity:1}}
