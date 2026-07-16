@@ -2,6 +2,51 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
+## PX-001A — MYTASKS VISUAL REVISION (2. tur): KOD İNCELEME PASS — USER TEST BEKLİYOR (2026-07-16)
+İlk PX-001A turu (aşağıdaki madde) DEV PASS'a çok yakınken Product Owner "ekran hâlâ liste gibi
+hissediyor, çalışma alanı hissi istiyorum" revizyonunu istedi — sadece görsel/bilgi hiyerarşisi,
+iş akışı/backend/route/DB/yetkilendirme değişmedi.
+
+**Uygulanan 9 revizyon hedefi:** (1) "İş Ekle" kaldırıldı → admin-only "Personele Ata" (Product
+Owner düzeltmesi: sessiz metin linkine gizlenmedi, küçük ama görünür ghost buton kaldı — "kendime
+görev" ile "personele görev" ayrı niyetler). (2) Hızlı-ekle tek giriş noktası. (3) Hızlı-ekle artık
+`df-quick-add--compact` (max-width:440px) — ekranın kahramanı input değil liste. (4) Satır dikey
+ritmi `.df-list-row-body{flex-direction:column;gap:6px}` ile tutarlılaştı (dağınık margin-top'lar
+kalktı), padding 16px→18px. (5) Durum artık düz metin değil tonlu `df-badge` (Foundation'ın Status
+Badge dili ilk kez gerçek ekranda). (6) Satır aksiyon butonu `df-btn--sm` — görev bilgisini
+gölgelemiyor. (7) Sekmeler `.df-tabs`'e `inset` gölge eklenip gerçek segmented-control hissi
+kazandı. (8) Sayfa üstüne KPI-kartı DEĞİL, sade "Bugün/Geciken/Tamamlanan" özet satırı eklendi
+(yeni `task_my_stats()`, salt-okunur, tıklanamaz). (9) "liste" değil "çalışma alanı" hissi — toplamı.
+
+**Bulunan ve düzeltilen 2 gerçek altyapı hatası (bu turun kod işi değil, keşif):**
+- **ds-foundation.css'te canlıda `.ds-page-header` layout'unu kıran gizli bug**: DS-003A'da eklenen
+  bir yorum paragrafında `--radius-*/--c-*` yazımı, `*/`'yi CSS yorumunu ERKEN KAPATAN bir dizi
+  olarak içeriyordu — bu, commit 57d52c6'dan beri `ds_page_header()`'a aksiyon geçen TÜM ekranların
+  (external/sales/finance/purchase/contact_view/task_view/mytask_new) header aksiyon butonunu
+  başlığın altına, tam genişlikte düşürüyordu. Kullanıcının primac.tr ekran görüntüsüyle
+  yakalandı, izole bisection testiyle doğrulandı, tek karakter/boşluk eklenerek düzeltildi —
+  **bu düzeltme mytasks.php'nin ötesinde, DS-003A'dan beri header-aksiyonlu TÜM ekranları
+  iyileştiriyor.**
+- **`ds_styles()`'ın `?v=1` cache-buster'ı DS-002A'dan beri hiç değişmiyordu** — CSS her sprintte
+  güncellendi ama sürüm dizesi sabit kaldığı için tarayıcı/CDN eski kopyayı süresiz önbellekte
+  tutabiliyordu (canlıda gözlemlendi: PX-001A'nın stilleri hiç uygulanmamış, `ds_icon()` SVG'leri
+  stilsiz/dev boyutta render olmuş). Artık `filemtime()` tabanlı — her değişiklik otomatik yeni
+  sürüm üretiyor.
+- **Metodoloji notu**: bu turun statik mobil önizlemeleri başlangıçta headless Chrome'un bu ortamda
+  `--window-size` için 500px'lik gizli bir taban uyguladığını (390/360px istekleri sessizce 500px'e
+  yükseltiliyordu) hesaba katmadan yapıldı — bu, gerçek olmayan bir "buton ekran dışına taşıyor"
+  bulgusuna yol açtı. `<iframe>` (kendi bağımsız viewport'u olan) tekniğiyle doğru 390/360px
+  doğrulandı, sorun yoktu. Bundan sonraki tüm dar-viewport statik doğrulamalar iframe tekniğini
+  kullanmalı.
+
+**Kod tekrarı düzeltmesi (Ece code-review, MEDIUM):** operasyon-özeti SQL sorgusu ve durum→ton
+eşlemesi web+mobil'de birebir kopyalanmıştı — `tasks_lib.php`'ye `task_my_stats()`/
+`task_status_tone()` olarak çıkarıldı, her iki ekran da şimdi bunu çağırıyor.
+
+**Review: Ece/Selin/Elif → üçü de PASS** (kod-tekrarı MEDIUM'u zaten düzeltildi, kritik/yüksek
+bulgu hiç olmadı). Selin: yeni `task_my_stats()` sorgusu tam prepared statement + sabit metin,
+sadece `$pid` (oturum sahibinin kendi personel id'si) parametresi, bilgi sızıntısı riski yok.
+
 ## PX-001A — MYTASKS PRODUCT REDESIGN: KOD İNCELEME PASS — USER TEST BEKLİYOR (2026-07-16)
 DS-003A (Visual Language Foundation) onaylandıktan sonraki ilk gerçek ekran uygulaması —
 mytasks.php (web/tablet) + mobile/mytasks.php'nin görsel katmanı tamamen `df-*` Foundation

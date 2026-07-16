@@ -108,17 +108,31 @@ try{
 
 <div class="df-text-section" style="margin:20px 4px 10px;color:var(--df-ink-900)">Görevlerim</div>
 <?php
+// PX-001A Visual Revision (2026-07-16): web ile aynı sade operasyon özeti — KPI kartı değil,
+// salt-okunur sayı+etiket satırı. "Kendime görev" (tabs+liste) ile "Personele görev ata" (admin,
+// ayrı buton) niyetleri ayrı kaldı — Product Owner kararı, biri diğerinin içine gizlenmedi.
+// task_my_stats(): tasks_lib.php'de paylaşılıyor (Ece code-review notu — web/mobil aynı sorguyu
+// ayrı ayrı yazmıştı).
+$__mStats = task_my_stats($pdo,$pid);
+$__mToday=$__mStats['today']; $__mOverdue=$__mStats['overdue']; $__mDone=$__mStats['done'];
+?>
+<div class="df-ops-summary" style="margin:0 4px 14px">
+  <div class="df-ops-stat"><strong><?=$__mToday?></strong><span>Bugün</span></div>
+  <div class="df-ops-stat"><strong<?=$__mOverdue?' class="is-danger"':''?>><?=$__mOverdue?></strong><span>Geciken</span></div>
+  <div class="df-ops-stat"><strong><?=$__mDone?></strong><span>Tamamlanan</span></div>
+</div>
+<?php
 // PX-001A düzeltme (statik önizleme sırasında bulundu): sekmeler flex:1 ile 100% genişliğe
 // zorlanınca flex item'ların varsayılan min-width:auto'su ("Tamamlanan" metninin içerik genişliği)
 // 390px'lik telefon ekranını taşırıyordu. Sekmeler artık içerik-genişliğinde (web'deki gibi),
-// admin "+ İş Ekle" ayrı, sağa yaslı küçük ikincil buton.
+// admin "Personele Ata" ayrı, sağa yaslı küçük ikincil buton (web'deki ghost tonuyla tutarlı).
 ?>
-<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;width:100%;box-sizing:border-box">
   <div class="df-tabs">
     <a class="df-tab<?=$f==='open'?' df-tab--active':''?>" href="mytasks.php?f=open">Açık</a>
     <a class="df-tab<?=$f==='done'?' df-tab--active':''?>" href="mytasks.php?f=done">Tamamlanan</a>
   </div>
-  <?php if($isAdmin): ?><?=ds_button('İş Ekle','task_new.php','secondary','df-btn--sm','',true)?><?php endif; ?>
+  <?php if($isAdmin): ?><?=ds_button('Personele Ata','task_new.php','ghost','df-btn--sm','',true)?><?php endif; ?>
 </div>
 <?php
 try{
@@ -146,10 +160,11 @@ try{
     echo '</div>';
     if($t['description']) echo '<div class="df-list-row-desc">'.htmlspecialchars($t['description']).'</div>';
     echo '<div class="df-list-row-meta">';
+    $__mStatusTone = task_status_tone($t['status']);
+    echo '<span class="df-badge df-badge--'.htmlspecialchars($__mStatusTone).'">'.htmlspecialchars($t['status']).'</span>';
     if($t['job_no']) echo '<span>İş: '.htmlspecialchars($t['job_no']).'</span>';
-    echo '<span>'.htmlspecialchars($t['status']).'</span>';
     if($t['priority'] && $t['priority']!=='Normal') echo ds_priority($t['priority'],$t['priority']);
-    if($t['due_date']) echo '<span>'.ds_icon('calendar',13).' '.htmlspecialchars($t['due_date']).'</span>';
+    if($t['due_date']) echo '<span class="df-list-row-due">'.ds_icon('calendar',13).' '.htmlspecialchars($t['due_date']).'</span>';
     if($geç) echo '<span style="color:var(--df-danger-ink);font-weight:600">Gecikti</span>';
     echo '</div>';
     echo '</div>';

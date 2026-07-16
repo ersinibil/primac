@@ -2,6 +2,15 @@
 
 <!-- Açık geliştirme görevleri. Kapanan madde buradan silinip memory/features.md'ye taşınır. -->
 
+## NAV-001 — Adaptive Workspace & Optional Module Navigation (2026-07-16, Product Owner notu)
+Product Owner'ın PX-001A sırasında değerli bulduğu ama kapsamı büyütmemek için AYRI bir Epic'e
+ertelediği bir fikir — bu oturumda henüz detaylandırılmadı (sadece isim + niyet not edildi).
+Muhtemel motivasyon: sol menüde çok sayıda modül var (Komuta Merkezi/Takvim/Notlarım/Görevlerim/
+Mesajlar/İş-Üretim/Ticaret/Finans/Raporlama/Genel Sistem Yönetimi) — "adaptive" ve "optional module
+navigation" isimlendirmesi, kullanıcıya göre uyarlanabilir/gizlenebilir bir nav yapısına işaret
+ediyor olabilir. **Kapsam netleşmedi, PX-001A DEV PASS aldıktan sonra ayrı bir Epic olarak ele
+alınacak** — bu notun ötesinde bir karar/analiz yok, sonraki oturumda Product Owner'la netleştirilmeli.
+
 ## PARITY-001 — Görevlerim / Notlarım Web-Mobil Kapsam Farkı (2026-07-16)
 PRODUCT DESIGN BLUEPRINT uygulama sprintinde (mytasks.php) kök neden analizi sırasında bulundu:
 `mobile/mytasks.php` kişisel not sistemi ("📝 Notlarım" paneli — `personal_notes` tablosu,

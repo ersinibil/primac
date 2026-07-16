@@ -19,6 +19,34 @@ function task_my_personnel_id($pdo,$uid){
     }catch(Throwable $e){ return 0; }
 }
 
+// PX-001A Visual Revision (2026-07-16, Ece code-review notu): web (mytasks.php) ve mobil
+// (mobile/mytasks.php) "operasyon özeti" (Bugün/Geciken/Tamamlanan) için birebir aynı sorguyu
+// ayrı ayrı yazmıştı — kod tekrarını/sürüklenmeyi önlemek için tek fonksiyona çıkarıldı.
+function task_my_stats($pdo,$pid){
+    $out=['today'=>0,'overdue'=>0,'done'=>0];
+    if(!$pid) return $out;
+    try{
+        $r=$pdo->prepare("SELECT
+            SUM(CASE WHEN due_date=CURDATE() AND status NOT IN ('Tamamlandı','İptal') THEN 1 ELSE 0 END) t_today,
+            SUM(CASE WHEN due_date<CURDATE() AND status NOT IN ('Tamamlandı','İptal') THEN 1 ELSE 0 END) t_overdue,
+            SUM(CASE WHEN status='Tamamlandı' THEN 1 ELSE 0 END) t_done
+            FROM tasks WHERE personnel_id=? AND deleted_at IS NULL");
+        $r->execute([$pid]);
+        $row=$r->fetch();
+        $out['today']=(int)($row['t_today']??0);
+        $out['overdue']=(int)($row['t_overdue']??0);
+        $out['done']=(int)($row['t_done']??0);
+    }catch(Throwable $e){}
+    return $out;
+}
+
+// Görev durumu → df-badge tonu (Visual Language Foundation). Bilinmeyen/yeni bir durum eklenirse
+// güvenli varsayılan 'info' döner.
+function task_status_tone($status){
+    $map=['Atandı'=>'info','Devam Ediyor'=>'warning','Tamamlandı'=>'success','İptal'=>'danger'];
+    return $map[$status] ?? 'info';
+}
+
 // Tek bir görevi (silinmemiş) ilişkili bilgilerle birlikte getirir.
 function task_fetch($pdo,$id){
     $st=$pdo->prepare("SELECT t.*, j.id job_real, j.job_no, p.name pname, p.phone pphone,

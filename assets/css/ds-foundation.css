@@ -27,7 +27,7 @@
    radius'u 12px). İkisi bir süre paralel yaşayacak; ekranlar df-*'a taşındıkça ds-* kademeli
    olarak terk edilecek (bkz. PX-001A ve sonrası). Bu dosyaya eklenen CSS zaten hem web (light)
    hem mobil (dark, ds_styles() → mobile/common.php topx() üzerinden aynı dosyayı yüklüyor)
-   sayfalarında otomatik olarak mevcut — mobile/common.php'nin kendi --radius-*/--c-* token'larına
+   sayfalarında otomatik olarak mevcut — mobile/common.php'nin kendi --radius-* / --c-* token'larına
    HİÇ dokunulmadı, dolayısıyla mobil hiçbir ekranda da görünüm değişikliği yok. */
 
 /* ── 1. Header (Page Header) ────────────────────────────────────────────── */
@@ -278,26 +278,29 @@ body.mobile-shell{
 
 /* Liste yüzeyi — satırlar artık ayrı ayrı kart/gölge/border taşımaz, tek yüzey + hairline ayraç */
 .df-list{background:var(--df-surface);border:1px solid var(--df-hairline);border-radius:var(--df-radius-md);overflow:hidden}
-.df-list-row{display:flex;justify-content:space-between;align-items:flex-start;gap:var(--df-space-3);padding:var(--df-space-4);border-bottom:1px solid var(--df-hairline);cursor:pointer;transition:background var(--df-dur-fast) var(--df-ease-standard)}
+.df-list-row{display:flex;justify-content:space-between;align-items:flex-start;gap:var(--df-space-3);padding:18px var(--df-space-4);border-bottom:1px solid var(--df-hairline);cursor:pointer;transition:background var(--df-dur-fast) var(--df-ease-standard)}
 .df-list-row:last-child{border-bottom:0}
 .df-list-row:hover{background:var(--df-surface-sunken)}
-.df-list-row-body{min-width:0;flex:1}
+/* PX-001A Visual Revision (2026-07-16): dikey ritim artık tutarlı bir flex-gap ile — dağınık
+   margin-top yerine, başlık/açıklama/meta arası her zaman aynı 6px. */
+.df-list-row-body{min-width:0;flex:1;display:flex;flex-direction:column;gap:6px}
 .df-list-row-title{font-size:var(--df-type-subtitle-size);font-weight:var(--df-type-subtitle-weight);color:var(--df-ink-900)}
-.df-list-row-desc{font-size:var(--df-type-body-size);color:var(--df-ink-600);margin-top:4px}
-.df-list-row-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;color:var(--df-ink-500);font-size:var(--df-type-caption-size);margin-top:5px}
+.df-list-row-desc{font-size:var(--df-type-body-size);color:var(--df-ink-600)}
+.df-list-row-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;color:var(--df-ink-500);font-size:var(--df-type-caption-size)}
 .df-list-row-meta .df-icon{opacity:.8}
+.df-list-row-meta .df-list-row-due{color:var(--df-ink-600);font-weight:600;display:inline-flex;align-items:center;gap:3px}
 .df-list-row-actions{display:flex;gap:6px;flex:0 0 auto;align-items:center}
 @media(max-width:640px){.df-list-row{flex-direction:column}.df-list-row-actions{width:100%}}
 
-/* Filtre sekmeleri — eski inline-style hack'in yerine */
-.df-tabs{display:inline-flex;background:var(--df-surface-sunken);border-radius:var(--df-radius-sm);padding:3px;gap:2px}
-.df-tab{border:0;background:transparent;color:var(--df-ink-600);font-size:12.5px;font-weight:600;padding:7px 14px;border-radius:6px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;transition:background var(--df-dur-fast) var(--df-ease-standard),color var(--df-dur-fast) var(--df-ease-standard)}
+/* Filtre sekmeleri — gerçek segmented control: gömük iz (inset gölge) + yüzen aktif parça */
+.df-tabs{display:inline-flex;background:var(--df-surface-sunken);border-radius:var(--df-radius-sm);padding:3px;gap:2px;box-shadow:inset 0 0 0 1px var(--df-hairline)}
+.df-tab{border:0;background:transparent;color:var(--df-ink-600);font-size:12.5px;font-weight:600;padding:7px 16px;border-radius:6px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;transition:background var(--df-dur-fast) var(--df-ease-standard),color var(--df-dur-fast) var(--df-ease-standard)}
 .df-tab--active{background:var(--df-surface);color:var(--df-ink-900);box-shadow:var(--df-shadow-sm)}
 body.mobile-shell .df-tab--active{background:var(--df-accent);color:#fff;box-shadow:none}
 
 /* "•••" menü — ds-menu ile aynı desen (native details/summary), df- token'larıyla */
 .df-menu{position:relative;display:inline-block}
-.df-menu>summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:var(--df-radius-sm);background:var(--df-surface-sunken);color:var(--df-ink-600)}
+.df-menu>summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:var(--df-radius-sm);background:var(--df-surface-sunken);color:var(--df-ink-600)}
 .df-menu>summary::-webkit-details-marker{display:none}
 .df-menu[open]>summary{background:var(--df-ink-900);color:var(--df-surface)}
 .df-menu-body{position:absolute;right:0;top:calc(100% + 6px);background:var(--df-surface);border:1px solid var(--df-hairline);border-radius:var(--df-radius-md);box-shadow:var(--df-shadow-md);padding:6px;min-width:170px;z-index:30;display:flex;flex-direction:column;gap:2px}
@@ -313,3 +316,23 @@ body.mobile-shell .df-tab--active{background:var(--df-accent);color:#fff;box-sha
 .df-quick-add input::placeholder{color:var(--df-ink-500)}
 .df-quick-add button{width:36px;height:36px;border-radius:50%;border:0;background:var(--df-accent);color:#fff;display:flex;align-items:center;justify-content:center;flex:0 0 auto;cursor:pointer}
 .df-quick-add button:disabled{opacity:.45;cursor:not-allowed}
+/* PX-001A Visual Revision: ekranın kahramanı input değil görevler olsun — hızlı-ekle artık
+   sayfa genişliğine değil, kompakt bir araç genişliğine sahip (yalnızca opt-in modifier,
+   .df-quick-add'in varsayılan tam-genişlik davranışı başka ekranlar için korunuyor). */
+.df-quick-add--compact{max-width:440px}
+
+/* Operasyon özeti — KPI kartı DEĞİL, sade sayı+etiket satırı (Karar: PX-001A Visual Revision) */
+.df-ops-summary{display:flex;gap:28px;flex-wrap:wrap;margin-bottom:var(--df-space-5)}
+.df-ops-stat{display:flex;align-items:baseline;gap:6px}
+.df-ops-stat strong{font-size:20px;font-weight:700;color:var(--df-ink-900);font-variant-numeric:tabular-nums}
+.df-ops-stat strong.is-danger{color:var(--df-danger-ink)}
+.df-ops-stat span{font-size:12.5px;color:var(--df-ink-500);font-weight:500}
+
+/* Toolbar satırı — sekmeler solda, ikincil/az-önemli linkler sağda (tek satır, sağa yaslı).
+   width:100% BİLEREK açık — bu satır width:auto+flex-wrap+iç içe inline-flex (.df-tabs) kombinasyonu
+   dar viewport'ta genişliği yanlış hesaplayıp içeriği ekran dışına itiyordu (statik önizlemede
+   bulundu, izole testle doğrulandı). */
+.df-toolbar-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:var(--df-space-4);width:100%;box-sizing:border-box}
+.df-toolbar-links{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--df-ink-500)}
+.df-toolbar-links a{color:var(--df-ink-500);text-decoration:none}
+.df-toolbar-links a:hover{color:var(--df-ink-900);text-decoration:underline}

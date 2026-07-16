@@ -46,25 +46,39 @@ $f=$_GET['f']??'open';
 require_once __DIR__.'/layout_top.php';
 ?>
 <?php
-// PX-001A (2026-07-16): Visual Language Foundation uygulaması — "✅ Görevlerim" emoji'li başlık
-// yerine düz metin + ayrı ds_icon() çıktısı ($icon parametresi zaten mevcuttu, DEĞİŞMEDİ).
-// "+ Kendime İş Ekle" hâlâ ayrı bir header butonu değil — aşağıdaki hızlı-ekleme formu bu aksiyonu
-// temsil ediyor (Blueprint: "az karar"). Admin-only "+ İş Ekle" (başkasına atama, task_new.php)
-// header'da kalıyor, artık df-* (ds_button 6. parametre) çıktısı.
-$__actions = is_admin() ? ds_button('İş Ekle', 'task_new.php', 'secondary', '', '', true) : '';
+// PX-001A Visual Revision (2026-07-16, Product Owner kararı): "Kendime görev eklemek" ile
+// "Personele görev atamak" farklı niyetler — biri diğerinin içine gizlenmez, ama ekranın birincil
+// odağı "kendime hızlı ekleme" kalır. Admin-only "Personele Ata" (task_new.php, route/yetki AYNI)
+// artık header'da küçük ama açık bir ghost buton; normal kullanıcı hiç görmüyor.
+$__actions = is_admin() ? ds_button('Personele Ata', 'task_new.php', 'ghost', '', '', true) : '';
 ds_page_header('Görevlerim', ds_icon('check',24), '', $__actions);
+
+// Operasyon özeti — KPI kartı DEĞİL, sade sayı+etiket satırı (Bugün/Geciken/Tamamlanan). Salt
+// okunur, tıklanamaz — yeni bir filtre/iş akışı eklemiyor, sadece durum farkındalığı.
+// task_my_stats()/task_status_tone(): tasks_lib.php'de paylaşılıyor (Ece code-review notu —
+// web/mobil aynı sorguyu/eşlemeyi ayrı ayrı yazmıştı).
+$__stats = task_my_stats($pdo,$pid);
+$__today=$__stats['today']; $__overdue=$__stats['overdue']; $__done=$__stats['done'];
 ?>
-<form method="post" action="mytask_new.php" class="df-quick-add">
+<div class="df-ops-summary">
+<div class="df-ops-stat"><strong><?=$__today?></strong><span>Bugün</span></div>
+<div class="df-ops-stat"><strong<?=$__overdue?' class="is-danger"':''?>><?=$__overdue?></strong><span>Geciken</span></div>
+<div class="df-ops-stat"><strong><?=$__done?></strong><span>Tamamlanan</span></div>
+</div>
+
+<form method="post" action="mytask_new.php" class="df-quick-add df-quick-add--compact">
 <input type="text" name="title" placeholder="Yeni görev başlığı yaz, Enter'a bas..." required maxlength="190">
 <button type="submit" aria-label="Görev ekle"><?=ds_icon('plus',18)?></button>
 </form>
 <?php if(!empty($_GET['ok'])): ?><div class="ok">İş eklendi.</div><?php endif; ?>
 
-<div class="df-tabs" style="margin-bottom:var(--df-space-4)">
+<div class="df-toolbar-row">
+<div class="df-tabs">
 <a class="df-tab<?=$f==='open'?' df-tab--active':''?>" href="mytasks.php?f=open">Açık</a>
 <a class="df-tab<?=$f==='done'?' df-tab--active':''?>" href="mytasks.php?f=done">Tamamlanan</a>
 </div>
-<p class="df-text-caption" style="margin:-6px 0 var(--df-space-4)">Tüm görevler için (yetkiniz varsa) <a href="tasks.php">Görevler</a> sayfasına bakın.</p>
+<div class="df-toolbar-links"><a href="tasks.php">Tüm Görevler</a></div>
+</div>
 
 <?php
 try{
@@ -104,15 +118,21 @@ try{
 <div class="df-list-row-title"><?=h($t['title'])?></div>
 <?php if($t['description']): ?><div class="df-list-row-desc"><?=nl2br(h($t['description']))?></div><?php endif; ?>
 <div class="df-list-row-meta">
+<?php
+// PX-001A Visual Revision: durum artık sessiz metin değil, tonlu bir df-badge (Status Badge —
+// Foundation'ın 4 rozet dilinden biri, ilk kez gerçek ekranda kullanılıyor). status_tone() mevcut
+// yapıya ekleme yapmadan, sadece bu ekranın kendi küçük eşlemesiyle.
+$__statusTone = task_status_tone($t['status']);
+?>
+<span class="df-badge df-badge--<?=h($__statusTone)?>"><?=h($t['status'])?></span>
 <?php if($t['job_no']): ?><span>İş: <?=h($t['job_no'])?></span><?php endif; ?>
-<span><?=h($t['status'])?></span>
 <?php if($t['priority'] && $t['priority']!=='Normal'): ?><?=ds_priority($t['priority'],$t['priority'])?><?php endif; ?>
-<?php if($t['due_date']): ?><span><?=ds_icon('calendar',13)?> <?=h($t['due_date'])?></span><?php endif; ?>
+<?php if($t['due_date']): ?><span class="df-list-row-due"><?=ds_icon('calendar',13)?> <?=h($t['due_date'])?></span><?php endif; ?>
 <?php if($gec): ?><span style="color:var(--df-danger-ink);font-weight:600">Gecikti</span><?php endif; ?>
 </div>
 </div>
 <div class="df-list-row-actions">
-<?php if($__primaryLabel): ?><form method="post" style="display:inline"><input type="hidden" name="tid" value="<?=(int)$t['id']?>"><button type="submit" class="df-btn df-btn--<?=h($__primaryTone)?>" name="task_status" value="<?=h($__primaryValue)?>"><?=h($__primaryLabel)?></button></form><?php endif; ?>
+<?php if($__primaryLabel): ?><form method="post" style="display:inline"><input type="hidden" name="tid" value="<?=(int)$t['id']?>"><button type="submit" class="df-btn df-btn--sm df-btn--<?=h($__primaryTone)?>" name="task_status" value="<?=h($__primaryValue)?>"><?=h($__primaryLabel)?></button></form><?php endif; ?>
 <?php if($t['job_real'] || $canEdit || $canDel): ?>
 <details class="df-menu">
 <summary aria-label="Diğer işlemler"><?=ds_icon('menu-dots',18)?></summary>
