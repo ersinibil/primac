@@ -172,38 +172,61 @@ if($isAdmin){
 <?php endif; ?>
 
 <?php else: ?>
-<!-- ── COMPACT — NAV-001B sade ana ekran (Product Owner kararı) ── -->
+<!-- ── COMPACT — Home Screen v1.1 (PX-001, 2026-07-16) — mockup turu kapandı, gerçek veri ── -->
 <?php
 $pid = task_my_personnel_id($pdo, $ME);
-$__taskStats = task_my_stats($pdo, $pid);
-$__openJobs = $__pulseShowJobs ? $open : 0;
-$__upcoming = 0;
-if($__pulseShowJobs){
-    try{ $__upcoming = (int)($pdo->query("SELECT COUNT(*) c FROM jobs WHERE status NOT IN ('Tamamlandı','İptal','Teslim Edildi') AND due_date IS NOT NULL AND due_date>=CURDATE() AND due_date<=DATE_ADD(CURDATE(),INTERVAL 7 DAY)")->fetch()['c'] ?? 0); }catch(Throwable $e){}
-}
-$__qaSplit1 = dashboard_quick_actions_split(function($perm) use($isAdmin){ return $isAdmin||user_can($perm); }, 1);
-$__singleAction = $__qaSplit1['primary'][0] ?? null;
+$__homeCanSee = function($perm){ return user_can($perm); };
+$__homeQ = home_build_queue($pdo, $isAdmin, $__homeCanSee, $pid, 'mobile');
+$__homeC = home_build_continue($pdo, $isAdmin, $__homeCanSee);
+$__homeDay = home_today_label();
 ?>
-<div class="df-panel">
-  <div class="df-ops-summary">
-    <div class="df-ops-stat"><strong><?=$__taskStats['today']?></strong><span>Bugünkü Görev</span></div>
-    <div class="df-ops-stat"><strong<?=$__taskStats['overdue']?' class="is-danger"':''?>><?=$__taskStats['overdue']?></strong><span>Geciken Görev</span></div>
-    <?php if($__pulseShowJobs): ?>
-    <div class="df-ops-stat"><strong><?=$__openJobs?></strong><span>Devam Eden İş</span></div>
-    <div class="df-ops-stat"><strong><?=$__upcoming?></strong><span>Yaklaşan (7g)</span></div>
-    <?php endif; ?>
+<div class="df-home-daylabel"><span class="df-home-dow"><?=h($__homeDay['dow'])?></span><span class="df-home-date"><?=h($__homeDay['date'])?></span></div>
+
+<?php if($__homeQ['hero']): $__h=$__homeQ['hero']; ?>
+<a class="df-home-hero" href="<?=h($__h['url'])?>">
+  <div class="df-home-hero-body">
+    <div class="df-home-hero-title"><?=h($__h['title'])?></div>
+    <div class="df-home-hero-meta"><?=h($__h['meta'])?></div>
+    <div class="df-home-hero-pill"><span class="df-badge df-badge--<?=h(home_pill_badge_tone($__h['pill']['tone']))?>"><?=h($__h['pill']['label'])?></span></div>
+  </div>
+  <div class="df-home-chev"></div>
+</a>
+<?php else: ?>
+<div class="df-panel" style="text-align:center;padding:24px 14px">
+  <div style="font-size:13.5px;font-weight:700">Bugün her şey yolunda</div>
+  <div style="font-size:12px;color:var(--df-ink-600);margin-top:4px">Sırada acil bir iş yok.</div>
+</div>
+<?php endif; ?>
+
+<?php if($__homeQ['queue']): ?>
+<div>
+  <div class="df-home-lab">Sırada</div>
+  <div class="df-home-qlist">
+    <?php foreach($__homeQ['queue'] as $__qi): ?>
+    <a class="df-home-qrow" href="<?=h($__qi['url'])?>">
+      <div class="df-home-qrow-body"><div class="df-home-qrow-title"><?=h($__qi['title'])?></div><div class="df-home-qrow-meta"><?=h($__qi['meta'])?></div></div>
+      <span class="df-badge df-badge--<?=h(home_pill_badge_tone($__qi['pill']['tone']))?>" style="font-size:10px;padding:3px 8px"><?=h($__qi['pill']['label'])?></span>
+      <div class="df-home-chev df-home-chev--sm"></div>
+    </a>
+    <?php endforeach; ?>
+  </div>
+  <?php if($__homeQ['more'] > 0): ?><a class="df-home-more" href="jobs.php">+<?=(int)$__homeQ['more']?> iş daha</a><?php endif; ?>
+</div>
+<?php endif; ?>
+
+<?php if($__homeC): ?>
+<div>
+  <div class="df-home-lab">Devam Et</div>
+  <div class="df-home-continue">
+    <?php foreach($__homeC as $__ci): ?>
+    <a class="df-home-cc" href="<?=h($__ci['url'])?>">
+      <div class="df-home-cc-eyebrow"><?=h($__ci['eyebrow'])?></div>
+      <div class="df-home-cc-row"><div class="df-home-cc-title"><?=h($__ci['title'])?></div><div class="df-home-chev df-home-chev--sm"></div></div>
+    </a>
+    <?php endforeach; ?>
   </div>
 </div>
-
-<div class="df-panel" style="display:flex;flex-direction:column;gap:8px">
-  <a class="df-nav-row" href="messages.php" style="background:var(--df-surface-sunken)">
-    <span>Mesajlar<?=$myMsg?' · '.$myMsg.' yeni':''?></span>
-  </a>
-  <?php if($__singleAction): ?>
-  <a class="df-btn df-btn--primary" style="width:100%" href="<?=htmlspecialchars($__singleAction['mobileUrl'] ?? $__singleAction['url'])?>"><?=$__singleAction['icon']?> <?=htmlspecialchars($__singleAction['label'])?></a>
-  <?php endif; ?>
-  <a class="df-btn df-btn--secondary" style="width:100%" href="more.php">Tüm Modüller</a>
-</div>
+<?php endif; ?>
 <?php endif; ?>
 
 <?php botx(); ?>

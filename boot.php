@@ -488,6 +488,9 @@ if(is_file(__DIR__.'/nav_lib.php')) require_once __DIR__.'/nav_lib.php';
 // yükleniyordu — layout_top.php (compact nav) artık user_pref_get() çağırdığı için TÜM sayfalarda
 // garanti yüklü olması gerekiyor, merkezi hale getirildi.
 if(is_file(__DIR__.'/user_prefs_lib.php')) require_once __DIR__.'/user_prefs_lib.php';
+// PX-001 (2026-07-16) — Home Screen v1.1 gerçek veri katmanı, web (dashboard.php) ve mobil
+// (mobile/index.php) compact modun ORTAK kaynağı — nav_lib.php ile aynı gerekçeyle merkezi.
+if(is_file(__DIR__.'/home_lib.php')) require_once __DIR__.'/home_lib.php';
 // Geciken iş otomatik bildirimi (saatte bir, dosya kilidi ile) — giriş yapılmışsa
 if(!empty($_SESSION['user']) && is_file(__DIR__.'/job_overdue_lib.php')){ require_once __DIR__.'/job_overdue_lib.php'; try{ check_overdue_jobs(db()); }catch(Throwable $e){} }
 // Sabah hatırlatma (09:30 sonrası ilk girişte, günde 1 kez) — kesin 09:30 için cPanel cron → cron.php?key=acans-cron-2026

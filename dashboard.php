@@ -3,10 +3,21 @@ require_once __DIR__.'/layout_top.php';
 if(file_exists(__DIR__.'/activity_lib.php')) require_once __DIR__.'/activity_lib.php';
 require_once __DIR__.'/notes_lib.php';
 require_once __DIR__.'/user_prefs_lib.php';
+// PX-001 (2026-07-16) — Home Screen v1.1 compact modu task_my_stats()/task_my_personnel_id()
+// kullanıyor; dashboard.php bu dosyayı daha önce hiç require etmiyordu (mobile/index.php zaten
+// ediyordu, mytasks.php'den beri).
+if(is_file(__DIR__.'/tasks_lib.php')) require_once __DIR__.'/tasks_lib.php';
 
 $today=date('Y-m-d');
 $pdo=db();
 $__myNotes=personal_notes_list($pdo,(int)($_SESSION['user']['id']??0),'open');
+
+// PX-001 (2026-07-16) — NAV-001B'nin nav_layout_mode pilot mekanizması: legacy dal ORİJİNAL
+// Komuta Merkezi'ni birebir korur, compact dal yeni Home Screen v1.1'i (Hero+Sırada+Devam Et)
+// gösterir. dashboard.php bu güne kadar hiçbir compact/legacy ayrımı yapmıyordu (sadece
+// mobile/index.php'de vardı) — web tarafı için bu ayrım İLK KEZ burada ekleniyor.
+$__navSavedMode = function_exists('user_pref_get') ? user_pref_get($pdo, (int)($_SESSION['user']['id']??0), 'nav_layout_mode', null) : null;
+$__navMode = function_exists('nav_effective_mode') ? nav_effective_mode($__navSavedMode, is_admin(), nav_is_pilot_user((int)($_SESSION['user']['id']??0))) : 'legacy';
 
 // Mevcut ay
 $monthStart=date('Y-m-01');
@@ -262,6 +273,7 @@ a.alert-stat-link:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(16
 @media(max-width:640px){.qa-categories{gap:14px}.qa-category{min-width:140px}}
 </style>
 
+<?php if($__navMode === 'legacy'): ?>
 <div class="panel-head page-header">
 <h1>Komuta Merkezi</h1>
 </div>
@@ -894,5 +906,67 @@ function dashboardPulseScrollToCritical(){
   return false;
 }
 </script>
+
+<?php else: ?>
+<?php
+// PX-001 — Home Screen v1.1 (Hero + Sırada + Devam Et). Kod yok, sadece mockup denilen aşama
+// kapandı (Product Owner kararı, 2026-07-16) — bu artık gerçek sorgulara bağlı pilot ekran.
+// Not: arama (Spotlight) bu turda BİLİNÇLİ OLARAK eklenmedi — gerçek çapraz-modül arama altyapısı
+// ayrı bir iş; mevcut Launcher ("Tüm Modüller") zaten bir arama/erişim yolu sağlıyor.
+$__homeMe = (int)($_SESSION['user']['id'] ?? 0);
+$__homePid = function_exists('task_my_personnel_id') ? task_my_personnel_id($pdo, $__homeMe) : null;
+$__homeCanSee = function($perm){ return user_can($perm); };
+$__homeQ = home_build_queue($pdo, is_admin(), $__homeCanSee, $__homePid, 'web');
+$__homeC = home_build_continue($pdo, is_admin(), $__homeCanSee);
+$__homeDay = home_today_label();
+?>
+<div class="df-home-daylabel"><span class="df-home-dow"><?=h($__homeDay['dow'])?></span><span class="df-home-date"><?=h($__homeDay['date'])?></span></div>
+
+<?php if($__homeQ['hero']): $__h=$__homeQ['hero']; ?>
+<a class="df-home-hero" href="<?=h($__h['url'])?>">
+  <div class="df-home-hero-body">
+    <div class="df-home-hero-title"><?=h($__h['title'])?></div>
+    <div class="df-home-hero-meta"><?=h($__h['meta'])?></div>
+    <div class="df-home-hero-pill"><span class="df-badge df-badge--<?=h(home_pill_badge_tone($__h['pill']['tone']))?>"><?=h($__h['pill']['label'])?></span></div>
+  </div>
+  <div class="df-home-chev"></div>
+</a>
+<?php else: ?>
+<div class="df-panel" style="text-align:center;padding:28px 16px">
+  <div style="font-size:14px;font-weight:700">Bugün her şey yolunda</div>
+  <div style="font-size:12.5px;color:var(--df-ink-600);margin-top:4px">Sırada acil bir iş yok.</div>
+</div>
+<?php endif; ?>
+
+<?php if($__homeQ['queue']): ?>
+<div>
+  <div class="df-home-lab">Sırada</div>
+  <div class="df-home-qlist">
+    <?php foreach($__homeQ['queue'] as $__qi): ?>
+    <a class="df-home-qrow" href="<?=h($__qi['url'])?>">
+      <div class="df-home-qrow-body"><div class="df-home-qrow-title"><?=h($__qi['title'])?></div><div class="df-home-qrow-meta"><?=h($__qi['meta'])?></div></div>
+      <span class="df-badge df-badge--<?=h(home_pill_badge_tone($__qi['pill']['tone']))?>" style="font-size:10px;padding:3px 8px"><?=h($__qi['pill']['label'])?></span>
+      <div class="df-home-chev df-home-chev--sm"></div>
+    </a>
+    <?php endforeach; ?>
+  </div>
+  <?php if($__homeQ['more'] > 0): ?><a class="df-home-more" href="jobs.php">+<?=(int)$__homeQ['more']?> iş daha</a><?php endif; ?>
+</div>
+<?php endif; ?>
+
+<?php if($__homeC): ?>
+<div>
+  <div class="df-home-lab">Devam Et</div>
+  <div class="df-home-continue">
+    <?php foreach($__homeC as $__ci): ?>
+    <a class="df-home-cc" href="<?=h($__ci['url'])?>">
+      <div class="df-home-cc-eyebrow"><?=h($__ci['eyebrow'])?></div>
+      <div class="df-home-cc-row"><div class="df-home-cc-title"><?=h($__ci['title'])?></div><div class="df-home-chev df-home-chev--sm"></div></div>
+    </a>
+    <?php endforeach; ?>
+  </div>
+</div>
+<?php endif; ?>
+<?php endif; ?>
 
 <?php require_once __DIR__.'/layout_bottom.php'; ?>
