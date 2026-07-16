@@ -2,6 +2,49 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
+## PX-001B — İş Detay v1: KOD İNCELEME PASS — PİLOT KULLANICI TESTİ BEKLİYOR (2026-07-16)
+Home Screen v1.1'in hemen ardından, aynı "mockup turu kapandı, gerçek veriyle çalıştır" kararıyla
+gerçek koda geçirildi — commit `9f48b5d`.
+
+**Yeni `job_detail_lib.php`** — hem web (`job_view.php`) hem mobil (`mobile/job_view.php`) pilot
+dalının TEK kaynağı. `job_detail_next_step($j,$pendingApprovalCount)`: basit kural zinciri (gecikmiş
++aktif→"Müşteriyi Ara", tamamlanmış+tahsilat bekliyor→"Tahsilatı Al", onay bekleyen dosya varsa→
+"Müşteriden Onay Takip Et", termine ≤3 gün varsa→"Üretimi Tamamla", yoksa null) TEK bir sonraki adım
+üretiyor — home_lib.php'nin puanlama felsefesiyle tutarlı, karmaşık bir karar motoru kurulmadı.
+`job_detail_timeline()`: `activity_logs` (`entity_type='job'`) — bilinçli seçim, aşağıya bkz.
+
+**Şema araştırmasında ortaya çıkan gerçeklik payı (mockup→gerçek kod geçişinin tam da amaçladığı
+şey):** mockup'ın "İlgili Kişiler" bölümü 4 rol (Müşteri/Temsilci/Üretim/Montaj) gösteriyordu; gerçek
+`jobs` tablosunda TEK `responsible_personnel_id` var, ayrı rol kolonu yok — gerçek sürüm 2 role
+(Müşteri + Sorumlu Personel) indirildi, icat edilmedi. Mockup'ın "İş Özeti (adet)" ve "Neden?/Sonra
+ne olacak?" genişletmesi de bu tura dahil edilmedi (Product Owner'ın mockup turunu kapatma kararı
+tam bu revizyonun ortasında geldi) — gerçek koda geçirilen taban, o son revizyondan ÖNCEKİ onaylı
+7 bölümlü mockup'tır.
+
+**Timeline kaynağı bilinçli seçimi:** şema araştırması web `job_view.php`'nin kendi `job_logs`
+tablosunu, mobil `mobile/job_view.php`'nin ise `activity_logs`'u kullandığını ortaya çıkardı — iki
+ayrı, birbirini görmeyen kaynak (backlog `PX-001B-ÖN`, artık kapandı). Pilot dal ikisi için de TEK
+kaynak (`activity_logs`, zaten hazır `activity_recent()` altyapısı) kullanıyor; eski iki ekranın
+kendi log yazma davranışı DEĞİŞMEDİ (kapsam dışı, ayrı bir birleştirme kararı gerektirir).
+
+**`job_view.php`'ye (web) İLK KEZ `nav_layout_mode` okuma dalı eklendi.** `mobile/job_view.php`
+zaten `$__navMode`'a erişebiliyordu (`mobile/common.php`, NAV-001B'den beri) ama hiç kullanmıyordu —
+bu turda kullanmaya başladı. POST işleme (aşama/durum/dosya/not/düzenleme) her iki dosyada da HİÇ
+değişmedi — "Tamamlandı" butonu bile mevcut handler'ları platform-doğru alan adlarıyla tetikliyor
+(web: `job_status`, mobil: `set_status`+`status` — iki farklı, kasıtlı, karıştırılmadı).
+
+**Review: Ece/Selin/Elif üçü de PASS.** Selin gerçek bir fonksiyonel bug buldu — mobil dosya
+linkinde `'../'` öneki eksikti (`mobile/` dizininden köke göre yanlış çözülüyordu, legacy dal bunu
+doğru yapıyordu) — aynı turda düzeltildi, php -l ile yeniden doğrulandı. Ece bir düşük öncelikli
+stil notu verdi (telefon sorgusu int-cast'li ham concat, prepared statement değil — ama bu legacy'den
+kopyalanmış mevcut bir desen, yeni bir açık değil).
+
+**PX-001 (Home Screen) + PX-001B (İş Detay) birlikte:** Product Owner'ın "artık ekran çizmeyi
+bırakın, gerçek veriyle çalıştırın, pilot kullanıcılarla test edelim" kararının iki ilk gerçek-kod
+çıktısı tamamlandı. İkisi de opt-in `nav_layout_mode` pilot mekanizmasını kullanıyor (admin/pilot
+listesi dışındaki kullanıcılar hiçbir değişiklik görmüyor), ikisi de legacy dallarını sıfır satır
+değiştirmeden koruyor. Sıradaki adım: kullanıcının kendi USER TEST'i.
+
 ## PX-001 — Home Screen v1.1: KOD İNCELEME PASS — PİLOT KULLANICI TESTİ BEKLİYOR (2026-07-16)
 Product Owner "Philosophy Reset" programı (ERP hissi eleştirisi → 6 konsept → Konsept 02
 Akış+03 Bugün+06 Spotlight sentezi → Home Screen mockup → dondu → "artık ekran çizmeyi bırakın,

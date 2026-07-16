@@ -2,14 +2,21 @@
 
 <!-- Açık geliştirme görevleri. Kapanan madde buradan silinip memory/features.md'ye taşınır. -->
 
-## PX-001B-ÖN — job_view.php/mobile/job_view.php İKİ FARKLI zaman çizelgesi kaynağı kullanıyor (2026-07-16)
+## PDP/SEC-002 — job_view.php/mobile/job_view.php telefon sorgusu prepared statement değil (2026-07-16, Ece PX-001B review notu, DÜŞÜK öncelik)
+`$pdo->query("SELECT phone FROM contacts WHERE id=".(int)$j['customer_id'])` deseni (`job_view.php`
+hem legacy hem yeni pilot dalda, `mobile/job_view.php`'de de aynı) prepared statement değil, ham
+string birleştirme — ama değer `(int)` cast'li olduğu için enjeksiyon riski YOK. Güvenlik açığı
+değil, CLAUDE.md'nin "Tüm SQL prepared statements" kuralına harfiyen uymayan, legacy'den kopyalanmış
+bir stil notu. **Karar verilmedi** — genel bir kod temizliği turunda ele alınabilir.
+
+## PX-001B-ÖN — job_view.php/mobile/job_view.php İKİ FARKLI zaman çizelgesi kaynağı kullanıyor (2026-07-16, PİLOT için çözüldü — LEGACY hâlâ açık)
 Şema araştırmasında bulundu: web `job_view.php` (satır 371) zaman çizelgesi için kendi `job_logs`
 tablosunu (`add_log()` ile yazılıyor) kullanıyor; mobil `mobile/job_view.php` (satır 304) ise
 `activity_logs` tablosunu (`entity_type='job'`, genel `activity_log()`/`activity_recent()`
-altyapısı) kullanıyor — iki ekran birbirinin yazdığı olayları GÖRMÜYOR. Yeni pilot İş Detay
-ekranı (PX-001B) için TEK kaynak seçilmesi gerekiyor — `activity_logs` daha zengin/genel altyapı
-olduğu için (zaten `activity_recent()`/`activity_row_html()` hazır) aday, ama eski iki ekranın
-kendi `job_logs`/`activity_logs` yazma davranışı bu turda DEĞİŞTİRİLMEYECEK (kapsam dışı, ayrı bir
+altyapısı) kullanıyor — iki ekran birbirinin yazdığı olayları GÖRMÜYOR. **PX-001B pilot dalı için
+karar verildi ve uygulandı:** `job_detail_lib.php::job_detail_timeline()` TEK kaynak olarak
+`activity_logs` kullanıyor (`activity_recent()` üzerinden). **Ama eski İKİ LEGACY ekranın kendi
+`job_logs`/`activity_logs` yazma davranışı hâlâ DEĞİŞTİRİLMEDİ** (bilinçli kapsam dışı — ayrı bir
 parite/birleştirme kararı gerektirir).
 
 ## PX-001 — Home Screen "Devam Et"/"Sırada" global sorgu, kişiye özel değil (2026-07-16, Selin review notu)
