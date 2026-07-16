@@ -135,6 +135,7 @@ try{
     $pers=$pdo->query("SELECT id,name FROM personnel WHERE COALESCE(active,1)=1 ORDER BY name")->fetchAll();
     $cs=$pdo->query("SELECT id,name FROM contacts ORDER BY name")->fetchAll();
 ?>
+<?php if($__navMode === 'legacy'): ?>
 <div class="panel">
   <h2 style="margin:0 0 4px"><?=htmlspecialchars($j['title'])?></h2>
   <div class="muted"><?=htmlspecialchars($j['job_no']??'')?> · <?=htmlspecialchars($j['status'])?><?=$j['due_date']?' · 📅 '.htmlspecialchars($j['due_date']):''?></div>
@@ -318,6 +319,95 @@ try{
   }
   ?>
 </div>
+
+<?php else: ?>
+<?php
+// PX-001B — İş Detay v1 (mockup turu kapandı, Product Owner kararı 2026-07-16). Legacy'nin yazma/
+// POST akışları hiç değişmedi — bu sadece yeni bir OKUMA dalı. Mobil zaten activity_logs kullandığı
+// için job_detail_timeline() birebir aynı kaynağı okuyor (bkz. backlog PX-001B-ÖN notu).
+$__pendingApprovals = job_detail_pending_approvals($pdo, $id);
+$__nextStep = job_detail_next_step($j, $__pendingApprovals);
+$__timeline = job_detail_timeline($id, 4);
+$__jdPhone = preg_replace('/\D/','', ($j['customer_id'] ? ($pdo->query("SELECT phone FROM contacts WHERE id=".(int)$j['customer_id'])->fetch()['phone'] ?? '') : ''));
+$__jdTxt = "📋 İş: ".$j['title']."\nNo: ".($j['job_no']??'')."\nDurum: ".$j['status'].($j['customer']?"\nMüşteri: ".$j['customer']:'').($j['due_date']?"\nTermin: ".$j['due_date']:'');
+try{ $__s=$pdo->prepare("SELECT n.*, u.full_name, u.username FROM job_notes n LEFT JOIN app_users u ON u.id=n.user_id WHERE n.job_id=? ORDER BY n.id DESC LIMIT 1"); $__s->execute([$id]); $__jdNoteRow=$__s->fetch(); }catch(Throwable $e2){ $__jdNoteRow=null; }
+try{ $__s=$pdo->prepare("SELECT * FROM job_files WHERE job_id=? ORDER BY id DESC LIMIT 2"); $__s->execute([$id]); $__jdFileRows=$__s->fetchAll(); }catch(Throwable $e2){ $__jdFileRows=[]; }
+$__jdOverdue = !empty($j['due_date']) && $j['due_date'] < date('Y-m-d') && !in_array($j['status'], ['Tamamlandı','İptal','Teslim Edildi'], true);
+$__jdDaysLate = $__jdOverdue ? (int)round((strtotime(date('Y-m-d')) - strtotime($j['due_date']))/86400) : 0;
+$__jdNextIcons = ['call'=>'phone','money'=>'send','check'=>'check','clock'=>'calendar'];
+?>
+<div class="df-jd">
+  <div class="df-jd-hero">
+    <span class="df-badge df-badge--<?=($__jdOverdue?'danger':'info')?>"><?=h($__jdOverdue ? 'GECİKTİ' : mb_strtoupper($j['status'],'UTF-8'))?></span>
+    <div class="df-jd-title"><?=h($j['title'])?></div>
+    <div class="df-jd-sub"><?=h($j['customer'] ?: 'Cari yok')?><?php if($__jdOverdue): ?><span class="df-jd-dot"></span><b><?=(int)$__jdDaysLate?> gün gecikti</b><?php endif; ?></div>
+  </div>
+
+  <?php if($__nextStep): ?>
+  <div class="df-jd-next">
+    <div class="df-jd-next-ic"><?=ds_icon($__jdNextIcons[$__nextStep['icon']] ?? 'check', 18)?></div>
+    <div class="df-jd-next-body">
+      <div class="df-jd-next-label">Sonraki Adım</div>
+      <div class="df-jd-next-title"><?=h($__nextStep['title'])?></div>
+      <div class="df-jd-next-sub"><?=h($__nextStep['sub'])?></div>
+    </div>
+  </div>
+  <?php else: ?>
+  <div class="df-panel" style="text-align:center;padding:18px 14px">
+    <div style="font-weight:700;font-size:13px">Şu an acil bir adım yok</div>
+  </div>
+  <?php endif; ?>
+
+  <?php if($__timeline): ?>
+  <div>
+    <div class="df-jd-lab">Zaman Akışı</div>
+    <div>
+      <?php foreach(array_reverse($__timeline) as $__tlRow): ?>
+      <div class="df-jd-tl-row"><span class="df-jd-tl-t"><?=h(date('H:i', strtotime($__tlRow['created_at'])))?></span><span class="df-jd-tl-dot"></span><span class="df-jd-tl-e"><?=h($__tlRow['title'] ?: $__tlRow['action'])?></span></div>
+      <?php endforeach; ?>
+    </div>
+  </div>
+  <?php endif; ?>
+
+  <div>
+    <div class="df-jd-lab">İlgili Kişiler</div>
+    <div class="df-jd-people">
+      <div class="df-jd-p-row"><span class="df-jd-p-role">Müşteri</span><span class="df-jd-p-name"><?=h($j['customer'] ?: '-')?></span></div>
+      <div class="df-jd-p-row"><span class="df-jd-p-role">Sorumlu</span><span class="df-jd-p-name"><?=h($j['responsible'] ?: '-')?></span></div>
+    </div>
+  </div>
+
+  <?php if($__jdFileRows): ?>
+  <div id="df-jd-files">
+    <div class="df-jd-lab">Dosyalar</div>
+    <div class="df-jd-files">
+      <?php foreach($__jdFileRows as $__f): $__ext=strtolower(pathinfo($__f['original_name'] ?? '', PATHINFO_EXTENSION)); $__isImg = in_array($__ext,['jpg','jpeg','png','gif','webp'],true) || strpos((string)$__f['mime_type'],'image/')===0; ?>
+      <a class="df-jd-f-row" href="<?=$__f['file_path'] ? '../'.h($__f['file_path']) : '#'?>" target="_blank" rel="noopener">
+        <span class="df-jd-f-badge<?=($__isImg?' df-jd-f-badge--img':'')?>"><?=h($__isImg?'IMG':mb_strtoupper($__ext ?: 'DOSYA','UTF-8'))?></span>
+        <span class="df-jd-f-name"><?=h($__f['original_name'] ?: 'Dosya')?></span>
+        <span class="df-jd-f-time"><?=h(function_exists('activity_time_ago') ? activity_time_ago($__f['created_at']) : $__f['created_at'])?></span>
+      </a>
+      <?php endforeach; ?>
+    </div>
+  </div>
+  <?php endif; ?>
+
+  <?php if($__jdNoteRow): $__who=$__jdNoteRow['full_name'] ?: $__jdNoteRow['username'] ?: '?'; ?>
+  <div>
+    <div class="df-jd-lab">Notlar</div>
+    <div class="df-jd-note"><b><?=h($__who)?>:</b> <?=nl2br(h($__jdNoteRow['note']))?><div class="df-jd-note-meta"><?=h($__jdNoteRow['created_at'])?></div></div>
+  </div>
+  <?php endif; ?>
+
+  <div class="df-jd-bar">
+    <?php if($__jdPhone): ?><a class="df-jd-bar-btn" href="tel:<?=h($__jdPhone)?>"><?=ds_icon('phone',17)?><span>Ara</span></a><?php endif; ?>
+    <a class="df-jd-bar-btn" href="<?=h(wa_link($__jdTxt,$__jdPhone))?>" target="_blank" rel="noopener"><span style="font-size:15px">📱</span><span>WhatsApp</span></a>
+    <a class="df-jd-bar-btn" href="#df-jd-files"><span style="font-size:15px">📎</span><span>Dosya</span></a>
+    <a class="df-jd-bar-btn" href="<?=h(mail_link('İş: '.$j['title'],$__jdTxt))?>"><?=ds_icon('send',17)?><span>Paylaş</span></a>
+    <form method="post" style="flex:1;margin:0"><input type="hidden" name="set_status" value="1"><input type="hidden" name="status" value="Tamamlandı"><button type="submit" class="df-jd-bar-btn is-done" style="width:100%;border:0;background:none"><?=ds_icon('check',17)?><span>Tamamlandı</span></button></form>
+  </div>
+</div>
+<?php endif; ?>
 
 <?php
 }catch(Throwable $e){ echo '<div class="err">'.htmlspecialchars($e->getMessage()).'</div>'; }

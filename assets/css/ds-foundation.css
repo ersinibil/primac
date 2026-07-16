@@ -424,3 +424,53 @@ body.mobile-shell .df-tab--active{background:var(--df-accent);color:#fff;box-sha
 .df-home-cc-eyebrow{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--df-ink-500)}
 .df-home-cc-row{display:flex;align-items:center;gap:5px;margin-top:5px}
 .df-home-cc-title{font-size:12.5px;font-weight:600;color:var(--df-ink-900);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+
+/* ── PX-001B (2026-07-16) — İş Detay v1: Hero + tek Sonraki Adım + sessiz destek bölümleri ── */
+.df-jd{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:var(--df-space-5)}
+.df-jd-back{display:inline-flex;align-items:center;gap:6px;color:var(--df-ink-500);font-size:12.5px;font-weight:700;text-decoration:none;width:fit-content}
+.df-jd-back:hover{color:var(--df-ink-900)}
+.df-jd-back-a{width:7px;height:7px;border-left:1.6px solid currentColor;border-bottom:1.6px solid currentColor;transform:rotate(45deg)}
+
+.df-jd-hero{display:flex;flex-direction:column;gap:8px}
+.df-jd-title{font-size:23px;font-weight:700;line-height:1.25;color:var(--df-ink-900)}
+.df-jd-sub{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--df-ink-600)}
+.df-jd-sub b{color:var(--df-danger-ink);font-weight:700}
+.df-jd-dot{width:3px;height:3px;border-radius:50%;background:var(--df-ink-500)}
+
+.df-jd-next{display:flex;align-items:center;gap:14px;background:var(--df-accent);border-radius:var(--df-radius-lg);padding:17px 19px;text-decoration:none;box-shadow:var(--df-shadow-md);transition:transform var(--df-dur-fast) var(--df-ease-standard)}
+.df-jd-next:hover{transform:translateY(-1px)}
+.df-jd-next-ic{width:40px;height:40px;border-radius:11px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;flex:0 0 auto;color:#fff}
+.df-jd-next-body{flex:1;min-width:0}
+.df-jd-next-label{font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.72)}
+.df-jd-next-title{font-size:16px;font-weight:700;color:#fff;margin-top:2px}
+.df-jd-next-sub{font-size:11.5px;color:rgba(255,255,255,.82);margin-top:2px}
+
+.df-jd-lab{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--df-ink-500);margin-bottom:9px}
+
+.df-jd-tl-row{display:flex;align-items:center;gap:10px;padding:5px 0;font-size:12px}
+.df-jd-tl-t{color:var(--df-ink-500);width:52px;flex:0 0 auto;font-variant-numeric:tabular-nums}
+.df-jd-tl-dot{width:5px;height:5px;border-radius:50%;background:var(--df-ink-300);flex:0 0 auto}
+.df-jd-tl-e{color:var(--df-ink-600)}
+
+.df-jd-people{background:var(--df-surface-sunken);border:1px solid var(--df-hairline);border-radius:var(--df-radius-md);padding:2px 14px}
+.df-jd-p-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--df-hairline)}
+.df-jd-p-row:last-child{border-bottom:0}
+.df-jd-p-role{font-size:10.5px;color:var(--df-ink-500);width:60px;flex:0 0 auto;font-weight:600}
+.df-jd-p-name{flex:1;min-width:0;font-size:13px;font-weight:600;color:var(--df-ink-900)}
+
+.df-jd-files{display:flex;flex-direction:column}
+.df-jd-f-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--df-hairline);font-size:12.5px;text-decoration:none;color:inherit}
+.df-jd-f-row:last-child{border-bottom:0}
+.df-jd-f-badge{font-size:9px;font-weight:800;padding:3px 6px;border-radius:5px;background:var(--df-ink-300);color:#fff;flex:0 0 auto}
+.df-jd-f-badge--img{background:var(--df-accent)}
+.df-jd-f-name{flex:1;color:var(--df-ink-900);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.df-jd-f-time{color:var(--df-ink-500);font-size:11px;flex:0 0 auto}
+
+.df-jd-note{background:var(--df-warning-soft);border-radius:var(--df-radius-md);padding:11px 13px;font-size:12.5px;color:var(--df-ink-900);line-height:1.5}
+.df-jd-note-meta{font-size:10.5px;color:var(--df-ink-500);margin-top:5px}
+
+.df-jd-bar{display:flex;gap:4px;border-top:1px solid var(--df-hairline);padding-top:var(--df-space-3)}
+.df-jd-bar-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;color:var(--df-ink-600);padding:8px 2px;border-radius:var(--df-radius-sm);text-decoration:none;font-family:inherit}
+.df-jd-bar-btn:hover{background:var(--df-surface-sunken);color:var(--df-ink-900)}
+.df-jd-bar-btn span{font-size:9.5px;font-weight:600}
+.df-jd-bar-btn.is-done{color:var(--df-success-ink)}

@@ -171,8 +171,14 @@ if(!$j){
     require __DIR__.'/layout_bottom.php';
     exit;
 }
+
+// PX-001B (2026-07-16) — İş Detay v1 pilot: mockup turu kapandı, gerçek veri. Legacy dal (klasik
+// ekran) aşağıda birebir korunuyor, compact dal ayrı bir render yolu (job_detail_lib.php).
+$__navSavedMode = function_exists('user_pref_get') ? user_pref_get($pdo, (int)($_SESSION['user']['id']??0), 'nav_layout_mode', null) : null;
+$__navMode = function_exists('nav_effective_mode') ? nav_effective_mode($__navSavedMode, is_admin(), nav_is_pilot_user((int)($_SESSION['user']['id']??0))) : 'legacy';
 ?>
 
+<?php if($__navMode === 'legacy'): ?>
 <div class="panel-head">
     <h1><?=h($j['job_no'])?> - <?=h($j['title'])?></h1>
     <div class="actions">
@@ -379,5 +385,97 @@ foreach($logs as $l): ?>
 </tbody>
 </table>
 </section>
+
+<?php else: ?>
+<?php
+// PX-001B — İş Detay v1 (mockup turu kapandı, Product Owner kararı 2026-07-16). Legacy'nin
+// yazma/POST akışları (aşama/durum/dosya/not/düzenleme) hiç değişmedi — bu sadece yeni bir OKUMA
+// dalı. "Tamamlandı" butonu bile mevcut $_POST['job_status'] işleyicisini kullanıyor.
+require_once __DIR__.'/share_lib.php';
+$__pendingApprovals = job_detail_pending_approvals($pdo, $id);
+$__nextStep = job_detail_next_step($j, $__pendingApprovals);
+$__timeline = job_detail_timeline($id, 4);
+$__jdPhone = preg_replace('/\D/','', ($j['customer_id'] ? ($pdo->query("SELECT phone FROM contacts WHERE id=".(int)$j['customer_id'])->fetch()['phone'] ?? '') : ''));
+$__jdTxt = "📋 İş: ".$j['title']."\nNo: ".($j['job_no']??'')."\nDurum: ".$j['status'].($j['customer_name']?"\nMüşteri: ".$j['customer_name']:'').($j['due_date']?"\nTermin: ".$j['due_date']:'');
+try{ $__s=$pdo->prepare("SELECT n.*, u.full_name, u.username FROM job_notes n LEFT JOIN app_users u ON u.id=n.user_id WHERE n.job_id=? ORDER BY n.id DESC LIMIT 1"); $__s->execute([$id]); $__jdNoteRow=$__s->fetch(); }catch(Throwable $e){ $__jdNoteRow=null; }
+try{ $__s=$pdo->prepare("SELECT * FROM job_files WHERE job_id=? ORDER BY id DESC LIMIT 2"); $__s->execute([$id]); $__jdFileRows=$__s->fetchAll(); }catch(Throwable $e){ $__jdFileRows=[]; }
+$__jdOverdue = !empty($j['due_date']) && $j['due_date'] < date('Y-m-d') && !in_array($j['status'], ['Tamamlandı','İptal','Teslim Edildi'], true);
+$__jdDaysLate = $__jdOverdue ? (int)round((strtotime(date('Y-m-d')) - strtotime($j['due_date']))/86400) : 0;
+$__jdNextIcons = ['call'=>'phone','money'=>'send','check'=>'check','clock'=>'calendar'];
+?>
+<div class="df-jd">
+  <a class="df-jd-back" href="jobs.php"><span class="df-jd-back-a"></span> İşler</a>
+
+  <div class="df-jd-hero">
+    <span class="df-badge df-badge--<?=($__jdOverdue?'danger':'info')?>"><?=h($__jdOverdue ? 'GECİKTİ' : mb_strtoupper($j['status'],'UTF-8'))?></span>
+    <div class="df-jd-title"><?=h($j['title'])?></div>
+    <div class="df-jd-sub"><?=h($j['customer_name'] ?: 'Cari yok')?><?php if($__jdOverdue): ?><span class="df-jd-dot"></span><b><?=(int)$__jdDaysLate?> gün gecikti</b><?php endif; ?></div>
+  </div>
+
+  <?php if($__nextStep): ?>
+  <div class="df-jd-next">
+    <div class="df-jd-next-ic"><?=ds_icon($__jdNextIcons[$__nextStep['icon']] ?? 'check', 19)?></div>
+    <div class="df-jd-next-body">
+      <div class="df-jd-next-label">Sonraki Adım</div>
+      <div class="df-jd-next-title"><?=h($__nextStep['title'])?></div>
+      <div class="df-jd-next-sub"><?=h($__nextStep['sub'])?></div>
+    </div>
+  </div>
+  <?php else: ?>
+  <div class="df-panel" style="text-align:center;padding:20px 16px">
+    <div style="font-weight:700;font-size:13.5px">Şu an acil bir adım yok</div>
+  </div>
+  <?php endif; ?>
+
+  <?php if($__timeline): ?>
+  <div>
+    <div class="df-jd-lab">Zaman Akışı</div>
+    <div>
+      <?php foreach(array_reverse($__timeline) as $__tlRow): ?>
+      <div class="df-jd-tl-row"><span class="df-jd-tl-t"><?=h(date('H:i', strtotime($__tlRow['created_at'])))?></span><span class="df-jd-tl-dot"></span><span class="df-jd-tl-e"><?=h($__tlRow['title'] ?: $__tlRow['action'])?></span></div>
+      <?php endforeach; ?>
+    </div>
+  </div>
+  <?php endif; ?>
+
+  <div>
+    <div class="df-jd-lab">İlgili Kişiler</div>
+    <div class="df-jd-people">
+      <div class="df-jd-p-row"><span class="df-jd-p-role">Müşteri</span><span class="df-jd-p-name"><?=h($j['customer_name'] ?: '-')?></span></div>
+      <div class="df-jd-p-row"><span class="df-jd-p-role">Sorumlu</span><span class="df-jd-p-name"><?=h($j['responsible_name'] ?: '-')?></span></div>
+    </div>
+  </div>
+
+  <?php if($__jdFileRows): ?>
+  <div id="df-jd-files">
+    <div class="df-jd-lab">Dosyalar</div>
+    <div class="df-jd-files">
+      <?php foreach($__jdFileRows as $__f): $__ext=strtolower(pathinfo($__f['original_name'] ?? '', PATHINFO_EXTENSION)); $__isImg = in_array($__ext,['jpg','jpeg','png','gif','webp'],true) || strpos((string)$__f['mime_type'],'image/')===0; ?>
+      <a class="df-jd-f-row" href="<?=h($__f['file_path'] ?: '#')?>" target="_blank" rel="noopener">
+        <span class="df-jd-f-badge<?=($__isImg?' df-jd-f-badge--img':'')?>"><?=h($__isImg?'IMG':mb_strtoupper($__ext ?: 'DOSYA','UTF-8'))?></span>
+        <span class="df-jd-f-name"><?=h($__f['original_name'] ?: 'Dosya')?></span>
+        <span class="df-jd-f-time"><?=h(function_exists('activity_time_ago') ? activity_time_ago($__f['created_at']) : $__f['created_at'])?></span>
+      </a>
+      <?php endforeach; ?>
+    </div>
+  </div>
+  <?php endif; ?>
+
+  <?php if($__jdNoteRow): $__who=$__jdNoteRow['full_name'] ?: $__jdNoteRow['username'] ?: '?'; ?>
+  <div>
+    <div class="df-jd-lab">Notlar</div>
+    <div class="df-jd-note"><b><?=h($__who)?>:</b> <?=nl2br(h($__jdNoteRow['note']))?><div class="df-jd-note-meta"><?=h($__jdNoteRow['created_at'])?></div></div>
+  </div>
+  <?php endif; ?>
+
+  <div class="df-jd-bar">
+    <?php if($__jdPhone): ?><a class="df-jd-bar-btn" href="tel:<?=h($__jdPhone)?>"><?=ds_icon('phone',18)?><span>Ara</span></a><?php endif; ?>
+    <a class="df-jd-bar-btn" href="<?=h(wa_link($__jdTxt,$__jdPhone))?>" target="_blank" rel="noopener"><span style="font-size:16px">📱</span><span>WhatsApp</span></a>
+    <a class="df-jd-bar-btn" href="#df-jd-files"><span style="font-size:16px">📎</span><span>Dosya</span></a>
+    <a class="df-jd-bar-btn" href="<?=h(mail_link('İş: '.$j['title'],$__jdTxt))?>"><?=ds_icon('send',18)?><span>Paylaş</span></a>
+    <form method="post" style="flex:1;margin:0"><input type="hidden" name="job_status" value="Tamamlandı"><button type="submit" class="df-jd-bar-btn is-done" style="width:100%;border:0;background:none"><?=ds_icon('check',18)?><span>Tamamlandı</span></button></form>
+  </div>
+</div>
+<?php endif; ?>
 
 <?php require_once __DIR__.'/layout_bottom.php'; ?>
