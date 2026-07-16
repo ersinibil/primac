@@ -185,6 +185,11 @@ function page_module_map(){
         'jobs.php'=>'jobs','job_new.php'=>'jobs','job_edit.php'=>'jobs',
         'takvim.php'=>'jobs','calendar.php'=>'jobs','production.php'=>'jobs','assembly.php'=>'jobs','external.php'=>'jobs',
         'approval_waiting.php'=>'jobs','work_center.php'=>'jobs','design.php'=>'jobs',
+        // PX-002 / Elif'in parite denetiminde bulduğu boşluk (2026-07-17): uretim.php/uretim_new.php
+        // (mobil-only, production.php'nin mobil karşılığı) hiç haritada yoktu — 'jobs' yetkisi
+        // olmayan giriş yapmış herkes doğrudan URL ile açabiliyordu. Mobil Launcher'a taşınınca
+        // (nav_lib.php mobileUrl) görünürlüğü arttığı için şimdi kapatılıyor.
+        'uretim.php'=>'jobs','uretim_new.php'=>'jobs',
         'tasks.php'=>'tasks',
         'contacts.php'=>'contacts','contact_new.php'=>'contacts','contact_view.php'=>'contacts','contacts_report.php'=>'contacts',
         'contact_documents.php'=>'contacts',

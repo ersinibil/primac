@@ -70,6 +70,11 @@ try {
         if ($action === 'pin' && in_array($key, nav_platform_fixed_keys($platform), true)) {
             throw new Exception('Bu modül zaten sabit menüde, ayrıca sabitlenemez.');
         }
+        // 2026-07-17 FAIL düzeltmesi — mobilde hiç karşılığı olmayan (mobileHide) bir modül
+        // mobil tarafta sabitlenirse Sabitlenenler'de 404 satırı olarak kalır.
+        if ($action === 'pin' && $platform === 'mobile' && !empty($item['mobileHide'])) {
+            throw new Exception('Bu modülün mobil karşılığı yok, mobilde sabitlenemez.');
+        }
 
         $current = user_pref_get(db(), $userId, $prefKey, '');
         $keys = array_filter(array_map('trim', explode(',', $current)));

@@ -166,7 +166,7 @@ $__pinnedKeys = array_filter(array_map('trim', explode(',', $__pinnedRaw)));
   <div class="df-panel" style="padding:6px">
     <?php foreach($__pinnedMods as $__item): ?>
     <div class="df-nav-row-wrap" style="display:flex;align-items:center" data-nav-label="<?=h(mb_strtolower($__item['label']))?>">
-      <a class="df-nav-row" style="flex:1" href="<?=h($__item['url'])?>"><?=h($__item['label'])?></a>
+      <a class="df-nav-row" style="flex:1" href="<?=h(nav_url_for_platform($__item,'mobile'))?>"><?=h($__item['label'])?></a>
       <button type="button" class="df-nav-pin-btn is-pinned" aria-label="Sabitlemeyi kaldır" onclick="navTogglePin('<?=h($__item['key'])?>',true,this)"><?=ds_icon('close',15)?></button>
     </div>
     <?php endforeach; ?>
@@ -182,7 +182,7 @@ $__pinnedKeys = array_filter(array_map('trim', explode(',', $__pinnedRaw)));
         $__isPinned = in_array($__item['key'], $__pinnedKeys, true);
     ?>
     <div class="df-nav-row-wrap" style="display:flex;align-items:center" data-nav-label="<?=h(mb_strtolower($__item['label']))?>">
-      <a class="df-nav-row" style="flex:1" href="<?=h($__item['url'])?>"><?=h($__item['label'])?></a>
+      <a class="df-nav-row" style="flex:1" href="<?=h(nav_url_for_platform($__item,'mobile'))?>"><?=h($__item['label'])?></a>
       <?php if(empty($__item['primary'])): ?>
       <button type="button" class="df-nav-pin-btn<?=($__isPinned?' is-pinned':'')?>" aria-label="<?=($__isPinned?'Sabitlemeyi kaldır':'Sabitle')?>" onclick="navTogglePin('<?=h($__item['key'])?>',<?=$__isPinned?'true':'false'?>,this)"><?=ds_icon($__isPinned?'close':'plus',15)?></button>
       <?php endif; ?>

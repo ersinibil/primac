@@ -23,11 +23,11 @@ function nav_taxonomy(){
         ['key'=>'mytasks','label'=>'Görevlerim','url'=>'mytasks.php','group'=>'çalışma','perm'=>null,'primary'=>true],
         ['key'=>'jobs','label'=>'İş / Üretim','url'=>'jobs.php','group'=>'çalışma','perm'=>'jobs','primary'=>true],
         ['key'=>'job_new','label'=>'Yeni İş Aç','url'=>'job_new.php','group'=>'is_takip','perm'=>'jobs','primary'=>false],
-        ['key'=>'production','label'=>'Üretimdeki İşleri Gör','url'=>'production.php','group'=>'is_takip','perm'=>'jobs','primary'=>false],
-        ['key'=>'assembly','label'=>'Montajdaki İşleri Gör','url'=>'assembly.php','group'=>'is_takip','perm'=>'jobs','primary'=>false],
+        ['key'=>'production','label'=>'Üretimdeki İşleri Gör','url'=>'production.php','mobileUrl'=>'uretim.php','group'=>'is_takip','perm'=>'jobs','primary'=>false],
+        ['key'=>'assembly','label'=>'Montajdaki İşleri Gör','url'=>'assembly.php','mobileHide'=>true,'group'=>'is_takip','perm'=>'jobs','primary'=>false],
         ['key'=>'external','label'=>'Dış Atölye İşlerini Gör','url'=>'external.php','group'=>'is_takip','perm'=>'jobs','primary'=>false],
-        ['key'=>'design','label'=>'Tasarımdaki İşleri Gör','url'=>'design.php','group'=>'is_takip','perm'=>'jobs','primary'=>false],
-        ['key'=>'work_center','label'=>'İş İstasyonunu Gör','url'=>'work_center.php','group'=>'is_takip','perm'=>'jobs','primary'=>false],
+        ['key'=>'design','label'=>'Tasarımdaki İşleri Gör','url'=>'design.php','mobileHide'=>true,'group'=>'is_takip','perm'=>'jobs','primary'=>false],
+        ['key'=>'work_center','label'=>'İş İstasyonunu Gör','url'=>'work_center.php','mobileHide'=>true,'group'=>'is_takip','perm'=>'jobs','primary'=>false],
         ['key'=>'approval_waiting','label'=>'Onay Bekleyen Dosyaları Gör','url'=>'approval_waiting.php','group'=>'is_takip','perm'=>'jobs','primary'=>false],
         ['key'=>'tasks','label'=>'Tüm Görevleri Gör','url'=>'tasks.php','group'=>'is_takip','perm'=>'tasks','primary'=>false],
         ['key'=>'takvim','label'=>'Takvim','url'=>'takvim.php','group'=>'çalışma','perm'=>'jobs','primary'=>true],
@@ -42,13 +42,13 @@ function nav_taxonomy(){
         // ── SAT & TAHSİL ET ──────────────────────────────────────────────────
         ['key'=>'contacts','label'=>'Cari Bul / Görüntüle','url'=>'contacts.php','group'=>'sat_tahsil','perm'=>'contacts','primary'=>false],
         ['key'=>'contact_new','label'=>'Yeni Cari Ekle','url'=>'contact_new.php','group'=>'sat_tahsil','perm'=>'contacts','primary'=>false],
-        ['key'=>'trade_documents','label'=>'Alış / Satış Belgelerini Gör','url'=>'trade_documents.php','group'=>'sat_tahsil','perm'=>'contacts','primary'=>false],
+        ['key'=>'trade_documents','label'=>'Alış / Satış Belgelerini Gör','url'=>'trade_documents.php','mobileHide'=>true,'group'=>'sat_tahsil','perm'=>'contacts','primary'=>false],
         ['key'=>'teklif','label'=>'Teklif Hazırla','url'=>'teklif.php','group'=>'sat_tahsil','perm'=>'teklif','primary'=>false],
         ['key'=>'sales','label'=>'Satış Yap','url'=>'sales.php','group'=>'sat_tahsil','perm'=>'stock','primary'=>false],
         ['key'=>'purchase','label'=>'Satın Alma Yap','url'=>'purchase.php','group'=>'sat_tahsil','perm'=>'stock','primary'=>false],
-        ['key'=>'finance_new_in','label'=>'Tahsilat Al','url'=>'finance_new.php?direction=in','group'=>'sat_tahsil','perm'=>'finance','primary'=>false],
-        ['key'=>'finance_new_out','label'=>'Ödeme Yap','url'=>'finance_new.php?direction=out','group'=>'sat_tahsil','perm'=>'finance','primary'=>false],
-        ['key'=>'finance_transfer','label'=>'Hesaplar Arası Transfer Yap','url'=>'finance_transfer.php','group'=>'sat_tahsil','perm'=>'finance','primary'=>false],
+        ['key'=>'finance_new_in','label'=>'Tahsilat Al','url'=>'finance_new.php?direction=in','mobileUrl'=>'collection.php','group'=>'sat_tahsil','perm'=>'finance','primary'=>false],
+        ['key'=>'finance_new_out','label'=>'Ödeme Yap','url'=>'finance_new.php?direction=out','mobileUrl'=>'payment.php','group'=>'sat_tahsil','perm'=>'finance','primary'=>false],
+        ['key'=>'finance_transfer','label'=>'Hesaplar Arası Transfer Yap','url'=>'finance_transfer.php','mobileUrl'=>'transfer.php','group'=>'sat_tahsil','perm'=>'finance','primary'=>false],
         ['key'=>'checks_notes','label'=>'Çek / Senet Takip Et','url'=>'checks_notes.php','group'=>'sat_tahsil','perm'=>'finance','primary'=>false],
 
         // ── STOK YÖNET ───────────────────────────────────────────────────────
@@ -59,8 +59,8 @@ function nav_taxonomy(){
         ['key'=>'product_taxonomy','label'=>'Marka / Birim Düzenle','url'=>'product_taxonomy.php','group'=>'stok','perm'=>'stock','primary'=>false],
 
         // ── YÖNET (arka ofis / raporlama / sistem) ──────────────────────────
-        ['key'=>'finance','label'=>'Kasa / Banka Panelini Gör','url'=>'finance.php','group'=>'yonet','perm'=>'finance','primary'=>false],
-        ['key'=>'finance_accounts','label'=>'Banka / Kasa / Kart Hesaplarını Yönet','url'=>'finance_accounts.php','group'=>'yonet','perm'=>'finance','primary'=>false],
+        ['key'=>'finance','label'=>'Kasa / Banka Panelini Gör','url'=>'finance.php','mobileUrl'=>'kasa.php','group'=>'yonet','perm'=>'finance','primary'=>false],
+        ['key'=>'finance_accounts','label'=>'Banka / Kasa / Kart Hesaplarını Yönet','url'=>'finance_accounts.php','mobileHide'=>true,'group'=>'yonet','perm'=>'finance','primary'=>false],
         ['key'=>'accounting','label'=>'Muhasebe Kayıtlarını Gör','url'=>'accounting.php','group'=>'yonet','perm'=>'muhasebe','primary'=>false],
         ['key'=>'accounting_categories','label'=>'Muhasebe Kategorilerini Düzenle','url'=>'accounting_categories.php','group'=>'yonet','perm'=>'muhasebe','primary'=>false,'adminOnly'=>true],
         ['key'=>'personnel','label'=>'Personeli Yönet','url'=>'personnel.php','group'=>'yonet','perm'=>'personnel','primary'=>false],
@@ -102,6 +102,16 @@ function nav_module_by_key($key){
     return null;
 }
 
+// PX-002 / FAIL düzeltmesi (2026-07-17) — kök neden: nav_taxonomy() satır başına TEK url
+// tutuyordu (web dosya adı), mobil sayfalar web'den farklı isimlerde olduğu için (örn.
+// finance.php -> mobile/kasa.php) mobil Menü/Sabitlenenler doğrudan bu url'i kullanınca 404
+// veriyordu. 'mobileUrl' varsa mobilde o kullanılır, yoksa 'url' aynen kullanılır (web hiç
+// etkilenmez — bu fonksiyon platform='web' için her zaman $item['url'] döner).
+function nav_url_for_platform($item, $platform){
+    if($platform === 'mobile' && !empty($item['mobileUrl'])) return $item['mobileUrl'];
+    return $item['url'];
+}
+
 // Yetkili + primary=true olan satırlar (compact sidebar'ın sabit Çalışma listesi)
 function nav_primary_modules($canSee, $isAdmin){
     $out = [];
@@ -131,7 +141,11 @@ function nav_pinned_modules($canSee, $isAdmin, $pinnedKeysCsv, $platform = 'web'
     $out = [];
     foreach($keys as $k){
         if(in_array($k, $fixed, true)) continue;
-        if(isset($byKey[$k]) && empty($byKey[$k]['primary'])) $out[] = $byKey[$k];
+        if(!isset($byKey[$k]) || !empty($byKey[$k]['primary'])) continue;
+        // Mobilde hiç karşılığı olmayan bir modül eski/elle oluşturulmuş bir pin kaydından
+        // geliyor olsa bile mobilde 404 satırı olarak render edilmesin.
+        if($platform === 'mobile' && !empty($byKey[$k]['mobileHide'])) continue;
+        $out[] = $byKey[$k];
     }
     return $out;
 }
@@ -157,6 +171,10 @@ function nav_grouped_for_launcher($canSee, $isAdmin, $pinnedKeysCsv = '', $platf
     $out = ['is_takip'=>[], 'sat_tahsil'=>[], 'stok'=>[], 'iletisim'=>[], 'yonet'=>[]];
     foreach(nav_authorized_modules($canSee, $isAdmin) as $item){
         if(in_array($item['key'], $hidden, true)) continue;
+        // Mobilde hiç karşılığı olmayan modüller (assembly/design/work_center/trade_documents/
+        // finance_accounts) mobil Launcher'da hiç gösterilmez — legacy mobil menüde de zaten
+        // hiç yoktular, bu davranışa dönüş, kayıp değil (2026-07-17 FAIL düzeltmesi).
+        if($platform === 'mobile' && !empty($item['mobileHide'])) continue;
         $out[$item['group']][] = $item;
     }
     return $out;
