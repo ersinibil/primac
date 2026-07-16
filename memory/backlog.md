@@ -2,6 +2,24 @@
 
 <!-- Açık geliştirme görevleri. Kapanan madde buradan silinip memory/features.md'ye taşınır. -->
 
+## PARITY-003 — Mobil Command Launcher'da bazı satırlar mobilde var olmayan URL'lere gidiyor (2026-07-16, Elif NAV-001 v3 review notu)
+`nav_taxonomy()`'nin `url` alanları NAV-001B'den beri hiç değişmedi (bu turda da dokunulmadı) — ama
+`mobile/more.php`'nin compact Launcher'ı bu URL'leri `../` öneki olmadan doğrudan basıyor, yani href
+mobil-yerel yola çözülüyor. Şu anahtarların hedef dosyası `mobile/` altında YOK: `production.php`,
+`assembly.php`, `design.php`, `work_center.php`, `trade_documents.php`, `finance.php`,
+`finance_accounts.php`, `finance_new.php` (Tahsilat/Ödeme), `finance_transfer.php` — mobilde
+karşılıkları ya farklı isimde (`uretim.php`, `kasa.php`, `transfer.php`, `collection.php`,
+`payment.php` gibi) ya da hiç yok. `nav_effective_mode()` admin'i varsayılan compact yaptığından bu,
+**admin dahil** compact moddaki her kullanıcıyı etkiliyor — tıklayınca mobilde 404.
+
+**Bilinçli olarak bu turda düzeltilmedi** — NAV-001 v3'ün kapsamı sadece Sidebar/Launcher çakışması
++ etiketleme/gruplama düzeltmesiydi, `url` alanlarına dokunmak "gereksiz refactor" sınırını aşardı.
+
+**Öneri (karar verilmedi):** `dashboard.php`'deki `dashboard_quick_actions_split()`'in zaten
+kullandığı `mobileUrl` (web/mobil URL farkını aynı listede tutma) deseni `nav_taxonomy()`'ye de
+eklenebilir — her satıra opsiyonel bir `mobileUrl` alanı, mobil Launcher varsa onu, yoksa `url`'yi
+kullanır. Ayrı bir NAV-001C/parity turunun konusu.
+
 ## PDP/SEC-001 — ajax_dashboard_order.php CSRF korumasız (2026-07-16, NAV-001B notu)
 `ajax_dashboard_order.php` (WEB UI ALIGNMENT & NAVIGATION SPRINT 001'den, dashboard kart/bölüm
 sürükle-bırak sırası) `boot.php`'nin `$__csrf_enforced_pages` listesinde YOK — proje genelinde

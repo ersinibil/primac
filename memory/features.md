@@ -2,7 +2,50 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
-## NAV-001B — PILOT IMPLEMENTATION: KOD İNCELEME PASS — USER TEST BEKLİYOR (2026-07-16)
+## NAV-001 v3 — Sidebar/Command Launcher çakışması giderildi: KOD İNCELEME PASS — USER TEST BEKLİYOR (2026-07-16)
+NAV-001B'nin USER TEST'e hiç çıkmamış pilotu üzerinde, Product Owner'ın "Sidebar ve Command
+Launcher aynı navigasyon hedefini asla tekrar göstermeyecek" kararıyla küçük ama mimari olarak
+önemli bir düzeltme yapıldı — commit `491098b`. Kök neden: Launcher (`nav_grouped_for_launcher()`)
+Sidebar'da/bottom-nav'da zaten sabit veya kişisel sabitlenmiş olan hedefleri filtrelemeden tekrar
+listeliyordu.
+
+**Product Owner'ın 3 turluk mimari inceleme süreci** (analiz → düzeltme → düzeltme) sonunda karara
+bağlanan ilke: görünürlük kararı ne Sidebar'a ne Launcher'a ait — TEK, genel bir kaynağa ait olmalı,
+"primary" alanı ikinci bir amaçla yeniden yorumlanmamalı (`primary` hâlâ SADECE Sidebar'ın sabit
+adaylarını işaretliyor).
+
+**Yeni `nav_visible_targets($canSee,$isAdmin,$pinnedKeysCsv,$platform='web')`** (nav_lib.php) — "bu
+kullanıcı için şu an fiilen görünür nav hedefleri nelerdir?" sorusuna cevap veren tek genel kaynak;
+Sidebar'a özel değil, ileride başka yüzeyler (Dashboard, Capture, ...) de aynı soruyu buraya
+sorabilir (Product Owner'ın açık talebi — kayıt/provider/adapter katmanı YOK, sade fonksiyon).
+Bugünkü girdileri: yetkili primary hedefler + kullanıcının kişisel sabitledikleri + platforma özel
+sabit hedefler (`nav_platform_fixed_keys()` — mobilde bottom-nav'ın sabit "Cari" ikonu, `contacts`).
+
+**`nav_grouped_for_launcher()`** artık bu kaynağı dışlama kümesi olarak kullanıyor.
+**`nav_taxonomy()`'deki 44 primary-olmayan satırın** `label`'ı modül ismi yerine fiil/niyet odaklı
+("Cariler"→"Cari Bul / Görüntüle", "Tahsilat"→"Tahsilat Al"), `group`'u departman yerine niyet
+kümesi oldu: `is_takip`/`sat_tahsil`/`stok`/`iletisim`/`yonet` (eski `çalışma`/`ticaret`/`finans`/
+`yönetim`'in yerini aldı — `key`/`url`/`perm`/`primary`/`adminOnly` HİÇBİRİ değişmedi). Legacy
+navigasyon dalı ve Sidebar/bottom-nav render kodu bu turda dokunulmadı.
+
+**Review turunda bulunan boşluk (aynı turda düzeltildi):** Elif, mobilde eski/manuel bir
+`nav_pinned_mobile=contacts` kaydının bottom-nav'ın sabit Cari ikonuyla çakışabileceğini buldu —
+`nav_pinned_modules()`'a `$platform` parametresi eklenip `nav_platform_fixed_keys()` ile dışlama
+hem okuma (Sabitlenenler render) hem yazma (`ajax_nav_prefs.php`'nin pin doğrulaması, yeni pin
+oluşturmayı da reddediyor) tarafında kapatıldı.
+
+**Review: Ece/Selin/Elif üçü de PASS.** Selin: `nav_visible_targets()`'ın yetki kontrolünü bypass
+etmediği hem statik hem `E_ALL` ile ampirik doğrulandı, CSRF/XSS regresyonu yok. Ece: PHP 7.2 uyumu,
+taksonomi bütünlüğü (51 satır, URL benzersizliği), grup dizisi eşleşmesi, legacy dal dokunulmazlığı
+— tek bilgilendirici not: mobilde `notes`/`takvim`/`dashboard` gibi primary satırlar zaten mobilde
+karşılığı olmayan sayfalar, Launcher'dan düşmeleri risksiz. Elif: yukarıdaki boşluk + **pre-existing,
+bu turdan bağımsız bir bulgu** → `PARITY-003` olarak backlog'a ayrı not düşüldü (mobil Command
+Launcher'da bazı satırlar mobilde dosya olarak var olmayan URL'lere gidiyor).
+
+**Doğrulama:** Zorunlu 11 test senaryosu (`php -r` ile: pinsiz/pinli web/mobil, kısıtlı yetkili,
+admin, Sidebar∩Launcher kesişimi boş, route benzersizliği, unpin sonrası geri dönüş, yetkisiz hedef
+hiçbir yüzeyde görünmüyor) + statik Launcher önizlemesi (headless Chrome, taşma yok, 5 grup okunur)
++ legacy dal `git diff`'te hiç görünmüyor.
 Optional Module Navigation + Mobile Experience Redesign pilotu — web sidebar artık compact/legacy
 iki modlu, mobil ana ekran+menü sadeleştirildi. **Opt-in, kullanıcı bazlı, tamamen geri alınabilir**
 (Product Owner kararı) — admin + `app_settings` pilot listesi + kendi tercihini "dene" yapan
