@@ -9,8 +9,8 @@ task_view bu konvansiyonun dışında kalmış. **PX-001B'de eklenmedi**, öncek
 `8400335`) mobil liste kartından buraya taşınırken web tarafı hiç eklenmemiş — bilinçli mi
 gözden kaçmış mı netleşmedi. Ayrıca mobildeki Gönder linki `pphone` boşsa da koşulsuz render
 oluyor (işlevsiz `wa.me` linki) — küçük bir kozmetik kusur, aynı notun parçası.
-**Karar verilmedi** — ürün kararıysa (mobil-only bilinçli) kapatılabilir, değilse `ots-feature-dev`
-(Kerem) ile web'e `share_buttons()` eklenmesi + boş-telefon koşulu düşünülebilir.
+**Karar verilmedi** — PX-001B kapanış kararında Product Owner bunu "ayrı bir parity sprintinde ele
+alınacak" olarak teyit etti (bilinçli erteleme, unutulmuş değil).
 
 ## NAV-001 — Adaptive Workspace & Optional Module Navigation (2026-07-16, Product Owner notu)
 Product Owner'ın PX-001A sırasında değerli bulduğu ama kapsamı büyütmemek için AYRI bir Epic'e
@@ -18,9 +18,10 @@ ertelediği bir fikir — bu oturumda henüz detaylandırılmadı (sadece isim +
 Muhtemel motivasyon: sol menüde çok sayıda modül var (Komuta Merkezi/Takvim/Notlarım/Görevlerim/
 Mesajlar/İş-Üretim/Ticaret/Finans/Raporlama/Genel Sistem Yönetimi) — "adaptive" ve "optional module
 navigation" isimlendirmesi, kullanıcıya göre uyarlanabilir/gizlenebilir bir nav yapısına işaret
-ediyor olabilir. **Kapsam netleşmedi.** PX-001A 2026-07-16'da DEV PASS/CLOSED aldı; Product Owner
-kararıyla NAV-001'e dönüş **PX-001B (Task View Product Redesign) tamamlandıktan sonraya**
-ertelendi — bu notun ötesinde bir karar/analiz yok, sonraki oturumda Product Owner'la netleştirilmeli.
+ediyor olabilir. **Kapsam hâlâ netleşmedi.** PX-001A (2026-07-16) ve PX-001B (2026-07-16) ikisi de
+DEV PASS/CLOSED aldı — Product Owner kararıyla NAV-001 artık değerlendirmeye alınabilir durumda,
+ANCAK başlamadan önce kapsam yeniden gözden geçirilip bir pilot uygulama belirlenecek. Henüz bir
+analiz/karar süreci başlamadı — sonraki oturumda Product Owner'dan kapsam/pilot talimatı beklenir.
 
 ## PARITY-001 — Görevlerim / Notlarım Web-Mobil Kapsam Farkı (2026-07-16)
 PRODUCT DESIGN BLUEPRINT uygulama sprintinde (mytasks.php) kök neden analizi sırasında bulundu:

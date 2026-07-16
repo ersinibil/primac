@@ -2,6 +2,15 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
+## PX-001B — TASK VIEW PRODUCT REDESIGN: USER TEST PASS / DEV PASS / CLOSED (2026-07-16)
+Product Owner kararı: PX-001B resmen kapatıldı. Task View artık Görevlerim ekranının resmi devam
+ekranı — mytasks.php ile aynı ürün dilini konuşuyor (bilgi hiyerarşisi, durum/termin/öncelik dili,
+Visual Language Foundation). Yeni görev ekranları bundan sonra hem mytasks.php hem task_view.php'yi
+referans alacak. PARITY-002 (web'de "Gönder" eksik) bilinçli olarak bu sprintin dışında bırakıldı,
+ayrı bir parity sprintinde ele alınacak. NAV-001 artık Product Owner değerlendirmesine alınabilir
+(PX-001A + PX-001B tamamlandı) — ancak başlamadan önce kapsam yeniden gözden geçirilip bir pilot
+uygulama belirlenecek, henüz başlamadı.
+
 ## PX-001B — TASK VIEW PRODUCT REDESIGN: KOD İNCELEME PASS — USER TEST BEKLİYOR (2026-07-16)
 mytasks.php'nin (PX-001A, CLOSED) doğal devamı — task_view.php (web) + mobile/task_view.php aynı
 `df-badge`/`ds_priority()`/`df-panel`/`ds_icon()` Foundation diline taşındı. Kapsam sadece bu iki
