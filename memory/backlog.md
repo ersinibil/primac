@@ -2,6 +2,15 @@
 
 <!-- Açık geliştirme görevleri. Kapanan madde buradan silinip memory/features.md'ye taşınır. -->
 
+## PDP/SEC-001 — ajax_dashboard_order.php CSRF korumasız (2026-07-16, NAV-001B notu)
+`ajax_dashboard_order.php` (WEB UI ALIGNMENT & NAVIGATION SPRINT 001'den, dashboard kart/bölüm
+sürükle-bırak sırası) `boot.php`'nin `$__csrf_enforced_pages` listesinde YOK — proje genelinde
+bilinen, kademeli CSRF yayılımının henüz ulaşmadığı bir sayfa. NAV-001B'de eklenen yeni
+`ajax_nav_prefs.php` (pin/sıra/layout-mode) BİLİNÇLİ olarak baştan bu listeye eklendi (Product Owner
+kararı: "mevcut ajax_dashboard_order.php'de yok gerekçesiyle korumasız bırakılmayacaktır") — ama
+`ajax_dashboard_order.php`'nin kendisi bu turda DÜZELTİLMEDİ (kapsam dışı). **Karar verilmedi** —
+ayrı bir CSRF-yayılım turunda `ajax_dashboard_order.php`'nin de listeye eklenmesi düşünülebilir.
+
 ## PARITY-002 — task_view.php'de "Gönder" (WhatsApp) sadece mobilde var (2026-07-16, Elif PX-001B review notu)
 `mobile/task_view.php`'de bir "Gönder" (WhatsApp, `wa_link()`) aksiyonu var, web `task_view.php`'de
 hiç karşılığı yok — `job_view.php`/`mobile/job_view.php` ikisi de `share_buttons()` kullanırken
@@ -12,16 +21,19 @@ oluyor (işlevsiz `wa.me` linki) — küçük bir kozmetik kusur, aynı notun pa
 **Karar verilmedi** — PX-001B kapanış kararında Product Owner bunu "ayrı bir parity sprintinde ele
 alınacak" olarak teyit etti (bilinçli erteleme, unutulmuş değil).
 
-## NAV-001 — Adaptive Workspace & Optional Module Navigation (2026-07-16, Product Owner notu)
-Product Owner'ın PX-001A sırasında değerli bulduğu ama kapsamı büyütmemek için AYRI bir Epic'e
-ertelediği bir fikir — bu oturumda henüz detaylandırılmadı (sadece isim + niyet not edildi).
-Muhtemel motivasyon: sol menüde çok sayıda modül var (Komuta Merkezi/Takvim/Notlarım/Görevlerim/
-Mesajlar/İş-Üretim/Ticaret/Finans/Raporlama/Genel Sistem Yönetimi) — "adaptive" ve "optional module
-navigation" isimlendirmesi, kullanıcıya göre uyarlanabilir/gizlenebilir bir nav yapısına işaret
-ediyor olabilir. **Kapsam hâlâ netleşmedi.** PX-001A (2026-07-16) ve PX-001B (2026-07-16) ikisi de
-DEV PASS/CLOSED aldı — Product Owner kararıyla NAV-001 artık değerlendirmeye alınabilir durumda,
-ANCAK başlamadan önce kapsam yeniden gözden geçirilip bir pilot uygulama belirlenecek. Henüz bir
-analiz/karar süreci başlamadı — sonraki oturumda Product Owner'dan kapsam/pilot talimatı beklenir.
+## NAV-001A — Optional Module Navigation + Mobile Experience Redesign BLUEPRINT (2026-07-16)
+Product Owner'ın tam kapsamlı program talimatı üzerine (Workspace/Menü Görünürlüğü/Yetki üç
+bağımsız katman, web+tablet+mobil bilgi mimarisi) 25 bölümlü bir Blueprint hazırlandı — KOD
+YAZILMADI, sadece analiz. Tam metin sohbet geçmişinde ("NAV-001A BLUEPRINT" başlıklı mesaj) ve
+kalıcı kopyası `memory/nav001a_blueprint.md`'de. Product Owner onayı bekleniyor; onay sonrası
+önerilen küçük/geri-alınabilir pilot NAV-001B olarak ayrı bir sprintte ele alınacak.
+**Öne çıkan bulgular:** mobile/index.php:151,157 ve mobile/common.php::botx() bottom nav'ı
+"İş"/"Cari" hedeflerini user_can('jobs')/user_can('contacts') kontrolü OLMADAN herkese gösteriyor
+(yetkisiz personel tıklarsa page_module_map() 403 veriyor) — mevcut kodda kanıtlanmış, gerçek bir
+"Ne nerede?" kök nedeni. user_preferences tablosu (migration 044) + user_prefs_lib.php +
+ajax_dashboard_order.php zaten pin/sıralama için whitelist-validated bir desen sağlıyor — NAV-001B
+için YENİ migration gerekmiyor. ROADMAP.md'deki "Workspace (Multi-Tenant) Architecture" (tamamen
+ayrı, işlevsiz "Aktif Şirket" dropdown'ı) ile isim çakışması var, ayrı terim önerildi.
 
 ## PARITY-001 — Görevlerim / Notlarım Web-Mobil Kapsam Farkı (2026-07-16)
 PRODUCT DESIGN BLUEPRINT uygulama sprintinde (mytasks.php) kök neden analizi sırasında bulundu:

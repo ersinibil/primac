@@ -16,6 +16,15 @@ try {
     $unreadMsgCount = (int)($s->fetch()['c'] ?? 0);
 } catch(Throwable $e) {}
 $cur = basename($_SERVER['SCRIPT_NAME']);
+
+// NAV-001B (2026-07-16) — Pilot compact navigasyon. Varsayılan davranış (kaydedilmiş tercih yoksa)
+// admin'i compact'ta, herkesi legacy'de gösterir; kullanıcı AÇIKÇA seçtiyse (profile.php'deki
+// anahtar) o tercih her zaman kazanır — "Eski geniş menüye dön" kalıcı olmalı (Product Owner kararı).
+$__navSavedMode = function_exists('user_pref_get') ? user_pref_get(db(), $__me, 'nav_layout_mode', null) : null;
+$__navMode = function_exists('nav_effective_mode')
+    ? nav_effective_mode($__navSavedMode, is_admin(), nav_is_pilot_user($__me))
+    : 'legacy';
+$__navCanSee = function($perm){ return user_can($perm); };
 ?>
 <!doctype html>
 <html lang="tr">
@@ -208,6 +217,36 @@ input,select,textarea{font-size:16px}
         <div class="workspace-name"><?=htmlspecialchars(app_config()['app_name'] ?? 'OTS')?></div>
     </div>
 
+    <?php if($__navMode !== 'legacy'): ?>
+    <?php
+    // ── NAV-001B COMPACT MOD ─────────────────────────────────────────────────────────────────
+    // Emoji eşlemesi legacy sidebar'da bu 7 satır için ZATEN kullanılıyordu — yeni bir ikon kararı
+    // değil, sağ kalan primary satırlar için mevcut emoji'lerin aynen taşınması.
+    $__primaryIcons = ['dashboard'=>'🏛','mytasks'=>'✅','jobs'=>'🧭','takvim'=>'📅','messages'=>'💬','notifications'=>'🔔','notes'=>'📝'];
+    $__primaryMods = nav_primary_modules($__navCanSee, is_admin());
+    $__pinnedRaw = user_pref_get(db(), $__me, 'nav_pinned_web', '');
+    $__pinnedMods = nav_pinned_modules($__navCanSee, is_admin(), $__pinnedRaw);
+    $__launcherGroups = nav_grouped_for_launcher($__navCanSee, is_admin());
+    ?>
+    <nav class="nav">
+        <?php foreach($__primaryMods as $__pm): $__pmUrl = explode('?',$__pm['url'])[0]; ?>
+        <a href="<?=h($__pm['url'])?>" <?=($cur===$__pmUrl?'class="active"':'')?>><span><?=h($__primaryIcons[$__pm['key']] ?? '•')?></span> <?=h($__pm['label'])?></a>
+        <?php endforeach; ?>
+
+        <div class="nav-title">Sabitlenenler</div>
+        <?php if($__pinnedMods): foreach($__pinnedMods as $__pn): $__pnUrl = explode('?',$__pn['url'])[0]; ?>
+        <a href="<?=h($__pn['url'])?>" <?=($cur===$__pnUrl?'class="active"':'')?>><?=h($__pn['label'])?></a>
+        <?php endforeach; else: ?>
+        <div class="nav-pin-empty">Henüz sabitlenmiş modül yok — "Tüm Modüller"den ekleyin.</div>
+        <?php endif; ?>
+
+        <button type="button" class="nav-launcher-trigger" onclick="document.querySelector('.app-shell').classList.add('launcher-open');document.getElementById('navLauncherSearch').focus()"><span>🔎</span> Tüm Modüller</button>
+    </nav>
+    <div class="sidebar-footer">
+        <a href="profile.php" <?=($cur==='profile.php'?'class="active"':'')?>><span>👤</span> Profilim</a>
+        <a href="logout.php"><span>🚪</span> Çıkış</a>
+    </div>
+    <?php else: ?>
     <nav class="nav">
         <a href="dashboard.php" <?=($cur==='dashboard.php'?'class="active"':'')?>><span>🏛</span> Komuta Merkezi</a>
         <a href="takvim.php" <?=($cur==='takvim.php'?'class="active"':'')?>><span>📅</span> Takvim</a>
@@ -371,8 +410,58 @@ input,select,textarea{font-size:16px}
             <a href="logout.php"><span>🚪</span> Çıkış</a>
         </div>
     </nav>
+    <?php endif; ?>
 </aside>
 <div class="nav-overlay" onclick="document.querySelector('.app-shell').classList.remove('nav-open')"></div>
+<?php if($__navMode !== 'legacy'): ?>
+<!-- NAV-001B — Web Module Launcher (yalnızca compact modda render edilir) -->
+<div class="df-nav-overlay" onclick="document.querySelector('.app-shell').classList.remove('launcher-open')"></div>
+<div class="df-nav-launcher">
+    <div class="df-nav-launcher-head">
+        <?=ds_icon('search',18)?>
+        <input type="text" id="navLauncherSearch" placeholder="Modül ara..." autocomplete="off" oninput="navLauncherFilter(this.value)">
+        <button type="button" class="df-icon-btn" aria-label="Kapat" onclick="document.querySelector('.app-shell').classList.remove('launcher-open')"><?=ds_icon('close',18)?></button>
+    </div>
+    <div class="df-nav-launcher-body" id="navLauncherBody">
+        <?php foreach(['çalışma','ticaret','finans','yönetim'] as $__g): if(empty($__launcherGroups[$__g])) continue; ?>
+        <div class="df-nav-launcher-group df-nav-launcher-group--<?=h($__g)?>">
+            <div class="df-nav-launcher-group-title"><?=h(nav_group_label($__g))?></div>
+            <?php foreach($__launcherGroups[$__g] as $__item):
+                $__isPinned = in_array($__item['key'], explode(',', $__pinnedRaw), true);
+                $__itemUrl = explode('?',$__item['url'])[0];
+            ?>
+            <div class="df-nav-row-wrap" style="display:flex;align-items:center" data-nav-label="<?=h(mb_strtolower($__item['label']))?>">
+                <a class="df-nav-row<?=($cur===$__itemUrl?' is-active':'')?>" style="flex:1" href="<?=h($__item['url'])?>"><?=h($__item['label'])?></a>
+                <?php if(empty($__item['primary'])): ?>
+                <button type="button" class="df-nav-pin-btn<?=($__isPinned?' is-pinned':'')?>" aria-label="<?=($__isPinned?'Sabitlemeyi kaldır':'Sabitle')?>" onclick="navTogglePin('<?=h($__item['key'])?>',<?=$__isPinned?'true':'false'?>,this)"><?=ds_icon($__isPinned?'close':'plus',15)?></button>
+                <?php endif; ?>
+            </div>
+            <?php endforeach; ?>
+        </div>
+        <?php endforeach; ?>
+    </div>
+</div>
+<script>
+function navTogglePin(key,isPinned,btn){
+    fetch('ajax_nav_prefs.php',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded','X-CSRF-Token':window.CSRF_TOKEN},
+        body:'action='+(isPinned?'unpin':'pin')+'&platform=web&key='+encodeURIComponent(key)+'&csrf_token='+encodeURIComponent(window.CSRF_TOKEN)})
+      .then(function(r){return r.json();}).then(function(d){ if(d.ok) location.reload(); });
+}
+function navLauncherFilter(q){
+    q = q.toLowerCase().trim();
+    document.querySelectorAll('#navLauncherBody .df-nav-row-wrap').forEach(function(row){
+        row.style.display = (!q || row.getAttribute('data-nav-label').indexOf(q)!==-1) ? '' : 'none';
+    });
+    document.querySelectorAll('#navLauncherBody .df-nav-launcher-group').forEach(function(g){
+        var anyVisible = Array.prototype.some.call(g.querySelectorAll('.df-nav-row-wrap'), function(r){ return r.style.display!=='none'; });
+        g.style.display = anyVisible ? '' : 'none';
+    });
+}
+document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape') document.querySelector('.app-shell').classList.remove('launcher-open');
+});
+</script>
+<?php endif; ?>
 
 <main class="main">
 <header class="topbar">

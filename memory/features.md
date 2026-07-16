@@ -2,6 +2,69 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
+## NAV-001B — PILOT IMPLEMENTATION: KOD İNCELEME PASS — USER TEST BEKLİYOR (2026-07-16)
+Optional Module Navigation + Mobile Experience Redesign pilotu — web sidebar artık compact/legacy
+iki modlu, mobil ana ekran+menü sadeleştirildi. **Opt-in, kullanıcı bazlı, tamamen geri alınabilir**
+(Product Owner kararı) — admin + `app_settings` pilot listesi + kendi tercihini "dene" yapan
+kullanıcılar dışında HERKES bugünkü deneyimi birebir görmeye devam ediyor.
+
+**Yeni tek kaynak:** `nav_lib.php` — `nav_taxonomy()` (Çalışma/Ticaret/Finans/Yönetim, ~50 satır,
+her satır perm+primary bayraklı) hem web sidebar+launcher hem mobil more.php'nin ORTAK kaynağı,
+`ds_lib.php`'den bilinçli AYRI (Product Owner kararı: ds_lib.php sadece görsel bileşen kütüphanesi).
+
+**Terminoloji düzeltmesi:** "Workspace" NAV-001 kapsamında hiç kullanılmadı — ROADMAP.md'deki
+"Workspace (Multi-Tenant) Architecture" ile çakışıyordu, Product Owner kararıyla "Odak Alanı"
+(teknik)/"Çalışma" (UI) terimlerine geçildi.
+
+**Tercih şeması — migration YOK:** mevcut `user_preferences` (migration 044) tablosuna yeni
+`pref_key`'ler: `nav_layout_mode` (compact/legacy, tri-state — kullanıcı seçmediyse admin/pilot
+varsayılan compact, herkes legacy), `nav_pinned_web`/`nav_pinned_mobile` (Product Owner kararı:
+platform bazlı BAĞIMSIZ, web'de sabitlenen mobilde otomatik sabitlenmez).
+
+**Yeni `ajax_nav_prefs.php`:** pin/unpin/reset/set_mode, `ajax_dashboard_order.php`'nin kanıtlanmış
+whitelist-doğrulama desenini izliyor — TEK farkla, CSRF baştan zorunlu (Product Owner kararı:
+"mevcut ajax_dashboard_order.php'de yok gerekçesiyle korumasız bırakılmayacaktır" — o dosyanın
+kendi eksikliği `PDP/SEC-001` olarak backlog'a ayrı not düşüldü, bu turda düzeltilmedi/kapsam dışı).
+
+**Blueprint'te bulunan gerçek güvenlik açığı düzeltildi:** `mobile/common.php::botx()` (bottom nav)
+ve eski `mobile/index.php`'nin "Açık İş"/"Cariler" kartları `user_can('jobs')`/`user_can('contacts')`
+kontrolü OLMADAN herkese gösteriliyordu — yetkisiz personel dokununca `page_module_map()` 403
+veriyordu. Artık her ikisi de yetki-filtreli; **bu düzeltme pilot modundan BAĞIMSIZ, evrensel**
+(güvenlik düzeltmesi, "opt-in deneyim" kategorisinde değil).
+
+**Web compact sidebar + Module Launcher:** `layout_top.php` artık `$__navMode` hesaplayıp iki ayrı
+dal render ediyor — legacy dal ESKİ HALİYLE BİREBİR (satır satır doğrulandı), compact dal 7 sabit
+Çalışma satırı + kullanıcının sabitlediği modüller + "Tüm Modüller" launcher tetikleyicisi. Launcher
+sağdan kayan `.df-surface--drawer` (DS-003A'dan beri tanımlı, bu sprintte ilk gerçek kullanımı),
+`.df-panel`/`.df-list-row` diliyle, arama filtreli, pin/unpin AJAX ile anlık. Legacy sidebar'ın koyu
+kabuğu değişmedi — compact primary satırlar da AYNI mevcut emoji'leri kullanıyor (yeni ikon kararı
+değil), sadece Launcher (yeni ekran) `ds_icon()` kullanıyor (arama/kapat/pin — per-modül ikon YOK,
+mytasks.php'deki "menü içi düz metin ikonsuz kalsın" ilkesiyle tutarlı, ~50 satırın yarısında güçlü
+semantik ikon eşleşmesi olmadığı için).
+
+**Mobil:** `mobile/more.php` ve `mobile/index.php` de AYNI `$__navMode` mantığıyla iki dallı (bu,
+kendi tespit ettiğim bir eksiklikti — ilk taslakta mobil için legacy dalı unutmuştum, Product
+Owner'ın "web VE mobil deneyimi birebir korunacaktır" kararına aykırıydı, review öncesi kendim
+buldum ve düzelttim). Legacy dallar orijinal dosyalarla `card()` etiket listesi bazında birebir
+doğrulandı (`diff` ile karşılaştırıldı, fark yok). Compact dalda: `mobile/more.php` renkli kart
+listesinden gruplu Module Launcher'a, `mobile/index.php` Nabız+4 sakin istatistik (Bugün/Geciken
+görev + Devam Eden İş/Yaklaşan — `task_my_stats()` mytasks.php ile aynı fonksiyon, yeni sorgu
+sadece "Yaklaşan" için)+Mesajlar+tek rol-bazlı aksiyon+Modüller linkine indirildi.
+
+**Review:** Selin (security) → **PASS**, kritik/yüksek bulgu yok (CSRF/whitelist/kullanıcı-izolasyonu/
+SQL/XSS ayrı ayrı doğrulandı). **Ece ve Elif'in subagent review'ları Anthropic API oturum limitine
+takılıp tamamlanamadı** (platform kısıtı, kod sorunu değil) — bunların yerine ben manuel olarak
+git diff'i satır satır inceledim: legacy dalların birebir korunduğunu (card() etiket diff'i +
+layout_top.php satır karşılaştırması), `nav_taxonomy()` perm değerlerinin `page_module_map()` ile
+tutarlı olduğunu (örnek satırlarla çapraz doğrulama), değişen dosya listesinde mytasks.php/
+task_view.php gibi PX-001A/B ekranlarının YER ALMADIĞINI doğruladım. **Ece/Elif'in formal subagent
+onayı DEV PASS öncesi tekrar denenebilir** (API limiti sıfırlandıktan sonra) — kullanıcıya bu
+şeffaf şekilde bildirildi.
+
+**Statik doğrulama:** web (compact sidebar + launcher açık/kapalı, taksonomi/pin filtreleme mock
+senaryosuyla — yetkisiz pinlenmiş anahtarların otomatik elendiği doğrulandı), mobil launcher +
+yeni ana ekran (360-390px, iframe tekniğiyle) — taşma yok.
+
 ## PX-001B — TASK VIEW PRODUCT REDESIGN: USER TEST PASS / DEV PASS / CLOSED (2026-07-16)
 Product Owner kararı: PX-001B resmen kapatıldı. Task View artık Görevlerim ekranının resmi devam
 ekranı — mytasks.php ile aynı ürün dilini konuşuyor (bilgi hiyerarşisi, durum/termin/öncelik dili,

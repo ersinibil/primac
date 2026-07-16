@@ -481,6 +481,13 @@ if(is_file(__DIR__.'/activity_lib.php')) require_once __DIR__.'/activity_lib.php
 // Saf ek: hiçbir mevcut ekran bu fonksiyonları çağırmıyor, boot.php'ye eklenmesi web+mobil
 // (mobile/common.php zaten boot.php'yi require ediyor) her ikisine de erişim sağlar.
 if(is_file(__DIR__.'/ds_lib.php')) require_once __DIR__.'/ds_lib.php';
+// NAV-001B (2026-07-16) — navigasyon bilgi mimarisi (taksonomi/yetki filtresi), ds_lib.php'den
+// bilinçli olarak AYRI (Product Owner kararı: ds_lib.php sadece görsel bileşen kütüphanesi).
+if(is_file(__DIR__.'/nav_lib.php')) require_once __DIR__.'/nav_lib.php';
+// user_prefs_lib.php önceden sadece dashboard.php/ajax_dashboard_order.php'nin kendi require'ıyla
+// yükleniyordu — layout_top.php (compact nav) artık user_pref_get() çağırdığı için TÜM sayfalarda
+// garanti yüklü olması gerekiyor, merkezi hale getirildi.
+if(is_file(__DIR__.'/user_prefs_lib.php')) require_once __DIR__.'/user_prefs_lib.php';
 // Geciken iş otomatik bildirimi (saatte bir, dosya kilidi ile) — giriş yapılmışsa
 if(!empty($_SESSION['user']) && is_file(__DIR__.'/job_overdue_lib.php')){ require_once __DIR__.'/job_overdue_lib.php'; try{ check_overdue_jobs(db()); }catch(Throwable $e){} }
 // Sabah hatırlatma (09:30 sonrası ilk girişte, günde 1 kez) — kesin 09:30 için cPanel cron → cron.php?key=acans-cron-2026
@@ -508,7 +515,10 @@ if($__page !== '' && isset($__pmap[$__page])){
 // FAZ-5F (Temizlik grubu): accounting_categories.php, check_note_view.php (mobil-only),
 // report.php, ajax_quick_add.php (mobil-only karşılığı yok, web+mobil formlardan ortak
 // çağrılıyor), wa_settings.php eklendi.
-$__csrf_enforced_pages = ['users.php', 'sil.php', 'notifications.php', 'accounting.php', 'finance.php', 'finance_accounts.php', 'checks_notes.php', 'kasa.php', 'finance_new.php', 'finance_transfer.php', 'finance_account_view.php', 'payment.php', 'collection.php', 'transfer.php', 'account_view.php', 'movement_view.php', 'personnel_new.php', 'personnel_edit.php', 'personnel_view.php', 'sifre_sifirla.php', 'temizle_veri.php', 'trade_document_new.php', 'teklif.php', 'quote_approve.php', 'public_file.php', 'wa_send_now.php', 'job_view.php', 'task_view.php', 'work_view.php', 'contact_new.php', 'contact_view.php', 'product_new.php', 'product_view.php', 'product_categories.php', 'product_taxonomy.php', 'stock_movement_new.php', 'brand_settings.php', 'job_new.php', 'jobs.php', 'task_new.php', 'tasks.php', 'mytask_new.php', 'mytasks.php', 'uretim_new.php', 'group_new.php', 'messages.php', 'notes.php', 'request_new.php', 'requests.php', 'profile.php', 'sales.php', 'purchase.php', 'accounting_categories.php', 'check_note_view.php', 'report.php', 'ajax_quick_add.php', 'ajax_dashboard_order.php', 'wa_settings.php', 'wa_conversation_view.php'];
+$__csrf_enforced_pages = ['users.php', 'sil.php', 'notifications.php', 'accounting.php', 'finance.php', 'finance_accounts.php', 'checks_notes.php', 'kasa.php', 'finance_new.php', 'finance_transfer.php', 'finance_account_view.php', 'payment.php', 'collection.php', 'transfer.php', 'account_view.php', 'movement_view.php', 'personnel_new.php', 'personnel_edit.php', 'personnel_view.php', 'sifre_sifirla.php', 'temizle_veri.php', 'trade_document_new.php', 'teklif.php', 'quote_approve.php', 'public_file.php', 'wa_send_now.php', 'job_view.php', 'task_view.php', 'work_view.php', 'contact_new.php', 'contact_view.php', 'product_new.php', 'product_view.php', 'product_categories.php', 'product_taxonomy.php', 'stock_movement_new.php', 'brand_settings.php', 'job_new.php', 'jobs.php', 'task_new.php', 'tasks.php', 'mytask_new.php', 'mytasks.php', 'uretim_new.php', 'group_new.php', 'messages.php', 'notes.php', 'request_new.php', 'requests.php', 'profile.php', 'sales.php', 'purchase.php', 'accounting_categories.php', 'check_note_view.php', 'report.php', 'ajax_quick_add.php', 'ajax_dashboard_order.php', 'wa_settings.php', 'wa_conversation_view.php',
+    // NAV-001B (2026-07-16): yeni endpoint baştan CSRF-korumalı — ajax_dashboard_order.php'nin
+    // eksikliği buraya miras bırakılmadı (Product Owner kararı, bkz. memory/backlog.md PDP/SEC notu).
+    'ajax_nav_prefs.php'];
 if($_SERVER['REQUEST_METHOD'] === 'POST' && in_array($__page, $__csrf_enforced_pages, true)){
     csrf_verify();
 }

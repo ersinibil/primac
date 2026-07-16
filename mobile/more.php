@@ -1,21 +1,12 @@
-<?php require_once 'common.php'; topx('Menü'); ?>
-<?php
-/* "Ara" kartı ve "Bildirim & Ses" test paneli buradan kaldırıldı (2026-07-04, UI/UX sprinti):
-   arama artık her sayfanın üst toolbar'ında (bkz. common.php::topx()) global olarak mevcut;
-   bildirim test/kurulum alanı ise geliştirme/teşhis amaçlı olduğu için sadece admin'in gördüğü
-   "Genel Sistem Yönetimi" grubuna taşındı (aşağıda, user_can('users') şartıyla). */
+<?php require_once 'common.php'; topx('Menü');
+$pdo=db();
+/* NAV-001B (2026-07-16) — Product Owner kararı: "Diğer kullanıcıların mevcut web VE MOBİL
+ * deneyimi birebir korunacaktır" — bu dosya da $__navMode'a göre iki yola ayrılıyor.
+ * legacy: ORİJİNAL renkli-kart menü listesi birebir korunur (aşağıda, değişmedi).
+ * compact: nav_lib.php tabanlı gruplu Module Launcher (Product Owner'ın istediği yeni deneyim).
+ */
+if($__navMode === 'legacy'):
 ?>
-<?php
-/* Taksonomi — web sol menüyle (layout_top.php) hizalı: İş / Üretim, Ticaret, Finans, Mesajlar,
-   Raporlama, Genel Sistem Yönetimi (2026-07-03: önce 6 gruptan 4'e sadeleştirildi; aynı gün
-   2. turda "Mesajlaşma ve Raporlama" tek grubu ikiye ayrıldı — kullanıcı bildirimi:
-   "mesajlaşmaları tek yere al, raporlama ayrı kalsın"; 2026-07-12 WEB UI ALIGNMENT & NAVIGATION
-   SPRINT 001 Faz B: "Personel İş Takip Yönetimi" adı web ile aynı olacak şekilde "İş / Üretim"e
-   kısaltıldı, eski tek "Muhasebe İşlemleri" grubu Ticaret/Finans olarak ikiye ayrıldı ve içindeki
-   rapor kartları Raporlama grubuna taşındı). Kart içerikleri/yetki kontrolleri aynı, sadece
-   gruplama değişti. */
-?>
-
 <div style="font-weight:900;margin:16px 4px 8px">🧭 İş / Üretim</div>
 <div class="grid">
   <?php
@@ -35,7 +26,7 @@
     card('İş Ekle','Personele iş ata','🎯','task_new.php','teal');
   }
   if($isAdmin) {
-    card('Talepler','Talep onay merkezi','📨','requests.php','orange'); // admin-only kalır
+    card('Talepler','Talep onay merkezi','📨','requests.php','orange');
   }
   if($isAdmin || user_can('personnel')) {
     card('Personel','Ekip listesi','👷','personnel.php','purple');
@@ -108,7 +99,7 @@
 <div style="font-weight:900;margin:16px 4px 8px">📊 Raporlama</div>
 <div class="grid">
   <?php
-  if($isAdmin) card('Son İşlemler','Aktivite akışı','🕘','activity.php','gray'); // activity.php block_personel()
+  if($isAdmin) card('Son İşlemler','Aktivite akışı','🕘','activity.php','gray');
   if($isAdmin || user_can('report')) {
     card('Genel Özet Rapor','Yekün özet','📊','report.php?modul=genel','blue');
     card('Tüm Modüller','Hepsi tek sunum','🗂️','report.php?modul=tumu','blue');
@@ -152,5 +143,92 @@
   <button class="btn dark" style="width:100%;padding:13px;margin-top:8px" onclick="var m=window.ACANS_TEST?ACANS_TEST():'hazır değil';document.getElementById('tres').textContent=m;">Bildirimleri Aç / Test Et</button>
   <p id="tres" class="small" style="margin-top:8px;color:#4ade80"></p>
 </div>
+<?php endif; ?>
+
+<?php else: ?>
+<!-- ── COMPACT — NAV-001B Module Launcher (Product Owner kararı) ── -->
+<?php
+$__canSee = function($perm){ return user_can($perm); };
+$__pinnedRaw = user_pref_get($pdo, $ME, 'nav_pinned_mobile', '');
+$__pinnedMods = nav_pinned_modules($__canSee, $isAdmin, $__pinnedRaw);
+$__groups = nav_grouped_for_launcher($__canSee, $isAdmin);
+$__pinnedKeys = array_filter(array_map('trim', explode(',', $__pinnedRaw)));
+?>
+<div class="toolbar-search" style="margin-bottom:14px">
+  <span class="ts-icon"><?=ds_icon('search',18)?></span>
+  <input type="text" id="navLauncherSearch" placeholder="Modül ara..." autocomplete="off" oninput="navLauncherFilter(this.value)">
+</div>
+
+<div id="navLauncherBody">
+<?php if($__pinnedMods): ?>
+<div class="df-nav-launcher-group">
+  <div class="df-nav-launcher-group-title">Sabitlenenler</div>
+  <div class="df-panel" style="padding:6px">
+    <?php foreach($__pinnedMods as $__item): ?>
+    <div class="df-nav-row-wrap" style="display:flex;align-items:center" data-nav-label="<?=h(mb_strtolower($__item['label']))?>">
+      <a class="df-nav-row" style="flex:1" href="<?=h($__item['url'])?>"><?=h($__item['label'])?></a>
+      <button type="button" class="df-nav-pin-btn is-pinned" aria-label="Sabitlemeyi kaldır" onclick="navTogglePin('<?=h($__item['key'])?>',true,this)"><?=ds_icon('close',15)?></button>
+    </div>
+    <?php endforeach; ?>
+  </div>
+</div>
+<?php endif; ?>
+
+<?php foreach(['çalışma','ticaret','finans','yönetim'] as $__g): if(empty($__groups[$__g])) continue; ?>
+<div class="df-nav-launcher-group df-nav-launcher-group--<?=h($__g)?>">
+  <div class="df-nav-launcher-group-title"><?=h(nav_group_label($__g))?></div>
+  <div class="df-panel" style="padding:6px">
+    <?php foreach($__groups[$__g] as $__item):
+        $__isPinned = in_array($__item['key'], $__pinnedKeys, true);
+    ?>
+    <div class="df-nav-row-wrap" style="display:flex;align-items:center" data-nav-label="<?=h(mb_strtolower($__item['label']))?>">
+      <a class="df-nav-row" style="flex:1" href="<?=h($__item['url'])?>"><?=h($__item['label'])?></a>
+      <?php if(empty($__item['primary'])): ?>
+      <button type="button" class="df-nav-pin-btn<?=($__isPinned?' is-pinned':'')?>" aria-label="<?=($__isPinned?'Sabitlemeyi kaldır':'Sabitle')?>" onclick="navTogglePin('<?=h($__item['key'])?>',<?=$__isPinned?'true':'false'?>,this)"><?=ds_icon($__isPinned?'close':'plus',15)?></button>
+      <?php endif; ?>
+    </div>
+    <?php endforeach; ?>
+  </div>
+</div>
+<?php endforeach; ?>
+
+<div class="df-nav-launcher-group">
+  <div class="df-nav-launcher-group-title">Diğer</div>
+  <div class="df-panel" style="padding:6px">
+    <div class="df-nav-row-wrap" data-nav-label="web sürümü"><a class="df-nav-row" href="../dashboard.php?web=1">Web Sürümü (Masaüstü)</a></div>
+    <?php if(user_can('users')): ?>
+    <div class="df-nav-row-wrap" data-nav-label="bildirim kur"><a class="df-nav-row" href="push_enable.php">Bildirim Kur (Push)</a></div>
+    <?php endif; ?>
+    <div class="df-nav-row-wrap" data-nav-label="çıkış yap"><a class="df-nav-row" href="../logout.php">Çıkış Yap</a></div>
+  </div>
+</div>
+</div>
+
+<?php if(user_can('users')): ?>
+<div class="panel" style="text-align:center">
+  <b>🔔 Bildirim & Ses (Test)</b>
+  <p class="small" style="margin-top:4px">Sadece yöneticiler görür — geliştirme/teşhis amaçlıdır.</p>
+  <button class="btn dark" style="width:100%;padding:13px;margin-top:8px" onclick="var m=window.ACANS_TEST?ACANS_TEST():'hazır değil';document.getElementById('tres').textContent=m;">Bildirimleri Aç / Test Et</button>
+  <p id="tres" class="small" style="margin-top:8px;color:#4ade80"></p>
+</div>
+<?php endif; ?>
+
+<script>
+function navTogglePin(key,isPinned,btn){
+    fetch('../ajax_nav_prefs.php',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded','X-CSRF-Token':window.CSRF_TOKEN},
+        body:'action='+(isPinned?'unpin':'pin')+'&platform=mobile&key='+encodeURIComponent(key)+'&csrf_token='+encodeURIComponent(window.CSRF_TOKEN)})
+      .then(function(r){return r.json();}).then(function(d){ if(d.ok) location.reload(); });
+}
+function navLauncherFilter(q){
+    q = q.toLowerCase().trim();
+    document.querySelectorAll('#navLauncherBody .df-nav-row-wrap').forEach(function(row){
+        row.style.display = (!q || row.getAttribute('data-nav-label').indexOf(q)!==-1) ? '' : 'none';
+    });
+    document.querySelectorAll('#navLauncherBody .df-nav-launcher-group').forEach(function(g){
+        var anyVisible = Array.prototype.some.call(g.querySelectorAll('.df-nav-row-wrap'), function(r){ return r.style.display!=='none'; });
+        g.style.display = anyVisible ? '' : 'none';
+    });
+}
+</script>
 <?php endif; ?>
 <?php botx(); ?>

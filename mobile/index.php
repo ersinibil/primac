@@ -1,69 +1,31 @@
 <?php require_once 'common.php'; topx(app_config()['app_name'] ?? 'OTS');
+require_once __DIR__.'/../tasks_lib.php';
 $pdo=db();
+
+// NAV-001B (2026-07-16) — Product Owner kararı: "Diğer kullanıcıların mevcut web VE MOBİL
+// deneyimi birebir korunacaktır" — bu dosya artık $__navMode'a (mobile/common.php'de hesaplanır)
+// göre iki ayrı yol izliyor. legacy: ORİJİNAL ekran (renkli kart grid'i + KPI karşılaştırması)
+// birebir korunur. compact: Product Owner'ın istediği sade "şu an ne yapmalıyım" ekranı.
 $open=mc("SELECT COUNT(*) c FROM jobs WHERE status NOT IN ('Tamamlandı','İptal','Teslim Edildi')");
 $overdue_count=mc("SELECT COUNT(*) c FROM jobs WHERE status NOT IN ('Tamamlandı','İptal','Teslim Edildi') AND due_date IS NOT NULL AND due_date<CURDATE()");
-
-// KPI Karşılaştırması: Bu ay vs Geçen ay (mobil basitleştirilmiş)
-$monthStart=date('Y-m-01');
-$monthEnd=date('Y-m-t');
-$prevMonthEnd=date('Y-m-01', strtotime('-1 day'));
-$prevMonthStart=date('Y-m-01', strtotime($prevMonthEnd));
-
-function getKpiMetricsMobile($pdo, $from, $to) {
-    $m = [];
-    try { $r = $pdo->prepare("SELECT COALESCE(SUM(amount),0) t FROM finance_movements WHERE direction='in' AND DATE(movement_date) BETWEEN ? AND ?"); $r->execute([$from, $to]); $m['rev'] = (float)($r->fetch()['t'] ?? 0); } catch(Throwable $e) { $m['rev'] = 0; }
-    try { $r = $pdo->prepare("SELECT COALESCE(SUM(amount),0) t FROM finance_movements WHERE direction='out' AND COALESCE(movement_type,'')<>'transfer' AND DATE(movement_date) BETWEEN ? AND ?"); $r->execute([$from, $to]); $m['exp'] = (float)($r->fetch()['t'] ?? 0); } catch(Throwable $e) { $m['exp'] = 0; }
-    return $m;
-}
-
-$currM = getKpiMetricsMobile($pdo, $monthStart, $monthEnd);
-$prevM = getKpiMetricsMobile($pdo, $prevMonthStart, $prevMonthEnd);
-
-
-// Kritik stok her zaman gerekli (hem admin hem personel için uyarı panelinde)
 $crit=mc("SELECT COUNT(*) c FROM stock_items WHERE quantity<=critical_level");
 
-// UX SPRINT 002 — PHASE B3: Nabız Satırı — web dashboard.php ile aynı, boot.php'deki paylaşılan
-// dashboard_pulse_state() ile hesaplanıyor. mc() hatayı sessizce 0'a çevirdiği için burada ayrı,
-// hataya duyarlı bir okuma yapılıyor (aynı sorgular, sadece $__pulseOk ile ayırt edilebiliyor).
 $__pulseOk = true; $__pulseOverdue = 0; $__pulseCriticalStock = 0;
 try {
     $__pulseOverdue = (int)($pdo->query("SELECT COUNT(*) c FROM jobs WHERE status NOT IN ('Tamamlandı','İptal','Teslim Edildi') AND due_date IS NOT NULL AND due_date<CURDATE()")->fetch()['c'] ?? 0);
     $__pulseCriticalStock = (int)($pdo->query("SELECT COUNT(*) c FROM stock_items WHERE quantity<=critical_level")->fetch()['c'] ?? 0);
 } catch(Throwable $e) { $__pulseOk = false; }
-// MOBILE UX BUGFIX SPRINT (2026-07-15): $__pulseShowJobs/$__pulseShowStock ayrı değişkenlere
-// çıkarıldı — hem pulse hesaplamasında hem aşağıdaki "Gecikme Uyarı" panelinin kendi yetki
-// filtresinde (bkz. aşağı) tekrar kullanılıyor, aynı iki kontrol iki yerde ayrı ayrı yazılmasın.
 $__pulseShowJobs = $isAdmin||user_can('jobs');
 $__pulseShowStock = $isAdmin||user_can('stock');
 $__pulse = dashboard_pulse_state($__pulseOk, $__pulseOverdue, $__pulseShowJobs, $__pulseCriticalStock, $__pulseShowStock);
 
-// MOBILE UX BUGFIX SPRINT (2026-07-15, revizyon): $overdue_count/$crit (satır 4/24, "Gecikme
-// Uyarı" panelinin GÖSTERDİĞİ sayılar) üzerinden — pulse'ın kendi hataya-duyarlı kopyaları değil,
-// panelde görünen sayılarla birebir tutarlı olsun diye. Nabız'ın "İncele" hedefini belirlemek için
-// kullanılıyor: TEK sorun varsa doğrudan o listeye, İKİSİ varsa Dikkat paneline (orada iki kutu
-// ayrı ayrı tıklanabilir), HİÇBİRİ yoksa link yok.
 $__gecikmeShowOverdue = $__pulseShowJobs && $overdue_count > 0;
 $__gecikmeShowCritical = $__pulseShowStock && $crit > 0;
 $__pulseTarget = null;
-if($__gecikmeShowOverdue && $__gecikmeShowCritical){
-    $__pulseTarget = '#gecikme-uyari';
-} elseif($__gecikmeShowOverdue){
-    $__pulseTarget = 'jobs.php?s=gec';
-} elseif($__gecikmeShowCritical){
-    $__pulseTarget = 'stock.php?critical=1';
-}
+if($__gecikmeShowOverdue && $__gecikmeShowCritical){ $__pulseTarget = '#gecikme-uyari'; }
+elseif($__gecikmeShowOverdue){ $__pulseTarget = 'jobs.php?s=gec'; }
+elseif($__gecikmeShowCritical){ $__pulseTarget = 'stock.php?critical=1'; }
 
-// UX SPRINT 002 — PHASE B4: Hızlı İşlemler — web ile aynı, boot.php'deki paylaşılan tanım+ayrım
-// listesini kullanıyor (mobilin kendi $isAdmin değişkeniyle, dosyanın mevcut deseniyle tutarlı).
-$__qaSplit = dashboard_quick_actions_split(function($perm) use($isAdmin){ return $isAdmin||user_can($perm); });
-
-if($isAdmin){
-  $contacts=mc("SELECT COUNT(*) c FROM contacts");
-  $stock=mc("SELECT COUNT(*) c FROM stock_items");
-  $todayIn=0; try{ $todayIn=(float)(db()->query("SELECT COALESCE(SUM(amount),0) s FROM finance_movements WHERE direction='in' AND DATE(movement_date)=CURDATE()")->fetch()['s']??0); }catch(Throwable $e){}
-  $topName=''; try{ $tp=db()->query("SELECT p.name, COUNT(*) c FROM jobs j JOIN personnel p ON p.id=j.responsible_personnel_id WHERE j.status IN ('Tamamlandı','Teslim Edildi') GROUP BY p.id ORDER BY c DESC LIMIT 1")->fetch(); if($tp)$topName=$tp['name'].' ('.$tp['c'].')'; }catch(Throwable $e){}
-}
 $myMsg=unread_msg(); $myNotif=unread_notif();
 $__pulseColors=[
   'green'  =>['fg'=>'var(--c-success)','bg'=>'var(--c-success-bg)','fgtext'=>'var(--c-success-text)'],
@@ -73,12 +35,7 @@ $__pulseColors=[
 ];
 $__pc=$__pulseColors[$__pulse['level']];
 ?>
-<!-- ── Nabız Satırı — UX SPRINT 002 PHASE B3 (mobil sade sürüm) ── -->
-<!-- MOBILE UX BUGFIX SPRINT (2026-07-15, revizyon — USER TEST FAIL sonrası): panel artık sadece
-     Dikkat bölümüne scroll etmiyor, $__pulseTarget'a göre AKSİYON ALINABİLİR hedefe gidiyor: tek
-     sorun varsa ilgili listeye doğrudan (jobs.php?s=gec veya stock.php?critical=1), iki sorun
-     varsa Dikkat paneline (orada artık iki kutu ayrı ayrı tıklanabilir, aşağı bkz). İç içe link
-     üretmemek için "İncele" ayrı bir <a> değil, aynı dış <a>'nın içindeki düz bir <span>. -->
+<!-- ── Nabız Satırı — her iki modda da aynı (değişmedi) ── -->
 <?php if($__pulseTarget !== null): ?>
 <a href="<?=htmlspecialchars($__pulseTarget)?>" class="panel" style="background:<?=$__pc['bg']?>;border-color:<?=$__pc['fg']?>;display:flex;align-items:center;gap:8px;padding:12px 14px;text-decoration:none;color:<?=$__pc['fgtext']?>">
   <span style="font-size:16px;line-height:1"><?=$__pulse['icon']?></span>
@@ -92,13 +49,30 @@ $__pc=$__pulseColors[$__pulse['level']];
 </div>
 <?php endif; ?>
 
-<!-- ── Hızlı İşlemler — UX SPRINT 002 PHASE B4 (mobil sade sürüm) ── -->
+<?php if($__navMode === 'legacy'): ?>
+<!-- ── LEGACY — orijinal ekran, PX-001B öncesi hâliyle birebir ── -->
 <?php
-$__qaByCat=[];
-foreach($__qaSplit['primary'] as $__qa){ $__qaByCat[$__qa['category']][]=$__qa; }
+$__qaSplit = dashboard_quick_actions_split(function($perm) use($isAdmin){ return $isAdmin||user_can($perm); });
+$monthStart=date('Y-m-01'); $monthEnd=date('Y-m-t');
+$prevMonthEnd=date('Y-m-01', strtotime('-1 day')); $prevMonthStart=date('Y-m-01', strtotime($prevMonthEnd));
+function getKpiMetricsMobile($pdo, $from, $to) {
+    $m = [];
+    try { $r = $pdo->prepare("SELECT COALESCE(SUM(amount),0) t FROM finance_movements WHERE direction='in' AND DATE(movement_date) BETWEEN ? AND ?"); $r->execute([$from, $to]); $m['rev'] = (float)($r->fetch()['t'] ?? 0); } catch(Throwable $e) { $m['rev'] = 0; }
+    try { $r = $pdo->prepare("SELECT COALESCE(SUM(amount),0) t FROM finance_movements WHERE direction='out' AND COALESCE(movement_type,'')<>'transfer' AND DATE(movement_date) BETWEEN ? AND ?"); $r->execute([$from, $to]); $m['exp'] = (float)($r->fetch()['t'] ?? 0); } catch(Throwable $e) { $m['exp'] = 0; }
+    return $m;
+}
+$currM = getKpiMetricsMobile($pdo, $monthStart, $monthEnd);
+$prevM = getKpiMetricsMobile($pdo, $prevMonthStart, $prevMonthEnd);
+if($isAdmin){
+  $contacts=mc("SELECT COUNT(*) c FROM contacts");
+  $stock=mc("SELECT COUNT(*) c FROM stock_items");
+  $todayIn=0; try{ $todayIn=(float)(db()->query("SELECT COALESCE(SUM(amount),0) s FROM finance_movements WHERE direction='in' AND DATE(movement_date)=CURDATE()")->fetch()['s']??0); }catch(Throwable $e){}
+  $topName=''; try{ $tp=db()->query("SELECT p.name, COUNT(*) c FROM jobs j JOIN personnel p ON p.id=j.responsible_personnel_id WHERE j.status IN ('Tamamlandı','Teslim Edildi') GROUP BY p.id ORDER BY c DESC LIMIT 1")->fetch(); if($tp)$topName=$tp['name'].' ('.$tp['c'].')'; }catch(Throwable $e){}
+}
 ?>
 <div class="panel">
   <b>⚡ Hızlı İşlemler</b>
+  <?php $__qaByCat=[]; foreach($__qaSplit['primary'] as $__qa){ $__qaByCat[$__qa['category']][]=$__qa; } ?>
   <?php foreach(['TİCARET','FİNANS','OPERASYON','İLETİŞİM'] as $__qaCat): if(empty($__qaByCat[$__qaCat])) continue; ?>
   <div style="margin-top:10px">
     <div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--c-muted);margin-bottom:6px"><?=htmlspecialchars($__qaCat)?></div>
@@ -163,7 +137,6 @@ foreach($__qaSplit['primary'] as $__qa){ $__qaByCat[$__qa['category']][]=$__qa; 
   </div>
 <?php endif; ?>
 
-<!-- ── Karşılaştırmalı KPI (Mobil Basitleştirilmiş) ── -->
 <div class="panel"><b>📊 Bu Ay vs Geçen Ay</b>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;font-size:12px">
     <div style="background:#f0fdf4;border-radius:var(--radius-sm);padding:10px;border:1px solid var(--c-success-bg)">
@@ -179,15 +152,6 @@ foreach($__qaSplit['primary'] as $__qa){ $__qaByCat[$__qa['category']][]=$__qa; 
   </div>
 </div>
 
-<!-- ── Gecikme Uyarı (Mobil) ── -->
-<!-- MOBILE UX BUGFIX SPRINT (2026-07-15, revizyon — USER TEST FAIL sonrası): iki kutu artık
-     ayrı ayrı <a> — kutunun TAMAMI aksiyon alınabilir hedefe gidiyor (eski ayrı "gör" butonları
-     kaldırıldı, aynı hedefe giden iki tıklama alanı olmasın diye). $__gecikmeShowOverdue/
-     $__gecikmeShowCritical yukarıda (Nabız hedefi hesabıyla birlikte) TEK yerde hesaplanıyor,
-     burada tekrar hesaplanmıyor. Yetkisiz kategori hiç render edilmiyor (Phase B3 incelemesinde
-     flag'lenen sızıntı — web tarafındaki eşdeğeri hâlâ backlog'da, bu turun kapsamı dışı).
-     scroll-margin-top: sticky .top header'ın (~130px) hedefi kapatmasını önlüyor — çift-sorun
-     durumunda Nabız'ın #gecikme-uyari scroll'u header'ın ALTINA iniyor. -->
 <?php if($__gecikmeShowOverdue || $__gecikmeShowCritical): ?>
 <div class="panel" id="gecikme-uyari" style="border-left:4px solid var(--c-danger);scroll-margin-top:130px"><b style="color:var(--c-danger)">⚠️ Dikkat</b>
   <div style="display:grid;grid-template-columns:<?=($__gecikmeShowOverdue && $__gecikmeShowCritical)?'1fr 1fr':'1fr'?>;gap:8px;margin-top:8px;font-size:12px">
@@ -204,6 +168,41 @@ foreach($__qaSplit['primary'] as $__qa){ $__qaByCat[$__qa['category']][]=$__qa; 
     </a>
     <?php endif; ?>
   </div>
+</div>
+<?php endif; ?>
+
+<?php else: ?>
+<!-- ── COMPACT — NAV-001B sade ana ekran (Product Owner kararı) ── -->
+<?php
+$pid = task_my_personnel_id($pdo, $ME);
+$__taskStats = task_my_stats($pdo, $pid);
+$__openJobs = $__pulseShowJobs ? $open : 0;
+$__upcoming = 0;
+if($__pulseShowJobs){
+    try{ $__upcoming = (int)($pdo->query("SELECT COUNT(*) c FROM jobs WHERE status NOT IN ('Tamamlandı','İptal','Teslim Edildi') AND due_date IS NOT NULL AND due_date>=CURDATE() AND due_date<=DATE_ADD(CURDATE(),INTERVAL 7 DAY)")->fetch()['c'] ?? 0); }catch(Throwable $e){}
+}
+$__qaSplit1 = dashboard_quick_actions_split(function($perm) use($isAdmin){ return $isAdmin||user_can($perm); }, 1);
+$__singleAction = $__qaSplit1['primary'][0] ?? null;
+?>
+<div class="df-panel">
+  <div class="df-ops-summary">
+    <div class="df-ops-stat"><strong><?=$__taskStats['today']?></strong><span>Bugünkü Görev</span></div>
+    <div class="df-ops-stat"><strong<?=$__taskStats['overdue']?' class="is-danger"':''?>><?=$__taskStats['overdue']?></strong><span>Geciken Görev</span></div>
+    <?php if($__pulseShowJobs): ?>
+    <div class="df-ops-stat"><strong><?=$__openJobs?></strong><span>Devam Eden İş</span></div>
+    <div class="df-ops-stat"><strong><?=$__upcoming?></strong><span>Yaklaşan (7g)</span></div>
+    <?php endif; ?>
+  </div>
+</div>
+
+<div class="df-panel" style="display:flex;flex-direction:column;gap:8px">
+  <a class="df-nav-row" href="messages.php" style="background:var(--df-surface-sunken)">
+    <span>Mesajlar<?=$myMsg?' · '.$myMsg.' yeni':''?></span>
+  </a>
+  <?php if($__singleAction): ?>
+  <a class="df-btn df-btn--primary" style="width:100%" href="<?=htmlspecialchars($__singleAction['mobileUrl'] ?? $__singleAction['url'])?>"><?=$__singleAction['icon']?> <?=htmlspecialchars($__singleAction['label'])?></a>
+  <?php endif; ?>
+  <a class="df-btn df-btn--secondary" style="width:100%" href="more.php">Tüm Modüller</a>
 </div>
 <?php endif; ?>
 
