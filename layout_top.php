@@ -226,7 +226,7 @@ input,select,textarea{font-size:16px}
     $__primaryMods = nav_primary_modules($__navCanSee, is_admin());
     $__pinnedRaw = user_pref_get(db(), $__me, 'nav_pinned_web', '');
     $__pinnedMods = nav_pinned_modules($__navCanSee, is_admin(), $__pinnedRaw);
-    $__launcherGroups = nav_grouped_for_launcher($__navCanSee, is_admin());
+    $__launcherGroups = nav_grouped_for_launcher($__navCanSee, is_admin(), $__pinnedRaw);
     ?>
     <nav class="nav">
         <?php foreach($__primaryMods as $__pm): $__pmUrl = explode('?',$__pm['url'])[0]; ?>
@@ -423,7 +423,7 @@ input,select,textarea{font-size:16px}
         <button type="button" class="df-icon-btn" aria-label="Kapat" onclick="document.querySelector('.app-shell').classList.remove('launcher-open')"><?=ds_icon('close',18)?></button>
     </div>
     <div class="df-nav-launcher-body" id="navLauncherBody">
-        <?php foreach(['çalışma','ticaret','finans','yönetim'] as $__g): if(empty($__launcherGroups[$__g])) continue; ?>
+        <?php foreach(['is_takip','sat_tahsil','stok','iletisim','yonet'] as $__g): if(empty($__launcherGroups[$__g])) continue; ?>
         <div class="df-nav-launcher-group df-nav-launcher-group--<?=h($__g)?>">
             <div class="df-nav-launcher-group-title"><?=h(nav_group_label($__g))?></div>
             <?php foreach($__launcherGroups[$__g] as $__item):

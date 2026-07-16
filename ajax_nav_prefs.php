@@ -64,6 +64,12 @@ try {
         if ($item['perm'] !== null && !$canSee($item['perm'])) {
             throw new Exception('Bu modül için yetkiniz yok.');
         }
+        // Elif'in NAV-001 v3 parite incelemesinde bulduğu boşluk: platforma özel, DAİMA görünür
+        // (mobilde bottom-nav'ın sabit "Cari" ikonu gibi) hedefler ayrıca sabitlenemez — aksi halde
+        // Command Launcher'ın "Sabitlenenler" bölümünde aynı hedef ikinci kez görünür.
+        if ($action === 'pin' && in_array($key, nav_platform_fixed_keys($platform), true)) {
+            throw new Exception('Bu modül zaten sabit menüde, ayrıca sabitlenemez.');
+        }
 
         $current = user_pref_get(db(), $userId, $prefKey, '');
         $keys = array_filter(array_map('trim', explode(',', $current)));

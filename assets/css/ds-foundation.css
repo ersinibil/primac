@@ -378,10 +378,11 @@ body.mobile-shell .df-tab--active{background:var(--df-accent);color:#fff;box-sha
 .df-nav-pin-btn.is-pinned{color:var(--df-accent)}
 /* Grup yüzey tonları — çok hafif, sadece grup başlığının arka planında (satırlarda DEĞİL,
    "her modüle ayrı renk" yasağı satır seviyesinde geçerli, grup seviyesinde çok hafif ton serbest). */
-.df-nav-launcher-group--çalışma .df-nav-launcher-group-title{color:var(--df-accent)}
-.df-nav-launcher-group--ticaret .df-nav-launcher-group-title{color:#9a6a3a}
-.df-nav-launcher-group--finans .df-nav-launcher-group-title{color:var(--df-success-ink)}
-.df-nav-launcher-group--yönetim .df-nav-launcher-group-title{color:var(--df-ink-500)}
+.df-nav-launcher-group--is_takip .df-nav-launcher-group-title{color:var(--df-accent)}
+.df-nav-launcher-group--sat_tahsil .df-nav-launcher-group-title{color:#9a6a3a}
+.df-nav-launcher-group--stok .df-nav-launcher-group-title{color:var(--df-info-ink)}
+.df-nav-launcher-group--iletisim .df-nav-launcher-group-title{color:var(--df-success-ink)}
+.df-nav-launcher-group--yonet .df-nav-launcher-group-title{color:var(--df-ink-500)}
 
 /* Compact sidebar — mevcut koyu .nav/.nav-title kabuğunu AYNEN kullanır (yeni token gerekmez,
    ds_icon() SVG'leri zaten currentColor ile koyu zeminde doğru renklenir), sadece "Tüm Modüller"

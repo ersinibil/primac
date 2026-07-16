@@ -150,8 +150,8 @@ if($__navMode === 'legacy'):
 <?php
 $__canSee = function($perm){ return user_can($perm); };
 $__pinnedRaw = user_pref_get($pdo, $ME, 'nav_pinned_mobile', '');
-$__pinnedMods = nav_pinned_modules($__canSee, $isAdmin, $__pinnedRaw);
-$__groups = nav_grouped_for_launcher($__canSee, $isAdmin);
+$__pinnedMods = nav_pinned_modules($__canSee, $isAdmin, $__pinnedRaw, 'mobile');
+$__groups = nav_grouped_for_launcher($__canSee, $isAdmin, $__pinnedRaw, 'mobile');
 $__pinnedKeys = array_filter(array_map('trim', explode(',', $__pinnedRaw)));
 ?>
 <div class="toolbar-search" style="margin-bottom:14px">
@@ -174,7 +174,7 @@ $__pinnedKeys = array_filter(array_map('trim', explode(',', $__pinnedRaw)));
 </div>
 <?php endif; ?>
 
-<?php foreach(['çalışma','ticaret','finans','yönetim'] as $__g): if(empty($__groups[$__g])) continue; ?>
+<?php foreach(['is_takip','sat_tahsil','stok','iletisim','yonet'] as $__g): if(empty($__groups[$__g])) continue; ?>
 <div class="df-nav-launcher-group df-nav-launcher-group--<?=h($__g)?>">
   <div class="df-nav-launcher-group-title"><?=h(nav_group_label($__g))?></div>
   <div class="df-panel" style="padding:6px">
