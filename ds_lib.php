@@ -9,6 +9,11 @@
 // DS-003A EKİ (2026-07-16): ds_icon() — Visual Language Foundation'ın onaylanan ikon standardının
 // PHP karşılığı, "df-" (design foundation) CSS namespace'iyle eşleşir (bkz. ds-foundation.css dosya
 // sonu). Diğer ds_*() fonksiyonları gibi bugün hiçbir ekran tarafından çağrılmıyor — inert.
+//
+// PX-001A EKİ (2026-07-16): mytasks.php Visual Language uygulaması. Product Owner kararı: PHP
+// tarafında TEK canonical component API korunur — ds_button() geriye-dönük-uyumlu $df parametresi
+// ile genişletildi (df-* çıktısı üretebilir), yeni ds_priority() eklendi. ds_page_header()/
+// ds_badge() DEĞİŞMEDİ (mevcut $icon parametresi zaten ds_icon() çıktısını taşıyabiliyor).
 
 function ds_styles(){
     echo '<link rel="stylesheet" href="'.h(base_url().'assets/css/ds-foundation.css').'?v=1">';
@@ -56,12 +61,31 @@ function ds_badge($text, $tone=null){
 
 // $attrs BİLEREK escape edilmiyor (data-*/onclick gibi ham HTML öznitelik eklemek için) —
 // yalnızca geliştirici-kontrollü sabit string olmalı, ASLA kullanıcı/veri kaynaklı ham girdi.
-function ds_button($label,$url=null,$variant='',$extraClass='',$attrs=''){
-    $cls = trim('ds-btn '.($variant?('ds-btn--'.$variant):'').' '.$extraClass);
+// PX-001A EKİ (2026-07-16): $df=true → "df-*" (Visual Language Foundation) sınıfları üretir ve
+// $label ARTIK ESCAPE EDİLMEZ (ds_icon() + metin birleşimini taşıyabilmek için — bu durumda
+// yalnızca geliştirici-kontrollü sabit string/HTML geçilmeli, ASLA kullanıcı/veri kaynaklı ham
+// girdi). $df=false VARSAYILAN — TÜM eski çağrılar (positional, 5 parametreye kadar) birebir eski
+// davranışı üretir: "ds-*" sınıfları, $label h() ile escape. Product Owner kararı (PX-001A):
+// paralel bir df_button() ailesi AÇILMADI, tek canonical API (ds_button) geriye-dönük-uyumlu
+// genişletildi.
+function ds_button($label,$url=null,$variant='',$extraClass='',$attrs='',$df=false){
+    $prefix = $df ? 'df-btn' : 'ds-btn';
+    $cls = trim($prefix.' '.($variant?($prefix.'--'.$variant):'').' '.$extraClass);
+    $lbl = $df ? $label : h($label);
     if($url!==null){
-        return '<a class="'.h($cls).'" href="'.h($url).'"'.($attrs?' '.$attrs:'').'>'.h($label).'</a>';
+        return '<a class="'.h($cls).'" href="'.h($url).'"'.($attrs?' '.$attrs:'').'>'.$lbl.'</a>';
     }
-    return '<button type="button" class="'.h($cls).'"'.($attrs?' '.$attrs:'').'>'.h($label).'</button>';
+    return '<button type="button" class="'.h($cls).'"'.($attrs?' '.$attrs:'').'>'.$lbl.'</button>';
+}
+
+// PX-001A (2026-07-16): öncelik sinyali artık renkli sol çubuk değil — küçük nokta (+ metin, renk
+// tek başına anlam taşımasın diye). $label verilmezse yalnızca nokta döner (satır başlığının
+// yanına gömülebilir).
+function ds_priority($priority, $label=null){
+    $tone = ($priority==='Acil') ? 'urgent' : (($priority==='Yüksek') ? 'high' : 'normal');
+    $dot = '<span class="df-priority-dot df-priority-dot--'.h($tone).'"></span>';
+    if($label===null) return $dot;
+    return '<span class="df-priority">'.$dot.h($label).'</span>';
 }
 
 // DS-003A (2026-07-16): self-hosted SVG ikon altyapısı — harici CDN/istek yok. $name SABİT bir

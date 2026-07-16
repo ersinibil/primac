@@ -2,6 +2,59 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
+## PX-001A — MYTASKS PRODUCT REDESIGN: KOD İNCELEME PASS — USER TEST BEKLİYOR (2026-07-16)
+DS-003A (Visual Language Foundation) onaylandıktan sonraki ilk gerçek ekran uygulaması —
+mytasks.php (web/tablet) + mobile/mytasks.php'nin görsel katmanı tamamen `df-*` Foundation
+token/bileşen sistemine taşındı. Blueprint Sprint 1'in IA/workflow kararları (satır-içi hızlı-ekle,
+web'de tek bağlamsal aksiyon+"•••" menü, mobilde sıfır-kayıt-aksiyonu+FAB) DEĞİŞMEDİ — bu sprint
+sadece görsel dil, iş mantığı/POST hedefleri/yetki kontrolleri bit-bir aynı kaldı (üç review ajanı
+da bunu doğruladı).
+
+**Mimari karar (Product Owner düzeltmesi):** İlk önerim (ds_button()'a paralel yeni bir df_*
+PHP helper ailesi) REDDEDİLDİ — "PHP tarafında tek canonical component API, CSS tarafında
+kontrollü Visual Language katmanı" kararı verildi. Uygulama: `ds_button()` geriye-dönük-uyumlu
+6. parametre (`$df=false` varsayılan — eski TÜM çağrılar birebir aynı çıktı üretir; `$df=true` →
+`df-*` sınıfları + escape edilmeyen `$label`, ikon+metin birleşimi için) ile genişletildi; yeni
+`ds_priority($priority,$label=null)` eklendi (öncelik artık renkli çubuk değil küçük nokta).
+`ds_page_header()`/`ds_badge()` HİÇ değişmedi — `ds_page_header()`'ın zaten var olan `$icon`
+parametresi `ds_icon()` çıktısını taşıyabildiği için "✅ Görevlerim"→"Görevlerim"+ikon değişimi
+sıfır ortak-bileşen riskiyle yapıldı, diğer 8 ekranın (UX-001/DS-002A pilotu) görünümü değişmedi.
+
+**Görsel değişiklikler:** emoji'ler (✅📋📅✓▶🗑✏️👁•••📝📲) `ds_icon()` SVG'ye geçti (menü içi düz
+metin öğeleri ikonsuz kaldı — "sessiz" ilke); satırlar artık ayrı kart/gölge/border taşımıyor, tek
+`.df-list` yüzeyi + hairline ayraç; öncelik sol renkli çubuk yerine küçük nokta (+ metin, "renk tek
+başına anlam taşımasın"); "GECİKMİŞ" bold-uppercase yerine sessiz "Gecikti" caption'ı; butonlar
+`ds-btn`(800/12px)→`df-btn`(600/8px, secondary artık hairline kenarlıklı — primac.tr'de daha önce
+bulunan "beyaz header'da kaybolan buton" kontrast hatasını yapısal olarak kapatıyor); filtre
+sekmeleri yeni `.df-tabs` (inline-style hack kaldırıldı); hızlı-ekle tek entegre pill yüzeye
+dönüştü (input+buton birleşik).
+
+**ds-foundation.css'e eklenen küçük df- bileşenleri** (somut ihtiyaçtan doğan, DS-003A'nın
+"Sprint 1'de ds-list-row'un doğduğu" aynı gerekçesiyle): `.df-panel`, `.df-list`/`.df-list-row`,
+`.df-tabs`/`.df-tab`, `.df-menu`/`.df-menu-body`, `.df-quick-add`.
+
+**Statik görsel doğrulama (izole PHP-CLI + headless Chrome, canlı DB/oturum kullanılmadı):**
+gerçek `ds_lib.php` fonksiyonları + gerçek `ds-foundation.css` ile web önizlemesi 1280/820/600px,
+mobil (gerçek dark shell stiliyle) önizlemesi 390/360px'de render edilip incelendi. Bu süreçte
+2 gerçek taşma hatası bulunup DÜZELTİLDİ: (1) mobil Notlarım kart aksiyonları (WhatsApp/Düzenle/
+Tamamla/Sil) 4'ü flex:1 tek satırda 390px ekranı taşırıyordu — flex item'ların varsayılan
+`min-width:auto` tuzağı; çözüm: Tamamla artık kendi tam-genişlik birincil satırında, diğer 3'ü
+40x36px sabit ikon-only ikincil satırda (aynı 4 fonksiyon/POST hedefi, sadece hiyerarşi kazandı).
+(2) mobil filtre sekmeleri `flex:1;width:100%` ile zorlanınca aynı tuzakla taşıyordu — sekmeler
+artık web'deki gibi içerik-genişliğinde, admin "İş Ekle" ayrı küçük ikincil buton.
+
+**Review: Ece/Selin/Elif → üçü de PASS, kritik/yüksek/orta bulgu yok** (Ece'nin 1 kozmetik MEDIUM
+notu — `.df-list-row-title` class'ının Notlarım başlığında bileşen-dışı yeniden kullanımı —
+işlevsel değil, bloklayıcı değil). Elif'in 1 LOW notu (mobil admin "İş Ekle" ham HTML yerine
+`ds_button()` kullanmalıydı) hemen düzeltildi. Selin: `ds_button()`'ın yeni escape-etmeyen
+`$df=true` modunun tek kullanım yerinin sabit string olduğu, `ds_priority()`'nin `$label`'ı `h()`
+ile escape ettiği, form-submit butonlarının (`type="button"` tuzağına düşmeden) doğru
+`type="submit"` kullandığı, CSRF/yetki/SQL'in hiç değişmediği doğrulandı.
+
+**Sonraki adım:** USER TEST + DEV PASS sonrası PX-001A CLOSED olacak, Blueprint'in sıradaki ekranı
+(task_view.php) için hem Product Design Blueprint hem bu Visual Language Foundation birlikte
+uygulanacak.
+
 ## DS-003A — VISUAL LANGUAGE FOUNDATION IMPLEMENTATION: KOD İNCELEME PASS — USER TEST BEKLİYOR (2026-07-16)
 "PRIMAC OTS Visual Language Foundation v1" dökümanının (Design System Sprint 003 — Typography/
 Spacing/Surface/Radius/Shadow/Color/Button/Badge/Icon/Motion/State/Manifesto, Product Owner

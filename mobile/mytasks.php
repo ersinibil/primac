@@ -53,9 +53,11 @@ $date=(!empty($_GET['date']) && preg_match('/^\d{4}-\d{2}-\d{2}$/',$_GET['date']
 topx('Görevlerim');
 ?>
 
-<div class="panel">
-  <b>📝 Notlarım<?=$date?' — '.htmlspecialchars(date('d.m.Y',strtotime($date))):''?></b> <small class="muted">(sadece sen görürsün)</small>
-  <?php if($date): ?> <a href="mytasks.php" style="color:#93c5fd;font-size:12px;text-decoration:none">✕ Tümü</a><?php endif; ?>
+<div class="df-panel">
+  <div class="df-list-row-title" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+    <span>Notlarım<?=$date?' — '.htmlspecialchars(date('d.m.Y',strtotime($date))):''?> <span class="df-text-caption">(sadece sen görürsün)</span></span>
+    <?php if($date): ?><a href="mytasks.php" class="df-text-caption" style="color:var(--df-accent-soft-ink)"><?=ds_icon('close',13)?> Tümü</a><?php endif; ?>
+  </div>
   <?php if(!empty($_SESSION['note_ok'])): ?><div class="ok" style="margin-top:8px"><?=htmlspecialchars($_SESSION['note_ok'])?></div><?php unset($_SESSION['note_ok']); endif; ?>
   <?php if(!empty($_SESSION['note_err'])): ?><div class="err" style="margin-top:8px"><?=htmlspecialchars($_SESSION['note_err'])?></div><?php unset($_SESSION['note_err']); endif; ?>
   <form method="post" style="margin-top:10px">
@@ -63,7 +65,7 @@ topx('Görevlerim');
     <input name="note_title" placeholder="Not başlığı" required>
     <textarea name="note_body" placeholder="Detay (opsiyonel)" rows="2"></textarea>
     <input type="date" name="note_due" placeholder="Termin (opsiyonel, takvime işlenir)">
-    <button class="btn dark" style="width:100%;margin-top:6px">📝 Not Ekle</button>
+    <button type="submit" class="df-btn df-btn--primary" style="width:100%;margin-top:6px">Not Ekle</button>
   </form>
 </div>
 <?php
@@ -71,27 +73,32 @@ try{
   $myNotes=personal_notes_list($pdo,$me,'open',$date);
   $myPhone=my_phone($pdo,$me);
   foreach($myNotes as $n){
-    $waTxt="📝 Not: ".$n['title'].($n['note']?"\n".$n['note']:'').($n['due_date']?"\n📅 ".$n['due_date']:'');
-    echo '<div class="panel" style="padding:12px;background:rgba(250,204,21,.08)">';
-    echo '<b>'.htmlspecialchars($n['title']).'</b>';
-    if($n['note']) echo '<br><small class="muted">'.htmlspecialchars($n['note']).'</small>';
-    if($n['due_date']) echo '<br><small class="muted">📅 '.htmlspecialchars($n['due_date']).'</small>';
-    echo '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">';
-    if($myPhone) echo '<a class="btn" href="'.htmlspecialchars(wa_link($waTxt,$myPhone)).'" target="_blank" rel="noopener" style="background:#16a34a;color:#fff;flex:1;text-align:center">📲 WhatsApp</a>';
-    echo '<button type="button" class="btn" style="background:#f59e0b;color:#fff;flex:1;text-align:center" onclick="var d=document.getElementById(\'nedit'.(int)$n['id'].'\');d.style.display=(d.style.display===\'block\')?\'none\':\'block\';">✏️ Düzenle</button>';
-    echo '<form method="post" style="flex:1;margin:0"><input type="hidden" name="note_id" value="'.(int)$n['id'].'"><button class="btn" name="note_done" value="1" style="width:100%;background:#2563eb;color:#fff">✓ Tamamla</button></form>';
-    echo '<form method="post" style="flex:1;margin:0" onsubmit="return confirm(\'Not silinsin mi?\')"><input type="hidden" name="note_id" value="'.(int)$n['id'].'"><button class="btn" name="note_del" value="1" style="width:100%;background:#7f1d1d;color:#fff">🗑 Sil</button></form>';
+    $waTxt="Not: ".$n['title'].($n['note']?"\n".$n['note']:'').($n['due_date']?"\nTermin: ".$n['due_date']:'');
+    echo '<div class="df-panel" style="margin-top:10px">';
+    echo '<div class="df-list-row-title">'.htmlspecialchars($n['title']).'</div>';
+    if($n['note']) echo '<div class="df-list-row-desc">'.htmlspecialchars($n['note']).'</div>';
+    if($n['due_date']) echo '<div class="df-list-row-meta">'.ds_icon('calendar',13).' '.htmlspecialchars($n['due_date']).'</div>';
+    // PX-001A düzeltme (statik önizleme sırasında bulundu): 4 buton tek satırda flex:1 metinli
+    // buton olarak taşıyordu — flex item'ların varsayılan min-width:auto'su (içerik genişliği)
+    // 390px'lik telefon ekranında satırı taşırıyordu. Hiyerarşi de kazandı: birincil eylem
+    // (Tamamla) artık kendi tam-genişlik satırında, üç ikincil eylem altında sabit-boyutlu
+    // ikon-only satırda (aynı 4 fonksiyon, aynı POST hedefleri — sadece yerleşim/görsel).
+    echo '<form method="post" style="margin-top:10px"><input type="hidden" name="note_id" value="'.(int)$n['id'].'"><button type="submit" class="df-btn df-btn--primary" name="note_done" value="1" style="width:100%;justify-content:center">'.ds_icon('check',15).' Tamamla</button></form>';
+    echo '<div style="display:flex;gap:8px;margin-top:8px">';
+    if($myPhone) echo '<a class="df-btn df-btn--secondary" href="'.htmlspecialchars(wa_link($waTxt,$myPhone)).'" target="_blank" rel="noopener" style="width:40px;height:36px;padding:0;flex:0 0 auto" aria-label="WhatsApp\'ta gönder">'.ds_icon('send',15).'</a>';
+    echo '<button type="button" class="df-btn df-btn--ghost" style="width:40px;height:36px;padding:0;flex:0 0 auto" aria-label="Düzenle" onclick="var d=document.getElementById(\'nedit'.(int)$n['id'].'\');d.style.display=(d.style.display===\'block\')?\'none\':\'block\';">'.ds_icon('edit',15).'</button>';
+    echo '<form method="post" style="margin:0" onsubmit="return confirm(\'Not silinsin mi?\')"><input type="hidden" name="note_id" value="'.(int)$n['id'].'"><button type="submit" class="df-btn df-btn--danger" name="note_del" value="1" style="width:40px;height:36px;padding:0" aria-label="Sil">'.ds_icon('trash',15).'</button></form>';
     echo '</div>';
     // Düzenle formu — mobilde ayrı modal yerine kart içinde açılıp/kapanan panel (platform deseni),
     // Öncelik/Hatırlatma alanları personal_notes şemasında yok, bu iş kapsamında eklenmedi.
-    echo '<div id="nedit'.(int)$n['id'].'" style="display:none;margin-top:10px;border-top:1px solid rgba(255,255,255,.12);padding-top:10px">';
+    echo '<div id="nedit'.(int)$n['id'].'" style="display:none;margin-top:10px;border-top:1px solid var(--df-hairline);padding-top:10px">';
     echo '<form method="post" style="margin:0">';
     echo '<input type="hidden" name="note_update" value="1">';
     echo '<input type="hidden" name="note_id" value="'.(int)$n['id'].'">';
     echo '<input name="note_title" value="'.htmlspecialchars($n['title']).'" placeholder="Not başlığı" required>';
     echo '<textarea name="note_body" rows="2" placeholder="Detay (opsiyonel)">'.htmlspecialchars($n['note']).'</textarea>';
     echo '<input type="date" name="note_due" value="'.htmlspecialchars($n['due_date']).'">';
-    echo '<button class="btn dark" style="width:100%">💾 Kaydet</button>';
+    echo '<button type="submit" class="df-btn df-btn--primary" style="width:100%">Kaydet</button>';
     echo '</form>';
     echo '</div>';
     echo '</div>';
@@ -99,42 +106,59 @@ try{
 }catch(Throwable $e){}
 ?>
 
-<div style="font-weight:900;margin:16px 4px 8px">✅ Görevlerim</div>
-<div class="panel" style="display:flex;gap:8px;padding:10px;flex-wrap:wrap">
-  <a class="btn <?=$f==='open'?'dark':''?>" style="flex:1;text-align:center;<?=$f==='open'?'':'background:#334155;color:#fff'?>" href="mytasks.php?f=open">Açık</a>
-  <a class="btn <?=$f==='done'?'dark':''?>" style="flex:1;text-align:center;<?=$f==='done'?'':'background:#334155;color:#fff'?>" href="mytasks.php?f=done">Tamamlanan</a>
-  <?php if($isAdmin): ?><a class="btn" style="flex:1;text-align:center;background:#334155;color:#fff" href="task_new.php">+ İş Ekle</a><?php endif; ?>
+<div class="df-text-section" style="margin:20px 4px 10px;color:var(--df-ink-900)">Görevlerim</div>
+<?php
+// PX-001A düzeltme (statik önizleme sırasında bulundu): sekmeler flex:1 ile 100% genişliğe
+// zorlanınca flex item'ların varsayılan min-width:auto'su ("Tamamlanan" metninin içerik genişliği)
+// 390px'lik telefon ekranını taşırıyordu. Sekmeler artık içerik-genişliğinde (web'deki gibi),
+// admin "+ İş Ekle" ayrı, sağa yaslı küçük ikincil buton.
+?>
+<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+  <div class="df-tabs">
+    <a class="df-tab<?=$f==='open'?' df-tab--active':''?>" href="mytasks.php?f=open">Açık</a>
+    <a class="df-tab<?=$f==='done'?' df-tab--active':''?>" href="mytasks.php?f=done">Tamamlanan</a>
+  </div>
+  <?php if($isAdmin): ?><?=ds_button('İş Ekle','task_new.php','secondary','df-btn--sm','',true)?><?php endif; ?>
 </div>
 <?php
 try{
-  if(!$pid && !$isAdmin){ echo '<div class="panel muted" style="text-align:center">Sana bağlı personel kaydı yok.</div>'; }
+  if(!$pid && !$isAdmin){ echo '<div class="df-empty"><div class="df-empty-title">Sana bağlı personel kaydı yok.</div></div>'; }
   $w = $f==='done' ? "t.status='Tamamlandı'" : "t.status NOT IN ('Tamamlandı','İptal')";
   // "Görevlerim" = sadece sana atanan işler. Admin dahil herkesin işleri için tasks.php ("Tüm Görevler") kullanılır.
   $rows=$pdo->prepare("SELECT t.*, j.id job_real, j.job_no, p.name pname, p.phone pphone FROM tasks t LEFT JOIN jobs j ON j.id=t.job_id LEFT JOIN personnel p ON p.id=t.personnel_id WHERE $w AND t.personnel_id=? AND t.deleted_at IS NULL ORDER BY (t.due_date IS NULL), t.due_date, t.id DESC LIMIT 100");
   $rows->execute([$pid]);
   $rows=$rows->fetchAll();
-  if(!$rows) echo '<div class="panel muted" style="text-align:center">'.($f==='done'?'Tamamlanan görev yok.':'Açık görev yok 🎉').'</div>';
+  if(!$rows){
+    echo '<div class="df-empty"><div class="df-empty-icon">'.ds_icon($f==='done'?'check':'calendar',20).'</div><div class="df-empty-title">'.($f==='done'?'Tamamlanan görev yok.':'Açık görev yok').'</div></div>';
+  } else {
+  echo '<div class="df-list" style="margin-top:10px">';
   foreach($rows as $t){
     $geç = ($f!=='done' && !empty($t['due_date']) && $t['due_date']<date('Y-m-d'));
     // PRODUCT DESIGN BLUEPRINT / mytasks.php sprinti (2026-07-16, Product Owner kararı — Mobil UX
     // Standardı PROJECT_RULES.md): kartta kayıt bazlı HİÇBİR aksiyon yok (Detay/İş Detayı/Gönder/
     // Başla/Tamamla/Düzenle/Sil hepsi task_view.php'ye taşındı). Kart sadece karar bilgisi taşır,
     // tamamı tıklanabilir — <a> ile sarmalandı, ayrı bir "Detay" butonuna gerek kalmadı.
-    $__urgent = $geç || $t['priority']==='Acil';
-    $__high = !$__urgent && $t['priority']==='Yüksek';
-    $__border = $__urgent ? 'border-left:3px solid #f87171' : ($__high ? 'border-left:3px solid #f59e0b' : '');
-    echo '<a class="panel" href="task_view.php?id='.(int)$t['id'].'" style="display:block;padding:12px;text-decoration:none;color:inherit;'.$__border.'">';
-    echo '<b>'.htmlspecialchars($t['title']).'</b>';
-    if($isAdmin && $t['pname']) echo ' <span class="muted">· '.htmlspecialchars($t['pname']).'</span>';
-    if($t['description']) echo '<br><small class="muted">'.htmlspecialchars($t['description']).'</small>';
-    echo '<br><small class="muted">'.($t['job_no']?'📋 '.htmlspecialchars($t['job_no']).' · ':'').'Durum: '.htmlspecialchars($t['status']);
-    if($t['priority'] && $t['priority']!=='Normal') echo ' · '.htmlspecialchars($t['priority']);
-    if($t['due_date']) echo ' · 📅 '.htmlspecialchars($t['due_date']).($geç?' <span style="color:#f87171;font-weight:900">GECİKMİŞ</span>':'');
-    echo '</small>';
+    // PX-001A (2026-07-16): sol renkli çubuk kaldırıldı, yerine küçük öncelik noktası (ds_priority()).
+    echo '<a class="df-list-row" href="task_view.php?id='.(int)$t['id'].'" style="text-decoration:none;color:inherit">';
+    echo '<div class="df-list-row-body">';
+    echo '<div class="df-list-row-title">'.htmlspecialchars($t['title']);
+    if($isAdmin && $t['pname']) echo ' <span class="df-text-caption">· '.htmlspecialchars($t['pname']).'</span>';
+    echo '</div>';
+    if($t['description']) echo '<div class="df-list-row-desc">'.htmlspecialchars($t['description']).'</div>';
+    echo '<div class="df-list-row-meta">';
+    if($t['job_no']) echo '<span>İş: '.htmlspecialchars($t['job_no']).'</span>';
+    echo '<span>'.htmlspecialchars($t['status']).'</span>';
+    if($t['priority'] && $t['priority']!=='Normal') echo ds_priority($t['priority'],$t['priority']);
+    if($t['due_date']) echo '<span>'.ds_icon('calendar',13).' '.htmlspecialchars($t['due_date']).'</span>';
+    if($geç) echo '<span style="color:var(--df-danger-ink);font-weight:600">Gecikti</span>';
+    echo '</div>';
+    echo '</div>';
     echo '</a>';
+  }
+  echo '</div>';
   }
 }catch(Throwable $e){ echo '<div class="err">'.htmlspecialchars($e->getMessage()).'</div>'; }
 ?>
-<a class="fab" href="mytask_new.php" aria-label="Kendime iş ekle">+</a>
+<a class="df-fab" href="mytask_new.php" aria-label="Kendime iş ekle" style="right:18px;bottom:calc(126px + env(safe-area-inset-bottom))"><?=ds_icon('plus',26)?></a>
 <?php
 botx();

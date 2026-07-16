@@ -46,85 +46,88 @@ $f=$_GET['f']??'open';
 require_once __DIR__.'/layout_top.php';
 ?>
 <?php
-// PRODUCT DESIGN BLUEPRINT / mytasks.php sprinti (2026-07-16, Product Owner onaylı):
-// "+ Kendime İş Ekle" artık ayrı bir header butonu değil — aşağıdaki satır-içi hızlı-ekleme
-// formunun kendisi bu aksiyonu temsil ediyor (Blueprint: "az karar" — aynı işi yapan iki ayrı
-// giriş noktası bırakılmadı). Admin-only "+ İş Ekle" (başkasına atama, task_new.php — FARKLI bir
-// hedef) header'da kalıyor, bu satır-içi formla ilgisi yok.
-$__actions = is_admin() ? ds_button('+ İş Ekle', 'task_new.php', 'secondary') : '';
-ds_page_header('✅ Görevlerim', '', '', $__actions);
+// PX-001A (2026-07-16): Visual Language Foundation uygulaması — "✅ Görevlerim" emoji'li başlık
+// yerine düz metin + ayrı ds_icon() çıktısı ($icon parametresi zaten mevcuttu, DEĞİŞMEDİ).
+// "+ Kendime İş Ekle" hâlâ ayrı bir header butonu değil — aşağıdaki hızlı-ekleme formu bu aksiyonu
+// temsil ediyor (Blueprint: "az karar"). Admin-only "+ İş Ekle" (başkasına atama, task_new.php)
+// header'da kalıyor, artık df-* (ds_button 6. parametre) çıktısı.
+$__actions = is_admin() ? ds_button('İş Ekle', 'task_new.php', 'secondary', '', '', true) : '';
+ds_page_header('Görevlerim', ds_icon('check',24), '', $__actions);
 ?>
-<form method="post" action="mytask_new.php" class="ds-quick-add">
+<form method="post" action="mytask_new.php" class="df-quick-add">
 <input type="text" name="title" placeholder="Yeni görev başlığı yaz, Enter'a bas..." required maxlength="190">
-<button type="submit" class="ds-btn ds-btn--accent">Ekle</button>
+<button type="submit" aria-label="Görev ekle"><?=ds_icon('plus',18)?></button>
 </form>
 <?php if(!empty($_GET['ok'])): ?><div class="ok">İş eklendi.</div><?php endif; ?>
 
-<div class="filters">
-<a href="mytasks.php?f=open" <?=$f==='open'?'style="background:#101828;color:#fff"':''?>>Açık</a>
-<a href="mytasks.php?f=done" <?=$f==='done'?'style="background:#101828;color:#fff"':''?>>Tamamlanan</a>
+<div class="df-tabs" style="margin-bottom:var(--df-space-4)">
+<a class="df-tab<?=$f==='open'?' df-tab--active':''?>" href="mytasks.php?f=open">Açık</a>
+<a class="df-tab<?=$f==='done'?' df-tab--active':''?>" href="mytasks.php?f=done">Tamamlanan</a>
 </div>
-<p class="muted" style="font-size:12.5px;margin-top:8px">Tüm görevler için (yetkiniz varsa) <a href="tasks.php">Görevler</a> sayfasına bakın.</p>
+<p class="df-text-caption" style="margin:-6px 0 var(--df-space-4)">Tüm görevler için (yetkiniz varsa) <a href="tasks.php">Görevler</a> sayfasına bakın.</p>
 
 <?php
 try{
-  if(!$pid && !is_admin()){ echo '<div class="panel" style="text-align:center;color:#667085">Sana bağlı personel kaydı yok.</div>'; }
+  if(!$pid && !is_admin()){ echo '<div class="df-panel" style="text-align:center;color:var(--df-ink-500)">Sana bağlı personel kaydı yok.</div>'; }
   $w = $f==='done' ? "t.status='Tamamlandı'" : "t.status NOT IN ('Tamamlandı','İptal')";
   $rows=$pdo->prepare("SELECT t.*, j.id job_real, j.job_no FROM tasks t LEFT JOIN jobs j ON j.id=t.job_id WHERE $w AND t.personnel_id=? AND t.deleted_at IS NULL ORDER BY (t.due_date IS NULL), t.due_date, t.id DESC LIMIT 100");
   $rows->execute([$pid]);
   $tasks=$rows->fetchAll();
   $pers=[];
   try{ $pers=$pdo->query("SELECT id,name FROM personnel WHERE COALESCE(active,1)=1 ORDER BY name")->fetchAll(); }catch(Throwable $e){}
-  if(!$tasks) echo '<div class="panel" style="text-align:center;color:#667085">'.($f==='done'?'Tamamlanan görev yok.':'Açık görev yok 🎉').'</div>';
+  if(!$tasks):
+?>
+<div class="df-empty">
+<div class="df-empty-icon"><?=ds_icon($f==='done'?'check':'calendar',20)?></div>
+<div class="df-empty-title"><?=$f==='done'?'Tamamlanan görev yok.':'Açık görev yok'?></div>
+</div>
+<?php else: ?>
+<div class="df-list">
+<?php
   foreach($tasks as $t):
     $gec = ($f!=='done' && !empty($t['due_date']) && $t['due_date']<date('Y-m-d'));
     $canEdit = task_can_edit($t,$me,$pid);
     $canDel = task_can_delete($t,$me,$pid);
     $canReassign = task_can_reassign($t,$me);
-?>
-<?php
     // PRODUCT DESIGN BLUEPRINT / mytasks.php sprinti (2026-07-16): tek bağlamsal birincil aksiyon
     // (Blueprint karar: Web/Tablet'te "duruma göre yalnızca bir" — Atandı→Başla, Devam Ediyor→
-    // Tamamla; ikisi birden ASLA gösterilmez, önceki halde ikisi aynı anda görünüyordu).
-    $__primaryLabel = null; $__primaryValue = null; $__primaryTone = 'accent';
+    // Tamamla; ikisi birden ASLA gösterilmez). PX-001A: etiketler artık ikonsuz düz metin (birincil
+    // buton zaten vurgulu, ikon şart değil — "sessiz" ilke).
+    $__primaryLabel = null; $__primaryValue = null; $__primaryTone = 'primary';
     if($f!=='done'){
-        if($t['status']!=='Devam Ediyor'){ $__primaryLabel='▶ Başla'; $__primaryValue='Devam Ediyor'; $__primaryTone='accent'; }
-        else { $__primaryLabel='✓ Tamamla'; $__primaryValue='Tamamlandı'; $__primaryTone='warn'; }
+        if($t['status']!=='Devam Ediyor'){ $__primaryLabel='Başla'; $__primaryValue='Devam Ediyor'; $__primaryTone='primary'; }
+        else { $__primaryLabel='Tamamla'; $__primaryValue='Tamamlandı'; $__primaryTone='warn'; }
     }
-    // Aciliyet: gecikmiş her zaman en yüksek sinyal; değilse görev önceliği (Acil/Yüksek). Normal
-    // öncelik renksiz kalır — "az renk" ilkesi, sadece dikkat gerekene vurgu.
-    $__rowClass = 'ds-list-row';
-    if($gec) $__rowClass .= ' ds-list-row--urgent';
-    elseif($t['priority']==='Acil') $__rowClass .= ' ds-list-row--urgent';
-    elseif($t['priority']==='Yüksek') $__rowClass .= ' ds-list-row--high';
     ?>
-<div class="<?=$__rowClass?>" onclick="if(event.target.closest('a,button,form,details,summary'))return;location.href='task_view.php?id=<?=(int)$t['id']?>'">
-<div class="ds-list-row-body">
-<div class="ds-list-row-title"><?=h($t['title'])?></div>
-<?php if($t['description']): ?><div class="muted" style="margin-top:4px;font-size:13px"><?=nl2br(h($t['description']))?></div><?php endif; ?>
-<div class="ds-list-row-meta">
-<?php if($t['job_no']): ?>📋 <?=h($t['job_no'])?> · <?php endif; ?>Durum: <?=h($t['status'])?>
-<?php if($t['priority'] && $t['priority']!=='Normal'): ?> · <?=h($t['priority'])?><?php endif; ?>
-<?php if($t['due_date']): ?> · 📅 <?=h($t['due_date'])?><?php if($gec): ?> <span style="color:#dc2626;font-weight:800">GECİKMİŞ</span><?php endif; endif; ?>
+<div class="df-list-row" onclick="if(event.target.closest('a,button,form,details,summary'))return;location.href='task_view.php?id=<?=(int)$t['id']?>'">
+<div class="df-list-row-body">
+<div class="df-list-row-title"><?=h($t['title'])?></div>
+<?php if($t['description']): ?><div class="df-list-row-desc"><?=nl2br(h($t['description']))?></div><?php endif; ?>
+<div class="df-list-row-meta">
+<?php if($t['job_no']): ?><span>İş: <?=h($t['job_no'])?></span><?php endif; ?>
+<span><?=h($t['status'])?></span>
+<?php if($t['priority'] && $t['priority']!=='Normal'): ?><?=ds_priority($t['priority'],$t['priority'])?><?php endif; ?>
+<?php if($t['due_date']): ?><span><?=ds_icon('calendar',13)?> <?=h($t['due_date'])?></span><?php endif; ?>
+<?php if($gec): ?><span style="color:var(--df-danger-ink);font-weight:600">Gecikti</span><?php endif; ?>
 </div>
 </div>
-<div class="ds-list-row-actions">
-<?php if($__primaryLabel): ?><form method="post" style="display:inline"><input type="hidden" name="tid" value="<?=(int)$t['id']?>"><button class="ds-btn ds-btn--<?=$__primaryTone?>" name="task_status" value="<?=h($__primaryValue)?>"><?=h($__primaryLabel)?></button></form><?php endif; ?>
+<div class="df-list-row-actions">
+<?php if($__primaryLabel): ?><form method="post" style="display:inline"><input type="hidden" name="tid" value="<?=(int)$t['id']?>"><button type="submit" class="df-btn df-btn--<?=h($__primaryTone)?>" name="task_status" value="<?=h($__primaryValue)?>"><?=h($__primaryLabel)?></button></form><?php endif; ?>
 <?php if($t['job_real'] || $canEdit || $canDel): ?>
-<details class="ds-menu">
-<summary>•••</summary>
-<div class="ds-menu-body">
-<a href="task_view.php?id=<?=(int)$t['id']?>">👁 Detay</a>
-<?php if($t['job_real']): ?><a href="job_view.php?id=<?=(int)$t['job_real']?>">📋 İş Detayı</a><?php endif; ?>
-<?php if($canEdit): ?><button type="button" onclick="this.closest('details').removeAttribute('open');var d=document.getElementById('tedit<?=(int)$t['id']?>');d.style.display=(d.style.display==='block')?'none':'block';">✏ Düzenle</button><?php endif; ?>
-<?php if($canDel): ?><form method="post" onsubmit="return confirm('Bu görev silinsin mi?')"><input type="hidden" name="tid" value="<?=(int)$t['id']?>"><button type="submit" name="delete_task" value="1" class="ds-menu-danger">🗑 Sil</button></form><?php endif; ?>
+<details class="df-menu">
+<summary aria-label="Diğer işlemler"><?=ds_icon('menu-dots',18)?></summary>
+<div class="df-menu-body">
+<a href="task_view.php?id=<?=(int)$t['id']?>">Detay</a>
+<?php if($t['job_real']): ?><a href="job_view.php?id=<?=(int)$t['job_real']?>">İş Detayı</a><?php endif; ?>
+<?php if($canEdit): ?><button type="button" onclick="this.closest('details').removeAttribute('open');var d=document.getElementById('tedit<?=(int)$t['id']?>');d.style.display=(d.style.display==='block')?'none':'block';">Düzenle</button><?php endif; ?>
+<?php if($canDel): ?><form method="post" onsubmit="return confirm('Bu görev silinsin mi?')"><input type="hidden" name="tid" value="<?=(int)$t['id']?>"><button type="submit" name="delete_task" value="1" class="df-menu-danger">Sil</button></form><?php endif; ?>
 </div>
 </details>
 <?php endif; ?>
 </div>
 </div>
 <?php if($canEdit): ?>
-<div id="tedit<?=(int)$t['id']?>" style="display:none;margin-top:12px;border-top:1px solid #eef2f6;padding-top:12px">
+<div id="tedit<?=(int)$t['id']?>" style="display:none;padding:var(--df-space-4);border-top:1px solid var(--df-hairline)">
 <form method="post" class="form-grid">
 <input type="hidden" name="tid" value="<?=(int)$t['id']?>">
 <label class="full">Başlık *<input type="text" name="title" value="<?=h($t['title'])?>" required></label>
@@ -153,11 +156,13 @@ try{
 </select>
 </label>
 <?php endif; ?>
-<div class="full"><button class="btn dark" name="edit_task" value="1" style="width:100%">💾 Kaydet</button></div>
+<div class="full"><button type="submit" class="df-btn df-btn--primary" name="edit_task" value="1" style="width:100%">Kaydet</button></div>
 </form>
 </div>
 <?php endif; ?>
 <?php endforeach; ?>
+</div>
+<?php endif; ?>
 <?php }catch(Throwable $e){ echo '<div class="alert">'.h($e->getMessage()).'</div>'; } ?>
 
 <?php require_once __DIR__.'/layout_bottom.php'; ?>

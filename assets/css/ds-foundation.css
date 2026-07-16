@@ -269,3 +269,47 @@ body.mobile-shell{
 .df-empty-desc{font-size:var(--df-type-caption-size);color:var(--df-ink-500);line-height:1.5;margin-bottom:var(--df-space-4)}
 .df-skel{background:var(--df-surface-sunken);border-radius:6px;height:12px;margin-bottom:8px;animation:df-pulse 1.4s ease-in-out infinite}
 @keyframes df-pulse{0%,100%{opacity:.5}50%{opacity:1}}
+
+/* ── PX-001A EKİ (2026-07-16) — mytasks.php Visual Language uygulaması ──────────────────────
+   Somut ihtiyaçtan doğan küçük df- bileşenleri (Sprint 1'de ds-list-row/ds-menu/ds-quick-add'in
+   doğduğu aynı gerekçe). Yalnızca migrate edilen ekranları (mytasks.php + mobile/mytasks.php)
+   etkiler — hiçbir global selector, hiçbir mevcut class'a dokunmadı. */
+.df-panel{background:var(--df-surface);border:1px solid var(--df-hairline);border-radius:var(--df-radius-md);padding:var(--df-space-4)}
+
+/* Liste yüzeyi — satırlar artık ayrı ayrı kart/gölge/border taşımaz, tek yüzey + hairline ayraç */
+.df-list{background:var(--df-surface);border:1px solid var(--df-hairline);border-radius:var(--df-radius-md);overflow:hidden}
+.df-list-row{display:flex;justify-content:space-between;align-items:flex-start;gap:var(--df-space-3);padding:var(--df-space-4);border-bottom:1px solid var(--df-hairline);cursor:pointer;transition:background var(--df-dur-fast) var(--df-ease-standard)}
+.df-list-row:last-child{border-bottom:0}
+.df-list-row:hover{background:var(--df-surface-sunken)}
+.df-list-row-body{min-width:0;flex:1}
+.df-list-row-title{font-size:var(--df-type-subtitle-size);font-weight:var(--df-type-subtitle-weight);color:var(--df-ink-900)}
+.df-list-row-desc{font-size:var(--df-type-body-size);color:var(--df-ink-600);margin-top:4px}
+.df-list-row-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;color:var(--df-ink-500);font-size:var(--df-type-caption-size);margin-top:5px}
+.df-list-row-meta .df-icon{opacity:.8}
+.df-list-row-actions{display:flex;gap:6px;flex:0 0 auto;align-items:center}
+@media(max-width:640px){.df-list-row{flex-direction:column}.df-list-row-actions{width:100%}}
+
+/* Filtre sekmeleri — eski inline-style hack'in yerine */
+.df-tabs{display:inline-flex;background:var(--df-surface-sunken);border-radius:var(--df-radius-sm);padding:3px;gap:2px}
+.df-tab{border:0;background:transparent;color:var(--df-ink-600);font-size:12.5px;font-weight:600;padding:7px 14px;border-radius:6px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;transition:background var(--df-dur-fast) var(--df-ease-standard),color var(--df-dur-fast) var(--df-ease-standard)}
+.df-tab--active{background:var(--df-surface);color:var(--df-ink-900);box-shadow:var(--df-shadow-sm)}
+body.mobile-shell .df-tab--active{background:var(--df-accent);color:#fff;box-shadow:none}
+
+/* "•••" menü — ds-menu ile aynı desen (native details/summary), df- token'larıyla */
+.df-menu{position:relative;display:inline-block}
+.df-menu>summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:var(--df-radius-sm);background:var(--df-surface-sunken);color:var(--df-ink-600)}
+.df-menu>summary::-webkit-details-marker{display:none}
+.df-menu[open]>summary{background:var(--df-ink-900);color:var(--df-surface)}
+.df-menu-body{position:absolute;right:0;top:calc(100% + 6px);background:var(--df-surface);border:1px solid var(--df-hairline);border-radius:var(--df-radius-md);box-shadow:var(--df-shadow-md);padding:6px;min-width:170px;z-index:30;display:flex;flex-direction:column;gap:2px}
+.df-menu-body a,.df-menu-body button{display:block;width:100%;text-align:left;background:transparent;border:0;border-radius:8px;padding:9px 11px;font-size:13.5px;font-weight:600;color:var(--df-ink-900);cursor:pointer;text-decoration:none;font-family:inherit}
+.df-menu-body a:hover,.df-menu-body button:hover{background:var(--df-surface-sunken)}
+.df-menu-body button.df-menu-danger,.df-menu-body a.df-menu-danger{color:var(--df-danger-ink)}
+
+/* Hızlı-ekle — entegre pill yüzey (input + aksiyon tek kapsayıcıda) */
+.df-quick-add{display:flex;align-items:center;gap:8px;background:var(--df-surface);border:1.5px solid var(--df-hairline);border-radius:var(--df-radius-pill);padding:4px 4px 4px 18px;margin-bottom:var(--df-space-4);transition:border-color var(--df-dur-fast) var(--df-ease-standard),box-shadow var(--df-dur-fast) var(--df-ease-standard)}
+.df-quick-add:focus-within{border-color:var(--df-accent);box-shadow:0 0 0 3px var(--df-accent-soft)}
+.df-quick-add input{flex:1;min-width:0;border:0;background:transparent;padding:11px 0;font-size:14.5px;color:var(--df-ink-900);font-family:inherit}
+.df-quick-add input:focus{outline:0}
+.df-quick-add input::placeholder{color:var(--df-ink-500)}
+.df-quick-add button{width:36px;height:36px;border-radius:50%;border:0;background:var(--df-accent);color:#fff;display:flex;align-items:center;justify-content:center;flex:0 0 auto;cursor:pointer}
+.df-quick-add button:disabled{opacity:.45;cursor:not-allowed}
