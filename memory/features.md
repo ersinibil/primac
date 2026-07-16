@@ -2,6 +2,61 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
+## UX-001 — HEADER REFRESH PILOT: KOD İNCELEME PASS — USER TEST BEKLİYOR (2026-07-16)
+DS-002A'da (2026-07-15) yapısal olarak Design System'e taşınan aynı 8 pilot ekranın header'ı
+şimdi görsel olarak da yeniden ele alındı. DS-002A'dan farkı: "birebir görünüm koru" kuralı bu
+sprintte BİLİNÇLİ OLARAK uygulanmadı — amaç aksiyonların görsel hiyerarşisini değiştirmek.
+Backend/DB/route/iş mantığı/yetkilendirme hiç değişmedi.
+
+**Analiz + Tasarım Kararı (kod yazılmadan önce sunuldu, Artifact + PDF):** Mevcut header'ların
+3 ortak sorunu tespit edildi — (1) ~20 aksiyon butonunun neredeyse tamamı aynı görsel ağırlıkta
+(düz `.btn`/`.btn secondary`), (2) en önemli işlem bazen header'da hiç yok (mytasks.php'de
+"kendime iş ekle" bir filtre satırına gömülü metin-link, task_view.php'de "başlat/tamamla" bir
+bilgi tablosunun altında), (3) riskli işlemler (contact_view.php'de "Pasif Yap"/"Sil") yeterince
+ayrışmıyor. Kullanıcı onayı sonrası uygulandı.
+
+**Yeni buton hiyerarşisi (ds-foundation.css/ds_lib.php, 4 mevcut varyant + 1 yeni):** Birincil
+(`ds-btn--accent`, ekran başına en fazla 1 — sayfanın en sık/asıl aksiyonu), İkincil
+(`ds-btn--secondary`, destekleyici işlemler), Gezinme (`ds-btn--ghost`, aksiyon değil başka
+sayfaya geçiş), Riskli (`ds-btn--danger`, zaten vardı, `delete_button()` dokunulmadan kullanıyor),
+ve **yeni** Durum Değişimi (`ds-btn--warn`, `background:var(--c-warn-bg,#fef3c7);color:#92400e`) —
+pilotta somut ihtiyaç doğdu (task_view.php "✓ Tamamla", contact_view.php "⏸ Pasif Yap"), spekülatif
+eklenmedi.
+
+**Ekran ekran uygulama (hepsi `ds_button()`/`ds_page_header()` üzerinden, ekrana özel CSS YOK):**
+- `mytasks.php` — "+ Kendime İş Ekle" (accent) ve admin-only "+ İş Ekle" (secondary) filtre
+  satırındaki düz metin-linklerden header'ın action bar'ına taşındı. Filtre sekmeleri dokunulmadı.
+- `mytask_new.php` — açıklama metni header'ın `subtitle` alanına taşındı (subtitle h() ile escape
+  edildiği için içindeki `<a>` linki taşınamadı — "← Görevlerim" ayrı bir ghost header aksiyonu
+  oldu, aynı hedef).
+- `task_view.php` — EN ÖNEMLİ TAŞIMA: durum aksiyonları (▶ Başla=accent, ✓ Tamamla=warn, ikisi de
+  `<form method="post">` POST buton) bir bilgi tablosunun altından header'a taşındı, "← Görevlerim"
+  ghost eklendi. Koşullar (`$canEdit` + statü kontrolleri) satır satır birebir korundu — Ece/Selin
+  bunu ayrıca doğruladı (`ob_start()` `layout_top.php`'den SONRA başlıyor, PRG/redirect ile
+  çakışmıyor; POST hedefi/CSRF enjeksiyonu DOM-konumundan bağımsız, etkilenmedi).
+- `external.php` — tek aksiyon eski `.btn`'den `ds_button(...,'accent')`'a geçti.
+- `sales.php`/`purchase.php` — ikincil aksiyonlar `ds_button(...,'secondary')`'ye geçti
+  (purchase.php'nin editMode koşulu değişmedi).
+- `finance.php` — "+ Tahsilat"=accent, "+ Ödeme"/"+ Transfer"=secondary, "Hesaplar"=ghost
+  (bu bir navigasyon, kayıt oluşturmuyor — semantik ayrım netleştirildi).
+- `contact_view.php` — EN YOĞUN EKRAN (7 aksiyon): Tahsilat=accent, Ödeme/Cari Raporu/WhatsApp=
+  secondary, Cari Listesi=ghost, Pasif-Yap/Aktif-Yap=warn (önceden duruma göre secondary/danger
+  karışık inline style'dı, artık tutarlı tek ton), Sil (`delete_button()`) hiç dokunulmadı —
+  zaten `.btn.danger` kullanıyordu, `.ds-btn--danger` ile TAM AYNI renk/radius/padding/font-weight
+  değerlerine sahip olduğu doğrulandı (Ece), paylaşılan fonksiyon olduğu için pilot kapsamı dışı
+  bırakıldı.
+
+**Review: Ece/Selin/Elif → üçü de PASS, hiç bulgu yok** (temiz geçen ilk tur — önceki sprintlerden
+farklı olarak hiçbir düzeltme gerekmedi). Selin: yetki koşulları/CSRF/POST hedefleri birebir
+korunduğu, `ds_button()`'ın URL/label escaping'i (XSS denemesi dahil) doğru çalıştığı doğrulandı.
+Elif: web+mobil fonksiyonel parite bozulmadı (mobil hiç dokunulmadı, DS-002A'daki aynı gerekçeyle
+kapsam dışı) — 2 bilgi amaçlı LOW not düşüldü (mobilde aynı aksiyonların hâlâ farklı hiyerarşi
+seviyesinde durması, gelecek "DS-002B Mobile Header" sprintine referans, düzeltme istenmedi).
+
+**Kapsam dışı:** Mobil (62 ekran, DS-002A'daki aynı `topx()` tek-nokta-riski gerekçesiyle),
+ekrana özel CSS (hiç yazılmadı, her şey ds-foundation.css/ds_lib.php üzerinden), filtre
+sekmeleri/tablolar/formlar (sadece `ds_page_header()`/`ds_action_bar()` alanı kapsamda).
+
 ## PDP-001 — VERİ BÜTÜNLÜĞÜ & GÜVEN: KOD İNCELEME PASS — USER TEST BEKLİYOR (2026-07-15)
 PRIMAC OTS PRODUCT AUDIT v1.0 raporunun (genel skor 4.6/10) 9 programlı yol haritasındaki
 PDP-001'in (rapora göre "en başa alınan" program — sessiz veri hataları her programdan önce

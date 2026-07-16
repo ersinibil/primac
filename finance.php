@@ -39,12 +39,15 @@ $pos=safe_sum("SELECT COALESCE(SUM(current_balance),0) s FROM finance_accounts W
 @media(max-width:960px){.command-grid{grid-template-columns:1fr}}
 </style>
 
-<?php ds_page_header('Finans Paneli', '', '', '
-<a class="btn quick-action" href="finance_new.php?direction=in">+ Tahsilat</a>
-<a class="btn secondary quick-action" href="finance_new.php?direction=out">+ Ödeme</a>
-<a class="btn secondary quick-action" href="finance_transfer.php">+ Transfer</a>
-<a class="btn secondary quick-action" href="finance_accounts.php">Hesaplar</a>
-', true); ?>
+<?php
+// UX-001 (2026-07-16): "+ Tahsilat" en sık işlem → birincil. "Hesaplar" bir kayıt oluşturmuyor,
+// başka sayfaya götürüyor → gezinme (ghost). Diğer ikisi ikincil aksiyon.
+$__actions = ds_button('+ Tahsilat', 'finance_new.php?direction=in', 'accent')
+    . ds_button('+ Ödeme', 'finance_new.php?direction=out', 'secondary')
+    . ds_button('+ Transfer', 'finance_transfer.php', 'secondary')
+    . ds_button('Hesaplar', 'finance_accounts.php', 'ghost');
+ds_page_header('Finans Paneli', '', '', $__actions, true);
+?>
 
 <?php if(isset($_GET['deleted'])): ?><div class="ok">Finans hareketi silindi, hesap bakiyesi güncellendi.</div><?php endif; ?>
 

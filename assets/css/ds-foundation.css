@@ -70,6 +70,10 @@ a.ds-kpi-card:hover{transform:translateY(-2px);box-shadow:0 14px 36px rgba(16,24
 .ds-btn--danger{background:var(--c-danger,#b42318);color:#fff}
 .ds-btn--ghost{background:transparent;color:#374151;border:1px solid #d0d5dd}
 .ds-btn--small{padding:7px 10px;font-size:12px}
+/* UX-001 (2026-07-16): pilotta somut ihtiyaç doğdu (task_view.php "Tamamla", contact_view.php
+   "Pasif Yap") — ne düz ikincil ne kalıcı/riskli olan, geri alınabilir ama dikkat gerektiren durum
+   değişiklikleri için. Renk ds-badge.yellow ile aynı (--c-warn-bg zaten mobil tanımlı, web fallback). */
+.ds-btn--warn{background:var(--c-warn-bg,#fef3c7);color:#92400e}
 
 /* ── 6. Badge / Status ───────────────────────────────────────────────────── */
 /* Ton sözlüğü mevcut status_tone() (boot.php) ile birebir aynı — yeni bir eşleme icat edilmedi,

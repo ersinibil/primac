@@ -96,10 +96,8 @@ require_once __DIR__.'/layout_top.php';
 $__title = $editMode ? '✏️ Alışı Düzenle' : 'Satın Alma';
 $__actions = '';
 if(!$editMode){
-    $__actions = '
-<a class="btn secondary quick-action" href="sales.php">🧾 Satış</a>
-<a class="btn secondary quick-action" href="trade_document_new.php?type=purchase">🛒 Alış Belgesi</a>
-';
+    $__actions = ds_button('🧾 Satış', 'sales.php', 'secondary')
+        . ds_button('🛒 Alış Belgesi', 'trade_document_new.php?type=purchase', 'secondary');
 }
 ds_page_header($__title, '', '', $__actions, true);
 ?>

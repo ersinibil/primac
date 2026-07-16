@@ -1,5 +1,5 @@
 <?php require_once __DIR__.'/layout_top.php'; ?>
-<?php ds_page_header('Dış İşler', '', '', '<a class="btn" href="job_new.php?type=dis_atolye">+ Yeni Dış İş</a>'); ?>
+<?php ds_page_header('Dış İşler', '', '', ds_button('+ Yeni Dış İş', 'job_new.php?type=dis_atolye', 'accent')); ?>
 
 <section class="panel">
 <table>

@@ -165,20 +165,22 @@ try{
 <?php
 // DS-002A: koşullu aksiyon bloğu 100% aynı kod, sadece ob_start()/ob_get_clean() ile
 // yakalanıp ds_page_header()'a veriliyor — mantık/koşullar hiç değişmedi.
+// UX-001 (2026-07-16): 7 buton neredeyse eşit ağırlıktaydı — birincil/ikincil/gezinme/durum-
+// değişimi/riskli olarak gruplandı. Koşullar/hedefler birebir aynı, sadece görsel hiyerarşi.
 ob_start();
 ?>
-<a class="btn quick-action" href="finance_new.php?direction=in&contact_id=<?=$id?>">+ Tahsilat</a>
-<a class="btn secondary quick-action" href="finance_new.php?direction=out&contact_id=<?=$id?>">+ Ödeme</a>
-<a class="btn quick-action" href="report.php?modul=cari_detay&ref=<?=$id?>">📊 Cari Raporu</a>
-<?php if($waConvId): ?><a class="btn secondary quick-action" href="wa_conversation_view.php?id=<?=(int)$waConvId?>">💬 WhatsApp</a>
-<?php elseif(!empty($c['phone'])): ?><a class="btn secondary quick-action" href="wa_conversation_view.php?phone=<?=urlencode($c['phone'])?>">💬 WhatsApp</a>
+<?=ds_button('+ Tahsilat', 'finance_new.php?direction=in&contact_id='.$id, 'accent')?>
+<?=ds_button('+ Ödeme', 'finance_new.php?direction=out&contact_id='.$id, 'secondary')?>
+<?=ds_button('📊 Cari Raporu', 'report.php?modul=cari_detay&ref='.$id, 'secondary')?>
+<?php if($waConvId): ?><?=ds_button('💬 WhatsApp', 'wa_conversation_view.php?id='.(int)$waConvId, 'secondary')?>
+<?php elseif(!empty($c['phone'])): ?><?=ds_button('💬 WhatsApp', 'wa_conversation_view.php?phone='.urlencode($c['phone']), 'secondary')?>
 <?php endif; ?>
-<a class="btn secondary quick-action" href="contacts.php">Cari Listesi</a>
+<?=ds_button('Cari Listesi', 'contacts.php', 'ghost')?>
 <?php if(is_admin() || user_can('contacts')): ?>
 <?php $isActive=(int)($c['active'] ?? 1); ?>
 <form method="post" style="display:inline">
     <input type="hidden" name="toggle_active" value="<?=$isActive?0:1?>">
-    <button class="btn <?=$isActive?'secondary':'danger'?>" style="<?=$isActive?'':'background:#dc2626;color:#fff'?>" onclick="return confirm('<?=$isActive?'Bu cariyi pasif yapmak istediğinize emin misiniz?':'Bu cariyi aktif yapmak istediğinize emin misiniz?'?>')">
+    <button class="ds-btn ds-btn--warn" onclick="return confirm('<?=$isActive?'Bu cariyi pasif yapmak istediğinize emin misiniz?':'Bu cariyi aktif yapmak istediğinize emin misiniz?'?>')">
         <?=$isActive?'⏸ Pasif Yap':'✅ Aktif Yap'?>
     </button>
 </form>

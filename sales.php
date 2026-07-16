@@ -142,10 +142,11 @@ $products  = $pdo->query(
 require_once __DIR__.'/layout_top.php';
 ?>
 
-<?php ds_page_header('Hızlı Satış', '', '', '
-<a class="btn secondary quick-action" href="purchase.php">🛒 Satın Alma</a>
-<a class="btn secondary quick-action" href="trade_document_new.php?type=sale">🧾 Satış Belgesi</a>
-', true); ?>
+<?php
+$__actions = ds_button('🛒 Satın Alma', 'purchase.php', 'secondary')
+    . ds_button('🧾 Satış Belgesi', 'trade_document_new.php?type=sale', 'secondary');
+ds_page_header('Hızlı Satış', '', '', $__actions, true);
+?>
 
 <?php if ($ok): ?>
 <div class="ok"><?= $ok ?></div>

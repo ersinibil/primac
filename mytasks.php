@@ -45,15 +45,19 @@ if($_SERVER['REQUEST_METHOD']==='POST' && (int)($_POST['tid']??0)){
 $f=$_GET['f']??'open';
 require_once __DIR__.'/layout_top.php';
 ?>
-<?php ds_page_header('✅ Görevlerim'); ?>
+<?php
+// UX-001 (2026-07-16): "+ Kendime İş Ekle" bu ekranın birincil aksiyonu — filtre satırına gömülü
+// metin-linkten header'ın birincil butonuna taşındı (fonksiyon/hedef aynı, sadece konum+ağırlık).
+$__actions = ds_button('+ Kendime İş Ekle', 'mytask_new.php', 'accent');
+if(is_admin()) $__actions .= ds_button('+ İş Ekle', 'task_new.php', 'secondary');
+ds_page_header('✅ Görevlerim', '', '', $__actions);
+?>
 <p class="muted">Bana atanan görevler ve hatırlatmalar — tüm görevler için (yetkiniz varsa) <a href="tasks.php">Görevler</a> sayfasına bakın.</p>
 <?php if(!empty($_GET['ok'])): ?><div class="ok">İş eklendi.</div><?php endif; ?>
 
 <div class="filters">
 <a href="mytasks.php?f=open" <?=$f==='open'?'style="background:#101828;color:#fff"':''?>>Açık</a>
 <a href="mytasks.php?f=done" <?=$f==='done'?'style="background:#101828;color:#fff"':''?>>Tamamlanan</a>
-<a href="mytask_new.php" style="margin-left:auto">+ Kendime İş Ekle</a>
-<?php if(is_admin()): ?><a href="task_new.php">+ İş Ekle</a><?php endif; ?>
 </div>
 
 <?php

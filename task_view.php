@@ -58,7 +58,22 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 require_once __DIR__.'/layout_top.php';
 $gec = !empty($task['due_date']) && $task['due_date']<date('Y-m-d') && !in_array($task['status'],['Tamamlandı','İptal']);
 ?>
-<?php ds_page_header($task['title']); ?>
+<?php
+// UX-001 (2026-07-16): "bu göreve ne yapmalıyım" sorusunun cevabı (durum aksiyonları) bir bilgi
+// tablosunun altında gömülüydü — header'ın birincil/durum-değişimi aksiyonlarına taşındı. Koşullar
+// (kim, hangi statüde, hangi butonu görür) birebir aynı, sadece konum+görsel ağırlık değişti.
+ob_start();
+if($canEdit && $task['status']!=='Devam Ediyor' && $task['status']!=='Tamamlandı'): ?>
+<form method="post" style="display:inline"><button class="ds-btn ds-btn--accent" name="task_status" value="Devam Ediyor">▶ Başla</button></form>
+<?php endif;
+if($canEdit && $task['status']!=='Tamamlandı'): ?>
+<form method="post" style="display:inline"><button class="ds-btn ds-btn--warn" name="task_status" value="Tamamlandı">✓ Tamamla</button></form>
+<?php endif; ?>
+<?=ds_button('← Görevlerim', 'mytasks.php', 'ghost')?>
+<?php
+$__actions = ob_get_clean();
+ds_page_header($task['title'], '', '', $__actions);
+?>
 <?php if(!empty($_SESSION['task_err'])): ?><div class="alert"><?=h($_SESSION['task_err'])?></div><?php unset($_SESSION['task_err']); endif; ?>
 
 <section class="panel">
@@ -71,15 +86,6 @@ $gec = !empty($task['due_date']) && $task['due_date']<date('Y-m-d') && !in_array
     <?php if($task['job_no']): ?><div><span class="muted">İş No</span><br><a href="job_view.php?id=<?=(int)$task['job_real']?>"><?=h($task['job_no'])?></a></div><?php endif; ?>
     <div><span class="muted">Oluşturan</span><br><?=h($task['creator_name']?:$task['creator_username']?:'-')?></div>
     <?php if($task['updated_by']): ?><div><span class="muted">Son Güncelleyen</span><br><?=h($task['updater_name']?:$task['updater_username']?:'-')?></div><?php endif; ?>
-  </div>
-  <div class="actions">
-    <?php if($canEdit && $task['status']!=='Devam Ediyor' && $task['status']!=='Tamamlandı'): ?>
-      <form method="post" style="display:inline"><button class="btn" name="task_status" value="Devam Ediyor">▶ Başla</button></form>
-    <?php endif; ?>
-    <?php if($canEdit && $task['status']!=='Tamamlandı'): ?>
-      <form method="post" style="display:inline"><button class="btn" name="task_status" value="Tamamlandı" style="background:#16a34a;color:#fff">✓ Tamamla</button></form>
-    <?php endif; ?>
-    <a class="btn ghost" href="mytasks.php">← Görevlerim</a>
   </div>
 </section>
 
