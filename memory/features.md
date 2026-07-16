@@ -2,6 +2,44 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
+## PX-002 Madde 1 — Compact mobil Menü/Sabitlenenler 404 fix (2026-07-17, commit `924c367`)
+PX-001/PX-001B USER TEST FAIL raporunun (Product Owner, 2026-07-17) AŞAMA 1 kök neden denetiminde
+bulunan "kesin 404 listesi"nin (10 kalem) kapatılması — sprint sırasının 1. maddesi.
+
+**Kök neden:** `nav_lib.php::nav_taxonomy()` her satırda TEK bir `url` alanı tutuyordu (web dosya
+adı). NAV-001 v3'te compact mobil Menü/Sabitlenenler bu `url`'i doğrudan `href`'e yazmaya
+başlayınca, mobil sayfaların web'den farklı isimlerde olduğu (`finance.php`→`mobile/kasa.php`,
+`production.php`→`mobile/uretim.php` gibi) ya da hiç var olmadığı (`assembly.php`/`design.php`/
+`work_center.php`/`trade_documents.php`/`finance_accounts.php`) 10 kalemde 404 üretti. Legacy mobil
+menü zaten bu farkı biliyordu (kendi sabit `kasa.php`/`collection.php`/... isimlerini kullanıyordu)
+ama bu bilgi hiç `nav_taxonomy()`'ye taşınmamıştı.
+
+**Çözüm:** `nav_taxonomy()`'ye opsiyonel `'mobileUrl'` (5 satır — doğru mobil dosyasına yönlendirir)
+ve `'mobileHide'=>true` (5 satır — mobil karşılığı hiç yok, legacy mobil menüde de zaten hiç
+yoklardı, bu davranışa dönüş) alanları eklendi. Yeni `nav_url_for_platform($item,$platform)`
+mobilde varsa `mobileUrl`'i döner. `nav_pinned_modules()`/`nav_grouped_for_launcher()` artık
+`platform='mobile'` iken `mobileHide`'ı filtreliyor (eski/stale bir pin kaydı olsa bile).
+`ajax_nav_prefs.php`'ye mobilde `mobileHide` modülün pinlenmesini reddeden guard eklendi. Web
+tarafı (`layout_top.php`) HİÇ değiştirilmedi — `platform='web'` varsayılanında `mobileUrl`/
+`mobileHide` zaten devre dışı.
+
+**Yan ürün — gerçek yetki boşluğu kapatıldı:** Elif'in (parity) incelemesinde, `mobile/uretim.php`
+ve `mobile/uretim_new.php`'nin `boot.php::page_module_map()`'te HİÇ yer almadığı ortaya çıktı —
+`'jobs'` yetkisi olmayan girişli herhangi bir kullanıcı bu sayfaları doğrudan URL ile açabiliyordu
+(POST ile `uretim_new.php` üzerinden `jobs` tablosuna INSERT dahil). İlginç: bu oturumun altındaki
+2026-07-03 kaydı bu sayfanın zaten `'jobs'` ile korunduğunu VARSAYMIŞTI — gerçekte değildi, gerçek
+bir unutulmuş boşluktu, yeni bir regresyon değil. Kardeş sayfalarla (`production.php` vb.) aynı
+desende `'jobs'` eklendi, Selin ayrıca doğruladı (admin bypass korunuyor, meşru senaryo kırılmıyor).
+
+**Review:** Ece/Selin/Elif üçü de PASS (hem ana diff hem `boot.php` eki ayrı ayrı incelendi).
+Legacy nav dalı ve web platformu doğrulanmış şekilde etkilenmedi. `php -l` temiz.
+
+**Durum:** DEV PASS henüz verilmedi — gerçek cihaz tıklama testi Product Owner'ın kendisi tarafından
+yapılacak (bu sprintin kabul kriteri: "php -r ile yapılan teorik test tek başına PASS sayılmayacak").
+Sprint sırasının kalanı (Madde 2: tek Application Shell, Madde 3: mobil Menü kategori tasarımı,
+Madde 4: web Command Launcher aynı mantık, Madde 5: Home→İş Detay→Yeni İş→Cari→Teklif→Satış tek tek
+dönüşüm) bu madde kapanmadan başlamıyor.
+
 ## PX-001B — İş Detay v1: KOD İNCELEME PASS — PİLOT KULLANICI TESTİ BEKLİYOR (2026-07-16)
 Home Screen v1.1'in hemen ardından, aynı "mockup turu kapandı, gerçek veriyle çalıştır" kararıyla
 gerçek koda geçirildi — commit `9f48b5d`.

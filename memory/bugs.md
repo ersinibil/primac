@@ -2,6 +2,20 @@
 
 <!-- Çözülen ve açık bug'lar. Çözüldüğünde tarih+çözüm notu ekleyip üstte "ÇÖZÜLDÜ" ile işaretle, silmeyin. -->
 
+## ÇÖZÜLDÜ (2026-07-17, commit `924c367`)
+
+- **`mobile/uretim.php`/`mobile/uretim_new.php` `boot.php::page_module_map()`'te hiç yoktu —
+  'jobs' yetkisi olmayan girişli kullanıcı doğrudan URL ile açabiliyordu** (PX-002 Madde 1
+  incelemesinde Elif/ots-parity-auditor tarafından bulundu, kapsam dışıydı ama fix'e dahil
+  edildi): menü seviyesinde (`nav_lib.php`, legacy `mobile/more.php`) zaten `user_can('jobs')`
+  şartına bağlıydı, ama `boot.php`'nin otomatik sayfa koruması (`require_permission()`) bu iki
+  dosya için hiç tetiklenmiyordu — doğrudan URL bilen herkes (ör. `mobile/uretim_new.php`'ye POST
+  ile) `jobs` tablosuna üretim emri ekleyebiliyordu. `memory/features.md`'nin 2026-07-03 kaydı bu
+  sayfanın zaten korumalı olduğunu varsaymıştı, gerçekte değildi — gerçek bir unutulmuş boşluktu.
+  `page_module_map()`'e kardeş sayfalarla (`production.php` vb.) aynı desende `'jobs'` eklendi.
+  Selin doğruladı: admin bypass korunuyor, `job_view.php` gibi bilinçli bir "bildirimden erişim"
+  istisnası bu iki sayfa için yoktu.
+
 ## Açık
 
 - **`mobile/requests.php`'de kendine-onay/red durumunda hiçbir bildirim oluşmuyor (parite sapması,

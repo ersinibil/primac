@@ -2,6 +2,12 @@
 
 <!-- Açık geliştirme görevleri. Kapanan madde buradan silinip memory/features.md'ye taşınır. -->
 
+## nav_module_is_active() mobileUrl'den habersiz (2026-07-17, Ece PX-002 Madde 1 review notu, çok düşük öncelik)
+`nav_lib.php::nav_module_is_active($key,$currentScript)` hâlâ sadece `$item['url']`'i
+karşılaştırıyor, yeni `mobileUrl` alanından habersiz. Şu an kod içinde HİÇBİR YERDEN çağrılmıyor
+(grep ile doğrulandı) — canlı bir risk yok. İleride biri bu fonksiyonu mobilde "aktif menü satırı"
+vurgusu için kullanmaya kalkarsa `nav_url_for_platform()` ile tutarlı hale getirilmeli.
+
 ## PDP/SEC-002 — job_view.php/mobile/job_view.php telefon sorgusu prepared statement değil (2026-07-16, Ece PX-001B review notu, DÜŞÜK öncelik)
 `$pdo->query("SELECT phone FROM contacts WHERE id=".(int)$j['customer_id'])` deseni (`job_view.php`
 hem legacy hem yeni pilot dalda, `mobile/job_view.php`'de de aynı) prepared statement değil, ham
@@ -27,7 +33,14 @@ legacy `dashboard_pulse_state()` deseniyle tutarlı bilinçli bir tasarım (güv
 beklentisi doğarsa, `home_build_queue()`/`home_build_continue()`'a `responsible_personnel_id`/
 `created_by` bazlı bir filtre eklenmesi ayrı bir ürün kararı ve tur gerektirir.
 
-## PARITY-003 — Mobil Command Launcher'da bazı satırlar mobilde var olmayan URL'lere gidiyor (2026-07-16, Elif NAV-001 v3 review notu)
+## PARITY-003 — ÇÖZÜLDÜ (2026-07-17, PX-002 Madde 1, commit `924c367`)
+Aşağıda önerilen `mobileUrl` deseni birebir uygulandı — bkz. [[features]] "PX-002 Madde 1". 5
+kalem `mobileUrl` ile doğru mobil dosyaya yönlendirildi, 5 kalem (`assembly`/`design`/
+`work_center`/`trade_documents`/`finance_accounts` — mobil karşılığı hiç yok) `mobileHide` ile
+Launcher'dan gizlendi. Bu, USER TEST FAIL raporunun (2026-07-17) "kesin 404 listesi"yle birebir
+örtüştü — bilinçli ertelenen bu madde, ertelemenin öngördüğü riskin gerçekleştiğini doğruladı.
+
+## PARITY-003 (orijinal not, referans için korunuyor) — Mobil Command Launcher'da bazı satırlar mobilde var olmayan URL'lere gidiyor (2026-07-16, Elif NAV-001 v3 review notu)
 `nav_taxonomy()`'nin `url` alanları NAV-001B'den beri hiç değişmedi (bu turda da dokunulmadı) — ama
 `mobile/more.php`'nin compact Launcher'ı bu URL'leri `../` öneki olmadan doğrudan basıyor, yani href
 mobil-yerel yola çözülüyor. Şu anahtarların hedef dosyası `mobile/` altında YOK: `production.php`,
