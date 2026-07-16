@@ -10,6 +10,10 @@ $pid=task_my_personnel_id($pdo,$me);
 // Durum güncelle — SADECE kendi (personnel_id eşleşen) görevi. Düzenle/Sil bilinçli olarak bu
 // listede DEĞİL, task_view.php (Detay) ekranında — Mobil UX Standardı (PROJECT_RULES.md,
 // "tekil aksiyonlar sadece Detay ekranında") + bildirimler modülüyle aynı desen.
+// PRODUCT DESIGN BLUEPRINT / mytasks.php sprinti (2026-07-16, Ece code-review notu): kart artık
+// hiçbir aksiyon butonu içermediği için bu handler UI'dan bir daha hiç tetiklenmiyor — durum
+// değişikliği artık sadece task_view.php'nin kendi (aynı mantıktaki) handler'ından yapılıyor.
+// Kod BİLEREK silinmedi (backend/route/POST hedefleri değişmeyecek kısıtı) — zararsız, ölü kod.
 if($_SERVER['REQUEST_METHOD']==='POST' && (int)($_POST['tid']??0)){
     $tid=(int)$_POST['tid'];
     try{
@@ -99,7 +103,6 @@ try{
 <div class="panel" style="display:flex;gap:8px;padding:10px;flex-wrap:wrap">
   <a class="btn <?=$f==='open'?'dark':''?>" style="flex:1;text-align:center;<?=$f==='open'?'':'background:#334155;color:#fff'?>" href="mytasks.php?f=open">Açık</a>
   <a class="btn <?=$f==='done'?'dark':''?>" style="flex:1;text-align:center;<?=$f==='done'?'':'background:#334155;color:#fff'?>" href="mytasks.php?f=done">Tamamlanan</a>
-  <a class="btn" style="flex:1;text-align:center;background:#334155;color:#fff" href="mytask_new.php">+ Kendime İş Ekle</a>
   <?php if($isAdmin): ?><a class="btn" style="flex:1;text-align:center;background:#334155;color:#fff" href="task_new.php">+ İş Ekle</a><?php endif; ?>
 </div>
 <?php
@@ -113,23 +116,25 @@ try{
   if(!$rows) echo '<div class="panel muted" style="text-align:center">'.($f==='done'?'Tamamlanan görev yok.':'Açık görev yok 🎉').'</div>';
   foreach($rows as $t){
     $geç = ($f!=='done' && !empty($t['due_date']) && $t['due_date']<date('Y-m-d'));
-    echo '<div class="panel" style="padding:12px">';
+    // PRODUCT DESIGN BLUEPRINT / mytasks.php sprinti (2026-07-16, Product Owner kararı — Mobil UX
+    // Standardı PROJECT_RULES.md): kartta kayıt bazlı HİÇBİR aksiyon yok (Detay/İş Detayı/Gönder/
+    // Başla/Tamamla/Düzenle/Sil hepsi task_view.php'ye taşındı). Kart sadece karar bilgisi taşır,
+    // tamamı tıklanabilir — <a> ile sarmalandı, ayrı bir "Detay" butonuna gerek kalmadı.
+    $__urgent = $geç || $t['priority']==='Acil';
+    $__high = !$__urgent && $t['priority']==='Yüksek';
+    $__border = $__urgent ? 'border-left:3px solid #f87171' : ($__high ? 'border-left:3px solid #f59e0b' : '');
+    echo '<a class="panel" href="task_view.php?id='.(int)$t['id'].'" style="display:block;padding:12px;text-decoration:none;color:inherit;'.$__border.'">';
     echo '<b>'.htmlspecialchars($t['title']).'</b>';
     if($isAdmin && $t['pname']) echo ' <span class="muted">· '.htmlspecialchars($t['pname']).'</span>';
     if($t['description']) echo '<br><small class="muted">'.htmlspecialchars($t['description']).'</small>';
     echo '<br><small class="muted">'.($t['job_no']?'📋 '.htmlspecialchars($t['job_no']).' · ':'').'Durum: '.htmlspecialchars($t['status']);
+    if($t['priority'] && $t['priority']!=='Normal') echo ' · '.htmlspecialchars($t['priority']);
     if($t['due_date']) echo ' · 📅 '.htmlspecialchars($t['due_date']).($geç?' <span style="color:#f87171;font-weight:900">GECİKMİŞ</span>':'');
     echo '</small>';
-    echo '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">';
-    echo '<a class="btn" href="task_view.php?id='.(int)$t['id'].'" style="background:#667085;color:#fff;flex:1;text-align:center">👁 Detay</a>';
-    if($t['job_real']) echo '<a class="btn" href="job_view.php?id='.(int)$t['job_real'].'" style="background:#334155;color:#fff;flex:1;text-align:center">📋 İş Detayı</a>';
-    $tTxt="📝 Görev: ".$t['title'].($t['job_no']?"\nİş: ".$t['job_no']:'')."\nDurum: ".$t['status'].($t['due_date']?"\nTermin: ".$t['due_date']:'').($t['description']?"\n".$t['description']:'');
-    echo '<a class="btn" href="'.htmlspecialchars(wa_link($tTxt,$t['pphone']??'')).'" target="_blank" rel="noopener" style="background:#16a34a;color:#fff;flex:1;text-align:center">📲 Gönder</a>';
-    if($f!=='done'){
-      if($t['status']!=='Devam Ediyor') echo '<form method="post" style="flex:1;margin:0"><input type="hidden" name="tid" value="'.(int)$t['id'].'"><button class="btn" name="task_status" value="Devam Ediyor" style="width:100%;background:#2563eb;color:#fff">▶ Başla</button></form>';
-      echo '<form method="post" style="flex:1;margin:0"><input type="hidden" name="tid" value="'.(int)$t['id'].'"><button class="btn" name="task_status" value="Tamamlandı" style="width:100%;background:#16a34a;color:#fff">✓ Tamamla</button></form>';
-    }
-    echo '</div></div>';
+    echo '</a>';
   }
 }catch(Throwable $e){ echo '<div class="err">'.htmlspecialchars($e->getMessage()).'</div>'; }
+?>
+<a class="fab" href="mytask_new.php" aria-label="Kendime iş ekle">+</a>
+<?php
 botx();

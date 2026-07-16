@@ -2,6 +2,21 @@
 
 <!-- Açık geliştirme görevleri. Kapanan madde buradan silinip memory/features.md'ye taşınır. -->
 
+## PARITY-001 — Görevlerim / Notlarım Web-Mobil Kapsam Farkı (2026-07-16)
+PRODUCT DESIGN BLUEPRINT uygulama sprintinde (mytasks.php) kök neden analizi sırasında bulundu:
+`mobile/mytasks.php` kişisel not sistemi ("📝 Notlarım" paneli — `personal_notes` tablosu,
+WhatsApp gönderme, takvime işlenen termin, tamamla/düzenle/sil) içeriyor; web `mytasks.php`'de bu
+özelliğin hiçbir karşılığı yok. Web'de tek karşılık `notes.php` — ayrı, bağımsız bir sayfa, aynı
+"Görevlerim" ekranına gömülü değil.
+
+**Bilinçli olarak bu sprintte eklenmedi** — Product Owner kararı: "Bu sprint yalnızca mytasks.php
+kullanıcı deneyimi dönüşümünde kalacaktır." Ayrı bir parity sprintinin konusu.
+
+**Öneri (karar verilmedi, sadece gözlem):** Web'e ya `mytasks.php` üstüne mobildekine benzer bir
+"Notlarım" paneli eklenmeli, ya da mobildeki panel kaldırılıp her iki platform da `notes.php`
+(web) / `mobile/notes.php` (varsa) gibi ayrı bir ekrana yönlendirilmeli — hangisi doğru kalıcı
+çözüm, henüz kararlaştırılmadı.
+
 ## critical_alerts (web) hâlâ yetkisiz-görünür — mobil kısmı KAPANDI (2026-07-14, mobil düzeltme 2026-07-15)
 UX SPRINT 002 Phase B3 (Dashboard Nabız Satırı) incelemesinde Selin (security) tarafından bulundu,
 Ece ve Elif de bağımsız olarak teyit etti: `dashboard.php`'nin "Dikkat - Geciken İşler & Kritik

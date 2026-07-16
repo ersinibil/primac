@@ -4,6 +4,7 @@
 require_once 'common.php';
 require_once __DIR__.'/../tasks_lib.php';
 require_once __DIR__.'/../checks_notes_lib.php';
+require_once __DIR__.'/../share_lib.php';
 $pdo=db();
 $me=(int)($_SESSION['user']['id']??0);
 $pid=task_my_personnel_id($pdo,$me);
@@ -69,6 +70,13 @@ $geç = !empty($task['due_date']) && $task['due_date']<date('Y-m-d') && !in_arra
 
   <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
     <?php if($task['job_real']): ?><a class="btn" href="job_view.php?id=<?=(int)$task['job_real']?>" style="background:#334155;color:#fff;flex:1">📋 İş Detayı</a><?php endif; ?>
+    <?php
+    // PRODUCT DESIGN BLUEPRINT / mytasks.php sprinti (2026-07-16): "📲 Gönder" liste kartından
+    // kaldırıldı (Mobil UX Standardı — tekil aksiyon), buraya taşındı. task_fetch() zaten pphone
+    // seçiyor (tasks_lib.php), yeni bir sorgu gerekmedi.
+    $__waTxt="📝 Görev: ".$task['title'].($task['job_no']?"\nİş: ".$task['job_no']:'')."\nDurum: ".$task['status'].($task['due_date']?"\nTermin: ".$task['due_date']:'').($task['description']?"\n".$task['description']:'');
+    ?>
+    <a class="btn" href="<?=htmlspecialchars(wa_link($__waTxt,$task['pphone']??''))?>" target="_blank" rel="noopener" style="background:#16a34a;color:#fff;flex:1">📲 Gönder</a>
     <?php if($canEdit && $task['status']!=='Devam Ediyor' && $task['status']!=='Tamamlandı'): ?>
       <form method="post" style="flex:1;margin:0"><button class="btn" name="task_status" value="Devam Ediyor" style="width:100%;background:#2563eb;color:#fff">▶ Başla</button></form>
     <?php endif; ?>

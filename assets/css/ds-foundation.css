@@ -103,6 +103,40 @@ a.ds-kpi-card:hover{transform:translateY(-2px);box-shadow:0 14px 36px rgba(16,24
 .ds-table tr:last-child td{border-bottom:none}
 .ds-table tr:hover td{background:#f8fafc}
 
+/* ── 9. Quick Add (satır-içi hızlı ekleme) ──────────────────────────────── */
+/* PRODUCT DESIGN BLUEPRINT / mytasks.php sprinti (2026-07-16): sayfa geçişi gerektiren bir
+   "yeni kayıt" formunu, listenin üstünde her zaman hazır bekleyen tek satırlık bir forma
+   indirger. Sadece desktop/tablette kullanılıyor (mobil Mobil UX Standardı gereği FAB kullanır). */
+.ds-quick-add{display:flex;gap:8px;margin-bottom:16px}
+.ds-quick-add input{flex:1;border:1.5px solid #d0d5dd;border-radius:12px;padding:12px 14px;font-size:15px;background:#fff;color:#101828}
+.ds-quick-add input:focus{outline:2px solid var(--c-accent,#2563eb);outline-offset:1px}
+@media(max-width:640px){.ds-quick-add{flex-direction:column}}
+
+/* ── 10. Menu ("•••" — nadir/tekil aksiyonlar) ──────────────────────────── */
+/* Native <details>/<summary> — projede zaten kurulu desen (contact_view.php/task_view.php'nin
+   "✏️ Düzenle" katlanır panelleri), yeni JS icat edilmedi. Sadece desktop/tablette kullanılır. */
+.ds-menu{position:relative;display:inline-block}
+.ds-menu>summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:12px;background:#eef2f6;color:#101828;font-weight:900;font-size:14px}
+.ds-menu>summary::-webkit-details-marker{display:none}
+.ds-menu[open]>summary{background:#111827;color:#fff}
+.ds-menu-body{position:absolute;right:0;top:calc(100% + 6px);background:#fff;border:1px solid #eef2f6;border-radius:14px;box-shadow:0 12px 32px rgba(16,24,40,.14);padding:6px;min-width:170px;z-index:30;display:flex;flex-direction:column;gap:2px}
+.ds-menu-body a,.ds-menu-body button{display:block;width:100%;text-align:left;background:transparent;border:0;border-radius:9px;padding:9px 11px;font-size:13.5px;font-weight:700;color:#101828;cursor:pointer;text-decoration:none;font-family:inherit}
+.ds-menu-body a:hover,.ds-menu-body button:hover{background:#f8fafc}
+.ds-menu-body button.ds-menu-danger,.ds-menu-body a.ds-menu-danger{color:#b42318}
+
+/* ── 11. List Row (öncelik-farkında satır/kart) ─────────────────────────── */
+/* Tam satır tıklanabilir (PDP/finance.php'deki aynı event.target.closest deseniyle), sol
+   kenarlık aciliyeti (gecikmiş/Acil/Yüksek) sessizce işaretler — sadece dikkat gerektirene renk,
+   "Normal" öncelik görsel gürültü yaratmasın diye renksiz kalır. */
+.ds-list-row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;background:#fff;border-radius:16px;padding:14px 16px;box-shadow:0 4px 14px rgba(16,24,40,.05);border:1px solid #eef2f6;border-left:4px solid transparent;cursor:pointer;margin-bottom:10px}
+.ds-list-row--urgent{border-left-color:var(--c-danger,#b42318)}
+.ds-list-row--high{border-left-color:var(--c-warn,#f59e0b)}
+.ds-list-row-body{min-width:0;flex:1}
+.ds-list-row-title{font-weight:800;color:#101828}
+.ds-list-row-meta{color:var(--c-muted,#667085);font-size:12.5px;margin-top:3px}
+.ds-list-row-actions{display:flex;gap:6px;flex:0 0 auto;align-items:center}
+@media(max-width:640px){.ds-list-row{flex-direction:column}.ds-list-row-actions{width:100%}}
+
 /* ── Mobil (koyu) bağlam düzeltmeleri ────────────────────────────────────── */
 body.mobile-shell .ds-page-header{border-bottom-color:rgba(255,255,255,.14)}
 body.mobile-shell .ds-form-grid .ds-field input,

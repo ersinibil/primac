@@ -2,6 +2,61 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
+## PRODUCT DESIGN BLUEPRINT — mytasks.php (Görevlerim) Sprint 1: KOD İNCELEME PASS — USER TEST BEKLİYOR (2026-07-16)
+"PRIMAC OTS Product Design Blueprint v1"in (23 platform-standardı + 8 pilot ekranın Desktop/
+Tablet/Mobile tek-akış tasarımı, Product Owner onaylı) ilk uygulama sprinti. Önceki DS-002A/UX-001
+sprintlerinden farklı olarak bu sprint HEM web HEM mobil dosyaları kapsadı — Blueprint'in "aynı
+ürün, tek deneyim, üç platform" ilkesi gereği.
+
+**Uygulama öncesi bulunan gerçek sapma (süreç gereği önce onay alındı):** mobile/mytasks.php
+incelenirken, projenin PROJECT_RULES.md'sinde zaten resmi bir "Mobil UX Standardı" (2026-07-04,
+UX SPRINT-001) olduğu görüldü: "Liste ekranı = sadece listeleme. Tekil aksiyonlar sadece Detay
+ekranında." Mevcut mytasks.php mobil kartı buna aykırıydı (5 buton: Detay/İş Detayı/Gönder/Başla/
+Tamamla). İlk önerim (✓ checkbox ile hızlı tamamlama) Product Owner tarafından REDDEDİLDİ — kesin
+karar: mobil kartta HİÇBİR kayıt bazlı aksiyon (checkbox dahil) olmayacak, tamamı Detay'a taşınacak.
+
+**Web/Tablet (mytasks.php):**
+- Header'daki "+ Kendime İş Ekle" kaldırıldı, yerine sayfa üstünde her zaman hazır bir satır-içi
+  hızlı-ekleme formu geldi (`action="mytask_new.php"`, route/POST hedefi DEĞİŞMEDİ — sadece forma
+  BAŞKA bir sayfadan erişiliyor, cross-page CSRF session-bazlı token sayesinde sorunsuz çalışıyor).
+- Görev satırları: tam satır tıklanabilir (finance.php'nin zaten kullandığı aynı
+  `event.target.closest()` deseni), TEK bağlamsal birincil aksiyon (Atandı→Başla, Devam Ediyor→
+  Tamamla — ikisi ASLA aynı anda değil, öncekinde ikisi birden gösterilebiliyordu), nadir aksiyonlar
+  (İş Detayı/Düzenle/Sil) yeni `.ds-menu` ("•••", native `&lt;details&gt;` — proje zaten bu deseni
+  kullanıyordu) içinde. Düzenle/Sil'in ARKASINDAKİ mantık hiç değişmedi, sadece tetikleyici konumu.
+  Öncelik/gecikme sol kenarlıkla (Acil/gecikmiş=kırmızı, Yüksek=amber, Normal=renksiz) VE metin
+  olarak (renk-tek-başına-sinyal olmasın diye) gösteriliyor.
+- ds-foundation.css'e 3 yeni bileşen: `.ds-quick-add`, `.ds-menu`/`.ds-menu-body`, `.ds-list-row`
+  (+ `--urgent`/`--high` varyantları) — hepsi pilotta somut ihtiyaçtan doğdu.
+
+**Mobile (mobile/mytasks.php + mobile/task_view.php):**
+- Görev kartı artık TAMAMEN bilgi kartı — `&lt;a class="panel"&gt;` ile sarmalı, İÇİNDE HİÇBİR buton
+  yok (öncekinde 5 buton vardı). Sol kenarlık aynı öncelik/gecikme mantığıyla renklendirilmiş.
+- "+ Kendime İş Ekle" filtre satırından kaldırıldı, yerine sayfa-seviyeli (kayıt-bazlı DEĞİL) yeni
+  bir FAB geldi (`mobile/common.php`'ye eklenen `.fab`, ilk kez kullanılan bir bileşen, Bottom Nav'ın
+  üstünde sabit). Admin-only "+ İş Ekle" (task_new.php) filtre satırında kaldı (sayfa-bazlı, kural
+  ihlali değil).
+- "📲 Gönder" (WhatsApp) karttan kaldırılıp `mobile/task_view.php`'ye TAŞINDI — orada hiç yoktu,
+  fonksiyon kaybolmasın diye yeni eklendi (aynı `wa_link()` mantığı, `task_fetch()` zaten `pphone`
+  seçiyordu). Başla/Tamamla/Düzenle/Sil/İş Detayı zaten task_view.php'deydi, dokunulmadı.
+- Karttaki eski `task_status` POST handler'ı (mobile/mytasks.php başı) BİLEREK silinmedi (backend/
+  route/POST hedefleri değişmeyecek kısıtı) — artık UI'dan hiç tetiklenmiyor, zararsız ölü kod,
+  yorum eklendi (Ece code-review notu).
+
+**Blueprint güncellemesi:** Standart #9 (Liste) ve #20 (Primary/Secondary Action) mobil satırları,
+"kayıt bazlı aksiyon YOK, kartın tamamı Detay'a gider" ifadesiyle güncellendi — bu artık TÜM
+gelecek mobil liste ekranları için bağlayıcı.
+
+**PARITY-001 (memory/backlog.md'ye kaydedildi, bu sprintte ÇÖZÜLMEDİ):** mobile/mytasks.php'nin
+"📝 Notlarım" (kişisel not) paneli web mytasks.php'de hiç yok — Product Owner kararıyla bilinçli
+olarak bu sprintin dışında bırakıldı, ayrı bir parity sprintinin konusu.
+
+**Review: Ece/Selin/Elif → üçü de PASS**, tek bulgu Ece'nin LOW-severity kozmetik notuydu (ölü
+POST handler'a açıklayıcı yorum eklendi). Selin: cross-page CSRF, satır-tıklama/"•••" menü
+etkileşimi, yetki kontrolleri, WhatsApp linki (boş telefon durumu dahil) hepsi güvenli. Elif:
+bilinçli platform-farkları (web'de 1 aksiyon+"•••" vs mobilde sıfır aksiyon) hiçbir fonksiyonu
+kaybetmeden doğru uygulanmış, gerçek bir parite/yetki tutarsızlığı yok.
+
 ## UX-001 — HEADER REFRESH PILOT: KOD İNCELEME PASS — USER TEST BEKLİYOR (2026-07-16)
 DS-002A'da (2026-07-15) yapısal olarak Design System'e taşınan aynı 8 pilot ekranın header'ı
 şimdi görsel olarak da yeniden ele alındı. DS-002A'dan farkı: "birebir görünüm koru" kuralı bu
