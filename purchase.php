@@ -89,9 +89,6 @@ $products=$pdo->query("SELECT id,name,unit,purchase_price,vat_rate FROM stock_it
 
 require_once __DIR__.'/layout_top.php';
 ?>
-<style>
-.notice{background:#dcfce7;color:#14532d;padding:12px 16px;border-radius:10px;margin:14px 0;font-size:14px}
-</style>
 <?php
 $__title = $editMode ? '✏️ Alışı Düzenle' : 'Satın Alma';
 $__actions = '';
@@ -106,10 +103,11 @@ ds_page_header($__title, ds_icon('box',24), '', $__actions, true, true);
 <?php if($er): ?><?=ds_alert('danger',$er)?><?php endif; ?>
 
 <!-- Hızlı Satın Alma Formu (JS ile dinamik satır eklenen kritik akış — .row-prod/#itemsBody vb.
-     class'lar JS'e SIKI bağlı, DEĞİŞTİRİLMEDİ; sadece dış panel/başlık DS'e taşındı) -->
+     class'lar JS'e SIKI bağlı, DEĞİŞTİRİLMEDİ; RELEASE 0.9 (2026-07-17) DS migration tamamlandı,
+     sales.php ile birebir aynı desen — bkz. o dosyadaki açıklama notu.) -->
 <section class="df-card">
-<h2 style="font-size:var(--df-type-section-size);font-weight:var(--df-type-section-weight);color:var(--df-ink-900);margin:0 0 var(--df-space-3)"><?=$editMode?'✏️ Alışı Düzenle':'Hızlı Satın Alma'?></h2>
-<div class="alert" style="background:#eef4ff;color:#1e3a8a;border:1px solid #bfdbfe">
+<h2 class="df-section-title" style="margin:0 0 var(--df-space-3)"><?=$editMode?'✏️ Alışı Düzenle':'Hızlı Satın Alma'?></h2>
+<div class="df-alert df-alert--info" style="margin-bottom:var(--df-space-3)">
   Bu ekran ödeme yapmaz — alış tedarikçiye açık borç (Bekliyor) olarak kaydedilir. Ödeme
   <a href="finance_new.php?direction=out">Ödeme ekranından</a> ayrıca girilir.
 </div>
@@ -120,26 +118,19 @@ ds_page_header($__title, ds_icon('box',24), '', $__actions, true, true);
   <input type="hidden" name="action" value="add_purchase">
   <?php endif; ?>
 
-  <div class="form-grid">
-    <div class="full">
-      <label>Tedarikçi</label>
-      <select name="contact_id" id="contactSel" class="full" required onchange="onSupplierChange()">
-        <option value="">— Seç —</option>
-        <?php
-        try{
-          $cs=$pdo->query("SELECT id,name FROM contacts WHERE type IN ('Tedarikçi','Her İkisi') OR type IS NULL ORDER BY name")->fetchAll();
-          if(!$cs) $cs=$pdo->query("SELECT id,name FROM contacts ORDER BY name")->fetchAll();
-          foreach($cs as $c): ?><option value="<?=$c['id']?>" <?=$editMode && (int)$editMode['purchase']['contact_id']===(int)$c['id']?'selected':''?>><?=htmlspecialchars($c['name'])?></option><?php endforeach;
-        }catch(Throwable $e){}
-        ?>
-        <option value="__new__">➕ Listede yok — Yeni Tedarikçi Ekle…</option>
-      </select>
-      <div id="newContactBox" class="full" style="display:none;background:#eef4ff;border:1px solid #bfdbfe;border-radius:12px;padding:12px;margin-top:8px">
-        <input type="text" id="contactNamePurch" placeholder="Tedarikçi adı" style="width:100%;border:1px solid #d0d5dd;border-radius:10px;padding:10px;margin-bottom:8px">
-        <button type="button" class="btn" style="width:100%" onclick="quickAddContactPurch(document.getElementById('contactNamePurch').value, 'Tedarikçi')">✓ Ekle ve Seç</button>
-      </div>
-    </div>
-  </div><!-- /form-grid -->
+  <?php
+  $__supplierOpts = '';
+  try{
+    $cs=$pdo->query("SELECT id,name FROM contacts WHERE type IN ('Tedarikçi','Her İkisi') OR type IS NULL ORDER BY name")->fetchAll();
+    if(!$cs) $cs=$pdo->query("SELECT id,name FROM contacts ORDER BY name")->fetchAll();
+    foreach($cs as $c){ $__supplierOpts .= '<option value="'.$c['id'].'" '.($editMode && (int)$editMode['purchase']['contact_id']===(int)$c['id']?'selected':'').'>'.h($c['name']).'</option>'; }
+  }catch(Throwable $e){}
+  ds_form_field('Tedarikçi', '<select name="contact_id" id="contactSel" required onchange="onSupplierChange()"><option value="">— Seç —</option>'.$__supplierOpts.'<option value="__new__">➕ Listede yok — Yeni Tedarikçi Ekle…</option></select>');
+  ?>
+  <div id="newContactBox" class="df-card" style="display:none;background:var(--df-accent-soft);border-color:transparent;margin-top:var(--df-space-2)">
+    <input type="text" id="contactNamePurch" placeholder="Tedarikçi adı" style="margin-bottom:var(--df-space-2)">
+    <button type="button" class="df-btn df-btn--primary" style="width:100%" onclick="quickAddContactPurch(document.getElementById('contactNamePurch').value, 'Tedarikçi')">✓ Ekle ve Seç</button>
+  </div>
 
   <datalist id="vatPresets">
     <option value="0"></option>
@@ -149,37 +140,37 @@ ds_page_header($__title, ds_icon('box',24), '', $__actions, true, true);
     <option value="20"></option>
   </datalist>
 
-  <div class="full" style="margin-top:14px">
-    <label style="font-weight:800">Ürünler <small class="muted" style="font-weight:400">(listede yoksa "➕ Yeni Ürün Ekle…" seçeneğini kullanın)</small></label>
-    <div style="overflow:auto">
-    <table class="purch-items-tbl" style="width:100%;border-collapse:collapse">
+  <div style="margin-top:var(--df-space-4)">
+    <label style="font-weight:700;font-size:13px;color:var(--df-ink-900);display:block;margin-bottom:var(--df-space-2)">Ürünler <small class="df-muted" style="font-weight:400">(listede yoksa "➕ Yeni Ürün Ekle…" seçeneğini kullanın)</small></label>
+    <div class="df-table-wrap">
+    <table class="df-table">
       <thead>
-        <tr style="text-align:left;font-size:12px;color:#667085">
-          <th style="padding:4px 6px">Ürün</th>
-          <th style="padding:4px 6px;width:90px">Miktar</th>
-          <th style="padding:4px 6px;width:120px">Birim Alış Fiyatı</th>
-          <th style="padding:4px 6px;width:80px">KDV %</th>
-          <th style="padding:4px 6px;width:110px;text-align:right">Ara Toplam</th>
+        <tr>
+          <th>Ürün</th>
+          <th style="width:90px">Miktar</th>
+          <th style="width:120px">Birim Alış Fiyatı</th>
+          <th style="width:80px">KDV %</th>
+          <th style="width:110px;text-align:right">Ara Toplam</th>
           <th style="width:36px"></th>
         </tr>
       </thead>
       <tbody id="itemsBody"></tbody>
     </table>
     </div>
-    <button type="button" class="btn secondary small" style="margin-top:8px" onclick="addItemRow()">➕ Satır Ekle</button>
+    <button type="button" class="df-btn df-btn--secondary df-btn--sm" style="margin-top:var(--df-space-2)" onclick="addItemRow()">➕ Satır Ekle</button>
   </div>
 
-  <div class="panel" style="background:rgba(37,99,235,.18);margin:16px 0;padding:16px 18px">
-    <div style="display:flex;justify-content:space-between;padding:3px 0"><span class="muted">Ara Toplam (KDV Hariç)</span><b id="purchSubtotal">0,00 ₺</b></div>
-    <div style="display:flex;justify-content:space-between;padding:3px 0"><span class="muted">KDV</span><b id="purchVat">0,00 ₺</b></div>
-    <div style="display:flex;justify-content:space-between;padding:8px 0 0;border-top:1px solid rgba(37,99,235,.3);margin-top:6px">
+  <div class="df-card" style="background:var(--df-accent-soft);border-color:transparent;margin:var(--df-space-4) 0">
+    <div style="display:flex;justify-content:space-between;padding:3px 0"><span class="df-muted">Ara Toplam (KDV Hariç)</span><b id="purchSubtotal">0,00 ₺</b></div>
+    <div style="display:flex;justify-content:space-between;padding:3px 0"><span class="df-muted">KDV</span><b id="purchVat">0,00 ₺</b></div>
+    <div style="display:flex;justify-content:space-between;padding:var(--df-space-2) 0 0;border-top:1px solid var(--df-hairline);margin-top:6px">
       <span style="font-size:15px;font-weight:800">Genel Toplam</span>
-      <span id="purchTotal" style="font-size:26px;font-weight:900">0,00 ₺</span>
+      <span id="purchTotal" style="font-size:26px;font-weight:900;color:var(--df-accent-soft-ink)">0,00 ₺</span>
     </div>
   </div>
 
-  <button type="submit" class="btn dark" style="width:100%;padding:14px;font-size:16px"><?=$editMode?'💾 Değişiklikleri Kaydet':'🛒 Satın Almayı Kaydet (Açık Borç)'?></button>
-  <?php if($editMode): ?><a href="purchase.php" class="btn secondary" style="width:100%;padding:10px;margin-top:8px;text-align:center;display:block">✕ Vazgeç</a><?php endif; ?>
+  <button type="submit" class="df-btn df-btn--primary df-btn--lg" style="width:100%"><?=$editMode?'💾 Değişiklikleri Kaydet':'🛒 Satın Almayı Kaydet (Açık Borç)'?></button>
+  <?php if($editMode): ?><a href="purchase.php" class="df-btn df-btn--secondary" style="width:100%;margin-top:var(--df-space-2);justify-content:center">✕ Vazgeç</a><?php endif; ?>
 </form>
 </section>
 
@@ -241,32 +232,34 @@ if($recent): ?>
 <?php endif; ?>
 </section>
 
-<!-- Satın Alma İşleri -->
-<section class="panel">
-<h2 style="margin-top:0">Satın Alma İşleri</h2>
-<table>
-<thead>
-<tr><th>İş No</th><th>Başlık</th><th>Termin</th><th>Durum</th></tr>
-</thead>
-<tbody>
+<!-- Satın Alma İşleri (salt-okunur — JS bağımlılığı yok) -->
+<section class="df-card" style="margin-top:var(--df-space-4)">
+<h2 style="font-size:15px;margin:0 0 var(--df-space-3)">Satın Alma İşleri</h2>
 <?php
 try{
-$rows=$pdo->query("SELECT * FROM jobs WHERE job_type IN ('satin_alma') ORDER BY id DESC")->fetchAll();
-foreach($rows as $r){
-echo "<tr>
-<td><a href='job_view.php?id=".h($r['id'])."'>".h($r['job_no'])."</a></td>
-<td>".h($r['title'])."</td>
-<td>".h($r['due_date'])."</td>
-<td>".badge($r['status'],status_tone($r['status']))."</td>
-</tr>";
-}
-if(!$rows) echo "<tr><td colspan='4' class='muted'>Henüz kayıt yok.</td></tr>";
-}catch(Throwable $e){
-echo "<tr><td colspan='4'><div class='alert'>".h($e->getMessage())."</div></td></tr>";
-}
-?>
+    $rows=$pdo->query("SELECT * FROM jobs WHERE job_type IN ('satin_alma') ORDER BY id DESC")->fetchAll();
+}catch(Throwable $e){ $rows=[]; $__jobsErr=$e->getMessage(); }
+if(!empty($__jobsErr)): ?>
+<?=ds_alert('danger',$__jobsErr)?>
+<?php elseif($rows): ?>
+<div class="df-table-wrap">
+<table class="df-table">
+<thead><tr><th>İş No</th><th>Başlık</th><th>Termin</th><th>Durum</th></tr></thead>
+<tbody>
+<?php foreach($rows as $r): ?>
+<tr>
+<td><a href="job_view.php?id=<?=(int)$r['id']?>"><?=h($r['job_no'])?></a></td>
+<td><?=h($r['title'])?></td>
+<td><?=h($r['due_date'])?></td>
+<td><?=ds_badge($r['status'])?></td>
+</tr>
+<?php endforeach; ?>
 </tbody>
 </table>
+</div>
+<?php else: ?>
+<p style="color:var(--df-ink-500)">Henüz kayıt yok.</p>
+<?php endif; ?>
 </section>
 
 <script>
@@ -298,15 +291,15 @@ function addItemRow(prefill){
     tr.innerHTML =
         '<td style="padding:4px 6px">'
         + '<select name="stock_item_id[]" class="row-prod" required onchange="onRowProductChange(this)">'+productOptionsHtmlPurch()+'</select>'
-        + '<div class="new-prod-box" style="display:none;background:#eef4ff;border:1px solid #bfdbfe;border-radius:10px;padding:8px;margin-top:6px">'
-        + '<input type="text" class="np-name" placeholder="Ürün adı" style="width:100%;border:1px solid #d0d5dd;border-radius:8px;padding:6px;margin-bottom:6px">'
-        + '<button type="button" class="btn small" style="width:100%" onclick="quickAddProductRow(this)">✓ Ekle ve Seç</button>'
+        + '<div class="new-prod-box df-card" style="display:none;background:var(--df-accent-soft);border-color:transparent;padding:8px;margin-top:6px">'
+        + '<input type="text" class="np-name" placeholder="Ürün adı" style="margin-bottom:6px">'
+        + '<button type="button" class="df-btn df-btn--primary df-btn--sm" style="width:100%" onclick="quickAddProductRow(this)">✓ Ekle ve Seç</button>'
         + '</div></td>'
         + '<td style="padding:4px 6px"><input type="number" step="0.01" min="0.01" name="quantity[]" class="row-qty" value="1" required oninput="calcAll()" style="width:80px"></td>'
         + '<td style="padding:4px 6px"><input type="number" step="0.01" min="0" name="unit_price[]" class="row-price" required oninput="calcAll()" style="width:110px"></td>'
         + '<td style="padding:4px 6px"><input type="text" inputmode="decimal" list="vatPresets" name="vat_rate[]" class="row-vat" value="20" oninput="calcAll()" style="width:70px"></td>'
         + '<td class="row-sub" style="padding:4px 6px;text-align:right;font-weight:800">0,00 ₺</td>'
-        + '<td style="padding:4px 6px"><button type="button" class="btn danger small" onclick="removeRow(this)">🗑</button></td>';
+        + '<td style="padding:4px 6px"><button type="button" class="df-btn df-btn--danger df-btn--sm" onclick="removeRow(this)">🗑</button></td>';
     document.getElementById('itemsBody').appendChild(tr);
     if(prefill){
         tr.querySelector('.row-prod').value = prefill.id;

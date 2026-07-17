@@ -154,18 +154,19 @@ ds_page_header('Hızlı Satış', ds_icon('tag',24), '', $__actions, true, true)
 <div style="display:grid;grid-template-columns:1fr;gap:20px;align-items:start">
 
   <!-- Sol: form (JS ile dinamik satır eklenen kritik akış — .row-prod/.row-qty/.row-price/
-       .row-vat/.row-sub/#itemsBody class'ları JS'e SIKI bağlı, DEĞİŞTİRİLMEDİ; sadece dış
-       panel/başlık/buton görselleri DS'e taşındı) -->
+       .row-vat/.row-sub/#itemsBody class'ları JS'e SIKI bağlı, DEĞİŞTİRİLMEDİ; RELEASE 0.9
+       (2026-07-17) DS migration'ı tamamlandı — sadece görsel katman (class/inline stil) DS
+       token'larına/df-btn'e taşındı, JS hiçbir selector'ı değişmedi, iş mantığına dokunulmadı.) -->
   <div class="df-card">
-    <h2 style="font-size:var(--df-type-section-size);font-weight:var(--df-type-section-weight);color:var(--df-ink-900);margin:0 0 var(--df-space-3)"><?= $isEditView ? '✏️ Satışı Düzenle' : 'Satış Formu' ?></h2>
-    <div class="notice" style="margin-bottom:12px;background:#eef4ff;color:#1e3a8a">
+    <h2 class="df-section-title" style="margin:0 0 var(--df-space-3)"><?= $isEditView ? '✏️ Satışı Düzenle' : 'Satış Formu' ?></h2>
+    <div class="df-alert df-alert--info" style="margin-bottom:var(--df-space-3)">
       Bu ekran tahsilat yapmaz — satış cariye açık borç (Bekliyor) olarak kaydedilir. Tahsilat
       <a href="finance_new.php?direction=in">Tahsilat ekranından</a> ayrıca girilir.
     </div>
     <form method="post" id="salesForm">
       <?php if ($viewEditId): ?><input type="hidden" name="edit_id" value="<?= (int)$viewEditId ?>"><?php endif; ?>
       <?php if ($stockShortage): ?>
-      <div class="alert" style="background:#fffbeb;border:1px solid #fde68a;color:#92400e;margin-bottom:12px">
+      <div class="df-alert df-alert--warning" style="margin-bottom:var(--df-space-3)">
         <b>⚠️ Mevcut stok bu satış için yetersiz.</b><br>
         İşlem tamamlanırsa aşağıdaki ürün(ler)de stok negatife düşecek — KONTROLLÜ NEGATİF STOK
         POLİTİKASI gereği, devam etmek için onayınız gerekiyor:
@@ -173,48 +174,40 @@ ds_page_header('Hızlı Satış', ds_icon('tag',24), '', $__actions, true, true)
           <?php foreach ($stockShortage as $s): ?>
           <li><b><?= h($s['name']) ?></b> — mevcut <?= h(stock_qty_fmt($s['available_stock'])) ?> <?= h($s['unit']) ?>,
               satış <?= h(stock_qty_fmt($s['requested_qty'])) ?> <?= h($s['unit']) ?>,
-              işlem sonrası <b style="color:#b91c1c"><?= h(stock_qty_fmt($s['resulting_stock'])) ?> <?= h($s['unit']) ?></b></li>
+              işlem sonrası <b style="color:var(--df-danger)"><?= h(stock_qty_fmt($s['resulting_stock'])) ?> <?= h($s['unit']) ?></b></li>
           <?php endforeach; ?>
         </ul>
-        <label style="display:block;background:#fef3c7;border-radius:10px;padding:10px;margin-top:8px">
+        <label style="display:block;background:var(--df-surface);border-radius:var(--df-radius-md);padding:var(--df-space-2);margin-top:var(--df-space-2)">
           <input type="checkbox" name="allow_negative_stock" value="1" style="width:auto;display:inline-block;margin-right:6px">
           Stok yetersiz olsa da bu satışa devam etmek istiyorum (satın alım daha sonra tamamlanacak).
         </label>
       </div>
       <?php endif; ?>
-      <div class="form-grid">
 
-        <div class="full">
-          <label>Cari (Müşteri)</label>
-          <select name="contact_id" id="contactSel" class="full" required onchange="onContactChange()">
-            <option value="">— Seç —</option>
-            <?php foreach ($contacts as $c): ?>
-              <option value="<?= (int)$c['id'] ?>" <?= $viewContactId===(int)$c['id'] ? 'selected' : '' ?>><?= h($c['name']) ?></option>
-            <?php endforeach; ?>
-            <option value="__new__">➕ Listede yok — Yeni Cari Ekle…</option>
-          </select>
-          <div id="newContactBox" class="full" style="display:none;background:#eef4ff;border:1px solid #bfdbfe;border-radius:12px;padding:12px;margin-top:8px">
-            <input type="text" id="contactName" placeholder="Müşteri adı" style="width:100%;border:1px solid #d0d5dd;border-radius:10px;padding:10px;margin-bottom:8px">
-            <select id="contactType" style="width:100%;border:1px solid #d0d5dd;border-radius:10px;padding:10px;margin-bottom:8px">
-              <option>Müşteri</option><option>Tedarikçi</option><option>Diğer</option>
-            </select>
-            <button type="button" class="btn" style="width:100%" onclick="quickAddContact(document.getElementById('contactName').value, document.getElementById('contactType').value)">✓ Ekle ve Seç</button>
-          </div>
-        </div>
+      <?php
+      $__contactOpts = '';
+      foreach ($contacts as $c) { $__contactOpts .= '<option value="'.(int)$c['id'].'" '.($viewContactId===(int)$c['id'] ? 'selected' : '').'>'.h($c['name']).'</option>'; }
+      ds_form_field('Cari (Müşteri)', '<select name="contact_id" id="contactSel" required onchange="onContactChange()"><option value="">— Seç —</option>'.$__contactOpts.'<option value="__new__">➕ Listede yok — Yeni Cari Ekle…</option></select>');
+      ?>
+      <div id="newContactBox" class="df-card" style="display:none;background:var(--df-accent-soft);border-color:transparent;margin-top:var(--df-space-2)">
+        <input type="text" id="contactName" placeholder="Müşteri adı" style="margin-bottom:var(--df-space-2)">
+        <select id="contactType" style="margin-bottom:var(--df-space-2)">
+          <option>Müşteri</option><option>Tedarikçi</option><option>Diğer</option>
+        </select>
+        <button type="button" class="df-btn df-btn--primary" style="width:100%" onclick="quickAddContact(document.getElementById('contactName').value, document.getElementById('contactType').value)">✓ Ekle ve Seç</button>
+      </div>
 
-      </div><!-- /form-grid -->
-
-      <div class="full" style="margin-top:14px">
-        <label style="font-weight:800">Ürünler</label>
-        <div style="overflow:auto">
-        <table class="sales-items-tbl" style="width:100%;border-collapse:collapse">
+      <div style="margin-top:var(--df-space-4)">
+        <label style="font-weight:700;font-size:13px;color:var(--df-ink-900);display:block;margin-bottom:var(--df-space-2)">Ürünler</label>
+        <div class="df-table-wrap">
+        <table class="df-table">
           <thead>
-            <tr style="text-align:left;font-size:12px;color:#667085">
-              <th style="padding:4px 6px">Ürün</th>
-              <th style="padding:4px 6px;width:90px">Miktar</th>
-              <th style="padding:4px 6px;width:120px">Birim Fiyat (₺)</th>
-              <th style="padding:4px 6px;width:80px">KDV %</th>
-              <th style="padding:4px 6px;width:110px;text-align:right">Ara Toplam</th>
+            <tr>
+              <th>Ürün</th>
+              <th style="width:90px">Miktar</th>
+              <th style="width:120px">Birim Fiyat (₺)</th>
+              <th style="width:80px">KDV %</th>
+              <th style="width:110px;text-align:right">Ara Toplam</th>
               <th style="width:36px"></th>
             </tr>
           </thead>
@@ -228,22 +221,22 @@ ds_page_header('Hızlı Satış', ds_icon('tag',24), '', $__actions, true, true)
           <option value="10"></option>
           <option value="20"></option>
         </datalist>
-        <button type="button" class="btn secondary small" style="margin-top:8px" onclick="addItemRow()">➕ Satır Ekle</button>
+        <button type="button" class="df-btn df-btn--secondary df-btn--sm" style="margin-top:var(--df-space-2)" onclick="addItemRow()">➕ Satır Ekle</button>
       </div>
 
-      <div class="panel" style="background:#f0f9ff;border:1px solid #bae6fd;margin:16px 0;padding:16px 18px">
-        <div style="display:flex;justify-content:space-between;padding:3px 0"><span class="muted">Ara Toplam</span><b id="salesSubtotal">0,00 ₺</b></div>
-        <div style="display:flex;justify-content:space-between;padding:3px 0"><span class="muted">KDV</span><b id="salesVat">0,00 ₺</b></div>
-        <div style="display:flex;justify-content:space-between;padding:8px 0 0;border-top:1px solid #bae6fd;margin-top:6px">
+      <div class="df-card" style="background:var(--df-accent-soft);border-color:transparent;margin:var(--df-space-4) 0">
+        <div style="display:flex;justify-content:space-between;padding:3px 0"><span class="df-muted">Ara Toplam</span><b id="salesSubtotal">0,00 ₺</b></div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0"><span class="df-muted">KDV</span><b id="salesVat">0,00 ₺</b></div>
+        <div style="display:flex;justify-content:space-between;padding:var(--df-space-2) 0 0;border-top:1px solid var(--df-hairline);margin-top:6px">
           <span style="font-size:15px;font-weight:800">Genel Toplam</span>
-          <span id="salesTotal" style="font-size:26px;font-weight:900;color:#0369a1">0,00 ₺</span>
+          <span id="salesTotal" style="font-size:26px;font-weight:900;color:var(--df-accent-soft-ink)">0,00 ₺</span>
         </div>
       </div>
 
-      <button type="submit" class="btn" style="width:100%;padding:14px;font-size:16px">
+      <button type="submit" class="df-btn df-btn--primary df-btn--lg" style="width:100%">
         <?php if ($stockShortage): ?>⚠️ Onaylıyorum, Devam Et<?php elseif ($isEditView): ?>💾 Değişiklikleri Kaydet<?php else: ?>🧾 Satışı Tamamla (Açık Borç)<?php endif; ?>
       </button>
-      <?php if ($isEditView && !$stockShortage): ?><a href="sales.php" class="btn secondary" style="width:100%;padding:10px;margin-top:8px;text-align:center;display:block">✕ Vazgeç</a><?php endif; ?>
+      <?php if ($isEditView && !$stockShortage): ?><a href="sales.php" class="df-btn df-btn--secondary" style="width:100%;margin-top:var(--df-space-2);justify-content:center">✕ Vazgeç</a><?php endif; ?>
     </form>
   </div><!-- /panel -->
 
@@ -340,16 +333,16 @@ function addItemRow(prefill){
     tr.innerHTML =
         '<td style="padding:4px 6px">'
         + '<select name="stock_item_id[]" class="row-prod" required onchange="onRowProductChange(this)">'+productOptionsHtml()+'</select>'
-        + '<div class="new-prod-box" style="display:none;background:#eef4ff;border:1px solid #bfdbfe;border-radius:10px;padding:8px;margin-top:6px">'
-        + '<input type="text" class="np-name" placeholder="Ürün adı" style="width:100%;border:1px solid #d0d5dd;border-radius:8px;padding:6px;margin-bottom:6px">'
-        + '<input type="text" class="np-unit" placeholder="adet" value="adet" style="width:100%;border:1px solid #d0d5dd;border-radius:8px;padding:6px;margin-bottom:6px">'
-        + '<button type="button" class="btn small" style="width:100%" onclick="quickAddProductRow(this)">✓ Ekle ve Seç</button>'
+        + '<div class="new-prod-box df-card" style="display:none;background:var(--df-accent-soft);border-color:transparent;padding:8px;margin-top:6px">'
+        + '<input type="text" class="np-name" placeholder="Ürün adı" style="margin-bottom:6px">'
+        + '<input type="text" class="np-unit" placeholder="adet" value="adet" style="margin-bottom:6px">'
+        + '<button type="button" class="df-btn df-btn--primary df-btn--sm" style="width:100%" onclick="quickAddProductRow(this)">✓ Ekle ve Seç</button>'
         + '</div></td>'
         + '<td style="padding:4px 6px"><input type="number" step="0.01" min="0.01" name="quantity[]" class="row-qty" value="1" required oninput="calcAll()" style="width:80px"></td>'
         + '<td style="padding:4px 6px"><input type="number" step="0.01" min="0" name="unit_price[]" class="row-price" required oninput="calcAll()" style="width:110px"></td>'
         + '<td style="padding:4px 6px"><input type="text" inputmode="decimal" list="vatPresets" name="vat_rate[]" class="row-vat" value="20" oninput="calcAll()" style="width:70px"></td>'
         + '<td class="row-sub" style="padding:4px 6px;text-align:right;font-weight:800">0,00 ₺</td>'
-        + '<td style="padding:4px 6px"><button type="button" class="btn danger small" onclick="removeRow(this)">🗑</button></td>';
+        + '<td style="padding:4px 6px"><button type="button" class="df-btn df-btn--danger df-btn--sm" onclick="removeRow(this)">🗑</button></td>';
     document.getElementById('itemsBody').appendChild(tr);
     if(prefill){
         // Düzenleme modu: ÜRÜNÜN GÜNCEL varsayılan fiyatı DEĞİL, satışta o an kayıtlı olan

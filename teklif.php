@@ -89,7 +89,13 @@ $id=(int)($_GET['id']??0);
 $new=!empty($_GET['new']);
 $editMode=($id && !empty($_GET['edit']));
 require_once __DIR__.'/layout_top.php';
-
+?>
+<style>
+body.nav-compact .df-form-grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 var(--df-space-4)}
+body.nav-compact .df-form-span-2{grid-column:1 / -1}
+@media(max-width:640px){body.nav-compact .df-form-grid-2{grid-template-columns:1fr}}
+</style>
+<?php
 // Kalemler için sepet-tarzı JS (Yeni + Düzenle formunda ortak) — 2026-07-03: eskiden etiketsiz
 // flex satırlardı, kullanıcı "hangi kutu ne işe yarıyor" diye şikayet etti. sales.php/purchase.php
 // ile aynı desen: başlıklı tablo + her satırda canlı tutar.
@@ -102,7 +108,7 @@ function addRow(nm,q,p){
     +'<td style="padding:4px 6px"><input name="item_qty[]" inputmode="decimal" placeholder="1" style="width:80px" value="'+(q!==undefined?q:'1')+'" oninput="calc()"></td>'
     +'<td style="padding:4px 6px"><input name="item_price[]" inputmode="decimal" placeholder="0,00" style="width:110px" value="'+(p||'')+'" oninput="calc()"></td>'
     +'<td class="row-sub" style="padding:4px 6px;text-align:right;font-weight:800">0,00 ₺</td>'
-    +'<td style="padding:4px 6px"><button type="button" class="btn danger small" onclick="this.closest(\'tr\').remove();calc()">🗑</button></td>';
+    +'<td style="padding:4px 6px"><button type="button" class="df-btn df-btn--danger df-btn--sm" onclick="this.closest(\'tr\').remove();calc()">🗑</button></td>';
   document.getElementById('rows').appendChild(tr);
   tr.addEventListener('input',calc);
 }
@@ -124,7 +130,7 @@ document.getElementsByName('vat_rate')[0].addEventListener('input',calc);
 /* ---------- GÖRÜNÜM ---------- */
 if($id && !$editMode){
   $q=null; try{ $s=$pdo->prepare("SELECT * FROM quotes WHERE id=?"); $s->execute([$id]); $q=$s->fetch(); }catch(Throwable $e){}
-  if(!$q){ echo '<div class="alert">Teklif bulunamadı.</div>'; require __DIR__.'/layout_bottom.php'; exit; }
+  if(!$q){ echo ds_alert('danger','Teklif bulunamadı.'); require __DIR__.'/layout_bottom.php'; exit; }
   $items=[]; try{ $it=$pdo->prepare("SELECT * FROM quote_items WHERE quote_id=? ORDER BY id"); $it->execute([$id]); $items=$it->fetchAll(); }catch(Throwable $e){}
   $cphone=preg_replace('/\D/','',$q['customer_id']?($pdo->query("SELECT phone FROM contacts WHERE id=".(int)$q['customer_id'])->fetch()['phone']??''):'');
   $fi=!empty($q['firm'])?firm_info($q['firm']):null;
@@ -141,7 +147,12 @@ if($id && !$editMode){
 .paper.lh>.lhbody{position:relative!important;z-index:1}
 .pdfmode .paper.lh{aspect-ratio:auto}
 </style>
-<div class="panel-head"><h1>Teklif <?=h($q['quote_no'])?></h1><div class="actions noprint"><a class="btn secondary" href="teklif.php">Liste</a><?php if(can_edit_delete()): ?><a class="btn" href="teklif.php?id=<?=$id?>&edit=1" style="background:#0369a1">✏️ Düzenle</a><?php endif; ?><?=delete_button('quote',$id)?></div></div>
+<div class="noprint"><?php
+$__quoteActions = ds_button('Liste','teklif.php','secondary','','',true);
+if(can_edit_delete()) $__quoteActions .= ds_button('✏️ Düzenle','teklif.php?id='.$id.'&edit=1','primary','','',true);
+$__quoteActions .= delete_button('quote',$id);
+ds_page_header('Teklif '.$q['quote_no'], ds_icon('edit',24), '', $__quoteActions, false, true);
+?></div>
 
 <?php $lh = ($fi && !empty($fi['letterhead']) && is_file(__DIR__.'/'.$fi['letterhead'])) ? $fi['letterhead'] : ''; ?>
 <div id="repArea" style="max-width:780px;margin:0 auto">
@@ -196,10 +207,10 @@ if($id && !$editMode){
   </div>
 </div>
 
-<section class="panel noprint" style="max-width:780px">
-  <b>📤 Teklifi gönder / yazdır</b>
+<section class="df-card noprint" style="max-width:780px">
+  <h2 class="df-section-title" style="margin:0 0 var(--df-space-2)">📤 Teklifi gönder / yazdır</h2>
   <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
-    <button onclick="shareReportPDF(this)" class="btn" style="background:#16a34a">📄 PDF İndir / Paylaş</button>
+    <button onclick="shareReportPDF(this)" class="df-btn df-btn--primary" style="background:var(--df-success)">📄 PDF İndir / Paylaş</button>
   </div>
   <?php
     $approvalUrl=base_url().'quote_approve.php?token='.$q['approval_token'];
@@ -208,11 +219,11 @@ if($id && !$editMode){
   ?>
 </section>
 
-<section class="panel noprint" style="max-width:620px">
-  <b>Durum</b>
+<section class="df-card noprint" style="max-width:620px;margin-top:var(--df-space-4)">
+  <h2 class="df-section-title" style="margin:0 0 var(--df-space-2)">Durum</h2>
   <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
     <?php foreach(['Taslak','Gönderildi','Kabul','Red'] as $st): ?>
-    <form method="post" style="margin:0"><input type="hidden" name="qid" value="<?=$id?>"><input type="hidden" name="status" value="<?=$st?>"><button class="btn" name="set_qstatus" value="1" style="background:<?=$q['status']===$st?'#2563eb':'#334155'?>"><?=$st?></button></form>
+    <form method="post" style="margin:0"><input type="hidden" name="qid" value="<?=$id?>"><input type="hidden" name="status" value="<?=$st?>"><button class="df-btn <?=$q['status']===$st?'df-btn--primary':'df-btn--secondary'?>" name="set_qstatus" value="1"><?=$st?></button></form>
     <?php endforeach; ?>
   </div>
 </section>
@@ -226,52 +237,51 @@ if($id && !$editMode){
 /* ---------- DÜZENLE ---------- */
 if($editMode && can_edit_delete()){
   $q=null; try{ $s=$pdo->prepare("SELECT * FROM quotes WHERE id=?"); $s->execute([$id]); $q=$s->fetch(); }catch(Throwable $e){}
-  if(!$q){ echo '<div class="alert">Teklif bulunamadı.</div>'; require __DIR__.'/layout_bottom.php'; exit; }
+  if(!$q){ echo ds_alert('danger','Teklif bulunamadı.'); require __DIR__.'/layout_bottom.php'; exit; }
   $items=[]; try{ $it=$pdo->prepare("SELECT * FROM quote_items WHERE quote_id=? ORDER BY id"); $it->execute([$id]); $items=$it->fetchAll(); }catch(Throwable $e){}
   $cs=$pdo->query("SELECT id,name FROM contacts ORDER BY name")->fetchAll();
 ?>
-<div class="panel-head"><h1>Teklif Düzenle: <?=h($q['quote_no'])?></h1><div class="actions"><a class="btn secondary" href="teklif.php?id=<?=$id?>">İptal</a></div></div>
-<?php if($error): ?><div class="alert"><?=h($error)?></div><?php endif; ?>
-<section class="panel" style="max-width:720px">
-<form method="post">
+<?php
+$__editActions = ds_button('İptal','teklif.php?id='.$id,'secondary','','',true);
+ds_page_header('Teklif Düzenle: '.$q['quote_no'], ds_icon('edit',24), '', $__editActions, false, true);
+?>
+<?php if($error): ?><?=ds_alert('danger',$error)?><?php endif; ?>
+<section class="df-card" style="max-width:720px">
+<form method="post" class="df-form-grid-2">
   <input type="hidden" name="edit_id" value="<?=$id?>">
-  <div class="form-grid">
-    <div class="full">
-      <label>Teklifi veren firma (opsiyonel — logo/iletişim ekler)</label>
-      <select name="firm" class="full"><option value="">— Firma yok (sade) —</option><option value="ACANS"<?=$q['firm']==='ACANS'?' selected':''?>>ACANS Reklam</option><option value="PRIMAC"<?=$q['firm']==='PRIMAC'?' selected':''?>>PRIMAC</option></select>
-    </div>
-    <div class="full">
-      <label>Müşteri</label>
-      <select name="customer_id" class="full"><option value="">— Cari seç (veya alta yaz) —</option><?php foreach($cs as $c): ?><option value="<?=$c['id']?>"<?=(int)$q['customer_id']===(int)$c['id']?' selected':''?>><?=h($c['name'])?></option><?php endforeach; ?></select>
-      <input name="customer_name" placeholder="veya müşteri adı yaz" style="width:100%;margin-top:6px" value="<?=h($q['customer_name'])?>">
-    </div>
-    <div class="full">
-      <label>Giriş Açıklaması (SAYIN altında görünür)</label>
-      <textarea name="intro_note" rows="3" class="full"><?=h($q['intro_note']??'')?></textarea>
-    </div>
-    <div><label>Geçerlilik</label><input type="date" name="valid_until" value="<?=h($q['valid_until']??'')?>"></div>
-    <div><label>KDV %</label><input name="vat_rate" value="<?=h(rtrim(rtrim(number_format((float)$q['vat_rate'],2,'.',''),'0'),'.'))?>"></div>
+  <div class="df-form-span-2"><?php ds_form_field('Teklifi veren firma (opsiyonel — logo/iletişim ekler)', '<select name="firm"><option value="">— Firma yok (sade) —</option><option value="ACANS"'.($q['firm']==='ACANS'?' selected':'').'>ACANS Reklam</option><option value="PRIMAC"'.($q['firm']==='PRIMAC'?' selected':'').'>PRIMAC</option></select>'); ?></div>
+  <?php
+  $__custOpts='<option value="">— Cari seç (veya alta yaz) —</option>';
+  foreach($cs as $c){ $__custOpts.='<option value="'.$c['id'].'"'.((int)$q['customer_id']===(int)$c['id']?' selected':'').'>'.h($c['name']).'</option>'; }
+  ?>
+  <div class="df-form-span-2">
+    <?php ds_form_field('Müşteri', '<select name="customer_id">'.$__custOpts.'</select>'); ?>
+    <input name="customer_name" placeholder="veya müşteri adı yaz" style="margin-top:6px" value="<?=h($q['customer_name'])?>">
   </div>
-  <div class="full" style="margin-top:14px">
-    <label style="font-weight:800">Kalemler</label>
-    <div style="overflow:auto">
-    <table style="width:100%;border-collapse:collapse">
-      <thead><tr style="text-align:left;font-size:12px;color:#667085">
-        <th style="padding:4px 6px">Ürün/Hizmet</th><th style="padding:4px 6px;width:90px">Miktar</th>
-        <th style="padding:4px 6px;width:120px">Birim Fiyat</th><th style="padding:4px 6px;width:110px;text-align:right">Tutar</th><th style="width:36px"></th>
+  <div class="df-form-span-2"><?php ds_form_field('Giriş Açıklaması (SAYIN altında görünür)', '<textarea name="intro_note" rows="3">'.h($q['intro_note']??'').'</textarea>'); ?></div>
+  <?php ds_form_field('Geçerlilik', '<input type="date" name="valid_until" value="'.h($q['valid_until']??'').'">'); ?>
+  <?php ds_form_field('KDV %', '<input name="vat_rate" value="'.h(rtrim(rtrim(number_format((float)$q['vat_rate'],2,'.',''),'0'),'.')).'">'); ?>
+
+  <div class="df-form-span-2" style="margin-top:var(--df-space-2)">
+    <label style="font-weight:700;font-size:13px;color:var(--df-ink-900);display:block;margin-bottom:var(--df-space-2)">Kalemler</label>
+    <div class="df-table-wrap">
+    <table class="df-table">
+      <thead><tr>
+        <th>Ürün/Hizmet</th><th style="width:90px">Miktar</th>
+        <th style="width:120px">Birim Fiyat</th><th style="width:110px;text-align:right">Tutar</th><th style="width:36px"></th>
       </tr></thead>
       <tbody id="rows"></tbody>
     </table>
     </div>
-    <button type="button" class="btn secondary small" onclick="addRow()" style="margin-top:8px">➕ Kalem Ekle</button>
+    <button type="button" class="df-btn df-btn--secondary df-btn--sm" onclick="addRow()" style="margin-top:var(--df-space-2)">➕ Kalem Ekle</button>
   </div>
-  <div class="panel" style="margin-top:14px;background:rgba(34,197,94,.08)">
+  <div class="df-form-span-2 df-card" style="margin-top:var(--df-space-2);background:var(--df-success-soft);border-color:transparent">
     <div style="display:flex;justify-content:space-between"><span>Ara Toplam</span><b id="tSub">0,00 ₺</b></div>
     <div style="display:flex;justify-content:space-between"><span>KDV</span><b id="tVat">0,00 ₺</b></div>
-    <div style="display:flex;justify-content:space-between;font-size:18px;margin-top:4px"><span><b>Toplam</b></span><b id="tTot" style="color:#22c55e">0,00 ₺</b></div>
+    <div style="display:flex;justify-content:space-between;font-size:18px;margin-top:4px"><span><b>Toplam</b></span><b id="tTot" style="color:var(--df-success-ink)">0,00 ₺</b></div>
   </div>
-  <label class="full" style="margin-top:8px;display:block">Not</label><textarea name="notes" rows="2" class="full"><?=h($q['notes']??'')?></textarea>
-  <button class="btn" name="edit_quote" value="1" style="margin-top:10px;background:#0369a1">💾 Değişiklikleri Kaydet</button>
+  <div class="df-form-span-2"><?php ds_form_field('Not', '<textarea name="notes" rows="2">'.h($q['notes']??'').'</textarea>'); ?></div>
+  <div class="df-form-span-2"><button class="df-btn df-btn--primary" name="edit_quote" value="1">💾 Değişiklikleri Kaydet</button></div>
 </form>
 </section>
 <script>
@@ -287,47 +297,43 @@ calc();
 if($new){
   $cs=$pdo->query("SELECT id,name FROM contacts ORDER BY name")->fetchAll();
 ?>
-<div class="panel-head"><h1>Yeni Teklif</h1><a class="btn secondary" href="teklif.php">Liste</a></div>
-<?php if($error): ?><div class="alert"><?=h($error)?></div><?php endif; ?>
-<section class="panel" style="max-width:720px">
-<form method="post">
-  <div class="form-grid">
-    <div class="full">
-      <label>Teklifi veren firma (opsiyonel — logo/iletişim ekler)</label>
-      <select name="firm" class="full"><option value="">— Firma yok (sade) —</option><option value="ACANS">ACANS Reklam</option><option value="PRIMAC">PRIMAC</option></select>
-    </div>
-    <div class="full">
-      <label>Müşteri</label>
-      <select name="customer_id" class="full"><option value="">— Cari seç (veya alta yaz) —</option><?php foreach($cs as $c): ?><option value="<?=$c['id']?>"><?=h($c['name'])?></option><?php endforeach; ?></select>
-      <input name="customer_name" placeholder="veya müşteri adı yaz" style="width:100%;margin-top:6px">
-    </div>
-    <div class="full">
-      <label>Giriş Açıklaması (SAYIN altında görünür)</label>
-      <textarea name="intro_note" rows="3" class="full" placeholder="Örn: Firmamızdan talep etmiş olduğunuz ürün/hizmetler için hazırladığımız teklifimiz aşağıdaki gibidir."></textarea>
-    </div>
-    <div><label>Geçerlilik</label><input type="date" name="valid_until"></div>
-    <div><label>KDV %</label><input name="vat_rate" value="20"></div>
+<?php ds_page_header('Yeni Teklif', ds_icon('edit',24), '', ds_button('Liste','teklif.php','secondary','','',true), false, true); ?>
+<?php if($error): ?><?=ds_alert('danger',$error)?><?php endif; ?>
+<section class="df-card" style="max-width:720px">
+<form method="post" class="df-form-grid-2">
+  <div class="df-form-span-2"><?php ds_form_field('Teklifi veren firma (opsiyonel — logo/iletişim ekler)', '<select name="firm"><option value="">— Firma yok (sade) —</option><option value="ACANS">ACANS Reklam</option><option value="PRIMAC">PRIMAC</option></select>'); ?></div>
+  <?php
+  $__custOpts2='<option value="">— Cari seç (veya alta yaz) —</option>';
+  foreach($cs as $c){ $__custOpts2.='<option value="'.$c['id'].'">'.h($c['name']).'</option>'; }
+  ?>
+  <div class="df-form-span-2">
+    <?php ds_form_field('Müşteri', '<select name="customer_id">'.$__custOpts2.'</select>'); ?>
+    <input name="customer_name" placeholder="veya müşteri adı yaz" style="margin-top:6px">
   </div>
-  <div class="full" style="margin-top:14px">
-    <label style="font-weight:800">Kalemler</label>
-    <div style="overflow:auto">
-    <table style="width:100%;border-collapse:collapse">
-      <thead><tr style="text-align:left;font-size:12px;color:#667085">
-        <th style="padding:4px 6px">Ürün/Hizmet</th><th style="padding:4px 6px;width:90px">Miktar</th>
-        <th style="padding:4px 6px;width:120px">Birim Fiyat</th><th style="padding:4px 6px;width:110px;text-align:right">Tutar</th><th style="width:36px"></th>
+  <div class="df-form-span-2"><?php ds_form_field('Giriş Açıklaması (SAYIN altında görünür)', '<textarea name="intro_note" rows="3" placeholder="Örn: Firmamızdan talep etmiş olduğunuz ürün/hizmetler için hazırladığımız teklifimiz aşağıdaki gibidir."></textarea>'); ?></div>
+  <?php ds_form_field('Geçerlilik', '<input type="date" name="valid_until">'); ?>
+  <?php ds_form_field('KDV %', '<input name="vat_rate" value="20">'); ?>
+
+  <div class="df-form-span-2" style="margin-top:var(--df-space-2)">
+    <label style="font-weight:700;font-size:13px;color:var(--df-ink-900);display:block;margin-bottom:var(--df-space-2)">Kalemler</label>
+    <div class="df-table-wrap">
+    <table class="df-table">
+      <thead><tr>
+        <th>Ürün/Hizmet</th><th style="width:90px">Miktar</th>
+        <th style="width:120px">Birim Fiyat</th><th style="width:110px;text-align:right">Tutar</th><th style="width:36px"></th>
       </tr></thead>
       <tbody id="rows"></tbody>
     </table>
     </div>
-    <button type="button" class="btn secondary small" onclick="addRow()" style="margin-top:8px">➕ Kalem Ekle</button>
+    <button type="button" class="df-btn df-btn--secondary df-btn--sm" onclick="addRow()" style="margin-top:var(--df-space-2)">➕ Kalem Ekle</button>
   </div>
-  <div class="panel" style="margin-top:14px;background:rgba(34,197,94,.08)">
+  <div class="df-form-span-2 df-card" style="margin-top:var(--df-space-2);background:var(--df-success-soft);border-color:transparent">
     <div style="display:flex;justify-content:space-between"><span>Ara Toplam</span><b id="tSub">0,00 ₺</b></div>
     <div style="display:flex;justify-content:space-between"><span>KDV</span><b id="tVat">0,00 ₺</b></div>
-    <div style="display:flex;justify-content:space-between;font-size:18px;margin-top:4px"><span><b>Toplam</b></span><b id="tTot" style="color:#22c55e">0,00 ₺</b></div>
+    <div style="display:flex;justify-content:space-between;font-size:18px;margin-top:4px"><span><b>Toplam</b></span><b id="tTot" style="color:var(--df-success-ink)">0,00 ₺</b></div>
   </div>
-  <label class="full" style="margin-top:8px;display:block">Not</label><textarea name="notes" rows="2" class="full" placeholder="Teslim, ödeme koşulu vb."></textarea>
-  <button class="btn" name="save_quote" value="1" style="margin-top:10px">💾 Teklifi Oluştur</button>
+  <div class="df-form-span-2"><?php ds_form_field('Not', '<textarea name="notes" rows="2" placeholder="Teslim, ödeme koşulu vb."></textarea>'); ?></div>
+  <div class="df-form-span-2"><button class="df-btn df-btn--primary" name="save_quote" value="1">💾 Teklifi Oluştur</button></div>
 </form>
 </section>
 <script>
