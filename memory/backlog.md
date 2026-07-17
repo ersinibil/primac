@@ -24,8 +24,11 @@ son onayı: "Bu faz yeniden açılmayacaktır") — bkz. [[features]] "FAZ 2C-i"
 2C-iii Search, 2C-iv Liste/Kart, 2C-v Formlar, 2C-vi Badge/EmptyState temizliği) sırayla, her biri
 kendi Audit + DEV PASS + USER TEST kapısından geçerek ilerleyecek.
 
-**FAZ 2C-ii — Mobile Home: Audit teslim edildi (2026-07-17), kod YOK, Product Owner kararı
-bekleniyor.** Ana bulgu: Home'da 3 varyant var — Legacy-Admin (KPI grid+Hızlı İşlemler+ay
+**FAZ 2C-ii — Mobile Home: Audit ONAYLANDI (2026-07-17), ama kodlama BAŞLAMAYACAK.** Product Owner
+kararı: uygulamadan önce ayrı bir "Product Sprint" yapılacak — Home'un kullanıcı deneyimi yeniden
+tasarlanacak, legacy'den hangi bileşenlerin korunacağı ve yeni Home'un NİHAİ bilgi mimarisi
+(audit'te sunulan A/B seçeneğinin ötesinde, Product Owner'ın kendi tasarım kararı) bu sprintte
+belirlenecek. **Açık gate: bu IA kararı gelmeden 2C-ii'nin implementasyonuna geçilmeyecek.** Ana bulgu: Home'da 3 varyant var — Legacy-Admin (KPI grid+Hızlı İşlemler+ay
 karşılaştırması), Legacy-Personel (aynı desenin sade hâli), Compact (tek, rol-agnostik queue modeli
 — `home_build_queue()`/`home_build_continue()` zaten `$canSee()` ile rol-farkında, web
 `dashboard.php` ile ORTAK). Personel'in bugün legacy görmesi component eksikliği değil,
