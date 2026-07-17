@@ -262,18 +262,22 @@ function ds_tabs($items){
 // canlı) aynen kullanılıyor, yeni sınıf icat edilmedi. $url verilirse gerçek <a> (JS'siz de tam
 // satır tıklanabilir — mytasks.php web tarafının div+onclick+closest() deseni BİLEREK
 // kullanılmadı, search.php gibi satır-içi ikincil aksiyon barındırmayan listeler için <a> daha
-// sağlam/erişilebilir). $title/$desc kullanıcı/veri kaynaklı, h() ile escape edilir.
-// $metaRightHtml BİLEREK escape edilmiyor (ds_badge()/tabular tutar gibi hazır HTML taşımak
-// için — diğer ds_*'in $actionsHtml deseniyle aynı kural, yalnızca geliştirici-kontrollü sabit
-// HTML ya da zaten kendi içinde h()'lenmiş parça geçilmeli). Bugün 0 canlı çağrı — FAZ 2B-ii-R/2
-// (search.php dönüşümü) ilk tüketici olacak.
-function ds_list_item($title, $url=null, $desc=null, $metaRightHtml=null, $chevron=true){
+// sağlam/erişilebilir).
+// FAZ 2B-ii-R/2 DÜZELTMESİ (2026-07-17): $title/$desc R/1'de h() ile OTOMATİK escape ediliyordu —
+// search.php'nin gerçek kullanımında (rule 8: "eşleşen metin güvenli highlight ile gösterilecek")
+// bunun İÇİNDE ds_highlight() çıktısı (zaten <mark> taşıyan HTML) taşınması gerektiği ortaya
+// çıktı. R/1'in 0 canlı çağrısı vardı, ilk gerçek tüketiciyle birlikte sözleşme netleşti:
+// $title/$desc artık $metaRightHtml ile AYNI kural — BİLEREK escape edilmiyor, çağıran taraf
+// ds_highlight()/h() ile kendi güvenliğini sağlamalı (diğer ds_*'in $actionsHtml deseniyle aynı).
+// search.php'de HER çağrı ds_highlight() üzerinden geçiyor (boş sorguda bile içeride h() çalışır,
+// bkz. ds_highlight() — hiçbir yol escape'siz kalmıyor).
+function ds_list_item($titleHtml, $url=null, $descHtml=null, $metaRightHtml=null, $chevron=true){
     $tag = $url ? 'a' : 'div';
     $href = $url ? ' href="'.h($url).'"' : '';
     echo '<'.$tag.' class="df-list-row"'.$href.'>';
     echo '<div class="df-list-row-body">';
-    echo '<div class="df-list-row-title">'.h($title).'</div>';
-    if($desc !== null && $desc !== '') echo '<div class="df-list-row-desc">'.h($desc).'</div>';
+    echo '<div class="df-list-row-title">'.$titleHtml.'</div>';
+    if($descHtml !== null && $descHtml !== '') echo '<div class="df-list-row-desc">'.$descHtml.'</div>';
     echo '</div>';
     if($metaRightHtml !== null && $metaRightHtml !== '') echo '<div class="df-list-row-meta">'.$metaRightHtml.'</div>';
     if($url && $chevron) echo ds_icon('chevron-right', 16, 'df-list-row-chevron');
