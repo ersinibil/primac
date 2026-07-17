@@ -141,8 +141,9 @@ if ($with) {
     try { $pdo->prepare("UPDATE internal_messages SET is_read=1 WHERE receiver_user_id=? AND sender_user_id=?")->execute([$me,$with]); } catch(Throwable $e){}
 }
 
-topx($thread ? 'Grup' : ($with ? 'Sohbet' : 'Mesajlar'));
+topx($thread ? 'Grup' : ($with ? 'Sohbet' : 'İletişim Merkezi'));
 ?>
+<?php if(!$thread && !$with){ require_once __DIR__.'/../share_lib.php'; ic_tabs('sohbetler'); } ?>
 <style>
 .chat-list{display:flex;flex-direction:column;gap:8px;min-width:0}
 .chat-row-wrap{display:flex;align-items:center;gap:6px;min-width:0}

@@ -1,6 +1,7 @@
 <?php
 require_once 'common.php';
 require_once __DIR__.'/../notifications_lib.php';
+require_once __DIR__.'/../share_lib.php';
 $pdo=db();
 // Silme / temizleme işlemleri (çıktıdan önce) — SADECE oturum sahibinin kendi görünümünü etkiler:
 // kişisel bildirim fiziksel silinir (sahiplik kontrollü), genel (target_user_id=NULL) bildirim
@@ -10,18 +11,22 @@ $pdo=db();
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['del'])){ notif_dismiss($pdo,$ME,(int)$_POST['del']); header('Location: notifications.php'); exit; }
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['clear'])){ notif_dismiss_all_read($pdo,$ME); header('Location: notifications.php'); exit; }
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['clearall'])){ notif_dismiss_all($pdo,$ME); header('Location: notifications.php'); exit; }
-// Görüntülenince okundu yap (sadece bana ait + genel — genel olan artık SADECE benim için okundu sayılır)
-notif_mark_all_read($pdo,$ME);
 
-topx('Bildirimler');
+topx('İletişim Merkezi');
 ?>
-<div class="panel" style="display:flex;gap:8px;padding:10px">
+<?php ic_tabs('bildirimler'); ?>
+<div class="panel" style="display:flex;gap:8px;padding:10px;margin-top:10px">
   <form method="post" style="flex:1"><?=csrf_field()?><input type="hidden" name="clear" value="1"><button type="submit" class="btn" style="width:100%;background:#334155;color:#fff">Okunanları Sil</button></form>
   <form method="post" style="flex:1" onsubmit="return confirm('Tüm bildirimler silinsin mi?')"><?=csrf_field()?><input type="hidden" name="clearall" value="1"><button type="submit" class="btn" style="width:100%;background:#7f1d1d;color:#fff">Tümünü Sil</button></form>
 </div>
 <?php
 try{
-  $rows=notif_list_for_user($pdo,$ME,80);
+  // İLETİŞİM MERKEZİ (2026-07-17): SADECE kişisel bildirimler (target_user_id=$ME) — genel/
+  // broadcast bildirimler artık duyurular.php'de. Görüntülenince okundu yap — SADECE bu sayfada
+  // gösterilen (kişisel) alt küme için (notif_mark_all_read() kullanılmadı, o genel bildirimleri
+  // de işaretlerdi — Duyurular sekmesindeki "Yeni" rozetinin sessizce sıfırlanmasını önler).
+  $rows=array_values(array_filter(notif_list_for_user($pdo,$ME,80), function($n){ return $n['target_user_id']!==null; }));
+  foreach($rows as $__n){ try{ notif_mark_read($pdo,$ME,(int)$__n['id']); }catch(Throwable $e){} }
   if(!$rows){ echo '<div class="panel muted" style="text-align:center">Bildirim yok 🔕</div>'; }
   // UX SPRINT-001 (2026-07-04): kart artık sadece özet gösterir ve tamamı tıklanabilir —
   // tekil aksiyonlar (Sil, İlgili Modüle Git) sadece notification_view.php'de. Liste ekranı

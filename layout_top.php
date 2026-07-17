@@ -308,15 +308,17 @@ input,select,textarea{font-size:16px}
         // kontrolleri (user_can(...)) DEĞİŞMEDİ, sadece hangi grupta göründükleri değişti.
         $ticaret_pages = ['contacts.php','contact_new.php','teklif.php','stock.php','product_new.php','stock_movement_new.php','product_categories.php','product_taxonomy.php','sales.php','purchase.php','trade_documents.php','trade_document_new.php','trade_document_view.php'];
         $finans_pages = ['finance.php','finance_accounts.php','finance_new.php','finance_transfer.php','checks_notes.php','check_note_view.php','accounting.php','accounting_categories.php'];
-        $mesajlar_pages = ['messages.php','notifications.php','wa_send_now.php','wa_conversations.php','wa_conversation_view.php'];
+        $mesajlar_pages = ['messages.php','notifications.php','duyurular.php','taleplerim.php','wa_send_now.php','wa_conversations.php','wa_conversation_view.php'];
         $rapor_pages = ['activity.php','report.php','contacts_report.php'];
         $sistem_pages = ['users.php','audit_log.php','wa_settings.php','brand_settings.php','profile.php','request_new.php','temizle_veri.php','logout.php'];
         ?>
 
         <details <?=(in_array($cur,$mesajlar_pages)?'open':'')?>><summary><span>💬</span> İletişim Merkezi</summary>
             <div class="sub">
-                <a href="messages.php" <?=($cur==='messages.php'?'class="active"':'')?>><span>💬</span> İç Mesajlar</a>
+                <a href="messages.php" <?=($cur==='messages.php'?'class="active"':'')?>><span>💬</span> Sohbetler</a>
                 <a href="notifications.php" <?=($cur==='notifications.php'?'class="active"':'')?>><span>🔔</span> Bildirimler</a>
+                <a href="taleplerim.php" <?=($cur==='taleplerim.php'?'class="active"':'')?>><span>📨</span> Taleplerim</a>
+                <a href="duyurular.php" <?=($cur==='duyurular.php'?'class="active"':'')?>><span>📢</span> Duyurular</a>
                 <?php if(user_can('users')): ?>
                 <a href="wa_conversations.php" <?=(in_array($cur,['wa_conversations.php','wa_conversation_view.php'])?'class="active"':'')?>><span>💬</span> WhatsApp Konuşmaları</a>
                 <a href="wa_send_now.php" <?=($cur==='wa_send_now.php'?'class="active"':'')?>><span>📤</span> WhatsApp Toplu Gönderim</a>

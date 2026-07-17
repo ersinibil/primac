@@ -500,3 +500,23 @@ function rate_limit_clear($file, $bucketKey){
     ftruncate($fp, 0); rewind($fp); fwrite($fp, json_encode($data)); fflush($fp);
     flock($fp, LOCK_UN); fclose($fp);
 }
+
+// İLETİŞİM MERKEZİ (2026-07-17, Product Owner kararı): "Mesajlar" tek başına modül olmaktan
+// çıkıp Sohbetler/Bildirimler/Taleplerim/Duyurular sekmeleriyle tek bir ana modül oldu. Bu
+// fonksiyon web+mobil ORTAK sekme şeridini üretir — her sayfa kendi bağımsız dosyasında kalır
+// (business logic BİRLEŞTİRİLMEDİ, sadece ortak navigasyon şeridi paylaşılıyor). $prefix mobil
+// sayfalardan çağrıldığında '' (aynı dizin), web'den çağrıldığında da '' (kök dizin) — ikisi de
+// aynı dosya adlarını (messages.php/notifications.php/duyurular.php/taleplerim.php) kendi
+// dizininde kullanıyor, mobilin KENDİ kopyaları var (mobile/ altında).
+function ic_tabs($active){
+    if(!function_exists('ds_tabs')) return;
+    $items=[
+        ['key'=>'sohbetler','label'=>'Sohbetler','url'=>'messages.php'],
+        ['key'=>'bildirimler','label'=>'Bildirimler','url'=>'notifications.php'],
+        ['key'=>'taleplerim','label'=>'Taleplerim','url'=>'taleplerim.php'],
+        ['key'=>'duyurular','label'=>'Duyurular','url'=>'duyurular.php'],
+    ];
+    $tabs=[];
+    foreach($items as $it){ $tabs[]=['label'=>$it['label'],'url'=>$it['url'],'active'=>$active===$it['key']]; }
+    ds_tabs($tabs);
+}

@@ -2,6 +2,7 @@
 require_once __DIR__.'/boot.php';
 require_login();
 require_once __DIR__.'/notifications_lib.php';
+require_once __DIR__.'/share_lib.php';
 
 $pdo=db();
 $ME=(int)(current_user()['id'] ?? 0);
@@ -46,14 +47,19 @@ require_once __DIR__.'/layout_top.php';
 
 $rows=[];
 try{
-    $rows=notif_list_for_user($pdo,$ME,100);
+    // İLETİŞİM MERKEZİ (2026-07-17): Bildirimler artık SADECE kişisel bildirimleri gösterir
+    // (target_user_id=$ME) — genel/broadcast bildirimler (target_user_id IS NULL) "Duyurular"
+    // sekmesine ayrıldı (duyurular.php). notif_list_for_user() DEĞİŞMEDİ (hâlâ ikisini birlikte
+    // döndürüyor, unread_notif() rozeti hâlâ ikisini birden sayıyor) — sadece BU sayfanın
+    // render ettiği alt küme daraltıldı, veri katmanına dokunulmadı.
+    $rows=array_values(array_filter(notif_list_for_user($pdo,$ME,100), function($n){ return $n['target_user_id']!==null; }));
 }catch(Throwable $e){
     echo "<div class='alert'>".h($e->getMessage())."</div>";
 }
 ?>
 
 <div class="panel-head">
-<h1>Bildirim Merkezi</h1>
+<h1>İletişim Merkezi</h1>
 <div style="display:flex;gap:8px;flex-wrap:wrap">
 <a class="btn secondary" href="notifications.php?all_read=1">Tümünü Okundu Yap</a>
 <form method="post" style="display:inline"><?=csrf_field()?><input type="hidden" name="clear" value="1"><button type="submit" class="btn secondary">Okunanları Sil</button></form>
@@ -61,7 +67,9 @@ try{
 </div>
 </div>
 
-<section class="panel">
+<?php ic_tabs('bildirimler'); ?>
+
+<section class="panel" style="margin-top:16px">
 <?php foreach($rows as $n):
 $go=$n['action_url'] ?: 'dashboard.php';
 // Bazı bildirimler mobil-sadece bir sayfaya link verebilir (mytasks.php artık web'de de var, ama

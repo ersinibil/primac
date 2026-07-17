@@ -380,9 +380,10 @@ function msg_av_color($id){
     return $c[((int)$id) % count($c)];
 }
 ?>
-<h1>💬 Mesajlar</h1>
+<h1>İletişim Merkezi</h1>
+<?php ic_tabs('sohbetler'); ?>
 
-<div class="msg-wrap">
+<div class="msg-wrap" style="margin-top:16px">
 
     <!-- SOL: gruplar + kişi listesi -->
     <div class="msg-list">

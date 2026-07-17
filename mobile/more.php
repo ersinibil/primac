@@ -87,8 +87,10 @@ if($__navMode === 'legacy'):
 <div style="font-weight:900;margin:16px 4px 8px">💬 İletişim Merkezi</div>
 <div class="grid">
   <?php
-  card('İletişim Merkezi','İç yazışma','💬','messages.php','teal');
-  card('Bildirimler','Tüm bildirimler','🔔','notifications.php','yellow');
+  card('Sohbetler','İç yazışma','💬','messages.php','teal');
+  card('Bildirimler','Kişisel bildirimler','🔔','notifications.php','yellow');
+  card('Taleplerim','Gönderdiğim talepler','📨','taleplerim.php','purple');
+  card('Duyurular','Genel duyurular','📢','duyurular.php','orange');
   if(user_can('users')) {
     card('WhatsApp Konuşmaları','Gelen/giden geçmiş, 1:1 yazış','💬','wa_conversations.php','teal');
     card('Toplu WhatsApp Gönderimi','Birden fazla kişiye mesaj','📤','wa_send_now.php','green');
