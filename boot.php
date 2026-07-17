@@ -395,7 +395,7 @@ function dashboard_quick_action_defs(){
         ['key'=>'gorev',    'category'=>'OPERASYON', 'label'=>'Yeni Görev',    'icon'=>'🎯', 'url'=>'task_new.php',                  'perm'=>'tasks'],
         ['key'=>'talep',    'category'=>'OPERASYON', 'label'=>'Yeni Talep',    'icon'=>'📨', 'url'=>'request_new.php',               'perm'=>null],
         ['key'=>'teklif',   'category'=>'TİCARET',    'label'=>'Yeni Teklif',   'icon'=>'📄', 'url'=>'teklif.php',                    'perm'=>'teklif'],
-        ['key'=>'mesaj',    'category'=>'İLETİŞİM',   'label'=>'Yeni Mesaj',    'icon'=>'💬', 'url'=>'messages.php',                  'perm'=>null],
+        ['key'=>'mesaj',    'category'=>'İLETİŞİM',   'label'=>'İletişim Merkezi', 'icon'=>'💬', 'url'=>'messages.php',                  'perm'=>null],
     ];
 }
 

@@ -313,7 +313,7 @@ input,select,textarea{font-size:16px}
         $sistem_pages = ['users.php','audit_log.php','wa_settings.php','brand_settings.php','profile.php','request_new.php','temizle_veri.php','logout.php'];
         ?>
 
-        <details <?=(in_array($cur,$mesajlar_pages)?'open':'')?>><summary><span>💬</span> Mesajlar</summary>
+        <details <?=(in_array($cur,$mesajlar_pages)?'open':'')?>><summary><span>💬</span> İletişim Merkezi</summary>
             <div class="sub">
                 <a href="messages.php" <?=($cur==='messages.php'?'class="active"':'')?>><span>💬</span> İç Mesajlar</a>
                 <a href="notifications.php" <?=($cur==='notifications.php'?'class="active"':'')?>><span>🔔</span> Bildirimler</a>

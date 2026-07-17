@@ -84,10 +84,10 @@ if($__navMode === 'legacy'):
 </div>
 <?php endif; ?>
 
-<div style="font-weight:900;margin:16px 4px 8px">💬 Mesajlar</div>
+<div style="font-weight:900;margin:16px 4px 8px">💬 İletişim Merkezi</div>
 <div class="grid">
   <?php
-  card('Mesajlar','İç yazışma','💬','messages.php','teal');
+  card('İletişim Merkezi','İç yazışma','💬','messages.php','teal');
   card('Bildirimler','Tüm bildirimler','🔔','notifications.php','yellow');
   if(user_can('users')) {
     card('WhatsApp Konuşmaları','Gelen/giden geçmiş, 1:1 yazış','💬','wa_conversations.php','teal');

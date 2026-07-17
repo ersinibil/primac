@@ -121,13 +121,13 @@ if($isAdmin){
     card('Satış','Mobil satış ekranı','🧾','sales.php','orange');
     card('Tahsilat','Cariye tahsilat gir','💰','collection.php','yellow');
     card('Stok','Ürünleri gör','📦','stock.php','red');
-    card('Mesajlar','İç yazışma','💬','messages.php','teal');
+    card('İletişim Merkezi','İç yazışma','💬','messages.php','teal');
     ?>
   </div>
 <?php else: ?>
   <div class="panel"><b>Hoş geldin, <?=htmlspecialchars($name)?></b><p class="small">Personel paneli · satış, tahsilat, iş ve mesaj.</p>
   <div class="grid">
-    <?php card('Açık İş',$open.' adet','📋','jobs.php','blue');card('Mesajlar',$myMsg.' yeni','💬','messages.php','teal');?>
+    <?php card('Açık İş',$open.' adet','📋','jobs.php','blue');card('İletişim Merkezi',$myMsg.' yeni','💬','messages.php','teal');?>
   </div></div>
   <div class="grid">
     <?php
@@ -137,7 +137,7 @@ if($isAdmin){
     card('İş Emirleri','Müşteri işleri ve operasyon takibi','📋','jobs.php','green');
     card('Görevlerim','Bana atanan görevler ve hatırlatmalar','🎯','mytasks.php','blue');
     card('Stok','Ürünleri gör','📦','stock.php','red');
-    card('Mesajlar','Ekiple yazış','💬','messages.php','teal');
+    card('İletişim Merkezi','Ekiple yazış','💬','messages.php','teal');
     ?>
   </div>
 <?php endif; ?>
