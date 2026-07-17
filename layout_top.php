@@ -197,9 +197,56 @@ input,select,textarea{font-size:16px}
 .quick-action{border-radius:999px}
 </style>
 </head>
-<body>
+<body<?=($__navMode!=='legacy'?' class="nav-compact"':'')?>>
 <div class="app-shell">
-<aside class="sidebar">
+<aside class="<?=($__navMode!=='legacy'?'df-rail':'sidebar')?>">
+<?php if($__navMode !== 'legacy'): ?>
+    <?php
+    // ── PX-002 FAZ 2B-ii — COMPACT WEB APPLICATION SHELL / NAVIGATION RAIL ────────────────────
+    // Product Owner IA FREEZE kararı (2026-07-17): 5 kanonik kategori (İşler/Ticaret/Üretim &
+    // Stok/Finans/Yönetim), kategori = çalışma alanı, içerik = eylem. Eski "primary satırlar +
+    // Sabitlenenler + Tüm Modüller" modeli TAMAMEN kaldırıldı (Flag 1 — Launcher/Pin Retirement).
+    // nav_pinned_modules()/nav_grouped_for_launcher()/ajax_nav_prefs.php SİLİNMEDİ, sadece artık
+    // buradan ÇAĞRILMIYOR — DB'deki eski pin verisi dokunulmadan duruyor, Legacy Mode'a dönülürse
+    // eski davranış aynen çalışır (aşağıdaki legacy dal hiç değişmedi).
+    $__catIconMap = ['isler'=>'briefcase','ticaret'=>'tag','uretim_stok'=>'box','finans'=>'wallet','yonetim'=>'settings'];
+    ?>
+    <nav class="df-rail-nav" aria-label="Ana navigasyon">
+        <a class="df-rail-link<?=($cur==='dashboard.php'?' is-active':'')?>" href="dashboard.php"><?=ds_icon('home',18)?><span>Ana Sayfa</span></a>
+        <div class="df-rail-categories">
+            <?php foreach(nav_category_keys() as $__cat):
+                $__catItems = nav_items_for_category($__navCanSee, is_admin(), $__cat, 'web');
+                if(!$__catItems) continue; // boş kategori: hiç render edilmez (disabled/gizli davranış)
+                $__catId = 'df-rail-cat-'.$__cat;
+                $__catHasActive = false;
+                foreach($__catItems as $__ci){ if($cur === explode('?',$__ci['url'])[0]){ $__catHasActive = true; break; } }
+            ?>
+            <div class="df-rail-cat<?=($__catHasActive?' is-open':'')?>" data-cat="<?=h($__cat)?>">
+                <button type="button" class="df-rail-cat-btn" aria-expanded="<?=($__catHasActive?'true':'false')?>" aria-controls="<?=h($__catId)?>" onclick="dfRailToggle(this)">
+                    <?=ds_icon($__catIconMap[$__cat] ?? 'menu', 18)?>
+                    <span><?=h(nav_category_label($__cat))?></span>
+                    <span class="df-rail-cat-chevron" aria-hidden="true"></span>
+                </button>
+                <div class="df-rail-cat-body" id="<?=h($__catId)?>">
+                    <?php foreach($__catItems as $__it): $__itUrl = explode('?',$__it['url'])[0]; ?>
+                    <a class="df-rail-item<?=(!empty($__it['isPrimaryAction'])?' df-rail-item--primary':'')?><?=($cur===$__itUrl?' is-active':'')?>" href="<?=h($__it['url'])?>"><?=h($__it['actionLabel'] ?? $__it['label'])?></a>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+    </nav>
+    <noscript><style>body.nav-compact .df-rail-cat-body{display:block!important}</style></noscript>
+    <div class="df-rail-footer">
+        <div class="df-rail-account">
+            <a class="df-rail-avatar" href="profile.php" aria-label="Profilim"><?=h(mb_strtoupper(mb_substr($_SESSION['user']['name'] ?? 'K', 0, 1)))?></a>
+            <div class="df-rail-account-info">
+                <a class="df-rail-account-name" href="profile.php"><?=h($_SESSION['user']['name'] ?? 'Kullanıcı')?></a>
+            </div>
+            <a class="df-rail-logout" href="logout.php" aria-label="Çıkış Yap" title="Çıkış Yap"><?=ds_icon('logout',16)?></a>
+        </div>
+    </div>
+<?php else: ?>
     <a class="brand brand-link" href="dashboard.php" title="Ana sayfa">
     <?php $__blogo=brand_logo(); if($__blogo && file_exists(__DIR__.'/'.$__blogo)): ?>
         <img class="brand-logo" src="<?=h($__blogo)?>" alt="Logo">
@@ -217,36 +264,6 @@ input,select,textarea{font-size:16px}
         <div class="workspace-name"><?=htmlspecialchars(app_config()['app_name'] ?? 'OTS')?></div>
     </div>
 
-    <?php if($__navMode !== 'legacy'): ?>
-    <?php
-    // ── NAV-001B COMPACT MOD ─────────────────────────────────────────────────────────────────
-    // Emoji eşlemesi legacy sidebar'da bu 7 satır için ZATEN kullanılıyordu — yeni bir ikon kararı
-    // değil, sağ kalan primary satırlar için mevcut emoji'lerin aynen taşınması.
-    $__primaryIcons = ['dashboard'=>'🏛','mytasks'=>'✅','jobs'=>'🧭','takvim'=>'📅','messages'=>'💬','notifications'=>'🔔','notes'=>'📝'];
-    $__primaryMods = nav_primary_modules($__navCanSee, is_admin());
-    $__pinnedRaw = user_pref_get(db(), $__me, 'nav_pinned_web', '');
-    $__pinnedMods = nav_pinned_modules($__navCanSee, is_admin(), $__pinnedRaw);
-    $__launcherGroups = nav_grouped_for_launcher($__navCanSee, is_admin(), $__pinnedRaw);
-    ?>
-    <nav class="nav">
-        <?php foreach($__primaryMods as $__pm): $__pmUrl = explode('?',$__pm['url'])[0]; ?>
-        <a href="<?=h($__pm['url'])?>" <?=($cur===$__pmUrl?'class="active"':'')?>><span><?=h($__primaryIcons[$__pm['key']] ?? '•')?></span> <?=h($__pm['label'])?></a>
-        <?php endforeach; ?>
-
-        <div class="nav-title">Sabitlenenler</div>
-        <?php if($__pinnedMods): foreach($__pinnedMods as $__pn): $__pnUrl = explode('?',$__pn['url'])[0]; ?>
-        <a href="<?=h($__pn['url'])?>" <?=($cur===$__pnUrl?'class="active"':'')?>><?=h($__pn['label'])?></a>
-        <?php endforeach; else: ?>
-        <div class="nav-pin-empty">Henüz sabitlenmiş modül yok — "Tüm Modüller"den ekleyin.</div>
-        <?php endif; ?>
-
-        <button type="button" class="nav-launcher-trigger" onclick="document.querySelector('.app-shell').classList.add('launcher-open');document.getElementById('navLauncherSearch').focus()"><span>🔎</span> Tüm Modüller</button>
-    </nav>
-    <div class="sidebar-footer">
-        <a href="profile.php" <?=($cur==='profile.php'?'class="active"':'')?>><span>👤</span> Profilim</a>
-        <a href="logout.php"><span>🚪</span> Çıkış</a>
-    </div>
-    <?php else: ?>
     <nav class="nav">
         <a href="dashboard.php" <?=($cur==='dashboard.php'?'class="active"':'')?>><span>🏛</span> Komuta Merkezi</a>
         <a href="takvim.php" <?=($cur==='takvim.php'?'class="active"':'')?>><span>📅</span> Takvim</a>
@@ -413,55 +430,21 @@ input,select,textarea{font-size:16px}
     <?php endif; ?>
 </aside>
 <div class="nav-overlay" onclick="document.querySelector('.app-shell').classList.remove('nav-open')"></div>
-<?php if($__navMode !== 'legacy'): ?>
-<!-- NAV-001B — Web Module Launcher (yalnızca compact modda render edilir) -->
-<div class="df-nav-overlay" onclick="document.querySelector('.app-shell').classList.remove('launcher-open')"></div>
-<div class="df-nav-launcher">
-    <div class="df-nav-launcher-head">
-        <?=ds_icon('search',18)?>
-        <input type="text" id="navLauncherSearch" placeholder="Modül ara..." autocomplete="off" oninput="navLauncherFilter(this.value)">
-        <button type="button" class="df-icon-btn" aria-label="Kapat" onclick="document.querySelector('.app-shell').classList.remove('launcher-open')"><?=ds_icon('close',18)?></button>
+<?php if($__navMode !== 'legacy'): if(function_exists('ds_scripts')) ds_scripts(); ?>
+
+<main class="df-page-container">
+<header class="df-topbar">
+    <button type="button" class="df-icon-btn df-rail-toggle" onclick="document.querySelector('.app-shell').classList.toggle('nav-open')" aria-label="Menü"><?=ds_icon('menu',20)?></button>
+    <form class="df-topbar-search" method="get" action="search.php" role="search">
+        <?=ds_icon('search',16)?>
+        <input name="q" placeholder="Ne yapmak istiyorsun?" autocomplete="off" value="<?=htmlspecialchars($_GET['q'] ?? '')?>">
+    </form>
+    <div class="df-topbar-actions">
+        <a class="df-icon-btn" href="messages.php" aria-label="Mesajlar<?=$unreadMsgCount?' — '.$unreadMsgCount.' okunmamış':''?>"><?=ds_icon('chat',18)?><?php if($unreadMsgCount): ?><span class="df-count-badge"><?=$unreadMsgCount>9?'9+':$unreadMsgCount?></span><?php endif; ?></a>
+        <a class="df-icon-btn" href="notifications.php" aria-label="Bildirimler<?=$notifCount?' — '.$notifCount.' okunmamış':''?>"><?=ds_icon('bell',18)?><?php if($notifCount): ?><span class="df-count-badge"><?=$notifCount>9?'9+':$notifCount?></span><?php endif; ?></a>
     </div>
-    <div class="df-nav-launcher-body" id="navLauncherBody">
-        <?php foreach(['is_takip','sat_tahsil','stok','iletisim','yonet'] as $__g): if(empty($__launcherGroups[$__g])) continue; ?>
-        <div class="df-nav-launcher-group df-nav-launcher-group--<?=h($__g)?>">
-            <div class="df-nav-launcher-group-title"><?=h(nav_group_label($__g))?></div>
-            <?php foreach($__launcherGroups[$__g] as $__item):
-                $__isPinned = in_array($__item['key'], explode(',', $__pinnedRaw), true);
-                $__itemUrl = explode('?',$__item['url'])[0];
-            ?>
-            <div class="df-nav-row-wrap" style="display:flex;align-items:center" data-nav-label="<?=h(mb_strtolower($__item['label']))?>">
-                <a class="df-nav-row<?=($cur===$__itemUrl?' is-active':'')?>" style="flex:1" href="<?=h($__item['url'])?>"><?=h($__item['label'])?></a>
-                <?php if(empty($__item['primary'])): ?>
-                <button type="button" class="df-nav-pin-btn<?=($__isPinned?' is-pinned':'')?>" aria-label="<?=($__isPinned?'Sabitlemeyi kaldır':'Sabitle')?>" onclick="navTogglePin('<?=h($__item['key'])?>',<?=$__isPinned?'true':'false'?>,this)"><?=ds_icon($__isPinned?'close':'plus',15)?></button>
-                <?php endif; ?>
-            </div>
-            <?php endforeach; ?>
-        </div>
-        <?php endforeach; ?>
-    </div>
-</div>
-<script>
-function navTogglePin(key,isPinned,btn){
-    fetch('ajax_nav_prefs.php',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded','X-CSRF-Token':window.CSRF_TOKEN},
-        body:'action='+(isPinned?'unpin':'pin')+'&platform=web&key='+encodeURIComponent(key)+'&csrf_token='+encodeURIComponent(window.CSRF_TOKEN)})
-      .then(function(r){return r.json();}).then(function(d){ if(d.ok) location.reload(); });
-}
-function navLauncherFilter(q){
-    q = q.toLowerCase().trim();
-    document.querySelectorAll('#navLauncherBody .df-nav-row-wrap').forEach(function(row){
-        row.style.display = (!q || row.getAttribute('data-nav-label').indexOf(q)!==-1) ? '' : 'none';
-    });
-    document.querySelectorAll('#navLauncherBody .df-nav-launcher-group').forEach(function(g){
-        var anyVisible = Array.prototype.some.call(g.querySelectorAll('.df-nav-row-wrap'), function(r){ return r.style.display!=='none'; });
-        g.style.display = anyVisible ? '' : 'none';
-    });
-}
-document.addEventListener('keydown', function(e){
-    if(e.key === 'Escape') document.querySelector('.app-shell').classList.remove('launcher-open');
-});
-</script>
-<?php endif; ?>
+</header>
+<?php else: ?>
 
 <main class="main">
 <header class="topbar">
@@ -480,3 +463,4 @@ document.addEventListener('keydown', function(e){
         <a class="pill" href="profile.php">👤 <span class="uname"><?=h($_SESSION['user']['name'] ?? 'Kullanıcı')?></span></a>
     </div>
 </header>
+<?php endif; ?>

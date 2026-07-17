@@ -26,6 +26,15 @@ function ds_styles(){
     echo '<link rel="stylesheet" href="'.h(base_url().'assets/css/ds-foundation.css').'?v='.(int)$__v.'">';
 }
 
+// PX-002 FAZ 2B-ii (2026-07-17) — ds_styles() ile aynı desen (mtime cache-bust), JS için.
+// Yalnızca compact modda çağrılır (layout_top.php) — Rail'in tek-açık kategori/sessionStorage
+// davranışı burada. Legacy Mode bu dosyayı hiç yüklemez.
+function ds_scripts(){
+    $__path = __DIR__.'/assets/js/ds-foundation.js';
+    $__v = is_file($__path) ? filemtime($__path) : 1;
+    echo '<script src="'.h(base_url().'assets/js/ds-foundation.js').'?v='.(int)$__v.'"></script>';
+}
+
 // $icon ve $actionsHtml BİLEREK escape edilmiyor (ikon/aksiyon HTML'i taşımak için) — bu
 // parametrelere yalnızca geliştirici-kontrollü sabit string/HTML geçilmeli, ASLA $_GET/$_POST/DB
 // verisi. Kullanıcı/veri kaynaklı her şey (title, subtitle) zaten h() ile escape ediliyor.
@@ -165,6 +174,11 @@ function ds_icon($name, $size=20, $class=''){
         'menu'=>'<line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/>',
         'box'=>'<path d="M3 8l9-5 9 5-9 5-9-5z"/><path d="M3 8v9l9 5 9-5V8"/><line x1="12" y1="13" x2="12" y2="22"/>',
         'wallet'=>'<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><circle cx="16.5" cy="14.5" r="1.1" fill="currentColor" stroke="none"/>',
+        // PX-002 FAZ 2B-ii EKİ (2026-07-17) — Web Rail'in 5 kategori ikonu + Hesap/Çıkış için
+        // eksik 3 karşılık. Yeni harici ikon kütüphanesi eklenmedi, aynı stroke/viewBox stiliyle.
+        'tag'=>'<path d="M20 13.5 12.5 21 3 11.5V3h8.5L20 11.5a2 2 0 0 1 0 2z"/><circle cx="8" cy="8" r="1.3" fill="currentColor" stroke="none"/>',
+        'settings'=>'<circle cx="12" cy="12" r="3"/><path d="M19.4 13a7.97 7.97 0 0 0 0-2l2-1.5-2-3.4-2.4 1a8 8 0 0 0-1.7-1L15 3h-4l-.3 2.6a8 8 0 0 0-1.7 1l-2.4-1-2 3.4L6.6 11a8 8 0 0 0 0 2l-2 1.5 2 3.4 2.4-1a8 8 0 0 0 1.7 1L11 21h4l.3-2.6a8 8 0 0 0 1.7-1l2.4 1 2-3.4-2-1.5z"/>',
+        'logout'=>'<path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>',
     ];
     if(!isset($__ds_icons[$name])) return '';
     $size = (int)$size; if($size<1) $size=20;

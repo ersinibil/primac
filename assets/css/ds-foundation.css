@@ -595,3 +595,70 @@ body.nav-compact .df-accordion-chevron{width:8px;height:8px;border-right:1.6px s
 body.nav-compact .df-accordion-item.is-open .df-accordion-chevron{transform:rotate(225deg)}
 body.nav-compact .df-accordion-body{display:none;padding:0 var(--df-space-2) var(--df-space-3)}
 body.nav-compact .df-accordion-item.is-open .df-accordion-body{display:block}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   PX-002 FAZ 2B-ii — WEB APPLICATION SHELL / NAVIGATION RAIL (2026-07-17)
+   Product Owner IA FREEZE + FAZ 2B-ii onayı. Eski .sidebar/.topbar/.main (Legacy Mode'un
+   hâlâ kullandığı, DOKUNULMAYAN class'lar) yerine tamamen YENİ, paralel bir class seti —
+   .df-rail/.df-topbar/.df-page-container. Legacy Mode bu bloğu HİÇ görmez (body.nav-compact
+   yalnızca compact modda basılıyor, bkz. layout_top.php).
+   ═══════════════════════════════════════════════════════════════════════ */
+body.nav-compact .df-rail{width:240px;background:var(--df-surface);border-right:1px solid var(--df-hairline);position:fixed;top:0;bottom:0;left:0;overflow-y:auto;display:flex;flex-direction:column;padding:var(--df-space-4) 0;z-index:10}
+body.nav-compact .df-rail::-webkit-scrollbar{width:4px}
+body.nav-compact .df-rail::-webkit-scrollbar-thumb{background:var(--df-hairline);border-radius:4px}
+
+body.nav-compact .df-rail-nav{padding:0 var(--df-space-3);flex:1;min-height:0;overflow-y:auto}
+body.nav-compact .df-rail-link{display:flex;align-items:center;gap:var(--df-space-3);padding:10px 12px;border-radius:var(--df-radius-sm);font-size:14px;font-weight:650;color:var(--df-ink-900);text-decoration:none;margin-bottom:var(--df-space-2)}
+body.nav-compact .df-rail-link:hover{background:var(--df-surface-sunken)}
+body.nav-compact .df-rail-link.is-active{background:var(--df-accent-soft);color:var(--df-accent-soft-ink)}
+body.nav-compact .df-rail-link:focus-visible{outline:0;box-shadow:var(--df-focus-ring)}
+
+body.nav-compact .df-rail-categories{display:flex;flex-direction:column;gap:2px;margin-top:var(--df-space-2);padding-top:var(--df-space-3);border-top:1px solid var(--df-hairline)}
+body.nav-compact .df-rail-cat-btn{display:flex;align-items:center;gap:var(--df-space-3);width:100%;padding:10px 12px;border:0;background:transparent;border-radius:var(--df-radius-sm);font:inherit;font-size:14px;font-weight:650;color:var(--df-ink-900);cursor:pointer;text-align:left}
+body.nav-compact .df-rail-cat-btn:hover{background:var(--df-surface-sunken)}
+body.nav-compact .df-rail-cat-btn:focus-visible{outline:0;box-shadow:var(--df-focus-ring)}
+body.nav-compact .df-rail-cat-btn>span:first-of-type{flex:1;min-width:0}
+body.nav-compact .df-rail-cat-chevron{width:7px;height:7px;border-right:1.6px solid var(--df-ink-500);border-bottom:1.6px solid var(--df-ink-500);transform:rotate(45deg);transition:transform var(--df-dur-fast) var(--df-ease-standard);flex:0 0 auto}
+body.nav-compact .df-rail-cat.is-open .df-rail-cat-btn{background:var(--df-surface-sunken)}
+body.nav-compact .df-rail-cat.is-open .df-rail-cat-chevron{transform:rotate(225deg)}
+body.nav-compact .df-rail-cat-body{display:none;padding:2px 12px 8px 41px;flex-direction:column;gap:1px}
+body.nav-compact .df-rail-cat.is-open .df-rail-cat-body{display:flex}
+body.nav-compact .df-rail-item{display:block;padding:8px 10px;border-radius:var(--df-radius-sm);font-size:13px;font-weight:600;color:var(--df-ink-600);text-decoration:none}
+body.nav-compact .df-rail-item:hover{background:var(--df-surface-sunken);color:var(--df-ink-900)}
+body.nav-compact .df-rail-item:focus-visible{outline:0;box-shadow:var(--df-focus-ring)}
+body.nav-compact .df-rail-item.is-active{background:var(--df-accent-soft);color:var(--df-accent-soft-ink)}
+body.nav-compact .df-rail-item--primary{color:var(--df-accent);font-weight:700}
+
+body.nav-compact .df-rail-footer{border-top:1px solid var(--df-hairline);padding:var(--df-space-3) var(--df-space-3) 0;margin-top:var(--df-space-2);flex:0 0 auto}
+body.nav-compact .df-rail-account{display:flex;align-items:center;gap:var(--df-space-2)}
+body.nav-compact .df-rail-avatar{width:32px;height:32px;border-radius:50%;background:var(--df-accent-soft);color:var(--df-accent-soft-ink);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;text-decoration:none;flex:0 0 auto}
+body.nav-compact .df-rail-avatar:focus-visible{outline:0;box-shadow:var(--df-focus-ring)}
+body.nav-compact .df-rail-account-info{flex:1;min-width:0}
+body.nav-compact .df-rail-account-name{display:block;font-size:13px;font-weight:650;color:var(--df-ink-900);text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.nav-compact .df-rail-account-name:hover{text-decoration:underline}
+body.nav-compact .df-rail-logout{width:32px;height:32px;border-radius:var(--df-radius-sm);display:flex;align-items:center;justify-content:center;color:var(--df-ink-500);flex:0 0 auto;text-decoration:none}
+body.nav-compact .df-rail-logout:hover{background:var(--df-surface-sunken);color:var(--df-danger-ink)}
+body.nav-compact .df-rail-logout:focus-visible{outline:0;box-shadow:var(--df-focus-ring)}
+
+/* Page Container — .main'in yeni hedefi, sayfa içeriği DEĞİŞMEDEN buraya akar (FAZ 2C'nin işi) */
+body.nav-compact .df-page-container{margin-left:240px;flex:1;padding:var(--df-space-5) var(--df-space-6);min-width:0}
+
+/* Top Bar — yalnızca Ara/Mesaj/Bildirim (Kural: Hesap Rail'de, TopBar'da tekrar etmez) */
+body.nav-compact .df-topbar{height:56px;display:flex;align-items:center;gap:var(--df-space-3);padding:0 var(--df-space-5);border-bottom:1px solid var(--df-hairline);background:var(--df-surface);position:sticky;top:0;z-index:5}
+body.nav-compact .df-rail-toggle{display:none}
+body.nav-compact .df-topbar-search{flex:0 1 380px;display:flex;align-items:center;gap:8px;background:var(--df-surface-sunken);border-radius:var(--df-radius-pill);padding:9px 14px;min-width:0}
+body.nav-compact .df-topbar-search input{border:0;background:transparent;outline:0;flex:1;font-size:14px;color:var(--df-ink-900);min-width:0;font-family:inherit}
+body.nav-compact .df-topbar-search input::placeholder{color:var(--df-ink-500)}
+body.nav-compact .df-topbar-search .df-icon{color:var(--df-ink-500);flex:0 0 auto}
+body.nav-compact .df-topbar-actions{display:flex;align-items:center;gap:4px;margin-left:auto;flex:0 0 auto}
+body.nav-compact .df-topbar-actions .df-icon-btn{width:44px;height:44px;position:relative}
+body.nav-compact .df-topbar-actions .df-count-badge{position:absolute;top:4px;right:4px}
+
+@media(max-width:960px){
+  body.nav-compact .df-rail{transform:translateX(-100%);transition:transform var(--df-dur-base) var(--df-ease-standard);z-index:1000;box-shadow:var(--df-shadow-lg)}
+  body.nav-compact .app-shell.nav-open .df-rail{transform:translateX(0)}
+  body.nav-compact .df-page-container{margin-left:0;padding:var(--df-space-4)}
+  body.nav-compact .df-topbar{padding:0 var(--df-space-3)}
+  body.nav-compact .df-topbar-search{display:none}
+  body.nav-compact .df-rail-toggle{display:flex}
+}
