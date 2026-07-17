@@ -1,4 +1,9 @@
-<?php require_once 'common.php'; topx(app_config()['app_name'] ?? 'OTS');
+<?php require_once 'common.php';
+// PX-002 FAZ 2B-ii-R EK — BRAND AREA (2026-07-17). Yalnızca compact modda başlık "PRIMAC OTS"
+// kurumsal kimliğine sabitlenir (topx()'ün zaten her sayfada bastığı logo+başlık+arama akışı
+// aynen korunur — yeni bir bileşen/ikinci arama kutusu eklenmedi). Legacy Mode dokunulmadı: orada
+// başlık öncekiyle birebir aynı (app_config()['app_name']) kalmaya devam eder.
+topx($__navMode !== 'legacy' ? 'PRIMAC OTS' : (app_config()['app_name'] ?? 'OTS'));
 require_once __DIR__.'/../tasks_lib.php';
 $pdo=db();
 

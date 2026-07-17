@@ -211,6 +211,21 @@ input,select,textarea{font-size:16px}
     // eski davranış aynen çalışır (aşağıdaki legacy dal hiç değişmedi).
     $__catIconMap = ['isler'=>'briefcase','ticaret'=>'tag','uretim_stok'=>'box','finans'=>'wallet','yonetim'=>'settings'];
     ?>
+    <!-- PX-002 FAZ 2B-ii-R EK — BRAND AREA (2026-07-17). Product Owner kararı: "kullanıcı ekranı
+    açtığında bunun PRIMAC OTS olduğunu ilk bakışta anlayamıyor" — kurumsal kimlik eksikliği USER
+    TEST'te FAIL nedeni oldu. Logo TEK KAYNAKTAN (brand_icon()) besleniyor, hiçbir dosya adı burada
+    hardcode edilmedi. data-workspace="primac" ileride çoklu firma/workspace seçici eklenirse
+    (Product Owner: "Gelecek Uyumluluğu") bu kapsayıcıya dokunmadan üstüne inşa edilebilsin diye —
+    bugün tıklanabilir bir switcher DEĞİL, sadece Ana Sayfa'ya götüren bir bağlantı. -->
+    <div class="df-rail-brand" data-workspace="primac">
+        <a class="df-rail-brand-mark" href="dashboard.php" aria-label="Ana sayfa">
+            <?php $__brandLogo = function_exists('brand_icon') ? brand_icon() : ''; ?>
+            <?php if($__brandLogo && file_exists(__DIR__.'/'.$__brandLogo)): ?>
+            <img src="<?=h($__brandLogo)?>" alt="">
+            <?php endif; ?>
+        </a>
+        <span class="df-rail-brand-name">PRIMAC OTS</span>
+    </div>
     <nav class="df-rail-nav" aria-label="Ana navigasyon">
         <a class="df-rail-link<?=($cur==='dashboard.php'?' is-active':'')?>" href="dashboard.php"><?=ds_icon('home',18)?><span>Ana Sayfa</span></a>
         <div class="df-rail-categories">
