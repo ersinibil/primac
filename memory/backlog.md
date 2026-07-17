@@ -19,10 +19,23 @@ uygulama kullanıyormuş hissi yaşamamalı.
 TAM LEGACY. DF CSS + `ds_lib.php` her mobil sayfada zaten yükleniyor (kullanılmıyor) — göç yeni
 altyapı değil markup dönüşümü.
 
-**FAZ 2C-i (Mobile Shell Migration) CLOSED** (DEV PASS + USER TEST PASS, 2026-07-17) — bkz.
-[[features]] "FAZ 2C-i". Kalan fazlar (2C-ii Home, 2C-iii Search, 2C-iv Liste/Kart, 2C-v Formlar,
-2C-vi Badge/EmptyState temizliği) sırayla, her biri kendi Audit + DEV PASS + USER TEST kapısından
-geçerek ilerleyecek. Şimdi sırada: **FAZ 2C-ii — Mobile Home**, yalnızca Audit aşamasında (kod YOK).
+**FAZ 2C-i (Mobile Shell Migration) CLOSED** (AUDIT+DEV+USER TEST PASS, 2026-07-17, Product Owner'ın
+son onayı: "Bu faz yeniden açılmayacaktır") — bkz. [[features]] "FAZ 2C-i". Kalan fazlar (2C-ii Home,
+2C-iii Search, 2C-iv Liste/Kart, 2C-v Formlar, 2C-vi Badge/EmptyState temizliği) sırayla, her biri
+kendi Audit + DEV PASS + USER TEST kapısından geçerek ilerleyecek.
+
+**FAZ 2C-ii — Mobile Home: Audit teslim edildi (2026-07-17), kod YOK, Product Owner kararı
+bekleniyor.** Ana bulgu: Home'da 3 varyant var — Legacy-Admin (KPI grid+Hızlı İşlemler+ay
+karşılaştırması), Legacy-Personel (aynı desenin sade hâli), Compact (tek, rol-agnostik queue modeli
+— `home_build_queue()`/`home_build_continue()` zaten `$canSee()` ile rol-farkında, web
+`dashboard.php` ile ORTAK). Personel'in bugün legacy görmesi component eksikliği değil,
+`nav_effective_mode()`'un varsayılan pilot-gate davranışı (rollout kararı, ayrı). Sunulan 2 seçenek:
+(A) queue modelini tek standart yap (kod minimal, legacy KPI içeriği terk edilir), (B) legacy KPI
+içeriğini DF bileşenleriyle yeniden üret (daha büyük iş, hiçbir bilgi kaybolmaz). **Karar
+Product Owner'ın.** Ayrı bulgu (YÜKSEK risk, business logic DEĞİL, görünürlük kusuru): Legacy
+Personel/Saha dalındaki 7 kısayol kartı `user_can()` kontrolsüz — yetkisiz tıklamada 403 "ne
+nerede" tuzağı (NAV-001A'da bottom nav için zaten düzeltilen sınıfla aynı kusur, burada
+düzeltilmedi). Tam rapor: `~/Desktop/FAZ2C-ii-Home-Audit.pdf`.
 
 ## ds-foundation.css'te kısmen ölü Launcher CSS'i (2026-07-17, Ece PX-002 FAZ 2B-ii review notu, çok düşük öncelik)
 FAZ 2B-ii'de `layout_top.php`'nin eski Launcher paneli (web "Tüm Modüller" sağdan-kayan drawer)
