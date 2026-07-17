@@ -25,14 +25,13 @@ $where=[$statusMap[$s]??$statusMap['aktif']]; $params=[];
 if($type){ $where[]="j.job_type=?"; $params[]=$type; }
 $sqlWhere='WHERE '.implode(' AND ',$where);
 $tabs=['aktif'=>'Aktif','bekleyen'=>'Bekleyen','devam'=>'Devam Eden','tamam'=>'Tamamlanan','iptal'=>'İptal','gec'=>'Geciken','bugun'=>'Bugün Teslim','tumu'=>'Tümü'];
+ds_page_header('İş Emirleri', ds_icon('briefcase',24), 'Müşteri işleri ve operasyon takibi', ds_button('Yeni İş','job_new.php','primary','','',true), false, true);
+$__jobTabItems=[];
+foreach($tabs as $k=>$v){ $__jobTabItems[]=['label'=>$v,'url'=>'jobs.php?s='.$k,'active'=>$s===$k]; }
+ds_tabs($__jobTabItems);
 ?>
-<div class="panel-head"><h1>İş Emirleri</h1><a class="btn" href="job_new.php">+ Yeni İş</a></div>
-<p class="muted">Müşteri işleri ve operasyon takibi</p>
-<div class="filters">
-<?php foreach($tabs as $k=>$v): ?><a href="jobs.php?s=<?=$k?>" style="<?=$s===$k?'background:#2563eb;color:#fff;border-radius:8px;padding:6px 10px':''?>"><?=$v?></a><?php endforeach; ?>
-</div>
-<section class="panel">
-<table>
+<section class="df-card" style="margin-top:var(--df-space-4)">
+<div class="df-table-wrap"><table class="df-table">
 <thead><tr><th>İş No</th><th>Başlık</th><th>Müşteri</th><th>Sorumlu</th><th>Termin</th><th>Durum</th><th>İşlem</th></tr></thead>
 <tbody>
 <?php
@@ -40,20 +39,21 @@ try{
 $stmt=db()->prepare("SELECT j.*, c.name customer_name, p.name responsible_name FROM jobs j LEFT JOIN contacts c ON c.id=j.customer_id LEFT JOIN personnel p ON p.id=j.responsible_personnel_id $sqlWhere ORDER BY j.id DESC LIMIT 300");
 $stmt->execute($params); $rows=$stmt->fetchAll();
 foreach($rows as $r){ $aktif=!in_array($r['status'],['Tamamlandı','Teslim Edildi','İptal']);
- echo "<tr><td><a href='job_view.php?id=".h($r['id'])."'>".h($r['job_no'])."</a></td><td>".h($r['title'])."</td><td>".h($r['customer_name'])."</td><td>".h($r['responsible_name'])."</td><td>".h($r['due_date'])."</td><td>".badge($r['status'],status_tone($r['status']))."</td><td style='white-space:nowrap'>";
- echo "<a class='btn ghost' href='job_view.php?id=".h($r['id'])."'>Detay</a> ";
+ echo "<tr><td><a href='job_view.php?id=".h($r['id'])."'>".h($r['job_no'])."</a></td><td>".h($r['title'])."</td><td>".h($r['customer_name'])."</td><td>".h($r['responsible_name'])."</td><td>".h($r['due_date'])."</td><td>".ds_badge($r['status'])."</td><td style='white-space:nowrap'>";
+ echo "<a class='df-btn df-btn--ghost df-btn--sm' href='job_view.php?id=".h($r['id'])."'>Detay</a> ";
  if($aktif){
-   if($r['status']!=='Devam Ediyor') echo "<form method='post' style='display:inline'><input type='hidden' name='jid' value='".h($r['id'])."'><button class='btn ghost' name='set' value='Devam Ediyor'>▶</button></form> ";
-   echo "<form method='post' style='display:inline'><input type='hidden' name='jid' value='".h($r['id'])."'><button class='btn' name='set' value='Tamamlandı'>✓ Tamamla</button></form> ";
-   echo "<form method='post' style='display:inline' onsubmit=\"return confirm('İptal?')\"><input type='hidden' name='jid' value='".h($r['id'])."'><button class='btn ghost' name='set' value='İptal'>✕</button></form>";
+   if($r['status']!=='Devam Ediyor') echo "<form method='post' style='display:inline'><input type='hidden' name='jid' value='".h($r['id'])."'><button class='df-btn df-btn--ghost df-btn--sm' name='set' value='Devam Ediyor'>▶</button></form> ";
+   echo "<form method='post' style='display:inline'><input type='hidden' name='jid' value='".h($r['id'])."'><button class='df-btn df-btn--primary df-btn--sm' name='set' value='Tamamlandı'>✓ Tamamla</button></form> ";
+   echo "<form method='post' style='display:inline' onsubmit=\"return confirm('İptal?')\"><input type='hidden' name='jid' value='".h($r['id'])."'><button class='df-btn df-btn--ghost df-btn--sm' name='set' value='İptal'>✕</button></form>";
  } elseif($r['status']==='Tamamlandı'){
-   echo "<form method='post' style='display:inline'><input type='hidden' name='jid' value='".h($r['id'])."'><button class='btn ghost' name='set' value='Teslim Edildi'>📦 Teslim/Kapat</button></form>";
+   echo "<form method='post' style='display:inline'><input type='hidden' name='jid' value='".h($r['id'])."'><button class='df-btn df-btn--ghost df-btn--sm' name='set' value='Teslim Edildi'>📦 Teslim/Kapat</button></form>";
  }
  echo "</td></tr>";
 }
-if(!$rows) echo "<tr><td colspan='7' class='muted'>Bu kategoride iş yok.</td></tr>";
-}catch(Throwable $e){ echo "<tr><td colspan='7'><div class='alert'>".h($e->getMessage())."</div></td></tr>";}
+if(!$rows) echo "<tr><td colspan='7' class='df-muted'>Bu kategoride iş yok.</td></tr>";
+}catch(Throwable $e){ echo "<tr><td colspan='7'>".ds_alert('danger',$e->getMessage())."</td></tr>";}
 ?>
-</tbody></table>
+</tbody></table></div>
 </section>
+<style>body.nav-compact .df-muted{color:var(--df-ink-500)}</style>
 <?php require_once __DIR__.'/layout_bottom.php'; ?>

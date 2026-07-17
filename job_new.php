@@ -130,71 +130,57 @@ function selected_type($value, $preType){
 }
 ?>
 
-<h1>Yeni İş Aç</h1>
+<?php ds_page_header('Yeni İş Aç', ds_icon('briefcase',24), '', '', false, true); ?>
 
-<?php if($error): ?>
-<div class="alert"><?=h($error)?></div>
-<?php endif; ?>
+<?php if($error): ?><?=ds_alert('danger',$error)?><?php endif; ?>
 
-<section class="panel">
-<form method="post" class="form-grid">
-<label>İş Başlığı<input name="title" required placeholder="Örn: 150 adet telefon standı"></label>
+<section class="df-card">
+<form method="post" class="df-form-grid-2">
+<div class="df-form-span-2"><?php ds_form_field('İş Başlığı', '<input name="title" required placeholder="Örn: 150 adet telefon standı">'); ?></div>
 
-<label>İş Tipi
-<select name="job_type">
-<option value="3d_imalat" <?=selected_type('3d_imalat',$preType)?>>3D İmalat</option>
-<option value="uv_baski" <?=selected_type('uv_baski',$preType)?>>UV Baskı</option>
-<option value="lazer" <?=selected_type('lazer',$preType)?>>Lazer</option>
-<option value="grafik_tasarim" <?=selected_type('grafik_tasarim',$preType)?>>Grafik Tasarım</option>
-<option value="dis_atolye" <?=selected_type('dis_atolye',$preType)?>>Dış Atölye</option>
-<option value="tedarikcide_uretim" <?=selected_type('tedarikcide_uretim',$preType)?>>Tedarikçide Üretim</option>
-<option value="montaj" <?=selected_type('montaj',$preType)?>>Montaj</option>
-<option value="satin_alma" <?=selected_type('satin_alma',$preType)?>>Satın Alma</option>
-<option value="muhasebe" <?=selected_type('muhasebe',$preType)?>>Muhasebe İşlemi</option>
-<option value="karma" <?=selected_type('karma',$preType)?>>Karma İş</option>
-</select>
-</label>
+<?php
+$__jobTypes=['3d_imalat'=>'3D İmalat','uv_baski'=>'UV Baskı','lazer'=>'Lazer','grafik_tasarim'=>'Grafik Tasarım','dis_atolye'=>'Dış Atölye','tedarikcide_uretim'=>'Tedarikçide Üretim','montaj'=>'Montaj','satin_alma'=>'Satın Alma','muhasebe'=>'Muhasebe İşlemi','karma'=>'Karma İş'];
+$__opts='';
+foreach($__jobTypes as $__k=>$__v){ $__opts.='<option value="'.h($__k).'" '.selected_type($__k,$preType).'>'.h($__v).'</option>'; }
+ds_form_field('İş Tipi', '<select name="job_type">'.$__opts.'</select>');
+?>
 
-<label>Müşteri
-<select name="customer_id">
-<option value="">Seçiniz</option>
-<?php foreach($customers as $c): ?><option value="<?=$c['id']?>"><?=h($c['name'])?></option><?php endforeach; ?>
-</select>
-</label>
+<?php
+$__custOpts='<option value="">Seçiniz</option>';
+foreach($customers as $c){ $__custOpts.='<option value="'.h($c['id']).'">'.h($c['name']).'</option>'; }
+ds_form_field('Müşteri', '<select name="customer_id">'.$__custOpts.'</select>');
+?>
 
-<label>Tedarikçi / Dış Atölye
-<select name="supplier_id">
-<option value="">Yok</option>
-<?php foreach($suppliers as $s): ?><option value="<?=$s['id']?>"><?=h($s['name'])?></option><?php endforeach; ?>
-</select>
-</label>
+<?php
+$__supOpts='<option value="">Yok</option>';
+foreach($suppliers as $s){ $__supOpts.='<option value="'.h($s['id']).'">'.h($s['name']).'</option>'; }
+ds_form_field('Tedarikçi / Dış Atölye', '<select name="supplier_id">'.$__supOpts.'</select>');
+?>
 
-<label>Sorumlu Personel
-<select name="responsible_personnel_id">
-<option value="">Seçiniz</option>
-<?php foreach($personnel as $p): ?><option value="<?=$p['id']?>"><?=h($p['name'])?></option><?php endforeach; ?>
-</select>
-</label>
+<?php
+$__persOpts='<option value="">Seçiniz</option>';
+foreach($personnel as $p){ $__persOpts.='<option value="'.h($p['id']).'">'.h($p['name']).'</option>'; }
+ds_form_field('Sorumlu Personel', '<select name="responsible_personnel_id">'.$__persOpts.'</select>');
+?>
 
-<label>Termin<input type="date" name="due_date"></label>
+<?php ds_form_field('Termin', '<input type="date" name="due_date">'); ?>
+<?php ds_form_field('Öncelik', '<select name="priority"><option>Normal</option><option>Acil</option><option>Çok Acil</option><option>Düşük</option></select>'); ?>
+<?php ds_form_field('Durum', '<select name="status"><option>Yeni</option><option>Teklif</option><option>Onay Bekliyor</option><option>Planlandı</option><option>Devam Ediyor</option><option>Dışarıda</option><option>Montajda</option><option>Tamamlandı</option></select>'); ?>
+<?php ds_form_field('Satış Kanalı / Pazar', '<input name="channel" placeholder="Primac.com.tr, Trendyol, mağaza, müşteri özel...">'); ?>
+<?php ds_form_field('Dosya Linki', '<input name="file_link" placeholder="Tasarım, STL, Drive linki...">'); ?>
+<?php ds_form_field('Satış Tutarı', '<input type="number" step="0.01" name="sale_amount" value="0">'); ?>
+<?php ds_form_field('Maliyet', '<input type="number" step="0.01" name="cost_amount" value="0">'); ?>
+<div class="df-form-span-2"><?php ds_form_field('Teslim / Montaj Adresi', '<textarea name="delivery_address" rows="2"></textarea>'); ?></div>
+<div class="df-form-span-2"><?php ds_form_field('Açıklama', '<textarea name="description" rows="5"></textarea>'); ?></div>
 
-<label>Öncelik
-<select name="priority"><option>Normal</option><option>Acil</option><option>Çok Acil</option><option>Düşük</option></select>
-</label>
-
-<label>Durum
-<select name="status"><option>Yeni</option><option>Teklif</option><option>Onay Bekliyor</option><option>Planlandı</option><option>Devam Ediyor</option><option>Dışarıda</option><option>Montajda</option><option>Tamamlandı</option></select>
-</label>
-
-<label>Satış Kanalı / Pazar<input name="channel" placeholder="Primac.com.tr, Trendyol, mağaza, müşteri özel..."></label>
-<label>Dosya Linki<input name="file_link" placeholder="Tasarım, STL, Drive linki..."></label>
-<label>Satış Tutarı<input type="number" step="0.01" name="sale_amount" value="0"></label>
-<label>Maliyet<input type="number" step="0.01" name="cost_amount" value="0"></label>
-<label class="full">Teslim / Montaj Adresi<textarea name="delivery_address" rows="2"></textarea></label>
-<label class="full">Açıklama<textarea name="description" rows="5"></textarea></label>
-
-<button class="btn">İşi Kaydet</button>
+<div class="df-form-span-2"><button class="df-btn df-btn--primary">İşi Kaydet</button></div>
 </form>
 </section>
+
+<style>
+body.nav-compact .df-form-grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 var(--df-space-4)}
+body.nav-compact .df-form-span-2{grid-column:1 / -1}
+@media(max-width:640px){body.nav-compact .df-form-grid-2{grid-template-columns:1fr}}
+</style>
 
 <?php require_once __DIR__.'/layout_bottom.php'; ?>
