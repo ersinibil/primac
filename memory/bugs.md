@@ -2,6 +2,30 @@
 
 <!-- Çözülen ve açık bug'lar. Çözüldüğünde tarih+çözüm notu ekleyip üstte "ÇÖZÜLDÜ" ile işaretle, silmeyin. -->
 
+## ÇÖZÜLDÜ — ACİL HOTFIX PAKETİ (2026-07-17, commit `14f1485`/`b198be8`/`9404228`, PRODUCT OWNER KARARI)
+Master Envanter'de kodda satır numarasıyla doğrulanan 2 güvenlik açığı + 1 sessiz şema hatası,
+Home (FAZ 2C-ii) implementasyonuna geçmeden önce ayrı bir ACİL HOTFIX kapısı olarak kapatıldı.
+58/58 DB-free test PASS + Ece (code-review) + Selin (security-review) bağımsız incelemesi. Tam
+rapor: `~/Desktop/PRIMAC-OTS-Acil-Hotfix-DEV-PASS.pdf`.
+- **HOTFIX-01 — `accounting.php` reflected XSS**: `$_GET['tab']` önceden hiç doğrulanmadan/escape
+  edilmeden href'lere basılıyordu. Artık 4 gerçek sekme değerine karşı whitelist (`in_array(...,
+  true)`) + savunma derinliği için `h()` escape.
+- **HOTFIX-02 — `users.php` + `mobile/users.php` rol yükseltme (privilege escalation)**:
+  `$_POST['role']` hem create hem update'te doğrudan kaydediliyordu — `users` modül yetkisi olan
+  admin-olmayan biri kendini/başkasını admin yapabiliyordu. Artık rol yalnızca whitelist'teki bir
+  değer VE oturumdaki kullanıcı `is_admin()` İSE fiilen değişebiliyor; `uid===1` (ana yönetici)
+  koruması korundu. Ece'nin code-review'unda `mobile/users.php`'de aynı korumanın (whitelist +
+  uid=1) hiç olmadığı bulunup aynı commit'te kapatıldı.
+- **HOTFIX-03 — `requests.php`/`mobile/requests.php` şema hatası**: gerçek kolon `response_note`
+  (migration 008) yerine var olmayan `manager_note`'a yazılıyordu — her onay/red işlemi sessizce
+  başarısız oluyordu. Düzeltildi + `requests.php`'de önceden hiç render edilmeyen `$error` artık
+  gösteriliyor, ham exception metni yerine güvenli sabit mesaj + `error_log()`. Ece'nin bulgusuyla
+  `mobile/request_new.php`'nin aynı hatayı taşıyan üçüncü kopyası da kapatıldı.
+- **Yeni backlog maddeleri (bu hotfix'in kapsamı DIŞINDA bırakıldı, bilinçli)**: `users.php`'nin
+  `permissions[]` alanında whitelist yok (MEDIUM, Selin'in notu — role ile aynı desende ayrı bir
+  turda ele alınmalı); `requests.php`'nin liste-SELECT catch bloğu hâlâ ham exception gösteriyor
+  (LOW, sadece okuma hatası, farklı kod yolu).
+
 ## ÇÖZÜLDÜ (2026-07-17, commit `924c367`)
 
 - **`mobile/uretim.php`/`mobile/uretim_new.php` `boot.php::page_module_map()`'te hiç yoktu —

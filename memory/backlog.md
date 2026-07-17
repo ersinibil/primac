@@ -2,6 +2,15 @@
 
 <!-- Açık geliştirme görevleri. Kapanan madde buradan silinip memory/features.md'ye taşınır. -->
 
+## ACİL HOTFIX PAKETİ — KAPANDI (2026-07-17, PRODUCT OWNER KARARI — R0.9 hotfix kapısı)
+Master Envanter'in bulduğu 2 güvenlik açığı + 1 sessiz şema hatası, Home implementasyonuna (KOMUT 5)
+geçmeden önce ayrı bir kapı olarak kapatıldı — **3/3 hotfix PASS**, 58/58 test, Ece+Selin bağımsız
+incelemesi, 3 ayrı commit (`14f1485`/`b198be8`/`9404228`), migration yok. Tam detay → `memory/bugs.md`
+"ÇÖZÜLDÜ — ACİL HOTFIX PAKETİ". Rapor: `~/Desktop/PRIMAC-OTS-Acil-Hotfix-DEV-PASS.pdf`.
+İki küçük takip maddesi KNOWN_BUGS.md'ye yeni madde olarak eklendi (7: `permissions[]` whitelist
+eksikliği MEDIUM, 8: requests.php liste-okuma catch bloğu LOW) — bilinçli olarak bu hotfix'in dışında.
+**Gate kapandı: Product Owner onayı sonrası doğrudan KOMUT 5 / FAZ 2C-ii Home implementasyonuna geçilir.**
+
 ## MASTER ENVANTER & RELEASE 0.9 PLANI (2026-07-17, PRODUCT OWNER KARARI — çalışma modeli değişti)
 Product Owner kararı: geliştirme mantığı "yeni özellik" değil "PRIMAC OTS'yi aktif kullanıma hazır hale
 getirme" oldu (Evolution not Revolution, Business Logic korunur, Audit→Kod→DEV PASS→USER TEST→CLOSED

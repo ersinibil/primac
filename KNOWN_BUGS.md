@@ -6,18 +6,32 @@ ve en yakın zamanda çözülenlerin kısa özeti tutulur.
 
 ## Açık — SYSTEM AUDIT MODE bulguları (2026-07-04, read-only denetim)
 
-1. **ORTA-YÜKSEK — `accounting.php` yansıyan XSS** — satır 8, 111-130: `$_GET['tab']` escape
-   edilmeden href'e basılıyor (`h()`/`htmlspecialchars()` eksik). Mobilde bu parametre kullanılmıyor.
-2. **ORTA — `users.php` rol yükseltme** — satır 41-51: `users` modül yetkisi olan admin-olmayan
-   biri kendini/başkasını `admin` rolüne yükseltebilir, `uid===1` dışında kısıtlama yok.
+1. ~~**ORTA-YÜKSEK — `accounting.php` yansıyan XSS**~~ — **ÇÖZÜLDÜ (2026-07-17, ACİL HOTFIX
+   PAKETİ, commit `14f1485`)**: `$_GET['tab']` artık whitelist + `h()` ile korunuyor. Detay →
+   `memory/bugs.md`.
+2. ~~**ORTA — `users.php` rol yükseltme**~~ — **ÇÖZÜLDÜ (2026-07-17, ACİL HOTFIX PAKETİ, commit
+   `b198be8`)**: rol artık yalnızca `is_admin()` + whitelist ile değişebiliyor, `mobile/users.php`
+   de aynı korumayı aldı. Detay → `memory/bugs.md`.
 3. **ORTA — `is_admin()` session'da bayatlıyor** — `boot.php:124-127`, `user_can()` gibi DB'den
    taze okumuyor; rolü alınan bir admin aktif oturumu boyunca admin yetkisiyle işlem yapabilir.
-4. **ORTA — Login'de session fixation koruması yok** — `index.php:12-40`, başarılı girişte
-   `session_regenerate_id(true)` çağrılmıyor.
-5. **DÜŞÜK — `cron.php:7`'de yeni sabit anahtar** (`acans-cron-2026`) — `acans-migrate-2026`'dan
-   farklı, daha önce raporlanmamış.
-6. **BİLGİ — Proje genelinde CSRF token mekanizması yok.** → **SECURITY SPRINT-004** olarak
-   planlandı (bkz. `ROADMAP.md` "Security Roadmap").
+   Master Envanter'de PKY-04/GUV-03, Release 1.0'a planlı — hâlâ açık, bilinçli.
+4. ~~**ORTA — Login'de session fixation koruması yok**~~ — **MUHTEMELEN ÇÖZÜLDÜ**: SECURITY
+   SPRINT-005 FAZ-1 (commit `b973e01`) `session_regenerate_id(true)`'yu hem `index.php:63` hem
+   `boot.php:467`'ye ekledi — bu madde SPRINT-005'ten ÖNCE yazıldığı için güncellenmemiş kalmıştı.
+   Kodda 2026-07-17 Master Envanter turunda doğrulandı.
+5. **DÜŞÜK — `cron.php:7`'de sabit anahtar** (`acans-cron-2026`) — hâlâ açık, düşük risk.
+6. ~~**BİLGİ — Proje genelinde CSRF token mekanizması yok.**~~ — **ÇÖZÜLDÜ**: SECURITY SPRINT-004
+   57 sayfayı enforced listeye ekleyerek tamamen kapattı — bu madde SPRINT-004'ten ÖNCE yazıldığı
+   için güncellenmemiş kalmıştı. Kodda 2026-07-17 Master Envanter turunda doğrulandı.
+
+## Açık — yeni (2026-07-17, ACİL HOTFIX PAKETİ review notları)
+7. **MEDIUM — `users.php` `permissions[]` alanında whitelist yok** — `role`'e uygulanan
+   `is_admin()`+whitelist deseni `permissions[]`'a hiç uygulanmadı; `users` yetkili admin-olmayan
+   biri kendi/başka bir kullanıcının `edit_delete`/`finance`/`personnel_accounts`/`users`
+   yetkilerini işaretleyebiliyor. Bilinçli olarak bu hotfix'in dışında bırakıldı (Selin'in notu).
+8. **DÜŞÜK — `requests.php` liste-SELECT catch bloğu ham exception gösteriyor** — HOTFIX-03
+   yalnızca UPDATE/onay-red akışını kapsadı, okuma/liste hatası (satır ~79) ayrı, düşük ihtimalli
+   bir kod yolu, bilinçli dokunulmadı (Ece'nin notu).
 
 Tam denetim raporu (mimari/performans/UX/veri modeli dahil) → System Audit Artifact (2026-07-04),
 öncelik sırası → `ROADMAP.md` "SYSTEM AUDIT — Teknik Borç ve Öncelikler" bölümü.
