@@ -17,6 +17,27 @@ function personnel_create_login($pdo, $personnelId, $username, $password){
     $username=trim($username);
     $ex=$pdo->prepare("SELECT id FROM app_users WHERE username=?"); $ex->execute([$username]);
     if($ex->fetch()) throw new Exception('Bu kullanıcı adı zaten var.');
+    // P0-AUTH-01 (2026-07-17): aynı personele ikinci bir hesap daha açılması, hangi hesabın
+    // "güncel" sayılacağını belirsizleştiriyordu (bkz. personnel_reset_password() üstündeki not —
+    // gerçek kullanıcı testinde personelin yeni şifreyle giriş yapamaması bu köke bağlandı). Zaten
+    // bağlı bir hesap varsa (personnel.user_id VEYA app_users.personnel_id üzerinden) yeni hesap
+    // oluşturulmasını engelle. Ece'nin P0-AUTH-01 re-review'ında bulduğu düzeltme: personnel.user_id
+    // sadece varlığı değil, HÂLÂ bu personele ait olup olmadığı (personnel_id=?) da doğrulanır —
+    // users.php'den bir hesap başka bir personele taşınmışsa (bkz. users.php update_user), eski
+    // personelin user_id'si "yetim" değil ama artık BAŞKASINA ait olur; salt varlık kontrolü bunu
+    // yanlışlıkla "hâlâ bağlı" sayıp meşru yeni hesap açılmasını engelleyebilirdi.
+    $pr0=$pdo->prepare("SELECT user_id FROM personnel WHERE id=?"); $pr0->execute([$personnelId]); $p0=$pr0->fetch();
+    $existingUid=(int)($p0['user_id'] ?? 0);
+    $hasLink = false;
+    if($existingUid){
+        $chk=$pdo->prepare("SELECT id FROM app_users WHERE id=? AND personnel_id=?"); $chk->execute([$existingUid,$personnelId]);
+        $hasLink = (bool)$chk->fetch();
+    }
+    if(!$hasLink){
+        $le=$pdo->prepare("SELECT id FROM app_users WHERE personnel_id=? LIMIT 1"); $le->execute([$personnelId]);
+        $hasLink = (bool)$le->fetch();
+    }
+    if($hasLink) throw new Exception('Bu personelin zaten bağlı bir giriş hesabı var. Yeni hesap oluşturmak yerine mevcut hesabın şifresini sıfırlayın.');
     $pr=$pdo->prepare("SELECT name,phone,email FROM personnel WHERE id=?"); $pr->execute([$personnelId]); $prow=$pr->fetch();
     $pdo->prepare("INSERT INTO app_users(username,full_name,phone,email,password_hash,role,personnel_id,active,created_at) VALUES(?,?,?,?,?,?,?,1,NOW())")
         ->execute([$username,$prow['name'],$prow['phone'],$prow['email'],password_hash($password,PASSWORD_DEFAULT),'personel',$personnelId]);
@@ -33,20 +54,36 @@ function personnel_create_login($pdo, $personnelId, $username, $password){
  * @return array ['user_id'=>int,'username'=>string,'phone'=>string]
  */
 function personnel_reset_password($pdo, $personnelId, $newPassword){
-    // Elif'in PDP-001 re-review'ında bulduğu düzeltme (2026-07-15): mobildeki orijinal akış İKİ
-    // ayrı sorguydu — hesabı BULMAK için p.user_id=u.id yönünde (personnel.user_id bu hesaba
-    // işaret ediyorsa app_users.personnel_id boş/yanlış olsa bile hesabı bulan bir OR yedek yolu
-    // sağlıyordu), sonra username/phone'u ÇEKMEK için ayrıca p.id=u.personnel_id yönünde. Bu ikisi
-    // tek sorguda birleştirilince OR yedek yolu sessizce ölü koda dönüşüyordu — iki sorgu deseni
-    // birebir geri getirildi.
-    $bu=$pdo->prepare("SELECT u.id FROM app_users u LEFT JOIN personnel p ON p.user_id=u.id WHERE u.personnel_id=? OR p.id=? LIMIT 1");
-    $bu->execute([$personnelId,$personnelId]); $br=$bu->fetch();
-    if(!$br) throw new Exception('Bu personele bağlı bir giriş hesabı yok.');
-    $boundUid=(int)$br['id'];
+    // P0-AUTH-01 (2026-07-17): gerçek kullanıcı testinde "şifre sıfırlandı" mesajı gösterilmesine
+    // rağmen personelin yeni şifreyle giriş yapamadığı bildirildi. Kök neden: eski sorgu
+    // (LEFT JOIN + OR + ORDER BY'sız LIMIT 1) personele birden fazla app_users kaydı bağlıysa
+    // (bkz. personnel_create_login() üstündeki not — önceden bu ihtimale karşı bir engel yoktu)
+    // HANGİ kaydın döneceğini garanti etmiyordu; MySQL bazen personelin GERÇEKTEN kullandığı
+    // hesap yerine eski/artık kullanılmayan bir hesabı seçip onu güncelleyebiliyordu. Artık hedef
+    // hesap TEK ve deterministik bir kaynaktan çözülüyor: personnel.user_id — bu alan "personel
+    // için güncel hesap" anlamına geliyor ve personnel_create_login() tarafından tutuluyor.
+    $pr=$pdo->prepare("SELECT user_id FROM personnel WHERE id=?"); $pr->execute([$personnelId]); $prow=$pr->fetch();
+    $boundUid=(int)($prow['user_id'] ?? 0);
+    if($boundUid){
+        // Ece'nin P0-AUTH-01 re-review'ında bulduğu düzeltme: sadece hesabın VAR olduğunu değil,
+        // hâlâ BU personele ait (personnel_id=?) olduğunu da doğrula — aksi halde başka bir
+        // personele taşınmış bir hesabın şifresi yanlışlıkla değiştirilebilir.
+        $chk=$pdo->prepare("SELECT id FROM app_users WHERE id=? AND personnel_id=?"); $chk->execute([$boundUid,$personnelId]);
+        if(!$chk->fetch()) $boundUid=0; // yetim veya artık başka personele ait
+    }
+    if(!$boundUid){
+        // Geriye dönük uyumluluk: user_id hiç set edilmemiş eski kayıtlar için tek deterministik
+        // yedek yol — en eski (ilk oluşturulan) bağlı hesap, web'in mevcut görüntüleme sorgusuyla
+        // (personnel_edit.php) aynı ORDER BY id ASC kuralını izler.
+        $fb=$pdo->prepare("SELECT id FROM app_users WHERE personnel_id=? ORDER BY id ASC LIMIT 1"); $fb->execute([$personnelId]);
+        $fr=$fb->fetch();
+        $boundUid=(int)($fr['id'] ?? 0);
+    }
+    if(!$boundUid) throw new Exception('Bu personele bağlı bir giriş hesabı yok.');
     $pdo->prepare("UPDATE app_users SET password_hash=? WHERE id=?")->execute([password_hash($newPassword,PASSWORD_DEFAULT),$boundUid]);
-    $cu=$pdo->prepare("SELECT u.username,p.phone FROM app_users u LEFT JOIN personnel p ON p.id=u.personnel_id WHERE u.id=?");
-    $cu->execute([$boundUid]); $cr=$cu->fetch();
-    return ['user_id'=>$boundUid,'username'=>$cr['username']??'','phone'=>$cr['phone']??''];
+    $cu=$pdo->prepare("SELECT username FROM app_users WHERE id=?"); $cu->execute([$boundUid]); $cr=$cu->fetch();
+    $pp=$pdo->prepare("SELECT phone FROM personnel WHERE id=?"); $pp->execute([$personnelId]); $ppr=$pp->fetch();
+    return ['user_id'=>$boundUid,'username'=>$cr['username']??'','phone'=>$ppr['phone']??''];
 }
 
 // $_FILES['cv'] varsa yükler, uploads/personnel_cv altına taşır ve kök-göreli yolu döner.

@@ -75,6 +75,22 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             $un=trim($_POST['username']);
             $ex=$pdo->prepare("SELECT id FROM app_users WHERE username=?"); $ex->execute([$un]);
             if($ex->fetch()) throw new Exception('Bu kullanıcı adı zaten var.');
+            // P0-AUTH-01 (2026-07-17): bkz. reset_pw bloğu üstündeki not — aynı personele ikinci
+            // bir hesap daha açılması hangi hesabın "güncel" sayılacağını belirsizleştiriyordu.
+            // Ece'nin re-review'ında bulduğu düzeltme: sadece user_id set mi diye değil, işaret
+            // ettiği hesabın HÂLÂ bu personele ait olup olmadığı (personnel_id=?) da doğrulanır.
+            $pr0=$pdo->prepare("SELECT user_id FROM personnel WHERE id=?"); $pr0->execute([$id]); $p0=$pr0->fetch();
+            $existingUid=(int)($p0['user_id'] ?? 0);
+            $hasLink = false;
+            if($existingUid){
+                $chk0=$pdo->prepare("SELECT id FROM app_users WHERE id=? AND personnel_id=?"); $chk0->execute([$existingUid,$id]);
+                $hasLink = (bool)$chk0->fetch();
+            }
+            if(!$hasLink){
+                $le=$pdo->prepare("SELECT id FROM app_users WHERE personnel_id=? LIMIT 1"); $le->execute([$id]);
+                $hasLink = (bool)$le->fetch();
+            }
+            if($hasLink) throw new Exception('Bu personelin zaten bağlı bir giriş hesabı var. Yeni hesap oluşturmak yerine mevcut hesabın şifresini sıfırlayın.');
             $p=$pdo->prepare("SELECT name,phone,email FROM personnel WHERE id=?"); $p->execute([$id]); $pr=$p->fetch();
             $pdo->prepare("INSERT INTO app_users(username,full_name,phone,email,password_hash,role,personnel_id,active,created_at) VALUES(?,?,?,?,?,?,?,1,NOW())")
                 ->execute([$un,$pr['name'],$pr['phone'],$pr['email'],password_hash($_POST['password'],PASSWORD_DEFAULT),'personel',$id]);
@@ -90,13 +106,29 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             // hesabın id'si POST edilerek o hesabın şifresi değiştirilebiliyordu, hedef hesap her
             // zaman görüntülenen personele ($id) bağlı gerçek hesaptan çekiliyor.
             if(!$canManageAccounts) throw new Exception('Bu işlem için yönetici yetkisi gerekir.');
-            $bu=$pdo->prepare("SELECT u.id FROM app_users u LEFT JOIN personnel p ON p.user_id=u.id WHERE u.personnel_id=? OR p.id=? LIMIT 1");
-            $bu->execute([$id,$id]); $br=$bu->fetch();
-            if(!$br) throw new Exception('Bu personele bağlı bir giriş hesabı yok.');
-            $boundUid=(int)$br['id'];
+            // P0-AUTH-01 (2026-07-17): gerçek kullanıcı testinde "şifre sıfırlandı" mesajı
+            // gösterilmesine rağmen personelin yeni şifreyle giriş yapamadığı bildirildi. Kök
+            // neden: eski sorgu (LEFT JOIN + OR + ORDER BY'sız LIMIT 1) personele birden fazla
+            // app_users kaydı bağlıysa HANGİ kaydın döneceğini garanti etmiyordu. Artık hedef
+            // hesap TEK deterministik kaynaktan çözülüyor: personnel.user_id (personel için
+            // "güncel hesap" — personnel_lib.php::personnel_reset_password() ile aynı mantık).
+            $bu=$pdo->prepare("SELECT user_id FROM personnel WHERE id=?"); $bu->execute([$id]); $brow=$bu->fetch();
+            $boundUid=(int)($brow['user_id'] ?? 0);
+            if($boundUid){
+                // Ece'nin re-review'ında bulduğu düzeltme: hesabın hâlâ BU personele ait olduğunu
+                // (personnel_id=?) da doğrula — başka personele taşınmışsa yanlış hesap hedeflenmesin.
+                $chk=$pdo->prepare("SELECT id FROM app_users WHERE id=? AND personnel_id=?"); $chk->execute([$boundUid,$id]);
+                if(!$chk->fetch()) $boundUid=0;
+            }
+            if(!$boundUid){
+                $fb=$pdo->prepare("SELECT id FROM app_users WHERE personnel_id=? ORDER BY id ASC LIMIT 1"); $fb->execute([$id]);
+                $fr=$fb->fetch();
+                $boundUid=(int)($fr['id'] ?? 0);
+            }
+            if(!$boundUid) throw new Exception('Bu personele bağlı bir giriş hesabı yok.');
             $pdo->prepare("UPDATE app_users SET password_hash=? WHERE id=?")->execute([password_hash($_POST['newpw'],PASSWORD_DEFAULT),$boundUid]);
             $ok='Şifre güncellendi.';
-            try{ $cu=$pdo->prepare("SELECT u.username,p.phone FROM app_users u LEFT JOIN personnel p ON p.id=u.personnel_id WHERE u.id=?"); $cu->execute([$boundUid]); $cr=$cu->fetch(); if($cr) $waCred=cred_wa($cr['phone']??'',$cr['username'],$_POST['newpw']); }catch(Throwable $e){}
+            try{ $cu=$pdo->prepare("SELECT username FROM app_users WHERE id=?"); $cu->execute([$boundUid]); $cr=$cu->fetch(); $pp=$pdo->prepare("SELECT phone FROM personnel WHERE id=?"); $pp->execute([$id]); $ppr=$pp->fetch(); if($cr) $waCred=cred_wa($ppr['phone']??'',$cr['username'],$_POST['newpw']); }catch(Throwable $e){}
         }
     }catch(Throwable $e){ $er=$e->getMessage(); }
 }
@@ -107,7 +139,17 @@ if(!empty($_SESSION['pers_err'])){ $er=$_SESSION['pers_err']; unset($_SESSION['p
 try{
     $s=$pdo->prepare("SELECT * FROM personnel WHERE id=?"); $s->execute([$id]); $p=$s->fetch();
     if(!$p) throw new Exception('Personel bulunamadı.');
-    $u=$pdo->prepare("SELECT * FROM app_users WHERE personnel_id=? OR id=? LIMIT 1"); $u->execute([$id,(int)($p['user_id']??0)]); $usr=$u->fetch();
+    // P0-AUTH-01 (2026-07-17, Ece re-review): görüntüleme sorgusu artık reset_pw/make_login'deki
+    // AYNI deterministik çözümlemeyi izliyor (önce personnel.user_id + sahiplik doğrulaması, yoksa
+    // personnel_id üzerinden en eski kayıt) — ekranda gösterilen hesap, gerçekte güncellenecek
+    // hesapla HER ZAMAN eşleşir.
+    $__uid=(int)($p['user_id']??0); $usr=false;
+    if($__uid){
+        $uu=$pdo->prepare("SELECT * FROM app_users WHERE id=? AND personnel_id=?"); $uu->execute([$__uid,$id]); $usr=$uu->fetch();
+    }
+    if(!$usr){
+        $u=$pdo->prepare("SELECT * FROM app_users WHERE personnel_id=? ORDER BY id ASC LIMIT 1"); $u->execute([$id]); $usr=$u->fetch();
+    }
     $acikIs=(int)$pdo->query("SELECT COUNT(*) c FROM jobs WHERE responsible_personnel_id=$id AND status NOT IN ('Tamamlandı','İptal','Teslim Edildi')")->fetch()['c'];
     $acikGorev=(int)$pdo->query("SELECT COUNT(*) c FROM tasks WHERE personnel_id=$id AND status NOT IN ('Tamamlandı','İptal')")->fetch()['c'];
 ?>

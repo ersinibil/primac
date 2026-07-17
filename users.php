@@ -33,6 +33,26 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             $hash=password_hash($_POST['password'] ?: '123456', PASSWORD_DEFAULT);
             $__postedRole = $_POST['role'] ?? '';
             $role = (is_admin() && in_array($__postedRole, $__validRoles, true)) ? $__postedRole : 'personel';
+            $__linkPid = (int)($_POST['personnel_id'] ?? 0) ?: null;
+            // P0-AUTH-01 (2026-07-17, Ece re-review'ında bulunan boşluk): bu form, personnel_edit.php'nin
+            // dedike "Giriş Hesabı Oluştur" akışından (personnel_lib.php::personnel_create_login())
+            // BAĞIMSIZ olarak, "Personel Bağlantısı" dropdown'undan zaten bağlı bir personel seçilerek
+            // ikinci bir hesap açılmasına izin veriyordu — P0-AUTH-01'in kök nedeni olan aynı mükerrer-
+            // hesap durumunu farklı bir giriş noktasından yeniden üretebiliyordu. Aynı koruma burada da.
+            if($__linkPid){
+                $__pr0=$pdo->prepare("SELECT user_id FROM personnel WHERE id=?"); $__pr0->execute([$__linkPid]); $__p0=$__pr0->fetch();
+                $__existingUid=(int)($__p0['user_id'] ?? 0);
+                $__hasLink=false;
+                if($__existingUid){
+                    $__chk=$pdo->prepare("SELECT id FROM app_users WHERE id=? AND personnel_id=?"); $__chk->execute([$__existingUid,$__linkPid]);
+                    $__hasLink=(bool)$__chk->fetch();
+                }
+                if(!$__hasLink){
+                    $__le=$pdo->prepare("SELECT id FROM app_users WHERE personnel_id=? LIMIT 1"); $__le->execute([$__linkPid]);
+                    $__hasLink=(bool)$__le->fetch();
+                }
+                if($__hasLink) throw new Exception('Bu personelin zaten bağlı bir giriş hesabı var. Yeni hesap oluşturmak yerine mevcut hesabın şifresini sıfırlayın.');
+            }
             $pdo->prepare("INSERT INTO app_users(username,full_name,phone,email,password_hash,role,personnel_id,permissions,active) VALUES(?,?,?,?,?,?,?,?,?)")
                 ->execute([
                     trim($_POST['username']),
@@ -41,10 +61,17 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                     trim($_POST['email']),
                     $hash,
                     $role,
-                    (int)$_POST['personnel_id'] ?: null,
+                    $__linkPid,
                     json_encode($perms,JSON_UNESCAPED_UNICODE),
                     isset($_POST['active'])?1:0
                 ]);
+            if($__linkPid){
+                // personnel.user_id'yi de senkron tut — personnel_create_login() ile aynı davranış,
+                // reset_password()'ün deterministik çözümlemesinin bu yoldan açılan hesaplar için de
+                // doğru çalışmasını sağlar.
+                $__newUid=(int)$pdo->lastInsertId();
+                $pdo->prepare("UPDATE personnel SET user_id=?,login_enabled=1 WHERE id=?")->execute([$__newUid,$__linkPid]);
+            }
             $ok='Kullanıcı oluşturuldu.';
         }
 
