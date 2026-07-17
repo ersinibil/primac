@@ -69,6 +69,14 @@ Tam denetim raporu (mimari/performans/UX/veri modeli dahil) → System Audit Art
 
 ## Son Çözülenler (detay → `memory/bugs.md`)
 
+- **DÜZELTİLDİ (kod) — P0-AUTH-02: users.php "Şifre Sıfırla ve WA Gönder" hesabı kilitliyordu
+  (2026-07-17, commit `b0f8ec6`)** — yeni rastgele şifre, WhatsApp gönderimi denenmeden ÖNCE DB'ye
+  yazılıyordu; gönderim başarısız olursa kimse yeni şifreyi bilmiyordu, hesap fiilen kilitleniyordu.
+  DB yazımı artık sadece gönderim başarılıysa yapılıyor. Gerçek cihaz testi bekliyor.
+- **DÜZELTİLDİ (kod) — P0-AUTH-01: personel yeni şifreyle giriş yapamıyordu (2026-07-17, commit
+  `91d0567`)** — personele mükerrer `app_users` hesabı bağlanabiliyordu, admin'in "Şifre Sıfırla"
+  hedefi belirsiz (ORDER BY'sız) bir sorguyla buluyordu. Artık deterministik çözülüyor + mükerrer
+  hesap oluşumu engelleniyor. Gerçek cihaz testi bekliyor.
 - **DÜZELTİLDİ — Satışta sessiz negatif stok (Kontrollü Negatif Stok Politikası, 2026-07-11,
   commit `3d927c7`, USER TEST: Web PASS / Mobile Pending)** — stok yetersizken satış hiçbir uyarı
   olmadan tamamlanıp stoğu eksiye düşürüyordu. Negatif stok YASAKLANMADI (satın alımdan önce

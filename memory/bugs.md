@@ -2,6 +2,35 @@
 
 <!-- Çözülen ve açık bug'lar. Çözüldüğünde tarih+çözüm notu ekleyip üstte "ÇÖZÜLDÜ" ile işaretle, silmeyin. -->
 
+## ÇÖZÜLDÜ (kod) — P0-AUTH-02: "Şifre Sıfırla ve WhatsApp Gönder" hesabı kilitliyordu (2026-07-17, commit `b0f8ec6`)
+P0-AUTH-01 kapatıldıktan sonra Canan adlı personel için AYNI belirtiyle ("şifre değiştirdim ama
+giremiyorum") yeni bir P0 vakası bildirildi. P0-AUTH-01'in mükerrer-hesap düzeltmesi bu vakayı
+açıklamadı (Canan'ın tek hesabı vardı) — kök neden FARKLI ve daha ciddi çıktı.
+
+**Kök neden:** `users.php`'nin "📲 Şifre Sıfırla ve WhatsApp ile Gönder" özelliğinde
+(`send_bulk_wa` POST işleyicisi), yeni rastgele şifre `generate_random_password(10)` ile üretilip
+`password_hash()`'lenip **veritabanına yazıldıktan SONRA** `wa_send()` çağrılıyordu. `wa_send()`
+başarısız olursa (API hatası, yanlış/eski telefon numarası, WhatsApp entegrasyonu o an çalışmıyor
+vb.) — yeni şifre zaten DB'ye yazılmış oluyordu ama kimseye (admin dahil) hiç gösterilmiyordu.
+Sonuç: hesap fiilen kilitleniyordu — eski şifre artık geçersiz, yeni şifreyi kimse bilmiyor. Admin
+"başarılı" sanıp işlemi tekrarladıkça (yeni rastgele şifre + yeni başarısız gönderim) sorun
+derinleşiyordu.
+
+**İlişkili bulunan ikinci hata:** aynı formun HTML'i, "Güncelle" formunun İÇİNDE geçersiz bir iç
+içe `<form>` idi (HTML'de form iç içe geçemez) — tarayıcı içteki form etiketini yok sayıp
+alanlarını dıştaki forma katabiliyordu, bu da tek tıkla `update_user` VE `send_bulk_wa`'nın
+öngörülemez şekilde birlikte tetiklenme riski taşıyordu.
+
+**Düzeltme:** DB yazımı artık SADECE `wa_send()` gerçekten `true` dönerse yapılıyor; başarısızsa
+eski şifre dokunulmadan kalıyor ve sonuç tablosunda "API hatası — şifre DEĞİŞTİRİLMEDİ, eski şifre
+geçerli" net şekilde gösteriliyor. İç içe form, dıştaki formdan çıkarılıp bağımsız hale getirildi.
+Aynı turda `users.php`'ye ayrıca (kullanıcı dostu yapı talebiyle) tek-amaçlı bir "Hızlı Şifre
+Değiştir" formu eklendi — admin artık isim/rol/aktiflik gibi alakasız alanları içeren büyük
+"Güncelle" formunu kullanmadan SADECE şifre değiştirebiliyor.
+
+**Açık kalan:** gerçek cihazda (Canan'ın hesabıyla) yeni şifreyle giriş testi — Product Owner
+tarafında bekliyor, henüz doğrulanmadı.
+
 ## ÇÖZÜLDÜ (kod) — P0-AUTH-01: personel yeni şifreyle giriş yapamıyor (2026-07-17, commit `91d0567`)
 FAZ 2C-ii USER TEST'inde bulunan P0 blocker. Gerçek kullanıcı raporu: personel şifresini birden
 fazla kez değiştirmesine (veya admin sıfırlamasına) rağmen yeni şifreyle giriş yapamıyor —
