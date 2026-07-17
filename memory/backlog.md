@@ -2,6 +2,41 @@
 
 <!-- Açık geliştirme görevleri. Kapanan madde buradan silinip memory/features.md'ye taşınır. -->
 
+## RELEASE 0.9 — 2026-07-17 BÜYÜK OTURUM ÖZETİ (P0-AUTH-02, Legacy temizliği, İletişim Merkezi, DS migration dalgası)
+Tek oturumda 31 commit. Sırayla: (1) **P0-AUTH-02** — Canan'ın gerçek giriş sorunu bulundu:
+users.php'nin "Şifre Sıfırla ve WhatsApp Gönder" özelliği WA gönderimi başarısız olsa bile şifreyi
+önceden değiştiriyordu (hesap kilitleniyordu) — DB yazımı artık sadece gönderim başarılıysa
+yapılıyor; ayrıca geçersiz iç içe `<form>` yapısı da düzeltildi. Gerçek cihaz testi hâlâ
+Product Owner'da bekliyor. (2) **Yetki mimarisi taraması** — 51 web + 70 mobil sayfa tek tek
+kontrol edildi, `ics.php`'de gerçek bir açık bulunup kapatıldı. (3) **Legacy navigasyon TAMAMEN
+kapatıldı** — `nav_effective_mode()` artık koşulsuz 'compact' döndürüyor, Rail/Topbar (web) ve
+yeni bottom nav (mobil) artık herkesin varsayılanı ve TEK seçeneği (Product Owner kararı: "ne
+mobilde ne web de eski görünüm görmek istemiyorum"). (4) **Kullanıcı/Yetki akışı birleştirme** —
+web personnel_new.php artık mobildeki gibi "aynı işlemde giriş hesabı oluştur" seçeneği sunuyor
+(personnel_create_login() ile, mükerrer-hesap korumalı). (5) **İLETİŞİM MERKEZİ** — Sohbetler/
+Bildirimler/Taleplerim/Duyurular 4 sekmeli yapı kuruldu (web+mobil, `share_lib.php::ic_tabs()`
+ortak şerit) — talep bildirimleri artık sohbete karışmıyor (internal_messages insert'leri
+kaldırıldı), Bildirimler/Duyurular ayrımı gerçek veride (target_user_id kişisel/genel) yapıldı,
+Taleplerim yeni personel-scoped salt-okunur görünüm (management_requests zaten var olan veri).
+(6) **Design System Migration dalgası** — 21 web + 6 mobil dosya (personel ekranları tam, iş/görev/
+cari/talep/stok/kullanıcı/finans/muhasebe ekranları tam veya kısmi — JS'e ağır bağımlı satış/alış
+formları bilinçli olarak kısmi bırakıldı, risk yönetimi). Her dosya `php -l` ile lint edildi,
+kritik/karmaşık olanlar headless Chrome ile görsel doğrulandı. guncelleme.zip defalarca yenilendi.
+**Kalan (henüz DS'e taşınmamış):** accounting.php'nin sekme içerikleri, product ekranları, trade
+documents, production/assembly/external/design, checks_notes/kasa/finance_accounts/finance_transfer,
+ve bunların mobil karşılıkları — bkz. ayrı "DS Migration — kalan ekranlar" maddesi.
+
+## DS Migration — kalan ekranlar (2026-07-17)
+Henüz Design System'e taşınmamış (0 df- class kapsamı): `product_new.php`, `product_view.php`
+(sadece yetki eklendi, görsel taşınmadı), `product_categories.php`, `product_taxonomy.php`,
+`trade_documents.php`, `trade_document_new.php`, `trade_document_view.php`, `production.php`,
+`assembly.php`, `external.php`, `design.php`, `work_center.php`, `checks_notes.php`, `kasa.php`,
+`finance_accounts.php`, `finance_transfer.php`, `accounting.php`'nin 4 sekme içeriği (Kayıtlar/
+Yeni Kayıt/Personel/Özet — sadece başlık+sekme şeridi taşındı), `sales.php`/`purchase.php`'nin
+JS'e bağımlı ürün-satırı giriş formları (kasıtlı bırakıldı), `teklif.php`'nin detay/düzenle/yeni
+formları (kasıtlı bırakıldı — JS'e bağımlı). Mobil tarafta da (personel hariç) hiçbir ekran henüz
+taşınmadı — mobile/jobs.php, mobile/sales.php, mobile/contacts.php vb. hâlâ legacy görünümde.
+
 ## İLETİŞİM MERKEZİ — yeni ana modül kararı, mimari analiz bekleniyor (2026-07-17, PRODUCT OWNER KARARI)
 USER TEST/ürün değerlendirmesi sonrası navigasyon bilgi mimarisi kararı: "Mesajlar" tek başına
 modül olmaktan çıkıp yeni bir ana modül olan **İletişim Merkezi** altında birleşecek — 4 bölüm:
