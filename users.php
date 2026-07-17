@@ -111,6 +111,20 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             $ok='Kullanıcı güncellendi.';
         }
 
+        // P0-AUTH-02 EK (2026-07-17, kullanıcı dostu yapı): şifre değiştirme artık isteğe bağlı
+        // olarak isim/telefon/rol/yetki/aktiflik gibi ALAKASIZ alanları içeren büyük "Güncelle"
+        // formundan bağımsız, kendi başına küçük bir işlem olarak da yapılabiliyor — personel
+        // taleplerinde admin'in "sadece şifre değiştirmek" isterken farkında olmadan başka bir
+        // alanı da (örn. Aktif kutusunu) değiştirip hesabı kilitleme riskini azaltır.
+        if(isset($_POST['reset_user_pw'])){
+            $uid=(int)$_POST['user_id'];
+            $newpw=$_POST['newpw'] ?? '';
+            if(strlen($newpw)<4) throw new Exception('Yeni şifre en az 4 karakter olmalı.');
+            $pdo->prepare("UPDATE app_users SET password_hash=? WHERE id=?")
+                ->execute([password_hash($newpw,PASSWORD_DEFAULT),$uid]);
+            $ok='Şifre güncellendi.';
+        }
+
         if(isset($_POST['send_bulk_wa'])){
             $selected=$_POST['selected_users'] ?? [];
             $mode=$_POST['wa_mode'] ?? 'all'; // 'all' veya 'selected'
@@ -392,6 +406,12 @@ if(!is_array($perms)) $perms=[];
 <label class="full"><input type="checkbox" name="active" <?=$u['active']?'checked':''?> style="width:auto"> Aktif</label>
 <button class="btn secondary">Güncelle</button>
 
+</form>
+<form method="post" style="display:flex;gap:8px;align-items:center;margin:0 0 14px;padding:10px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px">
+<input type="hidden" name="reset_user_pw" value="1">
+<input type="hidden" name="user_id" value="<?=$u['id']?>">
+<input type="password" name="newpw" placeholder="🔒 Yeni şifre (sadece şifreyi değiştirir)" minlength="4" required style="flex:1;margin:0">
+<button class="btn secondary" style="white-space:nowrap;margin:0">Şifreyi Değiştir</button>
 </form>
 <?php if(($u['phone'] ?? '') && ($u['active'] ?? true)): ?>
 <!-- P0-AUTH-02 (2026-07-17, ACİL): bu ayrı form ÖNCEDEN yukarıdaki "Güncelle" formunun İÇİNDE
