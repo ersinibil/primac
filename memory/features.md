@@ -2,6 +2,29 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
+## FAZ 2B-ii-R/2 — Search Referans Ekran Dönüşümü (2026-07-17, commit `9168999`)
+`search.php` ilk kez `$__navMode` compact/legacy ayrımı kazandı (önceki tüm P0 sayfalar gibi
+navMode'dan bağımsızdı). Legacy dal, 2026-07-04'ten beri var olan markup'ın satır satır aynısı
+(tek kasıtlı fark: `$pageTargets` ortak üst kapsama taşındı, davranış değişmedi — python diff ile
+doğrulandı). Arama algoritması/yetki filtreleri/URL'ler (`search_run()`/`search_hl()`)
+DOKUNULMADI. Compact dal: ikinci arama kutusu kaldırıldı (sorgu Top Bar'dan), her sonuç satırı
+`ds_list_item()` ile gerçek `<a>` (tam satır tıklanabilir), eşleşen metin `ds_highlight()` ile
+güvenli vurgu, durumlar `ds_badge()`, boş/sonuçsuz/hata durumları `ds_empty_state()`/`ds_alert()`.
+15 sonuç grubu da `search_run()`'ın döndürdüğü gerçek 15 anahtar (yeni kategori yok).
+`ds_page_header(df=true)`'nin **ilk canlı çağrısı** (0 canlı çağrıdan çıktı).
+
+**ds_lib.php düzeltmesi:** `ds_list_item()`'ın `$title`/`$desc`'i R/1'de otomatik `h()` escape
+ediyordu — gerçek kullanımda (highlight HTML taşıması gerektiği için) bu, `$metaRightHtml` ile
+aynı "çağıran taraf escape eder" kuralına çevrildi. XSS güvenliği DB'siz test scriptiyle yeniden
+doğrulandı.
+
+**Doğrulama:** gerçek `ds_lib.php`/`nav_lib.php` fonksiyonlarını çalıştıran DB'siz test scripti +
+headless Chrome screenshot — 1440px masaüstü ve 390px mobil-genişlik, 3 durum (sonuçlu/boş
+sorgu/sonuçsuz), XSS payload + Türkçe karakter + tırnak testleri. 15 href hedefi tek tek orijinal
+legacy koduyla karşılaştırıldı, hepsi birebir aynı.
+
+**Sıradaki:** FAZ 2B-ii-R/2b (akıllı arama — fuzzy/alias) — Product Owner DEV PASS'i bekleniyor.
+
 ## FAZ 2B-ii-R/1 — Ortak Helper Katmanı (2026-07-17, commit `6e14cf5`)
 `ds_lib.php`'ye 2 yeni fonksiyon: `ds_list_item()` (DF-ListItem — mevcut `.df-list-row` CSS'ini
 kullanır, `$url` verilirse gerçek `<a>` üretir — mytasks.php web tarafının div+onclick+closest()
