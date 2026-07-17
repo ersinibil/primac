@@ -59,92 +59,51 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 require_once __DIR__.'/layout_top.php';
 ?>
 
-<div class="panel-head">
-<h1>Yeni Cari</h1>
-<a class="btn secondary" href="contacts.php">Cari Listesi</a>
+<?php ds_page_header('Yeni Cari', ds_icon('users',24), '', ds_button('Cari Listesi','contacts.php','secondary','','',true), false, true); ?>
+
+<?php if($error): ?><?=ds_alert('danger',$error)?><?php endif; ?>
+
+<section class="df-card">
+<form method="post" class="df-form-grid-2">
+
+<div class="df-form-span-2">
+<?php if($typeLocked): ?>
+<?php ds_form_field('Cari Tipi', '<input type="text" value="'.h($type).'" disabled style="background:var(--df-surface-sunken);color:var(--df-ink-600);font-weight:700"><input type="hidden" name="type" value="'.h($type).'">'); ?>
+<?php else: ?>
+<?php
+$__typeOpts='';
+foreach(['Müşteri','Tedarikçi','Her İkisi'] as $t){ $__typeOpts.='<option '.($type===$t?'selected':'').'>'.$t.'</option>'; }
+ds_form_field('Cari Tipi', '<select name="type">'.$__typeOpts.'</select>');
+?>
+<?php endif; ?>
 </div>
 
-<?php if($error): ?><div class="alert"><?=h($error)?></div><?php endif; ?>
+<?php ds_form_field('Firma / Cari Adı', '<input name="name" required>'); ?>
+<?php ds_form_field('Yetkili Kişi', '<input name="authorized_person">'); ?>
+<?php ds_form_field('Telefon', '<input name="phone" type="tel">'); ?>
+<?php ds_form_field('2. Telefon', '<input name="phone2" type="tel">'); ?>
+<?php ds_form_field('E-posta', '<input name="email" type="email">'); ?>
+<?php ds_form_field('Web Sitesi', '<input name="website" type="url" placeholder="https://">'); ?>
+<?php ds_form_field('Vergi Dairesi', '<input name="tax_office">'); ?>
+<?php ds_form_field('Vergi / TC No', '<input name="tax_number">'); ?>
+<?php ds_form_field('İl', '<input name="city">'); ?>
+<?php ds_form_field('İlçe', '<input name="district">'); ?>
+<?php ds_form_field('Posta Kodu', '<input name="postal_code" maxlength="10">'); ?>
+<?php ds_form_field('IBAN', '<input name="iban" maxlength="32" placeholder="TR00 0000 0000 0000 0000 0000 00">'); ?>
+<?php ds_form_field('Açılış Bakiyesi', '<input type="number" step="0.01" name="opening_balance" value="0">'); ?>
 
-<section class="panel">
-<form method="post" class="form-grid">
+<div class="df-form-span-2"><?php ds_form_field('Adres', '<textarea name="address" rows="3"></textarea>'); ?></div>
+<div class="df-form-span-2"><?php ds_form_field('Notlar', '<textarea name="notes" rows="4"></textarea>'); ?></div>
 
-<label class="full">Cari Tipi
-<?php if($typeLocked): ?>
-<input type="text" value="<?=h($type)?>" disabled style="background:#f1f5f9;color:#475569;font-weight:700">
-<input type="hidden" name="type" value="<?=h($type)?>">
-<?php else: ?>
-<select name="type">
-<?php foreach(['Müşteri','Tedarikçi','Her İkisi'] as $t): ?>
-<option <?=$type===$t?'selected':''?>><?=$t?></option>
-<?php endforeach; ?>
-</select>
-<?php endif; ?>
-</label>
-
-<label>Firma / Cari Adı
-<input name="name" required>
-</label>
-
-<label>Yetkili Kişi
-<input name="authorized_person">
-</label>
-
-<label>Telefon
-<input name="phone" type="tel">
-</label>
-
-<label>2. Telefon
-<input name="phone2" type="tel">
-</label>
-
-<label>E-posta
-<input name="email" type="email">
-</label>
-
-<label>Web Sitesi
-<input name="website" type="url" placeholder="https://">
-</label>
-
-<label>Vergi Dairesi
-<input name="tax_office">
-</label>
-
-<label>Vergi / TC No
-<input name="tax_number">
-</label>
-
-<label>İl
-<input name="city">
-</label>
-
-<label>İlçe
-<input name="district">
-</label>
-
-<label>Posta Kodu
-<input name="postal_code" maxlength="10">
-</label>
-
-<label>IBAN
-<input name="iban" maxlength="32" placeholder="TR00 0000 0000 0000 0000 0000 00">
-</label>
-
-<label>Açılış Bakiyesi
-<input type="number" step="0.01" name="opening_balance" value="0">
-</label>
-
-<label class="full">Adres
-<textarea name="address" rows="3"></textarea>
-</label>
-
-<label class="full">Notlar
-<textarea name="notes" rows="4"></textarea>
-</label>
-
-<button class="btn">Cari Kaydet</button>
+<div class="df-form-span-2"><button class="df-btn df-btn--primary">Cari Kaydet</button></div>
 
 </form>
 </section>
+
+<style>
+body.nav-compact .df-form-grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 var(--df-space-4)}
+body.nav-compact .df-form-span-2{grid-column:1 / -1}
+@media(max-width:640px){body.nav-compact .df-form-grid-2{grid-template-columns:1fr}}
+</style>
 
 <?php require_once __DIR__.'/layout_bottom.php'; ?>

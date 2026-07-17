@@ -19,32 +19,25 @@ if($conditions) $where="WHERE ".implode(' AND ',$conditions);
 ?>
 
 <style>
-.crm-hero{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:18px}
-.crm-actions{display:flex;gap:10px;flex-wrap:wrap}
-.crm-tabs{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:14px;margin:14px 0 22px}
-.crm-card{display:block;text-decoration:none;border-radius:22px;padding:18px;box-shadow:0 10px 30px rgba(16,24,40,.07);border:1px solid rgba(15,23,42,.06);color:#101828}
-.crm-card small{display:block;color:#475467;font-weight:900;margin-bottom:6px}.crm-card strong{display:block;font-size:26px;line-height:1;margin-bottom:8px}.crm-card span{display:block;color:#667085;font-size:13px}
+.crm-tabs{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:var(--df-space-4);margin:var(--df-space-4) 0 var(--df-space-5)}
+.crm-card{display:block;text-decoration:none;border-radius:var(--df-radius-lg);padding:var(--df-space-4);box-shadow:var(--df-elevation-raised);border:1px solid var(--df-hairline);color:var(--df-ink-900)}
+.crm-card small{display:block;color:var(--df-ink-600);font-weight:900;margin-bottom:6px}.crm-card strong{display:block;font-size:26px;line-height:1;margin-bottom:8px}.crm-card span{display:block;color:var(--df-ink-500);font-size:13px}
 .crm-blue{background:linear-gradient(135deg,#dbeafe,#eff6ff)}.crm-green{background:linear-gradient(135deg,#dcfce7,#f0fdf4)}.crm-purple{background:linear-gradient(135deg,#ede9fe,#faf5ff)}.crm-orange{background:linear-gradient(135deg,#ffedd5,#fff7ed)}
-.crm-table-wrap{overflow:auto}.crm-name a{font-weight:900;color:#101828;text-decoration:none}.crm-name a:hover{text-decoration:underline}
-.rep-pill{display:inline-flex;align-items:center;border-radius:999px;background:#eef2ff;color:#3730a3;padding:6px 10px;font-weight:800;font-size:12px}.rep-empty{background:#f2f4f7;color:#667085}
-.type-pill{display:inline-flex;border-radius:999px;padding:6px 10px;font-weight:900;font-size:12px}.type-customer{background:#dcfce7;color:#166534}.type-supplier{background:#fef3c7;color:#92400e}.type-both{background:#dbeafe;color:#1e40af}
-.money-pos{font-weight:900;color:#166534}.money-neg{font-weight:900;color:#991b1b}.money-zero{font-weight:900;color:#667085}
+.crm-table-wrap{overflow:auto}.crm-name a{font-weight:900;color:var(--df-ink-900);text-decoration:none}.crm-name a:hover{text-decoration:underline}
+.rep-pill{display:inline-flex;align-items:center;border-radius:999px;background:var(--df-accent-soft);color:var(--df-accent-soft-ink);padding:6px 10px;font-weight:800;font-size:12px}.rep-empty{background:var(--df-surface-sunken);color:var(--df-ink-500)}
+.type-pill{display:inline-flex;border-radius:999px;padding:6px 10px;font-weight:900;font-size:12px}.type-customer{background:var(--df-success-soft);color:var(--df-success-ink)}.type-supplier{background:var(--df-warning-soft);color:var(--df-warning-ink)}.type-both{background:var(--df-info-soft);color:var(--df-info-ink)}
+.money-pos{font-weight:900;color:var(--df-success-ink)}.money-neg{font-weight:900;color:var(--df-danger-ink)}.money-zero{font-weight:900;color:var(--df-ink-500)}
 .passive-row{opacity:.45}
-.badge-passive{display:inline-flex;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:900;background:#f1f5f9;color:#64748b;margin-left:6px}
-@media(max-width:960px){.crm-tabs{grid-template-columns:1fr}.crm-hero{align-items:flex-start;flex-direction:column}}
+.badge-passive{display:inline-flex;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:900;background:var(--df-surface-sunken);color:var(--df-ink-500);margin-left:6px}
+@media(max-width:960px){.crm-tabs{grid-template-columns:1fr}}
 </style>
 
-<div class="crm-hero">
-    <div>
-        <h1>Cari Hesaplar</h1>
-        <p class="muted">Müşteri, tedarikçi, temsilci, tahsilat, ödeme ve bakiye yönetimi</p>
-    </div>
-    <div class="crm-actions">
-        <a class="btn" href="contact_new.php?type=Müşteri">+ Müşteri</a>
-        <a class="btn secondary" href="contact_new.php?type=Tedarikçi">+ Tedarikçi</a>
-        <a class="btn secondary" href="contacts_report.php">Cari Raporlar</a>
-    </div>
-</div>
+<?php
+$__contactActions = ds_button('Müşteri','contact_new.php?type=Müşteri','primary','','',true)
+    . ds_button('Tedarikçi','contact_new.php?type=Tedarikçi','secondary','','',true)
+    . ds_button('Cari Raporlar','contacts_report.php','secondary','','',true);
+ds_page_header('Cari Hesaplar', ds_icon('users',24), 'Müşteri, tedarikçi, temsilci, tahsilat, ödeme ve bakiye yönetimi', $__contactActions, false, true);
+?>
 
 <?php
 // NOT (2026-07-03 düzeltmesi): Toplam Bakiye eskiden TÜM finance_movements'ı (cari_id'si olsun
@@ -86,24 +79,24 @@ $movementsThisMonth=safe_count("SELECT COUNT(*) c FROM finance_movements WHERE c
     </a>
 </section>
 
-<section class="panel">
-<div class="panel-head">
-    <h2><?= $type ? h($type).' Listesi' : 'Cari Listesi' ?></h2>
-    <div class="actions">
-        <a class="btn small secondary" href="contacts.php">Tümü</a>
-        <a class="btn small secondary" href="contacts.php?type=Müşteri">Müşteri</a>
-        <a class="btn small secondary" href="contacts.php?type=Tedarikçi">Tedarikçi</a>
+<section class="df-card">
+<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:var(--df-space-3)">
+    <h2 style="font-size:var(--df-type-section-size);font-weight:var(--df-type-section-weight);color:var(--df-ink-900);margin:0"><?= $type ? h($type).' Listesi' : 'Cari Listesi' ?></h2>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <a class="df-btn df-btn--secondary df-btn--sm" href="contacts.php">Tümü</a>
+        <a class="df-btn df-btn--secondary df-btn--sm" href="contacts.php?type=Müşteri">Müşteri</a>
+        <a class="df-btn df-btn--secondary df-btn--sm" href="contacts.php?type=Tedarikçi">Tedarikçi</a>
         <?php if($showPassive): ?>
-        <a class="btn small secondary" href="contacts.php<?=$type?'?type='.urlencode($type):''?>">Sadece Aktif</a>
+        <a class="df-btn df-btn--secondary df-btn--sm" href="contacts.php<?=$type?'?type='.urlencode($type):''?>">Sadece Aktif</a>
         <?php else: ?>
-        <a class="btn small secondary" href="contacts.php?show_passive=1<?=$type?'&type='.urlencode($type):''?>">Pasif Dahil</a>
+        <a class="df-btn df-btn--secondary df-btn--sm" href="contacts.php?show_passive=1<?=$type?'&type='.urlencode($type):''?>">Pasif Dahil</a>
         <?php endif; ?>
-        <a class="btn small secondary" href="contacts_report.php">Rapor</a>
+        <a class="df-btn df-btn--secondary df-btn--sm" href="contacts_report.php">Rapor</a>
     </div>
 </div>
 
-<div class="crm-table-wrap">
-<table>
+<div class="df-table-wrap crm-table-wrap">
+<table class="df-table">
 <thead>
 <tr>
 <th>Cari</th>
@@ -158,12 +151,12 @@ try{
         echo "<td class='money-neg'>".money($r['total_out'])."</td>";
         echo "<td class='".$balClass."'>".money($balance)."</td>";
         echo "<td>".h($r['phone'] ?: '-')."</td>";
-        echo "<td><a class='btn small secondary' href='contact_view.php?id=".h($r['id'])."'>Profil</a></td>";
+        echo "<td><a class='df-btn df-btn--secondary df-btn--sm' href='contact_view.php?id=".h($r['id'])."'>Profil</a></td>";
         echo "</tr>";
     }
-    if(!$rows) echo "<tr><td colspan='9' class='muted'>Kayıt yok.</td></tr>";
+    if(!$rows) echo "<tr><td colspan='9' style='color:var(--df-ink-500)'>Kayıt yok.</td></tr>";
 }catch(Throwable $e){
-    echo "<tr><td colspan='9'><div class='alert'>".h($e->getMessage())."</div></td></tr>";
+    echo "<tr><td colspan='9'>".ds_alert('danger',$e->getMessage())."</td></tr>";
 }
 ?>
 </tbody>
