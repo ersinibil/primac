@@ -137,14 +137,13 @@ $groups=acc_group_summary($pdo,$month,$year);
 .group-bar{display:flex;justify-content:space-between;padding:6px 10px;border-radius:8px;margin:4px 0;font-size:13px}
 </style>
 
-<h1>📒 Muhasebe</h1>
-
-<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
-  <a href="?m=<?=$prevM?>&y=<?=$prevY?>&tab=<?=h($tab)?>" class="btn secondary" style="padding:8px 14px">‹</a>
-  <span style="font-weight:900;font-size:17px"><?=date('F Y',mktime(0,0,0,$month,1,$year))?></span>
-  <a href="?m=<?=$nextM?>&y=<?=$nextY?>&tab=<?=h($tab)?>" class="btn secondary" style="padding:8px 14px">›</a>
-  <a href="?m=<?=(int)date('m')?>&y=<?=(int)date('Y')?>&tab=<?=h($tab)?>" class="btn secondary" style="padding:8px 12px;font-size:12px">Bu Ay</a>
-</div>
+<?php
+$__accActions = ds_button('‹','?m='.$prevM.'&y='.$prevY.'&tab='.h($tab),'ghost','','',true)
+    . '<span style="font-weight:900;font-size:15px;padding:0 6px;display:inline-flex;align-items:center">'.date('F Y',mktime(0,0,0,$month,1,$year)).'</span>'
+    . ds_button('›','?m='.$nextM.'&y='.$nextY.'&tab='.h($tab),'ghost','','',true)
+    . ds_button('Bu Ay','?m='.(int)date('m').'&y='.(int)date('Y').'&tab='.h($tab),'secondary','df-btn--sm','',true);
+ds_page_header('Muhasebe', ds_icon('wallet',24), '', $__accActions, false, true);
+?>
 
 <div class="acc-summary">
   <div class="acc-card"><div class="num gelir-color"><?=money($sum['gelir'])?></div><small>Gelir</small></div>
@@ -152,16 +151,19 @@ $groups=acc_group_summary($pdo,$month,$year);
   <div class="acc-card"><div class="num <?=$net>=0?'net-pos':'net-neg'?>"><?=money(abs($net))?></div><small><?=$net>=0?'Net Kâr':'Net Zarar'?></small></div>
 </div>
 
-<?php if($msg): ?><div class="ok"><?=h($msg)?></div><?php endif; ?>
-<?php if($err): ?><div class="alert"><?=h($err)?></div><?php endif; ?>
+<?php if($msg): ?><?=ds_alert('success',$msg)?><?php endif; ?>
+<?php if($err): ?><?=ds_alert('danger',$err)?><?php endif; ?>
 
-<div class="acc-tabs">
-  <a href="?m=<?=$month?>&y=<?=$year?>&tab=kayitlar" class="<?=$tab==='kayitlar'?'active':''?>">📋 Kayıtlar</a>
-  <a href="?m=<?=$month?>&y=<?=$year?>&tab=yeni" class="<?=$tab==='yeni'?'active':''?>">➕ Yeni Kayıt</a>
-  <a href="?m=<?=$month?>&y=<?=$year?>&tab=personel" class="<?=$tab==='personel'?'active':''?>">👷 Personel</a>
-  <a href="?m=<?=$month?>&y=<?=$year?>&tab=ozet" class="<?=$tab==='ozet'?'active':''?>">📊 Özet</a>
-  <?php if(is_admin()): ?><a href="accounting_categories.php">⚙ Kategoriler</a><?php endif; ?>
-</div>
+<?php
+$__accTabItems=[
+    ['label'=>'📋 Kayıtlar','url'=>'?m='.$month.'&y='.$year.'&tab=kayitlar','active'=>$tab==='kayitlar'],
+    ['label'=>'➕ Yeni Kayıt','url'=>'?m='.$month.'&y='.$year.'&tab=yeni','active'=>$tab==='yeni'],
+    ['label'=>'👷 Personel','url'=>'?m='.$month.'&y='.$year.'&tab=personel','active'=>$tab==='personel'],
+    ['label'=>'📊 Özet','url'=>'?m='.$month.'&y='.$year.'&tab=ozet','active'=>$tab==='ozet'],
+];
+ds_tabs($__accTabItems);
+if(is_admin()) echo '<div style="margin-top:8px">'.ds_button('⚙ Kategoriler','accounting_categories.php','ghost','df-btn--sm','',true).'</div>';
+?>
 
 <script>
 // GİDER TÜRÜ CONTEXT-AWARE (2026-07-04): adıma özel "Gider Türü" katalogu — finance_lib.php'deki
