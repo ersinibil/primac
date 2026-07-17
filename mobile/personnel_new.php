@@ -36,8 +36,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 }
 topx('Yeni Personel');
 ?>
-<?php if($er): ?><div class="err"><?=htmlspecialchars($er)?></div><?php endif; ?>
-<div class="panel">
+<?php if($er): ?><?=ds_alert('danger',$er)?><?php endif; ?>
+<div class="df-panel">
 <form method="post" enctype="multipart/form-data">
   <label>Ad Soyad *</label><input name="name" required>
   <label>Görev / Rol</label><input name="role" placeholder="örn. Üretim, Montaj, Satış">
@@ -49,14 +49,14 @@ topx('Yeni Personel');
   <label>CV / Özgeçmiş <small class="muted">(opsiyonel — pdf/doc/docx/jpg/jpeg/png, en fazla 15 MB)</small></label>
   <input type="file" name="cv" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
   <?php endif; ?>
-  <div class="panel" style="background:rgba(37,99,235,.1)">
-    <label style="display:flex;align-items:center;gap:8px;margin:0"><input type="checkbox" name="make_login" value="1" style="width:auto;margin:0" onchange="document.getElementById('lg').style.display=this.checked?'block':'none'"> 🔑 Uygulamaya giriş hesabı oluştur</label>
+  <div class="df-panel" style="background:var(--df-accent-soft)">
+    <label style="display:flex;align-items:center;gap:8px;margin:0"><input type="checkbox" name="make_login" value="1" style="width:auto;margin:0" onchange="document.getElementById('lg').style.display=this.checked?'block':'none'"><?=ds_icon('user',16)?> Uygulamaya giriş hesabı oluştur</label>
     <div id="lg" style="display:none;margin-top:8px">
       <div style="display:flex;gap:10px"><div style="flex:1"><label>Kullanıcı Adı</label><input name="username"></div><div style="flex:1"><label>Şifre</label><input name="password"></div></div>
       <small class="muted">Personel bu bilgilerle giriş yapıp mesaj/iş/görev görür (yetkisi kısıtlı).</small>
     </div>
   </div>
-  <button class="btn dark" style="width:100%;padding:14px;margin-top:8px">👷 Personeli Kaydet</button>
+  <button class="df-btn df-btn--primary df-btn--lg" style="width:100%;margin-top:8px"><?=ds_icon('user',16)?> Personeli Kaydet</button>
 </form>
 </div>
 <?php botx(); ?>

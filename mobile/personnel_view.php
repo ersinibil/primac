@@ -153,74 +153,74 @@ try{
     $acikIs=(int)$pdo->query("SELECT COUNT(*) c FROM jobs WHERE responsible_personnel_id=$id AND status NOT IN ('Tamamlandı','İptal','Teslim Edildi')")->fetch()['c'];
     $acikGorev=(int)$pdo->query("SELECT COUNT(*) c FROM tasks WHERE personnel_id=$id AND status NOT IN ('Tamamlandı','İptal')")->fetch()['c'];
 ?>
-<?php if($ok): ?><div class="notice"><?=htmlspecialchars($ok)?></div><?php endif; ?>
-<?php if($er): ?><div class="err"><?=htmlspecialchars($er)?></div><?php endif; ?>
-<?php if($waCred): ?><a href="<?=htmlspecialchars($waCred)?>" target="_blank" rel="noopener" class="btn" style="display:block;text-align:center;background:#16a34a;color:#fff;padding:12px;margin-bottom:8px">📲 Giriş bilgisini WhatsApp ile gönder</a><?php endif; ?>
+<?php if($ok): ?><?=ds_alert('success',$ok)?><?php endif; ?>
+<?php if($er): ?><?=ds_alert('danger',$er)?><?php endif; ?>
+<?php if($waCred): ?><a href="<?=h($waCred)?>" target="_blank" rel="noopener" class="df-btn df-btn--primary" style="display:flex;background:var(--df-success);margin-bottom:var(--df-space-2)"><?=ds_icon('send',16)?> Giriş bilgisini WhatsApp ile gönder</a><?php endif; ?>
 
-<div class="panel">
-  <h2 style="margin:0"><?=htmlspecialchars($p['name'])?></h2>
-  <div class="muted"><?=htmlspecialchars($p['role']?:'Personel')?><?=$usr?' · 🔑 '.htmlspecialchars($usr['username']):' · giriş yok'?></div>
+<div class="df-panel">
+  <h2 style="margin:0"><?=h($p['name'])?></h2>
+  <div class="muted"><?=h($p['role']?:'Personel')?><?=$usr?' · '.ds_icon('user',13).' '.h($usr['username']):' · giriş yok'?></div>
   <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
-    <span style="background:rgba(255,255,255,.08);border-radius:10px;padding:6px 10px;font-size:13px">📋 Açık iş: <b><?=$acikIs?></b></span>
-    <span style="background:rgba(34,197,94,.15);color:#86efac;border-radius:10px;padding:6px 10px;font-size:13px">✅ Açık görev: <b><?=$acikGorev?></b></span>
+    <span class="df-badge df-badge--info"><?=ds_icon('briefcase',13)?> Açık iş: <b><?=$acikIs?></b></span>
+    <span class="df-badge df-badge--success"><?=ds_icon('check',13)?> Açık görev: <b><?=$acikGorev?></b></span>
   </div>
   <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
-    <a class="btn" href="task_new.php" style="background:#334155;color:#fff;flex:1;text-align:center">🎯 İş Ekle</a>
-    <a class="btn" href="kpi.php" style="background:#334155;color:#fff;flex:1;text-align:center">🏆 Performans</a>
-    <?php if($usr): ?><a class="btn" href="messages.php?with=<?=(int)$usr['id']?>" style="background:#2563eb;color:#fff;flex:1;text-align:center">💬 Mesaj</a><?php endif; ?>
+    <?=ds_button(ds_icon('calendar',15).' İş Ekle','task_new.php','secondary','','style="flex:1;justify-content:center"',true)?>
+    <?=ds_button(ds_icon('briefcase',15).' Performans','kpi.php','secondary','','style="flex:1;justify-content:center"',true)?>
+    <?php if($usr): ?><?=ds_button(ds_icon('chat',15).' Mesaj','messages.php?with='.(int)$usr['id'],'primary','','style="flex:1;justify-content:center"',true)?><?php endif; ?>
   </div>
 </div>
 
-<div class="panel"><b>✏️ Bilgileri Düzenle</b>
+<div class="df-panel"><b><?=ds_icon('edit',16)?> Bilgileri Düzenle</b>
 <form method="post" style="margin-top:8px" enctype="multipart/form-data">
-  <label>Ad Soyad</label><input name="name" value="<?=htmlspecialchars($p['name'])?>" required>
-  <label>Görev / Rol</label><input name="role" value="<?=htmlspecialchars($p['role']??'')?>">
-  <div style="display:flex;gap:10px"><div style="flex:1"><label>Telefon</label><input name="phone" value="<?=htmlspecialchars($p['phone']??'')?>"></div><div style="flex:1"><label>E-posta</label><input name="email" value="<?=htmlspecialchars($p['email']??'')?>"></div></div>
-  <div style="display:flex;gap:10px"><div style="flex:1"><label>Çalışma Tipi</label><input name="work_type" value="<?=htmlspecialchars($p['work_type']??'')?>"></div><div style="flex:1"><label>Başlangıç</label><input type="date" name="start_date" value="<?=htmlspecialchars($p['start_date']??'')?>"></div></div>
-  <label>IBAN</label><input name="iban" value="<?=htmlspecialchars($p['iban']??'')?>">
-  <label>Not</label><textarea name="notes" rows="2"><?=htmlspecialchars($p['notes']??'')?></textarea>
+  <label>Ad Soyad</label><input name="name" value="<?=h($p['name'])?>" required>
+  <label>Görev / Rol</label><input name="role" value="<?=h($p['role']??'')?>">
+  <div style="display:flex;gap:10px"><div style="flex:1"><label>Telefon</label><input name="phone" value="<?=h($p['phone']??'')?>"></div><div style="flex:1"><label>E-posta</label><input name="email" value="<?=h($p['email']??'')?>"></div></div>
+  <div style="display:flex;gap:10px"><div style="flex:1"><label>Çalışma Tipi</label><input name="work_type" value="<?=h($p['work_type']??'')?>"></div><div style="flex:1"><label>Başlangıç</label><input type="date" name="start_date" value="<?=h($p['start_date']??'')?>"></div></div>
+  <label>IBAN</label><input name="iban" value="<?=h($p['iban']??'')?>">
+  <label>Not</label><textarea name="notes" rows="2"><?=h($p['notes']??'')?></textarea>
   <?php if($hasCvCol): ?>
   <label>CV / Özgeçmiş <small class="muted">(opsiyonel — pdf/doc/docx/jpg/jpeg/png, en fazla 15 MB)</small></label>
   <?php if(!empty($p['cv_path'])): ?>
-  <div style="margin:4px 0 8px"><a href="<?=htmlspecialchars(base_url().$p['cv_path'])?>" target="_blank">📎 Mevcut CV'yi görüntüle</a></div>
+  <div style="margin:4px 0 8px"><a href="<?=h(base_url().$p['cv_path'])?>" target="_blank"><?=ds_icon('box',14)?> Mevcut CV'yi görüntüle</a></div>
   <?php endif; ?>
   <input type="file" name="cv" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
   <?php endif; ?>
   <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" name="active" value="1" <?=$p['active']?'checked':''?> style="width:auto;margin:0"> Aktif</label>
-  <button class="btn dark" name="save" value="1" style="width:100%;padding:13px;margin-top:8px">💾 Kaydet</button>
+  <button class="df-btn df-btn--primary df-btn--lg" name="save" value="1" style="width:100%;margin-top:8px"><?=ds_icon('check',16)?> Kaydet</button>
 </form>
 <?php if($hasCvCol && !empty($p['cv_path'])): ?>
 <form method="post" style="margin-top:8px" onsubmit="return confirm('CV dosyasını kaldırmak istediğinize emin misiniz?')">
-  <button class="btn" name="clear_cv" value="1" style="width:100%;background:#334155;color:#fff;padding:12px;border-radius:14px">🗑 CV'yi Kaldır</button>
+  <button class="df-btn df-btn--secondary" name="clear_cv" value="1" style="width:100%"><?=ds_icon('trash',16)?> CV'yi Kaldır</button>
 </form>
 <?php endif; ?>
 </div>
 
 <?php if($isAdmin): ?>
-<div class="panel">
+<div class="df-panel">
   <form method="post" onsubmit="return confirm('Bu personeli ve bağlı tüm verileri KALICI olarak silmek istediğinize emin misiniz?')" style="margin:0">
-    <button class="btn" name="delete_personnel" value="1" style="width:100%;background:#dc2626;color:#fff;padding:12px;border-radius:14px">🗑 Personeli Sil</button>
+    <button class="df-btn df-btn--danger" name="delete_personnel" value="1" style="width:100%"><?=ds_icon('trash',16)?> Personeli Sil</button>
   </form>
 </div>
 <?php endif; ?>
 
 <?php if($canManageAccounts): ?>
-<div class="panel"><b>🔑 Giriş Hesabı</b>
+<div class="df-panel"><b><?=ds_icon('user',16)?> Giriş Hesabı</b>
 <?php if($usr): ?>
-  <p class="muted" style="margin:8px 0">Kullanıcı: <b><?=htmlspecialchars($usr['username'])?></b> · durum: <?=$usr['active']?'aktif':'pasif'?></p>
-  <form method="post" style="display:flex;gap:8px"><input name="newpw" placeholder="Yeni şifre" style="flex:1;margin:0"><button class="btn" name="reset_pw" value="1" style="background:#334155;color:#fff">Şifre Sıfırla</button></form>
+  <p class="muted" style="margin:8px 0">Kullanıcı: <b><?=h($usr['username'])?></b> · durum: <?=$usr['active']?ds_badge('Aktif','green'):ds_badge('Pasif','red')?></p>
+  <form method="post" style="display:flex;gap:8px"><input name="newpw" placeholder="Yeni şifre" style="flex:1;margin:0"><button class="df-btn df-btn--secondary" name="reset_pw" value="1">Şifre Sıfırla</button></form>
 <?php else: ?>
   <p class="muted" style="margin:8px 0">Bu personelin uygulama girişi yok. Oluştur:</p>
   <form method="post"><div style="display:flex;gap:8px"><input name="username" placeholder="Kullanıcı adı" style="flex:1;margin:0"><input name="password" placeholder="Şifre" style="flex:1;margin:0"></div>
-  <button class="btn dark" name="make_login" value="1" style="width:100%;padding:12px;margin-top:8px">🔑 Giriş Hesabı Oluştur</button></form>
+  <button class="df-btn df-btn--primary df-btn--lg" name="make_login" value="1" style="width:100%;margin-top:8px"><?=ds_icon('user',16)?> Giriş Hesabı Oluştur</button></form>
 <?php endif; ?>
 </div>
 <?php endif; ?>
 
-<div class="panel"><b>🧾 İşlem Kaydı</b>
+<div class="df-panel"><b><?=ds_icon('info',16)?> İşlem Kaydı</b>
   <p class="muted" style="margin:4px 0 8px;font-size:12px">Bu personelin yaptığı son işlemler (düzenleme/ekleme/satış vb.).</p>
   <?php if(function_exists('activity_user_html')) echo activity_user_html($pdo,$usr['id']??0,40); ?>
 </div>
 <?php
-}catch(Throwable $e){ echo '<div class="err">'.htmlspecialchars($e->getMessage()).'</div>'; }
+}catch(Throwable $e){ echo ds_alert('danger',$e->getMessage()); }
 botx();

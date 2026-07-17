@@ -4,17 +4,29 @@ block_personel('personnel');
 $pdo=db();
 topx('Personel');
 ?>
-<div class="panel" style="padding:10px;display:flex;gap:8px"><a class="btn dark" style="flex:1;text-align:center" href="personnel_new.php">+ Yeni Personel</a><a class="btn" style="flex:1;text-align:center;background:#334155;color:#fff" href="task_new.php">🎯 İş Ekle</a></div>
+<div style="display:flex;gap:8px;margin-bottom:var(--df-space-3)">
+<?=ds_button('Yeni Personel','personnel_new.php','primary','','style="flex:1;justify-content:center"',true)?>
+<?=ds_button(ds_icon('calendar',15).' İş Ekle','task_new.php','secondary','','style="flex:1;justify-content:center"',true)?>
+</div>
 <?php
 try{
   $rows=$pdo->query("SELECT p.*,
     (SELECT COUNT(*) FROM tasks t WHERE t.personnel_id=p.id AND t.status NOT IN ('Tamamlandı','İptal')) acik_gorev,
     (SELECT COUNT(*) FROM jobs j WHERE j.responsible_personnel_id=p.id AND j.status NOT IN ('Tamamlandı','İptal','Teslim Edildi')) acik_is
     FROM personnel p ORDER BY COALESCE(p.active,1) DESC, p.name")->fetchAll();
-  if(!$rows) echo '<div class="panel muted">Personel yok.</div>';
-  foreach($rows as $r){ $pasif=!((int)($r['active']??1));
-    echo '<a class="item" href="personnel_view.php?id='.(int)$r['id'].'"'.($pasif?' style="opacity:.55"':'').'><b>'.htmlspecialchars($r['name']).'</b>'.($r['role']?' <span class="muted">· '.htmlspecialchars($r['role']).'</span>':'').($pasif?' <span style="color:#f87171;font-size:11px">PASİF</span>':'');
-    echo '<br><small>📋 Açık iş: '.(int)$r['acik_is'].' · ✅ Açık görev: '.(int)$r['acik_gorev'].($r['phone']?' · 📞 '.htmlspecialchars($r['phone']):'').'</small></a>';
+  if(!$rows){
+    ds_empty_state('Henüz personel yok.', 'Yeni Personel butonuyla ilk personeli ekleyebilirsiniz.', ds_icon('users',32));
+  } else {
+    echo '<div class="df-list">';
+    foreach($rows as $r){
+        $pasif=!((int)($r['active']??1));
+        $title=h($r['name']).($r['role']?' <span style="color:var(--df-ink-500);font-weight:400">· '.h($r['role']).'</span>':'');
+        if($pasif) $title.=' '.ds_badge('Pasif','red');
+        $meta='Açık iş: '.(int)$r['acik_is'].' · Açık görev: '.(int)$r['acik_gorev'];
+        if($r['phone']) $meta.=' · '.h($r['phone']);
+        echo ds_list_item($title, 'personnel_view.php?id='.(int)$r['id'], h($meta));
+    }
+    echo '</div>';
   }
-}catch(Throwable $e){ echo '<div class="err">'.htmlspecialchars($e->getMessage()).'</div>'; }
+}catch(Throwable $e){ echo ds_alert('danger',$e->getMessage()); }
 botx();
