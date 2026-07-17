@@ -16,66 +16,77 @@
 // ANLAMI DEĞİŞMEDİ (NAV-001 v3 Product Owner kararı: bu alan başka bir amaçla yeniden yorumlanmaz,
 // Launcher görünürlüğü nav_visible_targets()/nav_grouped_for_launcher() kendi kuralıyla belirler).
 // adminOnly: perm yetkisi yetmez, ayrıca is_admin() da gerekir (bugünkü mobil/more.php davranışı)
+// PX-002 FAZ 2B-i (2026-07-17) — NAV DATA FOUNDATION. Product Owner IA FREEZE kararıyla eklenen
+// additive alanlar: 'category' (isler|ticaret|uretim_stok|finans|yonetim|null=global),
+// 'categoryOrder' (kategori içi sıra), 'isPrimaryAction' (kategori başına TAM 1 tane true —
+// Yönetim'de hiç yok, Kural 9 istisnası), 'searchKeywords' (arama veri sözleşmesi, madde 10),
+// 'actionLabel' (yalnızca 'label'den FARKLIYSA var — Product Owner'ın onayladığı Route/Taxonomy
+// matrisinin "Yeni Eylem Etiketi" kolonu). Mevcut alanlar (key/label/url/mobileUrl/mobileHide/
+// group/perm/primary/adminOnly) BİR TEK KARAKTER bile değişmedi — legacy dal ve eski
+// nav_grouped_for_launcher()/nav_pinned_modules()/nav_visible_targets() bunları aynen kullanmaya
+// devam ediyor (Product Owner kararı: bu turda silinmez/yeniden anlamlandırılmaz).
+// production kesin kararı: category=uretim_stok, label DEĞİŞMEDİ ("Üretimdeki İşleri Gör"),
+// isPrimaryAction=true — "Üretimi Başlat" etiketi koda girmedi (Design/Workflow Backlog'da).
 function nav_taxonomy(){
     return [
         // ── ÇALIŞMA (primary adayları + iletişim) ───────────────────────────
-        ['key'=>'dashboard','label'=>'Komuta Merkezi','url'=>'dashboard.php','group'=>'çalışma','perm'=>null,'primary'=>true],
-        ['key'=>'mytasks','label'=>'Görevlerim','url'=>'mytasks.php','group'=>'çalışma','perm'=>null,'primary'=>true],
-        ['key'=>'jobs','label'=>'İş / Üretim','url'=>'jobs.php','group'=>'çalışma','perm'=>'jobs','primary'=>true],
-        ['key'=>'job_new','label'=>'Yeni İş Aç','url'=>'job_new.php','group'=>'is_takip','perm'=>'jobs','primary'=>false],
-        ['key'=>'production','label'=>'Üretimdeki İşleri Gör','url'=>'production.php','mobileUrl'=>'uretim.php','group'=>'is_takip','perm'=>'jobs','primary'=>false],
-        ['key'=>'assembly','label'=>'Montajdaki İşleri Gör','url'=>'assembly.php','mobileHide'=>true,'group'=>'is_takip','perm'=>'jobs','primary'=>false],
-        ['key'=>'external','label'=>'Dış Atölye İşlerini Gör','url'=>'external.php','group'=>'is_takip','perm'=>'jobs','primary'=>false],
-        ['key'=>'design','label'=>'Tasarımdaki İşleri Gör','url'=>'design.php','mobileHide'=>true,'group'=>'is_takip','perm'=>'jobs','primary'=>false],
-        ['key'=>'work_center','label'=>'İş İstasyonunu Gör','url'=>'work_center.php','mobileHide'=>true,'group'=>'is_takip','perm'=>'jobs','primary'=>false],
-        ['key'=>'approval_waiting','label'=>'Onay Bekleyen Dosyaları Gör','url'=>'approval_waiting.php','group'=>'is_takip','perm'=>'jobs','primary'=>false],
-        ['key'=>'tasks','label'=>'Tüm Görevleri Gör','url'=>'tasks.php','group'=>'is_takip','perm'=>'tasks','primary'=>false],
-        ['key'=>'takvim','label'=>'Takvim','url'=>'takvim.php','group'=>'çalışma','perm'=>'jobs','primary'=>true],
-        ['key'=>'messages','label'=>'Mesajlar','url'=>'messages.php','group'=>'çalışma','perm'=>null,'primary'=>true],
-        ['key'=>'notifications','label'=>'Bildirimler','url'=>'notifications.php','group'=>'çalışma','perm'=>null,'primary'=>true],
-        ['key'=>'notes','label'=>'Notlarım','url'=>'notes.php','group'=>'çalışma','perm'=>null,'primary'=>true],
-        ['key'=>'requests','label'=>'Talepleri Gör','url'=>'requests.php','group'=>'iletisim','perm'=>null,'primary'=>false,'adminOnly'=>true],
-        ['key'=>'request_new','label'=>'Yeni Talep Oluştur','url'=>'request_new.php','group'=>'iletisim','perm'=>null,'primary'=>false],
-        ['key'=>'wa_conversations','label'=>'WhatsApp Konuşmalarını Gör','url'=>'wa_conversations.php','group'=>'iletisim','perm'=>'users','primary'=>false],
-        ['key'=>'wa_send_now','label'=>'WhatsApp Toplu Mesaj Gönder','url'=>'wa_send_now.php','group'=>'iletisim','perm'=>'users','primary'=>false],
+        ['key'=>'dashboard','label'=>'Komuta Merkezi','url'=>'dashboard.php','group'=>'çalışma','perm'=>null,'primary'=>true,'category'=>null,'categoryOrder'=>null,'isPrimaryAction'=>false,'searchKeywords'=>['ana sayfa','home','komuta merkezi']],
+        ['key'=>'mytasks','label'=>'Görevlerim','url'=>'mytasks.php','group'=>'çalışma','perm'=>null,'primary'=>true,'actionLabel'=>'Görevlerimi Gör','category'=>'isler','categoryOrder'=>2,'isPrimaryAction'=>false,'searchKeywords'=>['görev','task','yapılacak']],
+        ['key'=>'jobs','label'=>'İş / Üretim','url'=>'jobs.php','group'=>'çalışma','perm'=>'jobs','primary'=>true,'actionLabel'=>'İş Emirlerini Gör','category'=>'isler','categoryOrder'=>3,'isPrimaryAction'=>false,'searchKeywords'=>['iş emri','iş listesi']],
+        ['key'=>'job_new','label'=>'Yeni İş Aç','url'=>'job_new.php','group'=>'is_takip','perm'=>'jobs','primary'=>false,'category'=>'isler','categoryOrder'=>1,'isPrimaryAction'=>true,'searchKeywords'=>['yeni iş','iş aç','sipariş']],
+        ['key'=>'production','label'=>'Üretimdeki İşleri Gör','url'=>'production.php','mobileUrl'=>'uretim.php','group'=>'is_takip','perm'=>'jobs','primary'=>false,'category'=>'uretim_stok','categoryOrder'=>1,'isPrimaryAction'=>true,'searchKeywords'=>['üretim','üretim başlat','aşama','üretim panosu']],
+        ['key'=>'assembly','label'=>'Montajdaki İşleri Gör','url'=>'assembly.php','mobileHide'=>true,'group'=>'is_takip','perm'=>'jobs','primary'=>false,'category'=>'uretim_stok','categoryOrder'=>2,'isPrimaryAction'=>false,'searchKeywords'=>['montaj']],
+        ['key'=>'external','label'=>'Dış Atölye İşlerini Gör','url'=>'external.php','group'=>'is_takip','perm'=>'jobs','primary'=>false,'category'=>'isler','categoryOrder'=>6,'isPrimaryAction'=>false,'searchKeywords'=>['dış atölye','dış tedarik']],
+        ['key'=>'design','label'=>'Tasarımdaki İşleri Gör','url'=>'design.php','mobileHide'=>true,'group'=>'is_takip','perm'=>'jobs','primary'=>false,'category'=>'uretim_stok','categoryOrder'=>3,'isPrimaryAction'=>false,'searchKeywords'=>['tasarım','grafik']],
+        ['key'=>'work_center','label'=>'İş İstasyonunu Gör','url'=>'work_center.php','mobileHide'=>true,'group'=>'is_takip','perm'=>'jobs','primary'=>false,'category'=>'uretim_stok','categoryOrder'=>4,'isPrimaryAction'=>false,'searchKeywords'=>['iş istasyonu','iş motoru']],
+        ['key'=>'approval_waiting','label'=>'Onay Bekleyen Dosyaları Gör','url'=>'approval_waiting.php','group'=>'is_takip','perm'=>'jobs','primary'=>false,'actionLabel'=>'Onay Bekleyenleri Gör','category'=>'isler','categoryOrder'=>5,'isPrimaryAction'=>false,'searchKeywords'=>['onay','müşteri onayı']],
+        ['key'=>'tasks','label'=>'Tüm Görevleri Gör','url'=>'tasks.php','group'=>'is_takip','perm'=>'tasks','primary'=>false,'category'=>'isler','categoryOrder'=>7,'isPrimaryAction'=>false,'searchKeywords'=>['tüm görevler','ekip görevi']],
+        ['key'=>'takvim','label'=>'Takvim','url'=>'takvim.php','group'=>'çalışma','perm'=>'jobs','primary'=>true,'actionLabel'=>'Takvime Bak','category'=>'isler','categoryOrder'=>4,'isPrimaryAction'=>false,'searchKeywords'=>['takvim','termin','tarih']],
+        ['key'=>'messages','label'=>'Mesajlar','url'=>'messages.php','group'=>'çalışma','perm'=>null,'primary'=>true,'category'=>null,'categoryOrder'=>null,'isPrimaryAction'=>false,'searchKeywords'=>['mesaj','yazış','chat']],
+        ['key'=>'notifications','label'=>'Bildirimler','url'=>'notifications.php','group'=>'çalışma','perm'=>null,'primary'=>true,'category'=>null,'categoryOrder'=>null,'isPrimaryAction'=>false,'searchKeywords'=>['bildirim','uyarı']],
+        ['key'=>'notes','label'=>'Notlarım','url'=>'notes.php','group'=>'çalışma','perm'=>null,'primary'=>true,'category'=>'isler','categoryOrder'=>10,'isPrimaryAction'=>false,'searchKeywords'=>['not','hatırlatma']],
+        ['key'=>'requests','label'=>'Talepleri Gör','url'=>'requests.php','group'=>'iletisim','perm'=>null,'primary'=>false,'adminOnly'=>true,'category'=>'isler','categoryOrder'=>9,'isPrimaryAction'=>false,'searchKeywords'=>['talep onayı']],
+        ['key'=>'request_new','label'=>'Yeni Talep Oluştur','url'=>'request_new.php','group'=>'iletisim','perm'=>null,'primary'=>false,'category'=>'isler','categoryOrder'=>8,'isPrimaryAction'=>false,'searchKeywords'=>['talep','izin','satın alma talebi']],
+        ['key'=>'wa_conversations','label'=>'WhatsApp Konuşmalarını Gör','url'=>'wa_conversations.php','group'=>'iletisim','perm'=>'users','primary'=>false,'category'=>null,'categoryOrder'=>null,'isPrimaryAction'=>false,'searchKeywords'=>['whatsapp','konuşma']],
+        ['key'=>'wa_send_now','label'=>'WhatsApp Toplu Mesaj Gönder','url'=>'wa_send_now.php','group'=>'iletisim','perm'=>'users','primary'=>false,'actionLabel'=>'WhatsApp Toplu Gönderim','category'=>'yonetim','categoryOrder'=>10,'isPrimaryAction'=>false,'searchKeywords'=>['toplu mesaj','whatsapp gönder']],
 
         // ── SAT & TAHSİL ET ──────────────────────────────────────────────────
-        ['key'=>'contacts','label'=>'Cari Bul / Görüntüle','url'=>'contacts.php','group'=>'sat_tahsil','perm'=>'contacts','primary'=>false],
-        ['key'=>'contact_new','label'=>'Yeni Cari Ekle','url'=>'contact_new.php','group'=>'sat_tahsil','perm'=>'contacts','primary'=>false],
-        ['key'=>'trade_documents','label'=>'Alış / Satış Belgelerini Gör','url'=>'trade_documents.php','mobileHide'=>true,'group'=>'sat_tahsil','perm'=>'contacts','primary'=>false],
-        ['key'=>'teklif','label'=>'Teklif Hazırla','url'=>'teklif.php','group'=>'sat_tahsil','perm'=>'teklif','primary'=>false],
-        ['key'=>'sales','label'=>'Satış Yap','url'=>'sales.php','group'=>'sat_tahsil','perm'=>'stock','primary'=>false],
-        ['key'=>'purchase','label'=>'Satın Alma Yap','url'=>'purchase.php','group'=>'sat_tahsil','perm'=>'stock','primary'=>false],
-        ['key'=>'finance_new_in','label'=>'Tahsilat Al','url'=>'finance_new.php?direction=in','mobileUrl'=>'collection.php','group'=>'sat_tahsil','perm'=>'finance','primary'=>false],
-        ['key'=>'finance_new_out','label'=>'Ödeme Yap','url'=>'finance_new.php?direction=out','mobileUrl'=>'payment.php','group'=>'sat_tahsil','perm'=>'finance','primary'=>false],
-        ['key'=>'finance_transfer','label'=>'Hesaplar Arası Transfer Yap','url'=>'finance_transfer.php','mobileUrl'=>'transfer.php','group'=>'sat_tahsil','perm'=>'finance','primary'=>false],
-        ['key'=>'checks_notes','label'=>'Çek / Senet Takip Et','url'=>'checks_notes.php','group'=>'sat_tahsil','perm'=>'finance','primary'=>false],
+        ['key'=>'contacts','label'=>'Cari Bul / Görüntüle','url'=>'contacts.php','group'=>'sat_tahsil','perm'=>'contacts','primary'=>false,'actionLabel'=>'Cari Bul','category'=>'ticaret','categoryOrder'=>1,'isPrimaryAction'=>true,'searchKeywords'=>['cari','müşteri','tedarikçi']],
+        ['key'=>'contact_new','label'=>'Yeni Cari Ekle','url'=>'contact_new.php','group'=>'sat_tahsil','perm'=>'contacts','primary'=>false,'category'=>'ticaret','categoryOrder'=>2,'isPrimaryAction'=>false,'searchKeywords'=>['yeni müşteri','yeni cari']],
+        ['key'=>'trade_documents','label'=>'Alış / Satış Belgelerini Gör','url'=>'trade_documents.php','mobileHide'=>true,'group'=>'sat_tahsil','perm'=>'contacts','primary'=>false,'actionLabel'=>'Belgeleri Gör','category'=>'ticaret','categoryOrder'=>6,'isPrimaryAction'=>false,'searchKeywords'=>['belge','irsaliye','fatura']],
+        ['key'=>'teklif','label'=>'Teklif Hazırla','url'=>'teklif.php','group'=>'sat_tahsil','perm'=>'teklif','primary'=>false,'category'=>'ticaret','categoryOrder'=>3,'isPrimaryAction'=>false,'searchKeywords'=>['teklif','fiyat teklifi']],
+        ['key'=>'sales','label'=>'Satış Yap','url'=>'sales.php','group'=>'sat_tahsil','perm'=>'stock','primary'=>false,'category'=>'ticaret','categoryOrder'=>4,'isPrimaryAction'=>false,'searchKeywords'=>['satış','sat']],
+        ['key'=>'purchase','label'=>'Satın Alma Yap','url'=>'purchase.php','group'=>'sat_tahsil','perm'=>'stock','primary'=>false,'category'=>'ticaret','categoryOrder'=>5,'isPrimaryAction'=>false,'searchKeywords'=>['satın alma','alış']],
+        ['key'=>'finance_new_in','label'=>'Tahsilat Al','url'=>'finance_new.php?direction=in','mobileUrl'=>'collection.php','group'=>'sat_tahsil','perm'=>'finance','primary'=>false,'category'=>'finans','categoryOrder'=>1,'isPrimaryAction'=>true,'searchKeywords'=>['tahsilat','tahsil et']],
+        ['key'=>'finance_new_out','label'=>'Ödeme Yap','url'=>'finance_new.php?direction=out','mobileUrl'=>'payment.php','group'=>'sat_tahsil','perm'=>'finance','primary'=>false,'category'=>'finans','categoryOrder'=>2,'isPrimaryAction'=>false,'searchKeywords'=>['ödeme','gider']],
+        ['key'=>'finance_transfer','label'=>'Hesaplar Arası Transfer Yap','url'=>'finance_transfer.php','mobileUrl'=>'transfer.php','group'=>'sat_tahsil','perm'=>'finance','primary'=>false,'actionLabel'=>'Transfer Yap','category'=>'finans','categoryOrder'=>3,'isPrimaryAction'=>false,'searchKeywords'=>['transfer','hesap aktar']],
+        ['key'=>'checks_notes','label'=>'Çek / Senet Takip Et','url'=>'checks_notes.php','group'=>'sat_tahsil','perm'=>'finance','primary'=>false,'actionLabel'=>'Çek ve Senetleri Gör','category'=>'finans','categoryOrder'=>6,'isPrimaryAction'=>false,'searchKeywords'=>['çek','senet','vade']],
 
         // ── STOK YÖNET ───────────────────────────────────────────────────────
-        ['key'=>'stock','label'=>'Stok Kontrol Et','url'=>'stock.php','group'=>'stok','perm'=>'stock','primary'=>false],
-        ['key'=>'product_new','label'=>'Yeni Ürün Ekle','url'=>'product_new.php','group'=>'stok','perm'=>'stock','primary'=>false],
-        ['key'=>'stock_movement_new','label'=>'Stok Giriş / Çıkış Yap','url'=>'stock_movement_new.php?type=in','group'=>'stok','perm'=>'stock','primary'=>false],
-        ['key'=>'product_categories','label'=>'Ürün Kategorilerini Düzenle','url'=>'product_categories.php','group'=>'stok','perm'=>'stock','primary'=>false],
-        ['key'=>'product_taxonomy','label'=>'Marka / Birim Düzenle','url'=>'product_taxonomy.php','group'=>'stok','perm'=>'stock','primary'=>false],
+        ['key'=>'stock','label'=>'Stok Kontrol Et','url'=>'stock.php','group'=>'stok','perm'=>'stock','primary'=>false,'category'=>'uretim_stok','categoryOrder'=>5,'isPrimaryAction'=>false,'searchKeywords'=>['stok','envanter']],
+        ['key'=>'product_new','label'=>'Yeni Ürün Ekle','url'=>'product_new.php','group'=>'stok','perm'=>'stock','primary'=>false,'category'=>'uretim_stok','categoryOrder'=>7,'isPrimaryAction'=>false,'searchKeywords'=>['yeni ürün']],
+        ['key'=>'stock_movement_new','label'=>'Stok Giriş / Çıkış Yap','url'=>'stock_movement_new.php?type=in','group'=>'stok','perm'=>'stock','primary'=>false,'actionLabel'=>'Stok Hareketi Yap','category'=>'uretim_stok','categoryOrder'=>6,'isPrimaryAction'=>false,'searchKeywords'=>['stok hareketi','giriş çıkış']],
+        ['key'=>'product_categories','label'=>'Ürün Kategorilerini Düzenle','url'=>'product_categories.php','group'=>'stok','perm'=>'stock','primary'=>false,'category'=>'uretim_stok','categoryOrder'=>8,'isPrimaryAction'=>false,'searchKeywords'=>['kategori','ürün kategorisi']],
+        ['key'=>'product_taxonomy','label'=>'Marka / Birim Düzenle','url'=>'product_taxonomy.php','group'=>'stok','perm'=>'stock','primary'=>false,'category'=>'uretim_stok','categoryOrder'=>9,'isPrimaryAction'=>false,'searchKeywords'=>['marka','birim']],
 
         // ── YÖNET (arka ofis / raporlama / sistem) ──────────────────────────
-        ['key'=>'finance','label'=>'Kasa / Banka Panelini Gör','url'=>'finance.php','mobileUrl'=>'kasa.php','group'=>'yonet','perm'=>'finance','primary'=>false],
-        ['key'=>'finance_accounts','label'=>'Banka / Kasa / Kart Hesaplarını Yönet','url'=>'finance_accounts.php','mobileHide'=>true,'group'=>'yonet','perm'=>'finance','primary'=>false],
-        ['key'=>'accounting','label'=>'Muhasebe Kayıtlarını Gör','url'=>'accounting.php','group'=>'yonet','perm'=>'muhasebe','primary'=>false],
-        ['key'=>'accounting_categories','label'=>'Muhasebe Kategorilerini Düzenle','url'=>'accounting_categories.php','group'=>'yonet','perm'=>'muhasebe','primary'=>false,'adminOnly'=>true],
-        ['key'=>'personnel','label'=>'Personeli Yönet','url'=>'personnel.php','group'=>'yonet','perm'=>'personnel','primary'=>false],
-        ['key'=>'personnel_new','label'=>'Yeni Personel Ekle','url'=>'personnel_new.php','group'=>'yonet','perm'=>'personnel','primary'=>false],
-        ['key'=>'kpi','label'=>'Performans / KPI Gör','url'=>'kpi.php','group'=>'yonet','perm'=>'personnel','primary'=>false],
-        ['key'=>'report','label'=>'Rapor Al','url'=>'report.php','group'=>'yonet','perm'=>'report','primary'=>false],
-        ['key'=>'gunluk_rapor','label'=>'Günlük İş Raporu Al','url'=>'gunluk_rapor.php','group'=>'yonet','perm'=>'report','primary'=>false],
-        ['key'=>'contacts_report','label'=>'Cari Ekstresi Al','url'=>'contacts_report.php','group'=>'yonet','perm'=>'contacts','primary'=>false],
-        ['key'=>'activity','label'=>'Son İşlemleri Gör','url'=>'activity.php','group'=>'yonet','perm'=>null,'primary'=>false,'adminOnly'=>true],
-        ['key'=>'users','label'=>'Kullanıcı & Yetki Yönet','url'=>'users.php','group'=>'yonet','perm'=>'users','primary'=>false],
-        ['key'=>'audit_log','label'=>'Denetim Günlüğünü Gör','url'=>'audit_log.php','group'=>'yonet','perm'=>'users','primary'=>false],
-        ['key'=>'wa_settings','label'=>'WhatsApp Ayarlarını Düzenle','url'=>'wa_settings.php','group'=>'yonet','perm'=>'users','primary'=>false],
-        ['key'=>'brand_settings','label'=>'Logo / Marka Düzenle','url'=>'brand_settings.php','group'=>'yonet','perm'=>'users','primary'=>false],
-        ['key'=>'temizle_veri','label'=>'Veri Temizle','url'=>'temizle_veri.php','group'=>'yonet','perm'=>null,'primary'=>false,'adminOnly'=>true],
-        ['key'=>'profile','label'=>'Profilim / Şifre','url'=>'profile.php','group'=>'yonet','perm'=>null,'primary'=>false],
+        ['key'=>'finance','label'=>'Kasa / Banka Panelini Gör','url'=>'finance.php','mobileUrl'=>'kasa.php','group'=>'yonet','perm'=>'finance','primary'=>false,'actionLabel'=>'Kasa ve Bankaları Gör','category'=>'finans','categoryOrder'=>4,'isPrimaryAction'=>false,'searchKeywords'=>['kasa','banka','finans paneli']],
+        ['key'=>'finance_accounts','label'=>'Banka / Kasa / Kart Hesaplarını Yönet','url'=>'finance_accounts.php','mobileHide'=>true,'group'=>'yonet','perm'=>'finance','primary'=>false,'actionLabel'=>'Hesapları Yönet','category'=>'finans','categoryOrder'=>5,'isPrimaryAction'=>false,'searchKeywords'=>['hesap','pos','kart']],
+        ['key'=>'accounting','label'=>'Muhasebe Kayıtlarını Gör','url'=>'accounting.php','group'=>'yonet','perm'=>'muhasebe','primary'=>false,'category'=>'finans','categoryOrder'=>7,'isPrimaryAction'=>false,'searchKeywords'=>['muhasebe','gider gelir']],
+        ['key'=>'accounting_categories','label'=>'Muhasebe Kategorilerini Düzenle','url'=>'accounting_categories.php','group'=>'yonet','perm'=>'muhasebe','primary'=>false,'adminOnly'=>true,'category'=>'finans','categoryOrder'=>8,'isPrimaryAction'=>false,'searchKeywords'=>['muhasebe kategori']],
+        ['key'=>'personnel','label'=>'Personeli Yönet','url'=>'personnel.php','group'=>'yonet','perm'=>'personnel','primary'=>false,'actionLabel'=>'Personelleri Yönet','category'=>'yonetim','categoryOrder'=>1,'isPrimaryAction'=>false,'searchKeywords'=>['personel','ekip']],
+        ['key'=>'personnel_new','label'=>'Yeni Personel Ekle','url'=>'personnel_new.php','group'=>'yonet','perm'=>'personnel','primary'=>false,'category'=>'yonetim','categoryOrder'=>2,'isPrimaryAction'=>false,'searchKeywords'=>['yeni personel']],
+        ['key'=>'kpi','label'=>'Performans / KPI Gör','url'=>'kpi.php','group'=>'yonet','perm'=>'personnel','primary'=>false,'category'=>'yonetim','categoryOrder'=>3,'isPrimaryAction'=>false,'searchKeywords'=>['performans','kpi']],
+        ['key'=>'report','label'=>'Rapor Al','url'=>'report.php','group'=>'yonet','perm'=>'report','primary'=>false,'actionLabel'=>'Raporları Gör','category'=>'yonetim','categoryOrder'=>5,'isPrimaryAction'=>false,'searchKeywords'=>['rapor','özet']],
+        ['key'=>'gunluk_rapor','label'=>'Günlük İş Raporu Al','url'=>'gunluk_rapor.php','group'=>'yonet','perm'=>'report','primary'=>false,'category'=>'yonetim','categoryOrder'=>6,'isPrimaryAction'=>false,'searchKeywords'=>['günlük rapor']],
+        ['key'=>'contacts_report','label'=>'Cari Ekstresi Al','url'=>'contacts_report.php','group'=>'yonet','perm'=>'contacts','primary'=>false,'category'=>'ticaret','categoryOrder'=>7,'isPrimaryAction'=>false,'searchKeywords'=>['cari ekstre','bakiye raporu']],
+        ['key'=>'activity','label'=>'Son İşlemleri Gör','url'=>'activity.php','group'=>'yonet','perm'=>null,'primary'=>false,'adminOnly'=>true,'category'=>'yonetim','categoryOrder'=>7,'isPrimaryAction'=>false,'searchKeywords'=>['son işlemler','aktivite']],
+        ['key'=>'users','label'=>'Kullanıcı & Yetki Yönet','url'=>'users.php','group'=>'yonet','perm'=>'users','primary'=>false,'actionLabel'=>'Kullanıcı ve Yetkileri Yönet','category'=>'yonetim','categoryOrder'=>4,'isPrimaryAction'=>false,'searchKeywords'=>['kullanıcı','yetki']],
+        ['key'=>'audit_log','label'=>'Denetim Günlüğünü Gör','url'=>'audit_log.php','group'=>'yonet','perm'=>'users','primary'=>false,'actionLabel'=>'Denetim Kayıtlarını Gör','category'=>'yonetim','categoryOrder'=>8,'isPrimaryAction'=>false,'searchKeywords'=>['denetim','log']],
+        ['key'=>'wa_settings','label'=>'WhatsApp Ayarlarını Düzenle','url'=>'wa_settings.php','group'=>'yonet','perm'=>'users','primary'=>false,'category'=>'yonetim','categoryOrder'=>9,'isPrimaryAction'=>false,'searchKeywords'=>['whatsapp ayar']],
+        ['key'=>'brand_settings','label'=>'Logo / Marka Düzenle','url'=>'brand_settings.php','group'=>'yonet','perm'=>'users','primary'=>false,'category'=>'yonetim','categoryOrder'=>11,'isPrimaryAction'=>false,'searchKeywords'=>['logo','marka']],
+        ['key'=>'temizle_veri','label'=>'Veri Temizle','url'=>'temizle_veri.php','group'=>'yonet','perm'=>null,'primary'=>false,'adminOnly'=>true,'category'=>'yonetim','categoryOrder'=>12,'isPrimaryAction'=>false,'searchKeywords'=>['veri temizle']],
+        ['key'=>'profile','label'=>'Profilim / Şifre','url'=>'profile.php','group'=>'yonet','perm'=>null,'primary'=>false,'category'=>null,'categoryOrder'=>null,'isPrimaryAction'=>false,'searchKeywords'=>['profil','şifre','hesap']],
     ];
 }
 
@@ -84,6 +95,95 @@ function nav_group_label($group){
         'is_takip'=>'İş Takip Et', 'sat_tahsil'=>'Sat & Tahsil Et', 'stok'=>'Stok Yönet',
         'iletisim'=>'İletişim & Talep', 'yonet'=>'Yönet',
     ][$group] ?? $group;
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// PX-002 FAZ 2B-i (2026-07-17) — NAV DATA FOUNDATION. Product Owner IA FREEZE kararıyla
+// onaylanan 5 kategori (İşler/Ticaret/Üretim & Stok/Finans/Yönetim) için yeni okuma katmanı.
+// Eski nav_grouped_for_launcher()/nav_pinned_modules()/nav_visible_targets() (aşağıda,
+// DEĞİŞMEDİ) Compact Mode'da artık ÇAĞRILMIYOR — Launcher/pin retirement kararı (Flag 1) —
+// ama silinmedi: Legacy Mode ve olası geri-dönüş senaryosu için aynen duruyor.
+// ══════════════════════════════════════════════════════════════════════════
+
+// Kategori anahtarlarının kesin listesi — whitelist doğrulaması için TEK kaynak (FAZ 2B-iii'te
+// mobile/more.php'nin ?open= parametresi bu listeye karşı doğrulanacak).
+function nav_category_keys(){
+    return ['isler','ticaret','uretim_stok','finans','yonetim'];
+}
+
+// Görüntü ismi TEK kaynağı — web Rail, mobil Menü/İşler, arama sonucu, breadcrumb hepsi
+// buradan okur (Product Owner kararı: "her yüzeyde aynı ad").
+function nav_category_label($category){
+    return [
+        'isler'=>'İşler', 'ticaret'=>'Ticaret', 'uretim_stok'=>'Üretim & Stok',
+        'finans'=>'Finans', 'yonetim'=>'Yönetim',
+    ][$category] ?? $category;
+}
+
+// Bir kategorideki yetkili satırlar, categoryOrder'a göre sıralı; isPrimaryAction=true olan
+// satır (varsa) her zaman en başta gösterilir. Filtre sırası nav_authorized_modules() ile
+// BİREBİR aynı (adminOnly -> perm -> platform/mobileHide) — madde 8'in "tek ortak filtre
+// sırası" kararı, üç fonksiyonda da (bu, nav_global_items, nav_search_index) tekrarlanıyor.
+function nav_items_for_category($canSee, $isAdmin, $category, $platform = 'web'){
+    $out = [];
+    foreach(nav_taxonomy() as $item){
+        if(($item['category'] ?? null) !== $category) continue;
+        if(!empty($item['adminOnly']) && !$isAdmin) continue;
+        if($item['perm']!==null && !$canSee($item['perm'])) continue;
+        if($platform === 'mobile' && !empty($item['mobileHide'])) continue;
+        $out[] = $item;
+    }
+    usort($out, function($a, $b){
+        $ap = empty($a['isPrimaryAction']) ? 1 : 0;
+        $bp = empty($b['isPrimaryAction']) ? 1 : 0;
+        if($ap !== $bp) return $ap <=> $bp;
+        return ($a['categoryOrder'] ?? 999) <=> ($b['categoryOrder'] ?? 999);
+    });
+    return $out;
+}
+
+// Kategori DIŞI (category===null) global katman satırları — Ana Sayfa/Mesajlar/Bildirimler/
+// Hesap gibi her zaman erişilebilir hedefler. Aynı filtre sırası burada da geçerli.
+function nav_global_items($canSee, $isAdmin, $platform = 'web'){
+    $out = [];
+    foreach(nav_taxonomy() as $item){
+        if(($item['category'] ?? null) !== null) continue;
+        if(!empty($item['adminOnly']) && !$isAdmin) continue;
+        if($item['perm']!==null && !$canSee($item['perm'])) continue;
+        if($platform === 'mobile' && !empty($item['mobileHide'])) continue;
+        $out[] = $item;
+    }
+    return $out;
+}
+
+// Arama veri sözleşmesi (madde 10) — search.php'nin motoru/UI'si bu turda YENİDEN YAZILMIYOR,
+// bu yalnızca ileride kullanılacak düz veri listesi. Yetkisiz/platformda gizli hedef ASLA
+// girmez (madde: "Menüde görünmüyorsa arama indeksinde de görünmemeli"). keywords: searchKeywords
+// + label + actionLabel birleşimi, küçük harfe çevrilmiş, boşluklardan arındırılmış, tekilleştirilmiş.
+function nav_search_index($canSee, $isAdmin, $platform = 'web'){
+    $out = [];
+    foreach(nav_taxonomy() as $item){
+        if(!empty($item['adminOnly']) && !$isAdmin) continue;
+        if($item['perm']!==null && !$canSee($item['perm'])) continue;
+        if($platform === 'mobile' && !empty($item['mobileHide'])) continue;
+        $category = $item['category'] ?? null;
+        $actionLabel = $item['actionLabel'] ?? $item['label'];
+        $raw = array_merge($item['searchKeywords'] ?? [], [$item['label'], $actionLabel]);
+        $seen = [];
+        foreach($raw as $k){
+            $k = mb_strtolower(trim((string)$k));
+            if($k !== '') $seen[$k] = true;
+        }
+        $out[] = [
+            'key' => $item['key'],
+            'actionLabel' => $actionLabel,
+            'categoryKey' => $category,
+            'categoryLabel' => $category !== null ? nav_category_label($category) : 'Global',
+            'platformUrl' => nav_url_for_platform($item, $platform),
+            'keywords' => array_keys($seen),
+        ];
+    }
+    return $out;
 }
 
 // $canSee: function(string $perm): bool  ·  $isAdmin: adminOnly satırlar için
