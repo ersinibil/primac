@@ -5,6 +5,10 @@ $pdo=db();
 $er='';
 
 // Tablo güvencesi
+// HOTFIX-03 (2026-07-17, ACİL): gerçek şema kolonu response_note (database/migrations/008_misc.sql)
+// — bu fallback yanlışlıkla manager_note ile yaratıyordu; canlı DB'lerde migration 008 zaten
+// çalıştığı için bu blok pratikte hiç tetiklenmiyor ama tetiklenirse de artık gerçek şemayla
+// tutarlı bir tablo oluşturur.
 try{ $pdo->query("SELECT 1 FROM management_requests LIMIT 1"); }
 catch(Throwable $e){
   try{
@@ -18,7 +22,7 @@ catch(Throwable $e){
       description TEXT,
       priority VARCHAR(30) DEFAULT 'Normal',
       status VARCHAR(30) DEFAULT 'Yeni',
-      manager_note TEXT NULL,
+      response_note TEXT NULL,
       created_by INT NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP NULL
@@ -32,7 +36,7 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['request_id'])){
     $rid=(int)$_POST['request_id'];
     $status=trim($_POST['status']??'Yeni');
     $note=trim($_POST['manager_note']??'');
-    $pdo->prepare("UPDATE management_requests SET status=?, manager_note=?, updated_at=NOW() WHERE id=?")
+    $pdo->prepare("UPDATE management_requests SET status=?, response_note=?, updated_at=NOW() WHERE id=?")
       ->execute([$status,$note,$rid]);
 
     // Talep sahibine bildirim + iç mesaj
@@ -51,7 +55,11 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['request_id'])){
 
     $back='requests.php'.(!empty($_GET['status'])?('?status='.urlencode($_GET['status'])):'');
     header('Location: '.$back); exit;
-  }catch(Throwable $e){ $er=$e->getMessage(); }
+  }catch(Throwable $e){
+    // HOTFIX-03: ham DB/exception metni kullanıcıya gösterilmez, teşhis için sunucu log'una yazılır.
+    error_log('mobile/requests.php update_request hatası: '.$e->getMessage());
+    $er='Talep güncellenemedi. Lütfen tekrar deneyin, sorun sürerse yöneticinize bildirin.';
+  }
 }
 
 $status=$_GET['status']??'';
@@ -120,7 +128,7 @@ topx('Talep Merkezi');
     <select name="status">
       <?php foreach($statuses as $s): ?><option <?=$r['status']===$s?'selected':''?>><?=htmlspecialchars($s)?></option><?php endforeach; ?>
     </select>
-    <input name="manager_note" placeholder="Yönetim notu" value="<?=htmlspecialchars((string)$r['manager_note'])?>">
+    <input name="manager_note" placeholder="Yönetim notu" value="<?=htmlspecialchars((string)$r['response_note'])?>">
     <div style="display:flex;gap:8px">
       <button class="btn" type="submit">Kaydet</button>
       <button class="btn dark" type="submit" onclick="this.form.status.value='Onaylandı'" style="background:#16a34a">✓ Onayla</button>

@@ -4,6 +4,8 @@ $pdo=db();
 $er='';
 
 // Tablo güvencesi (migrate atlanmışsa)
+// HOTFIX-03 EK (2026-07-17, ACİL — Ece code-review bulgusu): requests.php/mobile/requests.php'deki
+// aynı manager_note→response_note şema hatasının üçüncü kopyası, buradaki fallback'te de vardı.
 try{ $pdo->query("SELECT 1 FROM management_requests LIMIT 1"); }
 catch(Throwable $e){
   try{
@@ -17,7 +19,7 @@ catch(Throwable $e){
       description TEXT,
       priority VARCHAR(30) DEFAULT 'Normal',
       status VARCHAR(30) DEFAULT 'Yeni',
-      manager_note TEXT NULL,
+      response_note TEXT NULL,
       created_by INT NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP NULL

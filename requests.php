@@ -5,13 +5,23 @@ require_login();
 if(!is_admin()){ http_response_code(403); exit('Bu sayfa için yetkiniz yok.'); }
 
 $pdo=db();
+// HOTFIX-03 EK (Selin security-review notu): $error önceden hiç başlatılmıyordu, GET isteğinde
+// (POST yolu hiç çalışmadığında) aşağıdaki "if(!empty($error))" E_ALL altında "Undefined variable"
+// notice'ı üretebiliyordu.
+$error='';
 
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['request_id'])){
     try{
         $rid=(int)$_POST['request_id'];
         $newStatus=$_POST['status'];
+        // HOTFIX-03 (2026-07-17, ACİL): gerçek şema kolonu response_note (database/migrations/
+        // 008_misc.sql) — burada var olmayan manager_note'a yazılıyordu, PDO exception fırlatıyor,
+        // aşağıdaki catch $error'ı set ediyor ama hiçbir yerde render edilmediği için güncelleme
+        // kullanıcıya sessizce "başarılıymış gibi" görünüyordu. Form alanı adı (name="manager_note",
+        // aşağıda) değiştirilmedi — o sadece tarayıcı↔PHP arası kablo adı, DB koloniyle aynı olmak
+        // zorunda değil.
         $note=trim($_POST['manager_note']);
-        $stmt=$pdo->prepare("UPDATE management_requests SET status=?, manager_note=?, updated_at=NOW() WHERE id=?");
+        $stmt=$pdo->prepare("UPDATE management_requests SET status=?, response_note=?, updated_at=NOW() WHERE id=?");
         $stmt->execute([$newStatus, $note, $rid]);
 
         // Talep sahibine bildirim + iç mesaj
@@ -36,7 +46,10 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['request_id'])){
             }
         }catch(Throwable $e){}
     }catch(Throwable $e){
-        $error=$e->getMessage();
+        // HOTFIX-03: kullanıcıya ham DB/exception metni gösterilmez (şema detayı sızdırır) — güvenli,
+        // sabit bir mesaj gösterilir; teşhis için gerçek mesaj sunucu log'una yazılır.
+        error_log('requests.php update_request hatası: '.$e->getMessage());
+        $error='Talep güncellenemedi. Lütfen tekrar deneyin, sorun sürerse yöneticinize bildirin.';
     }
 }
 
@@ -64,6 +77,8 @@ $rows=$stmt->fetchAll();
 <h1>Talep Merkezi</h1>
 <a class="btn" href="request_new.php">+ Yeni Talep</a>
 </div>
+
+<?php if(!empty($error)): ?><div class="alert"><?=h($error)?></div><?php endif; ?>
 
 <div class="filters">
 <a href="requests.php">Tümü</a>
@@ -107,7 +122,7 @@ $rows=$stmt->fetchAll();
 <option <?=$r['status']===$s?'selected':''?>><?=$s?></option>
 <?php endforeach; ?>
 </select>
-<input name="manager_note" placeholder="Yönetim notu" value="<?=h($r['manager_note'])?>">
+<input name="manager_note" placeholder="Yönetim notu" value="<?=h($r['response_note'])?>">
 <button class="btn small">Kaydet</button>
 </div>
 </form>
