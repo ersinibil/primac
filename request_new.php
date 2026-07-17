@@ -29,10 +29,12 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             $me ?: null
         ]);
 
-        // P0-REQ-01 (2026-07-17, ACİL): web tarafında önceden HİÇ bildirim/mesaj gönderilmiyordu —
-        // mobil ile parite (aynı hedefleme mantığı) için eklendi. Hedef, mobil ile birebir aynı
-        // şekilde request_lib.php::request_resolve_recipient() ile çözülür: sadece ilgili işin
-        // sorumlu personeline, atanmış/geçerli bir hedef yoksa hiç kimseye mesaj gönderilmez.
+        // P0-REQ-01 (2026-07-17): hedef mobil ile birebir aynı şekilde request_lib.php::
+        // request_resolve_recipient() ile çözülür — sadece ilgili işin sorumlu personeline,
+        // atanmış/geçerli bir hedef yoksa hiç kimseye bildirim gönderilmez.
+        // İLETİŞİM MERKEZİ (2026-07-17, Product Owner kararı): "Talep bildirimleri sohbet listesine
+        // düşmeyecek; Bildirimler sekmesinde gösterilecek" — internal_messages'a YAZILMIYOR artık,
+        // sadece internal_notifications (+ push). Mesaj/Bildirim ayrımı ürün prensibi olarak korunuyor.
         try{
             $recipientUid=request_resolve_recipient($pdo,$jobId);
             if($recipientUid && $recipientUid!==$me){
@@ -40,7 +42,6 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 $notifTitle='📨 Yeni talep: '.$title;
                 $notifMsg=$myName.' · '.$category.' · '.$priority;
                 try{ $pdo->prepare("INSERT INTO internal_notifications(title,message,target_user_id,action_url,is_read) VALUES(?,?,?,?,0)")->execute([$notifTitle,$notifMsg,$recipientUid,'requests.php']); }catch(Throwable $e2){}
-                try{ $pdo->prepare("INSERT INTO internal_messages(sender_user_id,receiver_user_id,message,is_read) VALUES(?,?,?,0)")->execute([$me?:null,$recipientUid,$notifTitle."\n".$notifMsg]); }catch(Throwable $e2){}
                 if(file_exists(__DIR__.'/push_lib.php')){ require_once __DIR__.'/push_lib.php'; try{ push_to_user($recipientUid,$notifTitle,$notifMsg,'requests.php'); }catch(Throwable $e2){} }
             }
         }catch(Throwable $e){}

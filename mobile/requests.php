@@ -39,7 +39,8 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['request_id'])){
     $pdo->prepare("UPDATE management_requests SET status=?, response_note=?, updated_at=NOW() WHERE id=?")
       ->execute([$status,$note,$rid]);
 
-    // Talep sahibine bildirim + iç mesaj
+    // Talep sahibine bildirim — İLETİŞİM MERKEZİ (2026-07-17): "Talep bildirimleri sohbet listesine
+    // düşmeyecek; Bildirimler sekmesinde gösterilecek" — internal_messages'a artık YAZILMIYOR.
     try{
       $r=$pdo->prepare("SELECT title, created_by FROM management_requests WHERE id=?");
       $r->execute([$rid]); $row=$r->fetch();
@@ -48,8 +49,6 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['request_id'])){
       $notifMsg=($row['title']??'').($note?' · '.$note:'');
       if($owner && $owner!==$ME){
         if(function_exists('notify_user')) notify_user($owner,$notifTitle,$notifMsg,'requests.php');
-        // Mesajlar ekranında görünsün
-        try{ $pdo->prepare("INSERT INTO internal_messages(sender_user_id,receiver_user_id,message,is_read) VALUES(?,?,?,0)")->execute([$ME?:null,$owner,$notifTitle."\n".$notifMsg]); }catch(Throwable $e2){}
       }
     }catch(Throwable $e){}
 

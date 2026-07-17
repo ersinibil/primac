@@ -56,14 +56,15 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['save_request'])){
     // sorumlu personeline (request_lib.php::request_resolve_recipient()) deterministik olarak
     // çözülüyor; atanmış/geçerli bir hedef yoksa HİÇ KİMSEYE mesaj gönderilmez — talep yine de
     // Talep Merkezi listesinde görünür durur, sadece proaktif bildirim gitmez.
+    // İLETİŞİM MERKEZİ (2026-07-17, Product Owner kararı): "Talep bildirimleri sohbet listesine
+    // düşmeyecek; Bildirimler sekmesinde gösterilecek" — internal_messages'a artık YAZILMIYOR,
+    // notify_user() zaten internal_notifications + push'ı hallediyor.
     try{
       $recipientUid=request_resolve_recipient($pdo,$jobId);
       if($recipientUid && $recipientUid!==$ME){
         $notifMsg=$name.' · '.$category.' · '.$priority;
         if(function_exists('notify_user'))
           notify_user($recipientUid,'📨 Yeni talep: '.$title,$notifMsg,'requests.php');
-        // Mesajlar ekranında da görünsün
-        try{ $pdo->prepare("INSERT INTO internal_messages(sender_user_id,receiver_user_id,message,is_read) VALUES(?,?,?,0)")->execute([$ME?:null,$recipientUid,'📨 Yeni talep: '.$title."\n".$notifMsg]); }catch(Throwable $e2){}
       }
     }catch(Throwable $e){}
 

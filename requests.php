@@ -24,7 +24,9 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['request_id'])){
         $stmt=$pdo->prepare("UPDATE management_requests SET status=?, response_note=?, updated_at=NOW() WHERE id=?");
         $stmt->execute([$newStatus, $note, $rid]);
 
-        // Talep sahibine bildirim + iç mesaj
+        // Talep sahibine bildirim — İLETİŞİM MERKEZİ (2026-07-17, Product Owner kararı): "Talep
+        // bildirimleri sohbet listesine düşmeyecek; Bildirimler sekmesinde gösterilecek" —
+        // internal_messages'a artık YAZILMIYOR, sadece internal_notifications (+ push).
         try{
             $rq=$pdo->prepare("SELECT title, created_by FROM management_requests WHERE id=?");
             $rq->execute([$rid]); $row=$rq->fetch();
@@ -34,13 +36,6 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['request_id'])){
             if($owner){
                 // Uygulama içi bildirim
                 try{ $pdo->prepare("INSERT INTO internal_notifications(title,message,target_user_id,action_url,is_read) VALUES(?,?,?,?,0)")->execute([$notifTitle,$notifMsg,$owner,'requests.php']); }catch(Throwable $e2){}
-                // Mesajlar ekranında görünsün — TOPBAR MESSAGE BADGE GHOST COUNT düzeltmesi
-                // (2026-07-14): kendi talebini kendisi onaylayan/reddeden admin durumunda
-                // internal_messages'a YAZILMAZ, bildirim yine oluşur.
-                $senderId=(int)($_SESSION['user']['id']??0);
-                if($senderId!==$owner){
-                    try{ $pdo->prepare("INSERT INTO internal_messages(sender_user_id,receiver_user_id,message,is_read) VALUES(?,?,?,0)")->execute([$senderId?:null,$owner,$notifMsg]); }catch(Throwable $e2){}
-                }
                 // Web Push (push_lib varsa)
                 if(file_exists(__DIR__.'/push_lib.php')){ require_once __DIR__.'/push_lib.php'; try{ push_to_user($owner,$notifTitle,$notifMsg,'requests.php'); }catch(Throwable $e2){} }
             }
