@@ -257,3 +257,38 @@ function ds_tabs($items){
     }
     echo '</div>';
 }
+
+// FAZ 2B-ii-R/1 (2026-07-17) — DF-ListItem. Mevcut .df-list-row CSS'i (mytasks.php'de zaten
+// canlı) aynen kullanılıyor, yeni sınıf icat edilmedi. $url verilirse gerçek <a> (JS'siz de tam
+// satır tıklanabilir — mytasks.php web tarafının div+onclick+closest() deseni BİLEREK
+// kullanılmadı, search.php gibi satır-içi ikincil aksiyon barındırmayan listeler için <a> daha
+// sağlam/erişilebilir). $title/$desc kullanıcı/veri kaynaklı, h() ile escape edilir.
+// $metaRightHtml BİLEREK escape edilmiyor (ds_badge()/tabular tutar gibi hazır HTML taşımak
+// için — diğer ds_*'in $actionsHtml deseniyle aynı kural, yalnızca geliştirici-kontrollü sabit
+// HTML ya da zaten kendi içinde h()'lenmiş parça geçilmeli). Bugün 0 canlı çağrı — FAZ 2B-ii-R/2
+// (search.php dönüşümü) ilk tüketici olacak.
+function ds_list_item($title, $url=null, $desc=null, $metaRightHtml=null, $chevron=true){
+    $tag = $url ? 'a' : 'div';
+    $href = $url ? ' href="'.h($url).'"' : '';
+    echo '<'.$tag.' class="df-list-row"'.$href.'>';
+    echo '<div class="df-list-row-body">';
+    echo '<div class="df-list-row-title">'.h($title).'</div>';
+    if($desc !== null && $desc !== '') echo '<div class="df-list-row-desc">'.h($desc).'</div>';
+    echo '</div>';
+    if($metaRightHtml !== null && $metaRightHtml !== '') echo '<div class="df-list-row-meta">'.$metaRightHtml.'</div>';
+    if($url && $chevron) echo ds_icon('chevron-right', 16, 'df-list-row-chevron');
+    echo '</'.$tag.'>';
+}
+
+// FAZ 2B-ii-R/1 (2026-07-17) — DF-Match. search_lib.php::search_hl() (web+mobil ortak, aktif
+// kullanımda) BİLEREK değiştirilmedi — bu R/1'in "sıfır sayfa değişikliği" sınırının dışında
+// kalır. ds_highlight() ayrı, yeni bir fonksiyon: aynı güvenli davranış (önce htmlspecialchars(),
+// sonra eşleşen kısmı sarmalar) ama inline style yerine df-match sınıfı basar. $q boşsa metin
+// düz döner. Bugün 0 canlı çağrı — FAZ 2B-ii-R/2'de search.php web tarafı search_hl() yerine
+// buna geçecek (mobil search.php'ye dokunulmuyor, o search_hl()'i kullanmaya devam edecek).
+function ds_highlight($text, $q){
+    $text = h((string)$text);
+    $q = trim((string)$q);
+    if($q === '') return $text;
+    return preg_replace('/('.preg_quote(h($q), '/').')/iu', '<mark class="df-match">$1</mark>', $text);
+}

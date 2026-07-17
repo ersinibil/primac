@@ -315,7 +315,17 @@ body.mobile-shell{
 .df-list-row-meta .df-icon{opacity:.8}
 .df-list-row-meta .df-list-row-due{color:var(--df-ink-600);font-weight:600;display:inline-flex;align-items:center;gap:3px}
 .df-list-row-actions{display:flex;gap:6px;flex:0 0 auto;align-items:center}
+/* FAZ 2B-ii-R/1 (2026-07-17) — ds_list_item() <a> olarak render ettiğinde tarayıcı varsayılan
+   link rengi/altı çizili görünmesin diye (mobile/mytasks.php'nin şu ana kadar tek tek inline
+   style ile yaptığı reset artık sınıfın kendisinde). Chevron: .df-list-row zaten
+   align-items:flex-start olduğu için ikon varsayılan olarak üstte kalır — dikeyde ortalandı. */
+.df-list-row{text-decoration:none;color:inherit}
+.df-list-row-chevron{align-self:center;color:var(--df-ink-300);flex:0 0 auto}
 @media(max-width:640px){.df-list-row{flex-direction:column}.df-list-row-actions{width:100%}}
+
+/* FAZ 2B-ii-R/1 (2026-07-17) — DF-Match (ds_highlight()). Eski search_hl()'in inline
+   #fef08a sarısı yerine token'lı, sistemin kendi accent dilini kullanan bir vurgu. */
+.df-match{background:var(--df-accent-soft);color:var(--df-accent-soft-ink);border-radius:3px;padding:0 2px;font-weight:650}
 
 /* Filtre sekmeleri — gerçek segmented control: gömük iz (inset gölge) + yüzen aktif parça */
 .df-tabs{display:inline-flex;background:var(--df-surface-sunken);border-radius:var(--df-radius-sm);padding:3px;gap:2px;box-shadow:inset 0 0 0 1px var(--df-hairline)}
