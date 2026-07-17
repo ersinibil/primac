@@ -2,11 +2,18 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
-## BRAND AREA v1 — Web Navigation Rail + Mobil Home (2026-07-17, commit `09be2e5`)
+## BRAND AREA v1 — Web Navigation Rail + Mobil Home (2026-07-17, commit `09be2e5`..`7bc8342`, CLOSED — DEV PASS)
 Kapsam kesin olarak bunlardır, başka hiçbir yüzey değişmedi: **Web Navigation Rail** (`.df-rail-brand`,
 compact dal, `layout_top.php`) ve **Mobil Home** (`mobile/index.php`, yalnızca compact modda başlık).
 FAZ 2B-ii USER TEST'in FAIL nedenlerinden biri "kullanıcı hangi üründe olduğunu anlayamıyor"du —
 bu tur o bulguyu kapatıyor, P0 legacy-surface remediation'ın (FAZ 2B-ii-R) kendisi değil.
+
+**DEV PASS öncesi 2 ek düzeltme turu:** (1) önbellek kök nedeni — mobil PWA service worker'ı
+(`mobile/sw.js`) `icon.php`'yi cache-first önbelleklemişti, `CACHE` versiyonu v27→v28 ile
+tazelendi; web Rail logosuna `ds_styles()` ile aynı `?v=filemtime()` cache-bust deseni eklendi
+(`commit 5bf7e8d`). (2) DEV PASS'teki 3 mikro-UX notu: mark ~%25 büyütüldü (34→42px), logo/metin
+boşluğu artırıldı, metin ağırlığı düşürüldü (850→700, ilk odak marka işareti kalsın diye)
+(`commit 7bc8342`). **CLOSED — sıradaki: FAZ 2B-ii-R R/1 (ortak helper katmanı).**
 
 **Logo kaynağı:** Product Owner'ın Masaüstü'nden ilettiği resmi kurumsal kimlik dokümanı
 `PRİMAC KK.pdf` (tek sayfa, ~30×65 inç kurumsal kimlik panosu — renk paleti, sosyal medya
