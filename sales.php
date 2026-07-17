@@ -143,23 +143,21 @@ require_once __DIR__.'/layout_top.php';
 ?>
 
 <?php
-$__actions = ds_button('🛒 Satın Alma', 'purchase.php', 'secondary')
-    . ds_button('🧾 Satış Belgesi', 'trade_document_new.php?type=sale', 'secondary');
-ds_page_header('Hızlı Satış', '', '', $__actions, true);
+$__actions = ds_button('Satın Alma', 'purchase.php', 'secondary', '', '', true)
+    . ds_button('Satış Belgesi', 'trade_document_new.php?type=sale', 'secondary', '', '', true);
+ds_page_header('Hızlı Satış', ds_icon('tag',24), '', $__actions, true, true);
 ?>
 
-<?php if ($ok): ?>
-<div class="ok"><?= $ok ?></div>
-<?php endif; ?>
-<?php if ($er): ?>
-<div class="alert"><?= h($er) ?></div>
-<?php endif; ?>
+<?php if ($ok): ?><?=ds_alert('success',$ok)?><?php endif; ?>
+<?php if ($er): ?><?=ds_alert('danger',$er)?><?php endif; ?>
 
 <div style="display:grid;grid-template-columns:1fr;gap:20px;align-items:start">
 
-  <!-- Sol: form -->
-  <div class="panel">
-    <div class="panel-head"><h2><?= $isEditView ? '✏️ Satışı Düzenle' : 'Satış Formu' ?></h2></div>
+  <!-- Sol: form (JS ile dinamik satır eklenen kritik akış — .row-prod/.row-qty/.row-price/
+       .row-vat/.row-sub/#itemsBody class'ları JS'e SIKI bağlı, DEĞİŞTİRİLMEDİ; sadece dış
+       panel/başlık/buton görselleri DS'e taşındı) -->
+  <div class="df-card">
+    <h2 style="font-size:var(--df-type-section-size);font-weight:var(--df-type-section-weight);color:var(--df-ink-900);margin:0 0 var(--df-space-3)"><?= $isEditView ? '✏️ Satışı Düzenle' : 'Satış Formu' ?></h2>
     <div class="notice" style="margin-bottom:12px;background:#eef4ff;color:#1e3a8a">
       Bu ekran tahsilat yapmaz — satış cariye açık borç (Bekliyor) olarak kaydedilir. Tahsilat
       <a href="finance_new.php?direction=in">Tahsilat ekranından</a> ayrıca girilir.
@@ -249,10 +247,10 @@ ds_page_header('Hızlı Satış', '', '', $__actions, true);
     </form>
   </div><!-- /panel -->
 
-  <!-- Sağ: son satışlar -->
+  <!-- Sağ: son satışlar (salt-okunur — JS bağımlılığı yok, güvenle DS'e taşındı) -->
   <div>
-    <div class="panel section-card">
-      <div class="panel-head"><h2 style="font-size:15px">Son Satışlar</h2></div>
+    <div class="df-card">
+      <h2 style="font-size:15px;margin:0 0 var(--df-space-3)">Son Satışlar</h2>
       <?php
       try {
           $recent = $pdo->query(
@@ -267,8 +265,8 @@ ds_page_header('Hızlı Satış', '', '', $__actions, true);
           $recent = [];
       }
       if ($recent): ?>
-      <div style="overflow-x:auto">
-      <table style="min-width:600px">
+      <div class="df-table-wrap">
+      <table class="df-table" style="min-width:600px">
         <thead><tr><th>Tarih</th><th>Cari</th><th>Açıklama</th><th style="text-align:right">Tutar</th><th style="text-align:right">KDV</th><th>Durum</th><?php if(can_edit_delete()): ?><th>İşlem</th><?php endif; ?></tr></thead>
         <tbody>
         <?php foreach ($recent as $row): ?>
@@ -277,26 +275,26 @@ ds_page_header('Hızlı Satış', '', '', $__actions, true);
           <tr>
             <td class="nowrap"><?= h($row['movement_date']) ?></td>
             <td><?= h($row['cname'] ?? '—') ?></td>
-            <td class="muted" style="font-size:12px">
-              <?php if ($isDoc): ?><span class="badge" style="background:#e0f2fe;color:#0369a1"><?= h($row['document_no'] ?: 'Belge') ?></span> <?php endif; ?>
+            <td style="font-size:12px;color:var(--df-ink-500)">
+              <?php if ($isDoc): ?><span class="df-badge df-badge--info"><?= h($row['document_no'] ?: 'Belge') ?></span> <?php endif; ?>
               <?= h($row['description'] ?? '') ?>
             </td>
-            <td style="text-align:right;font-weight:800;color:#166534"><?= money($row['amount']) ?></td>
-            <td style="text-align:right;color:#667085;font-size:12px"><?= $row['vat_amount'] > 0 ? money($row['vat_amount']) : '—' ?></td>
-            <td><?= badge($row['status'], status_tone($row['status'])) ?></td>
+            <td style="text-align:right;font-weight:800;color:var(--df-success-ink)"><?= money($row['amount']) ?></td>
+            <td style="text-align:right;color:var(--df-ink-500);font-size:12px"><?= $row['vat_amount'] > 0 ? money($row['vat_amount']) : '—' ?></td>
+            <td><?= ds_badge($row['status']) ?></td>
             <?php if(can_edit_delete()): ?>
             <td class="nowrap"><div class="row-actions">
               <?php if ($isDoc): ?>
-              <a class="btn secondary small" href="trade_document_view.php?id=<?= (int)$row['document_id'] ?>">🧾 Belgeyi Aç</a>
+              <a class="df-btn df-btn--secondary df-btn--sm" href="trade_document_view.php?id=<?= (int)$row['document_id'] ?>">🧾 Belgeyi Aç</a>
               <?php else: ?>
               <?php if ($rowEditable): ?>
-              <a class="btn secondary small" href="sales.php?edit_id=<?= (int)$row['id'] ?>">✏️ Düzenle</a>
+              <a class="df-btn df-btn--secondary df-btn--sm" href="sales.php?edit_id=<?= (int)$row['id'] ?>">✏️ Düzenle</a>
               <?php endif; ?>
               <form method="post" action="sil.php" style="display:inline-block;margin:0"
                     onsubmit="return confirm('Bu satış kaydı ve bağlı verileri KALICI olarak silinecek. Emin misiniz?')">
                 <input type="hidden" name="t" value="sale">
                 <input type="hidden" name="id" value="<?= (int)$row['id'] ?>">
-                <button class="btn danger small" type="submit">🗑 Sil</button>
+                <button class="df-btn df-btn--danger df-btn--sm" type="submit">🗑 Sil</button>
               </form>
               <?php endif; ?>
             </div></td>
@@ -307,7 +305,7 @@ ds_page_header('Hızlı Satış', '', '', $__actions, true);
       </table>
       </div>
       <?php else: ?>
-        <p class="muted">Henüz kayıt yok.</p>
+        <p style="color:var(--df-ink-500)">Henüz kayıt yok.</p>
       <?php endif; ?>
     </div>
   </div><!-- /sağ -->
