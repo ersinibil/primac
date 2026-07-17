@@ -11,14 +11,16 @@ function personnel_initials($name){
     foreach(array_slice($parts,0,2) as $p){ $ini.=mb_substr($p,0,1,'UTF-8'); }
     return mb_strtoupper($ini,'UTF-8') ?: '?';
 }
+
+// RELEASE 0.9 — Personel Ekranları DS Migration (2026-07-17): sayfa artık ds_lib.php'nin
+// PROVEN (search.php/mytasks.php/job_view.php'de zaten canlıda kullanılan) bileşenlerine
+// dayanıyor — df-table/df-form-group gibi bugüne kadar hiç canlı kullanılmamış sınıflar
+// BİLEREK tercih edilmedi. Kart ızgarası kendi başına kalıyor (bu ekranın kendi deseni), ama
+// artık hardcoded renk/spacing yerine DS token'larını (--df-*) kullanıyor.
+ds_page_header('Personel', ds_icon('users',24), '', ds_button('Yeni Personel','personnel_new.php','primary','','',true), false, true);
 ?>
 
-<div class="panel-head">
-<h1>Personel</h1>
-<a class="btn" href="personnel_new.php">+ Yeni Personel</a>
-</div>
-
-<div class="pcard-grid">
+<div class="df-personnel-grid">
 <?php
 try{
     // app_users LEFT JOIN — kart üzerindeki "Mesaj Gönder" butonu için bağlı kullanıcı hesabı var mı bakılıyor.
@@ -41,54 +43,56 @@ try{
             $todayTasks=(int)($s->fetch()['c'] ?? 0);
         }catch(Throwable $e){}
         ?>
-        <div class="pcard">
-            <div class="pcard-head">
-                <div class="pcard-avatar"><?=h(personnel_initials($r['name']))?></div>
-                <div class="pcard-id">
+        <div class="df-personnel-card">
+            <div class="df-personnel-card-head">
+                <div class="df-personnel-avatar"><?=h(personnel_initials($r['name']))?></div>
+                <div class="df-personnel-id">
                     <strong><?=h($r['name'])?></strong>
-                    <span class="muted"><?=h($r['role'] ?: 'Personel')?></span>
+                    <span class="df-personnel-role"><?=h($r['role'] ?: 'Personel')?></span>
                 </div>
-                <?=$r['active']?badge('Aktif','green'):badge('Pasif','red')?>
+                <?=$r['active']?ds_badge('Aktif','green'):ds_badge('Pasif','red')?>
             </div>
-            <div class="pcard-info">
-                <div>📞 <?=h($r['phone'] ?: '-')?></div>
+            <div class="df-personnel-info">
+                <div><?=ds_icon('phone',14)?> <?=h($r['phone'] ?: '-')?></div>
                 <div>✉️ <?=h($r['email'] ?? '' ?: '-')?></div>
             </div>
-            <div class="pcard-stats">
+            <div class="df-personnel-stats">
                 <div><strong><?=$todayTasks?></strong><small>Bugünkü Görev</small></div>
                 <div><strong><?=$openTasks?></strong><small>Açık Görev</small></div>
             </div>
-            <div class="pcard-actions">
-                <a class="btn small" href="personnel_edit.php?id=<?=$pid?>">Detay</a>
-                <a class="btn small secondary" href="personnel_edit.php?id=<?=$pid?>&tab=gorevler">Görevler</a>
+            <div class="df-personnel-actions">
+                <?=ds_button('Detay','personnel_edit.php?id='.$pid,'secondary','df-btn--sm','',true)?>
+                <?=ds_button('Görevler','personnel_edit.php?id='.$pid.'&tab=gorevler','secondary','df-btn--sm','',true)?>
                 <?php if(!empty($r['linked_user_id'])): ?>
-                <a class="btn small secondary" href="messages.php?u=<?=(int)$r['linked_user_id']?>">Mesaj Gönder</a>
+                <?=ds_button('Mesaj Gönder','messages.php?u='.(int)$r['linked_user_id'],'secondary','df-btn--sm','',true)?>
                 <?php endif; ?>
-                <a class="btn small secondary" href="kpi.php">Performans</a>
+                <?=ds_button('Performans','kpi.php','secondary','df-btn--sm','',true)?>
             </div>
         </div>
         <?php
     }
-    if(!$rows) echo '<div class="muted" style="padding:20px">Henüz personel yok.</div>';
+    if(!$rows) ds_empty_state('Henüz personel yok.', 'Yeni Personel butonuyla ilk personeli ekleyebilirsiniz.', ds_icon('users',32));
 }catch(Throwable $e){
-    echo '<div class="alert">'.h($e->getMessage()).'</div>';
+    echo ds_alert('danger', $e->getMessage());
 }
 ?>
 </div>
 
 <style>
-.pcard-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin:14px 0 20px}
-.pcard{background:#fff;border-radius:20px;box-shadow:0 8px 28px rgba(16,24,40,.06);padding:18px;display:flex;flex-direction:column;gap:12px}
-.pcard-head{display:flex;align-items:center;gap:12px}
-.pcard-avatar{width:46px;height:46px;border-radius:14px;background:#111827;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:16px;flex:0 0 auto}
-.pcard-id{display:flex;flex-direction:column;flex:1;min-width:0}
-.pcard-id strong{font-size:15px;color:#101828}
-.pcard-info{display:flex;flex-direction:column;gap:4px;font-size:13px;color:#475467}
-.pcard-stats{display:flex;gap:10px}
-.pcard-stats>div{flex:1;background:#f8fafc;border-radius:14px;padding:8px 10px;text-align:center}
-.pcard-stats strong{display:block;font-size:18px;color:#101828}
-.pcard-stats small{color:#667085;font-size:11px}
-.pcard-actions{display:flex;flex-wrap:wrap;gap:6px}
+body.nav-compact .df-personnel-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:var(--df-space-4);margin:var(--df-space-4) 0 var(--df-space-5)}
+body.nav-compact .df-personnel-card{background:var(--df-surface);border:1px solid var(--df-hairline);border-radius:var(--df-radius-lg);box-shadow:var(--df-elevation-raised);padding:var(--df-space-4);display:flex;flex-direction:column;gap:var(--df-space-3)}
+body.nav-compact .df-personnel-card-head{display:flex;align-items:center;gap:var(--df-space-3)}
+body.nav-compact .df-personnel-avatar{width:46px;height:46px;border-radius:var(--df-radius-md);background:var(--df-ink-900);color:var(--df-surface);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:16px;flex:0 0 auto}
+body.nav-compact .df-personnel-id{display:flex;flex-direction:column;flex:1;min-width:0}
+body.nav-compact .df-personnel-id strong{font-size:var(--df-type-subtitle-size);color:var(--df-ink-900)}
+body.nav-compact .df-personnel-role{color:var(--df-ink-500);font-size:var(--df-type-caption-size)}
+body.nav-compact .df-personnel-info{display:flex;flex-direction:column;gap:4px;font-size:var(--df-type-caption-size);color:var(--df-ink-600)}
+body.nav-compact .df-personnel-info .df-icon{vertical-align:-2px;margin-right:2px}
+body.nav-compact .df-personnel-stats{display:flex;gap:var(--df-space-2)}
+body.nav-compact .df-personnel-stats>div{flex:1;background:var(--df-surface-sunken);border-radius:var(--df-radius-md);padding:var(--df-space-2) var(--df-space-3);text-align:center}
+body.nav-compact .df-personnel-stats strong{display:block;font-size:18px;color:var(--df-ink-900)}
+body.nav-compact .df-personnel-stats small{color:var(--df-ink-500);font-size:11px}
+body.nav-compact .df-personnel-actions{display:flex;flex-wrap:wrap;gap:var(--df-space-2)}
 </style>
 
 <?php require_once __DIR__.'/layout_bottom.php'; ?>

@@ -66,81 +66,69 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 }
 
 require_once __DIR__.'/layout_top.php';
+
+// RELEASE 0.9 — Personel Ekranları DS Migration (2026-07-17): ds_form_field() bugüne kadar hiç
+// canlı kullanılmamıştı (grep ile doğrulandı) — ama gerçek stil (input/select/textarea rengi,
+// border, radius) zaten AYRI, genel body.nav-compact seçicisinden geliyor; ds_form_field sadece
+// tutarlı label+boşluk sarmalayıcısı ekliyor, yeni bir görsel risk taşımıyor.
+ds_page_header('Yeni Personel', ds_icon('user',24), '', ds_button('Personel Listesi','personnel.php','secondary','','',true), false, true);
 ?>
 
-<div class="panel-head">
-<h1>Yeni Personel</h1>
-<a class="btn secondary" href="personnel.php">Personel Listesi</a>
-</div>
+<?php if($error): ?><?=ds_alert('danger',$error)?><?php endif; ?>
 
-<?php if($error): ?><div class="alert"><?=h($error)?></div><?php endif; ?>
+<section class="df-card">
+<form method="post" class="df-form-grid-2" enctype="multipart/form-data">
 
-<section class="panel">
-<form method="post" class="form-grid" enctype="multipart/form-data">
+<?php ds_form_field('Ad Soyad', '<input name="name" required placeholder="Örn: Faruk Gündoğdu">'); ?>
+<?php ds_form_field('Rol / Görev', '<input name="role" placeholder="Üretim, montaj, satın alma, grafik...">'); ?>
+<?php ds_form_field('Telefon', '<input name="phone">'); ?>
+<?php ds_form_field('E-posta', '<input name="email">'); ?>
 
-<label>Ad Soyad
-<input name="name" required placeholder="Örn: Faruk Gündoğdu">
-</label>
-
-<label>Rol / Görev
-<input name="role" placeholder="Üretim, montaj, satın alma, grafik...">
-</label>
-
-<label>Telefon
-<input name="phone">
-</label>
-
-<label>E-posta
-<input name="email">
-</label>
-
-<label>Çalışma Tipi
-<select name="work_type">
+<?php ds_form_field('Çalışma Tipi', '<select name="work_type">
 <option>Tam Zamanlı</option>
 <option>Yarı Zamanlı</option>
 <option>Günlük</option>
 <option>Dış Paydaş</option>
 <option>Stajyer</option>
-</select>
-</label>
+</select>'); ?>
 
-<label>İşe Giriş Tarihi
-<input type="date" name="start_date">
-</label>
+<?php ds_form_field('İşe Giriş Tarihi', '<input type="date" name="start_date">'); ?>
+<?php ds_form_field('Saatlik Ücret', '<input type="number" step="0.01" name="hourly_rate" value="0">'); ?>
+<?php ds_form_field('Günlük / Maaş', '<input type="number" step="0.01" name="daily_wage" value="0">'); ?>
 
-<label>Saatlik Ücret
-<input type="number" step="0.01" name="hourly_rate" value="0">
-</label>
-
-<label>Günlük / Maaş
-<input type="number" step="0.01" name="daily_wage" value="0">
-</label>
-
-<label class="full">IBAN
-<input name="iban">
-</label>
-
-<label class="full">Adres
-<textarea name="address" rows="2"></textarea>
-</label>
-
-<label class="full">Notlar
-<textarea name="notes" rows="4"></textarea>
-</label>
+<div class="df-form-span-2">
+<?php ds_form_field('IBAN', '<input name="iban">'); ?>
+</div>
+<div class="df-form-span-2">
+<?php ds_form_field('Adres', '<textarea name="address" rows="2"></textarea>'); ?>
+</div>
+<div class="df-form-span-2">
+<?php ds_form_field('Notlar', '<textarea name="notes" rows="4"></textarea>'); ?>
+</div>
 
 <?php if($hasCvCol): ?>
-<label class="full">CV / Özgeçmiş <small style="font-weight:400;color:#667085">(opsiyonel — pdf/doc/docx/jpg/jpeg/png, en fazla 15 MB)</small>
-<input type="file" name="cv" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
-</label>
+<div class="df-form-span-2">
+<?php ds_form_field('CV / Özgeçmiş', '<input type="file" name="cv" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">', 'Opsiyonel — pdf/doc/docx/jpg/jpeg/png, en fazla 15 MB'); ?>
+</div>
 <?php endif; ?>
 
-<label class="full">
+<div class="df-form-span-2">
+<label style="display:flex;align-items:center;gap:8px;font-size:var(--df-type-body-size);color:var(--df-ink-900)">
 <input type="checkbox" name="active" checked style="width:auto"> Aktif personel
 </label>
+</div>
 
-<button class="btn">Personeli Kaydet</button>
+<div class="df-form-span-2">
+<button class="df-btn df-btn--primary">Personeli Kaydet</button>
+</div>
 
 </form>
 </section>
+
+<style>
+body.nav-compact .df-form-grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 var(--df-space-4)}
+body.nav-compact .df-form-span-2{grid-column:1 / -1}
+@media(max-width:640px){body.nav-compact .df-form-grid-2{grid-template-columns:1fr}}
+</style>
 
 <?php require_once __DIR__.'/layout_bottom.php'; ?>
