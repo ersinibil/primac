@@ -76,8 +76,16 @@ function home_build_queue($pdo, $isAdmin, $canSee, $pid, $platform = 'web'){
  * projede henüz yok (yeni bir view-tracking tablosu bu turun kapsamı dışı). Bunun yerine gerçek,
  * sorgusu ucuz, yanıltıcı olmayan bir vekil kullanılıyor: son güncellenen açık iş / son eklenen
  * cari / son oluşturulan teklif. "Taslak iş" kavramı (mockup'ta vardı) kaldırıldı — karşılığı olan
- * gerçek bir veri yok, icat edilmedi. */
-function home_build_continue($pdo, $isAdmin, $canSee){
+ * gerçek bir veri yok, icat edilmedi.
+ * FAZ 2C-ii EKİ (2026-07-17) — "Son Görev": $pid opsiyonel (varsayılan 0, geriye uyumlu — mevcut
+ * 3 argümanlı çağrılar davranış değiştirmeden çalışmaya devam eder). Görev görüntüleme YETKİSİ
+ * kontrolü burada `tasks` modül izni değil — o TÜM görevler admin ekranını kapsar; kişinin KENDİ
+ * görevleri (mytasks.php ile aynı ilke) herkese açıktır, gerçek "yetki" sınırı personel kaydına
+ * bağlı olup olmadığıdır ($pid), tıpkı home_build_queue()'nun görev satırı için zaten kullandığı
+ * kural gibi. `tasks` tablosunda updated_at kolonu yok (bkz. migration 003) — job'daki
+ * COALESCE(updated_at,created_at) deseni burada uygulanamaz, en son ATANAN açık görev (id DESC)
+ * kullanılıyor. */
+function home_build_continue($pdo, $isAdmin, $canSee, $pid = 0){
     $out = [];
     if($isAdmin || $canSee('jobs')){
         try{
@@ -97,6 +105,59 @@ function home_build_continue($pdo, $isAdmin, $canSee){
             if($r) $out[] = ['eyebrow'=>'Son Teklif', 'title'=>($r['customer_name'] ?: $r['quote_no']), 'url'=>'teklif.php?view='.$r['id']];
         }catch(Throwable $e){}
     }
+    if($pid){
+        try{
+            $r = $pdo->prepare("SELECT id, title FROM tasks WHERE personnel_id=? AND deleted_at IS NULL AND status NOT IN ('Tamamlandı','İptal') ORDER BY id DESC LIMIT 1");
+            $r->execute([$pid]);
+            $r = $r->fetch();
+            if($r) $out[] = ['eyebrow'=>'Son Görev', 'title'=>$r['title'], 'url'=>'task_view.php?id='.$r['id']];
+        }catch(Throwable $e){}
+    }
+    return $out;
+}
+
+// FAZ 2C-ii EKİ (2026-07-17) — Nabız Satırı artık df-alert ile render ediliyor (A maddesi);
+// dashboard_pulse_state()'in ürettiği 4 seviye (green/yellow/red/neutral) df-alert'in 4 tonuna
+// (success/warning/danger/info) eşleniyor — yeni bir renk/durum icat edilmedi.
+function home_pulse_alert_type($level){
+    return ['green'=>'success','yellow'=>'warning','red'=>'danger','neutral'=>'info'][$level] ?? 'info';
+}
+
+// FAZ 2C-ii EKİ (2026-07-17) — Hızlı İşlemler (C maddesi): dashboard_quick_action_defs() (boot.php)
+// emoji ikon taşıyor, yeni compact chip satırı ds_icon() istiyor — bu SADECE sunum katmanı eşlemesi,
+// veri kaynağına (dashboard_quick_actions_split()) dokunulmadı. Her key mevcut ds_icon() whitelist'inden.
+function home_quick_action_icon($key){
+    return [
+        'job'=>'briefcase','satis'=>'tag','tahsilat'=>'wallet','alis'=>'box',
+        'odeme'=>'send','gorev'=>'calendar','talep'=>'info','teklif'=>'edit','mesaj'=>'chat',
+    ][$key] ?? 'menu-dots';
+}
+
+/* FAZ 2C-ii EKİ (2026-07-17) — Genel Bakış (E maddesi): yalnızca Admin, varsayılan kapalı
+ * accordion içindeki mini-stat satırları. YENİ finans matematiği/raporlama sorgusu İCAT EDİLMEDİ —
+ * her sorgu, projede ZATEN var olan başka bir ekrandan (dashboard.php legacy KPI bloğu / mobile
+ * legacy Bugün-Özet bloğu) birebir kopyalandı: bugünkü tahsilat sorgusu Finans Çekirdek
+ * Stabilizasyonu'nun "yalnızca gerçek kasa/banka hareketi" düzeltmesini (account_id IS NOT NULL)
+ * kullanıyor — mobile legacy'nin filtre eksik versiyonu DEĞİL, dashboard.php'nin denetimden geçmiş
+ * versiyonu tercih edildi. Her alan ayrı try/catch — biri başarısız olursa diğerleri etkilenmez,
+ * null dönen alan çağıran tarafta sessizce atlanır (Home çökmez).
+ */
+function home_build_overview($pdo){
+    $out = [];
+    try{
+        $v = (float)($pdo->query("SELECT COALESCE(SUM(amount),0) s FROM finance_movements WHERE direction='in' AND account_id IS NOT NULL AND DATE(movement_date)=CURDATE()")->fetch()['s'] ?? 0);
+        $out['today_collection'] = $v;
+    }catch(Throwable $e){}
+    try{
+        $out['open_jobs'] = (int)($pdo->query("SELECT COUNT(*) c FROM jobs WHERE status NOT IN ('Tamamlandı','İptal','Teslim Edildi')")->fetch()['c'] ?? 0);
+    }catch(Throwable $e){}
+    try{
+        $out['total_contacts'] = (int)($pdo->query("SELECT COUNT(*) c FROM contacts")->fetch()['c'] ?? 0);
+    }catch(Throwable $e){}
+    try{
+        $tp = $pdo->query("SELECT p.name, COUNT(*) c FROM jobs j JOIN personnel p ON p.id=j.responsible_personnel_id WHERE j.status IN ('Tamamlandı','Teslim Edildi') GROUP BY p.id ORDER BY c DESC LIMIT 1")->fetch();
+        if($tp) $out['top_personnel'] = $tp['name'].' ('.$tp['c'].')';
+    }catch(Throwable $e){}
     return $out;
 }
 

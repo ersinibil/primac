@@ -40,7 +40,10 @@ $__pulseColors=[
 ];
 $__pc=$__pulseColors[$__pulse['level']];
 ?>
-<!-- ── Nabız Satırı — her iki modda da aynı (değişmedi) ── -->
+
+<?php if($__navMode === 'legacy'): ?>
+<!-- ── LEGACY — orijinal ekran, PX-001B öncesi hâliyle birebir ── -->
+<!-- ── Nabız Satırı — LEGACY'de FAZ 2C-ii ÖNCESİ hâliyle birebir korunuyor (değişmedi) ── -->
 <?php if($__pulseTarget !== null): ?>
 <a href="<?=htmlspecialchars($__pulseTarget)?>" class="panel" style="background:<?=$__pc['bg']?>;border-color:<?=$__pc['fg']?>;display:flex;align-items:center;gap:8px;padding:12px 14px;text-decoration:none;color:<?=$__pc['fgtext']?>">
   <span style="font-size:16px;line-height:1"><?=$__pulse['icon']?></span>
@@ -53,9 +56,6 @@ $__pc=$__pulseColors[$__pulse['level']];
   <span style="flex:1;font-size:12.5px;font-weight:700;color:<?=$__pc['fgtext']?>"><?=htmlspecialchars($__pulse['message'])?></span>
 </div>
 <?php endif; ?>
-
-<?php if($__navMode === 'legacy'): ?>
-<!-- ── LEGACY — orijinal ekran, PX-001B öncesi hâliyle birebir ── -->
 <?php
 $__qaSplit = dashboard_quick_actions_split(function($perm) use($isAdmin){ return $isAdmin||user_can($perm); });
 $monthStart=date('Y-m-01'); $monthEnd=date('Y-m-t');
@@ -178,13 +178,15 @@ if($isAdmin){
 
 <?php else: ?>
 <!-- ── COMPACT — Home Screen v1.1 (PX-001, 2026-07-16) — mockup turu kapandı, gerçek veri ── -->
+<!-- FAZ 2C-ii (2026-07-17) — Home v2: Nabız/Hızlı İşlemler/Genel Bakış eklendi (A/C/E maddeleri). -->
 <?php
 $pid = task_my_personnel_id($pdo, $ME);
 $__homeCanSee = function($perm){ return user_can($perm); };
 $__homeQ = home_build_queue($pdo, $isAdmin, $__homeCanSee, $pid, 'mobile');
-$__homeC = home_build_continue($pdo, $isAdmin, $__homeCanSee);
+$__homeC = home_build_continue($pdo, $isAdmin, $__homeCanSee, $pid);
 $__homeDay = home_today_label();
 ?>
+<?=ds_alert(home_pulse_alert_type($__pulse['level']), $__pulse['message'])?>
 <div class="df-home-daylabel"><span class="df-home-dow"><?=h($__homeDay['dow'])?></span><span class="df-home-date"><?=h($__homeDay['date'])?></span></div>
 
 <?php if($__homeQ['hero']): $__h=$__homeQ['hero']; ?>
@@ -219,6 +221,24 @@ $__homeDay = home_today_label();
 </div>
 <?php endif; ?>
 
+<?php
+// FAZ 2C-ii (2026-07-17) — C: Hızlı İşlemler. dashboard_quick_actions_split() (boot.php, web ile
+// ORTAK, değişmedi) zaten $__homeCanSee ile filtreli. Mobil URL çözümü mevcut legacy desenle aynı:
+// $qa['mobileUrl'] ?? $qa['url'].
+$__qaSplit = dashboard_quick_actions_split($__homeCanSee);
+$__qaAll = array_merge($__qaSplit['primary'], $__qaSplit['overflow']);
+?>
+<?php if($__qaAll): ?>
+<div>
+  <div class="df-home-lab">Hızlı İşlemler</div>
+  <div class="df-home-qa-row">
+    <?php foreach($__qaAll as $__qa): ?>
+    <a class="df-home-qa-chip" href="<?=h($__qa['mobileUrl'] ?? $__qa['url'])?>"><?=ds_icon(home_quick_action_icon($__qa['key']),22)?><?=h($__qa['label'])?></a>
+    <?php endforeach; ?>
+  </div>
+</div>
+<?php endif; ?>
+
 <?php if($__homeC): ?>
 <div>
   <div class="df-home-lab">Devam Et</div>
@@ -231,6 +251,20 @@ $__homeDay = home_today_label();
     <?php endforeach; ?>
   </div>
 </div>
+<?php endif; ?>
+
+<?php if($isAdmin):
+    // FAZ 2C-ii (2026-07-17) — E: Genel Bakış. Yalnızca Admin, varsayılan KAPALI. Web ile ORTAK
+    // home_build_overview() — yeni finans matematiği/KPI kart sistemi icat edilmedi.
+    $__homeOv = home_build_overview($pdo);
+    $__homeOvHtml = '';
+    if(isset($__homeOv['today_collection'])) $__homeOvHtml .= '<div class="df-home-ov-row"><span class="df-home-ov-label">Bugünkü Tahsilat</span><span class="df-home-ov-value">'.h(mm($__homeOv['today_collection'])).'</span></div>';
+    if(isset($__homeOv['open_jobs'])) $__homeOvHtml .= '<div class="df-home-ov-row"><span class="df-home-ov-label">Açık İş</span><span class="df-home-ov-value">'.h($__homeOv['open_jobs']).' adet</span></div>';
+    if(isset($__homeOv['total_contacts'])) $__homeOvHtml .= '<div class="df-home-ov-row"><span class="df-home-ov-label">Toplam Cari</span><span class="df-home-ov-value">'.h($__homeOv['total_contacts']).' kayıt</span></div>';
+    if(isset($__homeOv['top_personnel'])) $__homeOvHtml .= '<div class="df-home-ov-row"><span class="df-home-ov-label">Lider Personel</span><span class="df-home-ov-value">'.h($__homeOv['top_personnel']).'</span></div>';
+    if($__homeOvHtml === '') $__homeOvHtml = '<div class="df-home-ov-row"><span class="df-home-ov-label">Şu an gösterilecek özet veri yok.</span></div>';
+?>
+<div style="margin-top:var(--df-space-5)"><?php ds_accordion_item('Genel Bakış', $__homeOvHtml, false); ?></div>
 <?php endif; ?>
 <?php endif; ?>
 

@@ -46,7 +46,9 @@ function block_personel($module=null){
     header('Location: index.php'); exit;
 }
 function topx($t){global $name,$isAdmin,$__navMode; $um=unread_msg(); $un=unread_notif(); $__compact=(isset($__navMode)&&$__navMode!=='legacy'); ?><!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title><?=htmlspecialchars($t)?></title><link rel="manifest" href="manifest.php"><meta name="theme-color" content="#071326"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="<?=htmlspecialchars(app_config()['app_name'] ?? 'OTS')?>"><link rel="apple-touch-icon" href="icon.php?size=180"><link rel="icon" href="icon.php?size=192"><meta name="csrf-token" content="<?=h(csrf_token())?>"><?php /* DESIGN SYSTEM SPRINT 001 / PHASE A (2026-07-15) — yeni "ds-" foundation stylesheet, sadece
-yeni sınıflar tanımlar, mevcut hiçbir class'a dokunmaz. */ if(function_exists('ds_styles')) ds_styles(); ?><script>
+yeni sınıflar tanımlar, mevcut hiçbir class'a dokunmaz. */ if(function_exists('ds_styles')) ds_styles(); ?><?php /* FAZ 2C-ii (2026-07-17) — dfAccordionToggle() (Genel Bakış) sadece compact modda gerekiyor;
+layout_top.php'nin web tarafındaki aynı $__navMode!=='legacy' kuralıyla tutarlı, mobil common.php
+şimdiye kadar bu dosyayı hiç yüklemiyordu (rail'e özel kısmı zaten boş DOM'da no-op). */ if($__compact && function_exists('ds_scripts')) ds_scripts(); ?><script>
 window.CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]').content;
 document.addEventListener('DOMContentLoaded', function(){
   document.querySelectorAll('form').forEach(function(f){

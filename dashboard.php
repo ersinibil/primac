@@ -913,13 +913,17 @@ function dashboardPulseScrollToCritical(){
 // kapandı (Product Owner kararı, 2026-07-16) — bu artık gerçek sorgulara bağlı pilot ekran.
 // Not: arama (Spotlight) bu turda BİLİNÇLİ OLARAK eklenmedi — gerçek çapraz-modül arama altyapısı
 // ayrı bir iş; mevcut Launcher ("Tüm Modüller") zaten bir arama/erişim yolu sağlıyor.
+// FAZ 2C-ii (2026-07-17) — Home v2: Nabız/Hızlı İşlemler/Genel Bakış eklendi (A/C/E maddeleri).
+// $__pulse zaten bu dosyanın başında (legacy dalıyla ORTAK) hesaplanıyor, burada TEKRAR
+// sorgulanmıyor, sadece df-alert ile render ediliyor.
 $__homeMe = (int)($_SESSION['user']['id'] ?? 0);
 $__homePid = function_exists('task_my_personnel_id') ? task_my_personnel_id($pdo, $__homeMe) : null;
 $__homeCanSee = function($perm){ return user_can($perm); };
 $__homeQ = home_build_queue($pdo, is_admin(), $__homeCanSee, $__homePid, 'web');
-$__homeC = home_build_continue($pdo, is_admin(), $__homeCanSee);
+$__homeC = home_build_continue($pdo, is_admin(), $__homeCanSee, $__homePid);
 $__homeDay = home_today_label();
 ?>
+<?=ds_alert(home_pulse_alert_type($__pulse['level']), $__pulse['message'])?>
 <div class="df-home-daylabel"><span class="df-home-dow"><?=h($__homeDay['dow'])?></span><span class="df-home-date"><?=h($__homeDay['date'])?></span></div>
 
 <?php if($__homeQ['hero']): $__h=$__homeQ['hero']; ?>
@@ -954,6 +958,25 @@ $__homeDay = home_today_label();
 </div>
 <?php endif; ?>
 
+<?php
+// FAZ 2C-ii (2026-07-17) — C: Hızlı İşlemler. dashboard_quick_actions_split() (boot.php, değişmedi)
+// zaten $__homeCanSee ile filtreli — yetkisiz bir aksiyon bu diziye hiç girmiyor, ekstra render-
+// zamanı kontrolüne gerek yok. primary+overflow tek satırda birleştirildi (kompakt tasarımda ayrı
+// "Diğer İşlemler" katlama UI'ı gerekmiyor, mevcut 9 aksiyon tek satıra sığıyor).
+$__qaSplit = dashboard_quick_actions_split($__homeCanSee);
+$__qaAll = array_merge($__qaSplit['primary'], $__qaSplit['overflow']);
+?>
+<?php if($__qaAll): ?>
+<div>
+  <div class="df-home-lab">Hızlı İşlemler</div>
+  <div class="df-home-qa-row">
+    <?php foreach($__qaAll as $__qa): ?>
+    <a class="df-home-qa-chip" href="<?=h($__qa['url'])?>"><?=ds_icon(home_quick_action_icon($__qa['key']),22)?><?=h($__qa['label'])?></a>
+    <?php endforeach; ?>
+  </div>
+</div>
+<?php endif; ?>
+
 <?php if($__homeC): ?>
 <div>
   <div class="df-home-lab">Devam Et</div>
@@ -966,6 +989,22 @@ $__homeDay = home_today_label();
     <?php endforeach; ?>
   </div>
 </div>
+<?php endif; ?>
+
+<?php if(is_admin()):
+    // FAZ 2C-ii (2026-07-17) — E: Genel Bakış. Yalnızca Admin, varsayılan KAPALI (ds_accordion_item
+    // 3. parametre false), Home'un açılış görünümüne hakim olmasın diye en altta. Yeni finans
+    // matematiği/KPI kart sistemi İCAT EDİLMEDİ — home_build_overview() zaten var olan, denetimden
+    // geçmiş sorguları (bkz. home_lib.php) tekrar kullanıyor.
+    $__homeOv = home_build_overview($pdo);
+    $__homeOvHtml = '';
+    if(isset($__homeOv['today_collection'])) $__homeOvHtml .= '<div class="df-home-ov-row"><span class="df-home-ov-label">Bugünkü Tahsilat</span><span class="df-home-ov-value">'.h(money($__homeOv['today_collection'])).'</span></div>';
+    if(isset($__homeOv['open_jobs'])) $__homeOvHtml .= '<div class="df-home-ov-row"><span class="df-home-ov-label">Açık İş</span><span class="df-home-ov-value">'.h($__homeOv['open_jobs']).' adet</span></div>';
+    if(isset($__homeOv['total_contacts'])) $__homeOvHtml .= '<div class="df-home-ov-row"><span class="df-home-ov-label">Toplam Cari</span><span class="df-home-ov-value">'.h($__homeOv['total_contacts']).' kayıt</span></div>';
+    if(isset($__homeOv['top_personnel'])) $__homeOvHtml .= '<div class="df-home-ov-row"><span class="df-home-ov-label">Lider Personel</span><span class="df-home-ov-value">'.h($__homeOv['top_personnel']).'</span></div>';
+    if($__homeOvHtml === '') $__homeOvHtml = '<div class="df-home-ov-row"><span class="df-home-ov-label">Şu an gösterilecek özet veri yok.</span></div>';
+?>
+<div style="margin-top:var(--df-space-5)"><?php ds_accordion_item('Genel Bakış', $__homeOvHtml, false); ?></div>
 <?php endif; ?>
 <?php endif; ?>
 

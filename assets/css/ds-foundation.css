@@ -460,6 +460,24 @@ body.mobile-shell .df-tab--active{background:var(--df-accent);color:#fff;box-sha
 .df-home-cc-row{display:flex;align-items:center;gap:5px;margin-top:5px}
 .df-home-cc-title{font-size:12.5px;font-weight:600;color:var(--df-ink-900);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
 
+/* ── FAZ 2C-ii (2026-07-17) — Home v2: Hızlı İşlemler chip satırı + Genel Bakış mini-stat satırı ──
+   Diğer df-home-* sınıfları gibi BİLEREK global/kapsamsız (body.nav-compact/mob-compact öneki YOK)
+   — bu markup zaten yalnızca compact Home dalında ($__navMode!=='legacy' sunucu tarafı kontrolü)
+   render ediliyor, aynı df-home-hero/df-home-qlist deseninin devamı. Web'de sarmalanan (wrap) grid,
+   mobilde yatay kaydırma — platform farkı body.mobile-shell (zaten var olan mobil/koyu-tema
+   kapsayıcısı) ile ayrıştırılıyor, yeni bir kapsam icat edilmedi. */
+.df-home-qa-row{display:flex;flex-wrap:wrap;gap:var(--df-space-2)}
+.df-home-qa-chip{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;flex:0 0 auto;background:var(--df-surface);border:1px solid var(--df-hairline);border-radius:var(--df-radius-md);padding:12px 16px;min-width:72px;color:var(--df-ink-900);text-decoration:none;font-size:11.5px;font-weight:650;text-align:center;transition:border-color var(--df-dur-fast) var(--df-ease-standard)}
+.df-home-qa-chip:hover{border-color:var(--df-ink-300)}
+.df-home-qa-chip .df-icon{color:var(--df-ink-600)}
+body.mobile-shell .df-home-qa-row{flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+body.mobile-shell .df-home-qa-row::-webkit-scrollbar{display:none}
+
+.df-home-ov-row{display:flex;justify-content:space-between;align-items:center;gap:var(--df-space-3);padding:10px 2px;border-bottom:1px solid var(--df-hairline)}
+.df-home-ov-row:last-child{border-bottom:0}
+.df-home-ov-label{font-size:var(--df-type-caption-size);color:var(--df-ink-600)}
+.df-home-ov-value{font-size:var(--df-type-body-size);font-weight:700;color:var(--df-ink-900);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+
 /* ── PX-001B (2026-07-16) — İş Detay v1: Hero + tek Sonraki Adım + sessiz destek bölümleri ── */
 .df-jd{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:var(--df-space-5)}
 .df-jd-back{display:inline-flex;align-items:center;gap:6px;color:var(--df-ink-500);font-size:12.5px;font-weight:700;text-decoration:none;width:fit-content}
@@ -587,24 +605,30 @@ body.nav-compact .df-form-error{font-size:var(--df-type-caption-size);color:var(
 body.nav-compact .df-form-group.has-error input,body.nav-compact .df-form-group.has-error select,body.nav-compact .df-form-group.has-error textarea{border-color:var(--df-danger)}
 
 /* DF-Alert — .err/.notice/.card(kırmızı metin) yerine geçecek tek dil. role="alert" çağıran
-   tarafta ds_alert() ile eklenir (aşağıda). */
-body.nav-compact .df-alert{display:flex;align-items:flex-start;gap:var(--df-space-2);padding:var(--df-space-3) var(--df-space-4);border-radius:var(--df-radius-md);font-size:var(--df-type-body-size);line-height:1.5}
-body.nav-compact .df-alert--info{background:var(--df-info-soft);color:var(--df-info-ink)}
-body.nav-compact .df-alert--success{background:var(--df-success-soft);color:var(--df-success-ink)}
-body.nav-compact .df-alert--warning{background:var(--df-warning-soft);color:var(--df-warning-ink)}
-body.nav-compact .df-alert--danger{background:var(--df-danger-soft);color:var(--df-danger-ink)}
+   tarafta ds_alert() ile eklenir (aşağıda).
+   FAZ 2C-ii EKİ (2026-07-17, HOTFIX sonrası Home A maddesi): bu bileşen artık mobil Home'un Nabız
+   satırında da kullanılıyor — seçiciler body.mob-compact'ı da kapsayacak şekilde genişletildi.
+   BİLEREK yalnızca df-alert'in KENDİ kuralları taşındı, body.nav-compact'ın rail/tablo/form gibi
+   masaüstüne özgü kuralları buraya SIZDIRILMADI (2C-i'nin izolasyon kararıyla tutarlı). */
+body.nav-compact .df-alert, body.mob-compact .df-alert{display:flex;align-items:flex-start;gap:var(--df-space-2);padding:var(--df-space-3) var(--df-space-4);border-radius:var(--df-radius-md);font-size:var(--df-type-body-size);line-height:1.5}
+body.nav-compact .df-alert--info, body.mob-compact .df-alert--info{background:var(--df-info-soft);color:var(--df-info-ink)}
+body.nav-compact .df-alert--success, body.mob-compact .df-alert--success{background:var(--df-success-soft);color:var(--df-success-ink)}
+body.nav-compact .df-alert--warning, body.mob-compact .df-alert--warning{background:var(--df-warning-soft);color:var(--df-warning-ink)}
+body.nav-compact .df-alert--danger, body.mob-compact .df-alert--danger{background:var(--df-danger-soft);color:var(--df-danger-ink)}
 
 /* DF-Accordion — YALNIZCA KABUK (Madde 2 sınırı, madde 6). Veri/kategori mantığı ve "tek açık"
    zorlaması Madde 3/4'ün işi; burada tek bir öğe bağımsız açılıp kapanabilir (genel amaçlı).
-   assets/js/ds-foundation.js içindeki dfAccordionToggle() ile çalışır. */
-body.nav-compact .df-accordion-item{border-bottom:1px solid var(--df-hairline)}
-body.nav-compact .df-accordion-item:last-child{border-bottom:0}
-body.nav-compact .df-accordion-header{display:flex;align-items:center;justify-content:space-between;gap:var(--df-space-3);width:100%;background:transparent;border:0;padding:var(--df-space-3) var(--df-space-2);font:inherit;font-weight:650;color:var(--df-ink-900);cursor:pointer;text-align:left;min-height:44px}
-body.nav-compact .df-accordion-header:focus-visible{outline:0;box-shadow:var(--df-focus-ring);border-radius:var(--df-radius-sm)}
-body.nav-compact .df-accordion-chevron{width:8px;height:8px;border-right:1.6px solid var(--df-ink-500);border-bottom:1.6px solid var(--df-ink-500);transform:rotate(45deg);transition:transform var(--df-dur-fast) var(--df-ease-standard);flex:0 0 auto}
-body.nav-compact .df-accordion-item.is-open .df-accordion-chevron{transform:rotate(225deg)}
-body.nav-compact .df-accordion-body{display:none;padding:0 var(--df-space-2) var(--df-space-3)}
-body.nav-compact .df-accordion-item.is-open .df-accordion-body{display:block}
+   assets/js/ds-foundation.js içindeki dfAccordionToggle() ile çalışır.
+   FAZ 2C-ii EKİ (2026-07-17): mobil Home'un Genel Bakış bölümü için body.mob-compact'a da açıldı —
+   aynı izolasyon gerekçesiyle (yalnızca bu bileşenin kuralları, rail/form/tablo değil). */
+body.nav-compact .df-accordion-item, body.mob-compact .df-accordion-item{border-bottom:1px solid var(--df-hairline)}
+body.nav-compact .df-accordion-item:last-child, body.mob-compact .df-accordion-item:last-child{border-bottom:0}
+body.nav-compact .df-accordion-header, body.mob-compact .df-accordion-header{display:flex;align-items:center;justify-content:space-between;gap:var(--df-space-3);width:100%;background:transparent;border:0;padding:var(--df-space-3) var(--df-space-2);font:inherit;font-weight:650;color:var(--df-ink-900);cursor:pointer;text-align:left;min-height:44px}
+body.nav-compact .df-accordion-header:focus-visible, body.mob-compact .df-accordion-header:focus-visible{outline:0;box-shadow:var(--df-focus-ring);border-radius:var(--df-radius-sm)}
+body.nav-compact .df-accordion-chevron, body.mob-compact .df-accordion-chevron{width:8px;height:8px;border-right:1.6px solid var(--df-ink-500);border-bottom:1.6px solid var(--df-ink-500);transform:rotate(45deg);transition:transform var(--df-dur-fast) var(--df-ease-standard);flex:0 0 auto}
+body.nav-compact .df-accordion-item.is-open .df-accordion-chevron, body.mob-compact .df-accordion-item.is-open .df-accordion-chevron{transform:rotate(225deg)}
+body.nav-compact .df-accordion-body, body.mob-compact .df-accordion-body{display:none;padding:0 var(--df-space-2) var(--df-space-3)}
+body.nav-compact .df-accordion-item.is-open .df-accordion-body, body.mob-compact .df-accordion-item.is-open .df-accordion-body{display:block}
 
 /* ══════════════════════════════════════════════════════════════════════════
    PX-002 FAZ 2B-ii — WEB APPLICATION SHELL / NAVIGATION RAIL (2026-07-17)
