@@ -2,6 +2,42 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
+## PX-002 FAZ 2B-i — NAV DATA FOUNDATION: IA kategorileri nav_lib.php'ye işlendi (2026-07-17, commit `d0960cd`)
+FAZ 2B başında Product Owner, hazırlanan "Application Shell" görsel önizlemesini **reddetti**
+("eski ERP'nin makyajı, sıfırdan düşünülmüş ürün istiyorum") ve süreci bir UI işinden Product
+Design/Bilgi Mimarisi (IA) çalışmasına çevirdi. İki tur revizyon sonrası **IA FREEZE** verildi:
+5 kanonik kategori — **İşler / Ticaret / Üretim & Stok / Finans / Yönetim** — + kategori-dışı
+kalıcı global katman (Ana Sayfa/Ara/Mesajlar/Bildirimler/Hesap). Kategori = çalışma alanı,
+içerik = eylem ayrımı kesinleşti. Tam 51/51 `nav_taxonomy()` satırının route/permission/
+mobile-fallback/arama-kelimesi dönüşüm matrisi Product Owner tarafından onaylandı (bkz.
+`memory/backlog.md`'deki referans — canlı Artifact linkleri sohbet geçmişinde).
+
+Bu ilk teknik alt-faz (FAZ 2B-i) **sadece veri katmanı** — `nav_lib.php`'nin 51 satırının
+tamamına additive alanlar eklendi: `category`, `categoryOrder`, `isPrimaryAction`,
+`searchKeywords`, (yalnızca farklıysa) `actionLabel`. Mevcut 9 alan (`key/label/url/mobileUrl/
+mobileHide/group/perm/primary/adminOnly`) **tek karakter değişmedi** — legacy dal ve eski
+`nav_grouped_for_launcher()/nav_pinned_modules()/nav_visible_targets()` aynen kullanmaya devam
+ediyor. Yeni okuma fonksiyonları (`nav_category_keys()`, `nav_category_label()`,
+`nav_items_for_category()`, `nav_global_items()`, `nav_search_index()`) üçü de
+`nav_authorized_modules()` ile birebir aynı filtre sırasını (adminOnly→perm→mobileHide)
+tekrarlıyor, henüz hiçbir sayfadan çağrılmıyor — sıfır görsel/davranışsal değişiklik.
+
+**Kesinleşen kararlar:** `production` → category=uretim_stok, isPrimaryAction=true, label
+DEĞİŞMEDİ ("Üretimdeki İşleri Gör") — "Üretimi Başlat" koda girmedi, backlog'a düşüldü (aşağıda).
+`contacts_report` eski `group='yonet'`den yeni `category='ticaret'`ye taşındı (Product Owner
+açık kararı). **Launcher/pin retirement (Flag 1):** Compact Mode'da Web Module Launcher
+("Tüm Modüller") ve kişisel pin sistemi FAZ 2B-ii/iii'te emekliye ayrılacak — `nav_pinned_
+modules()/nav_grouped_for_launcher()/ajax_nav_prefs.php` **silinmiyor**, sadece yeni UI
+bunları çağırmayacak; DB'deki eski pin verisi dokunulmadan kalıyor, Legacy Mode'da aynen
+çalışmaya devam ediyor. **Bağlamsal geri dönüş (Flag 2):** whitelist'li `from=` context
+anahtarı (home/isler/ticaret/uretim_stok/finans/yonetim/search/job_detail/menu) + taxonomy
+kategorisine düşen evrensel fallback — FAZ 2B-iv'ün işi, henüz uygulanmadı.
+
+Ece/Selin/Elif: **PASS**, sıfır bulgu. Elif dosya-başlığı yorumunun (satır 2-3) artık yeni
+fonksiyonları saymadığını (hata değil, belge takip notu) işaretledi; Selin gelecekteki
+`search.php` entegrasyonu için ileriye dönük XSS-hijyen hatırlatması düştü (bu turun kapsamı
+dışı). **Sıradaki:** FAZ 2B-ii (Web Rail/`layout_top.php`) — Product Owner DEV PASS'i bekleniyor.
+
 ## PX-002 Madde 2 / FAZ 2A — Design System v1 + Application Shell v1 foundation (2026-07-17, commit `7834e1a`)
 Madde 1 USER TEST PASS sonrası, Product Owner'ın "Compact modda hiçbir sayfada legacy iz
 kalmayacak" kesin ürün kararının ilk fazı. Kapsam SADECE ortak altyapı — 3 dosya değişti

@@ -2,6 +2,33 @@
 
 <!-- Açık geliştirme görevleri. Kapanan madde buradan silinip memory/features.md'ye taşınır. -->
 
+## Design/Workflow Backlog — "Üretimi Başlat" hızlı aksiyonu (2026-07-17, PX-002 FAZ 2B IA FREEZE kararı)
+Mevcut bir işten üretim aşaması başlatma hızlı aksiyonu. Product Owner'ın IA revizyonu
+sırasında önerildi ama mevcut tek route'un (`production.php`/`mobile/uretim.php`) gerçek
+davranışının "üretim panosu / üretimdeki işleri görüntüleme" olduğu netleşti — ayrı bir gerçek
+işlem/ekran/güvenli bağlam oluşmadan navigasyonda "Üretimi Başlat" etiketi kullanılmadı
+(`production` taxonomy satırı `category=uretim_stok, isPrimaryAction=true` oldu ama label
+"Üretimdeki İşleri Gör" olarak kaldı). Gerçek ihtiyaç netleşirse (örn. bir işin durumunu
+"üretimde" yapan ayrı bir aksiyon/route) bu backlog maddesi değerlendirilecek.
+
+## Web Module Launcher + kişisel pin sisteminin Compact Mode'da emekliye ayrılması (2026-07-17, PX-002 FAZ 2B Flag 1 kararı)
+IA FREEZE sonrası: 5-kategori Rail/Menü modeli her rotayı zaten 1-2 tıkla erişilebilir kıldığı
+için "Tüm Modüller" arama-tetikleyicili paneli ve kişisel "Sabitlenenler" pin sistemi Compact
+Mode'da **kullanılmayacak** (FAZ 2B-ii web / FAZ 2B-iii mobil işi). Bu bir veri silme kararı
+DEĞİL: `nav_pinned_modules()/nav_grouped_for_launcher()/nav_visible_targets()` fonksiyonları ve
+`ajax_nav_prefs.php` endpoint'i **kodda kalıyor**, DB'deki `nav_pinned_web`/`nav_pinned_mobile`
+tercihleri **silinmiyor/migrate edilmiyor** — sadece yeni Compact UI bunları hiç çağırmıyor.
+Legacy Mode'a dönen kullanıcının eski pinleri aynen çalışmaya devam ediyor. FAZ 2B-iii'ün test
+matrisinde "eski pin verisiyle giriş yapan kullanıcı" senaryosu ayrıca doğrulanacak.
+
+## nav_lib.php dosya-başlığı yorumu artık eksik (2026-07-17, Elif PX-002 FAZ 2B-i review notu, çok düşük öncelik)
+`nav_lib.php:2-3`'teki özet yorum ("Web sidebar, Web Module Launcher, mobile/more.php ve
+mobile/common.php::botx() hepsi buradan beslenir") hâlâ doğru ama artık dosyanın FAZ 2B-i'de
+eklenen ikinci katmanını (nav_category_keys/nav_items_for_category/nav_global_items/
+nav_search_index — gelecekte web Rail + mobil Menü/İşler + arama motorunu besleyecek) saymıyor.
+Hata değil, sadece belge takip maddesi — FAZ 2B-ii/iii bu fonksiyonları gerçek sayfalara
+bağladığında başlık yorumu da güncellenmeli.
+
 ## Design System Backlog — DF-Modal/DF-ConfirmDialog/DF-Pagination/DF-LoadingState/DF-Skeleton (2026-07-17, PX-002 FAZ 2A "Dead Component Kararı")
 Product Owner kararı: bu 5 component bugün üretilmedi çünkü kod genelinde 0 gerçek kullanım
 yeri var (grep ile doğrulandı — modal/dialog markup'ı hiç yok, tüm onaylar native `confirm()`
