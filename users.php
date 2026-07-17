@@ -18,9 +18,21 @@ $prefillPhone = trim($_GET['phone'] ?? '');
 
 if($_SERVER['REQUEST_METHOD']==='POST'){
     try{
+        // HOTFIX-02 (2026-07-17, ACİL): rol yükseltme açığı — bu sayfa require_permission('users')
+        // ile korunuyor ama bu yetki admin ANLAMINA GELMİYOR (granüler modül yetkisi, admin-olmayan
+        // birine de verilebilir). Önceden $_POST['role'] hem create hem update'te doğrudan kaydediliyordu
+        // — 'users' yetkili admin-olmayan biri kendini/başkasını admin yapabiliyordu. Artık: (1) rol
+        // sadece sabit whitelist'ten biri olabilir, (2) rolü FİİLEN değiştirebilmek için oturumdaki
+        // kullanıcının is_admin() olması ZORUNLU — admin değilse gönderilen role değeri tamamen
+        // yok sayılır (create'te 'personel'e düşer, update'te mevcut DB rolü korunur). Böylece
+        // admin-olmayan biri ne başkasını ne KENDİSİNİ yükseltebilir.
+        $__validRoles = ['personel','yonetici','admin'];
+
         if(isset($_POST['create_user'])){
             $perms=$_POST['permissions'] ?? [];
             $hash=password_hash($_POST['password'] ?: '123456', PASSWORD_DEFAULT);
+            $__postedRole = $_POST['role'] ?? '';
+            $role = (is_admin() && in_array($__postedRole, $__validRoles, true)) ? $__postedRole : 'personel';
             $pdo->prepare("INSERT INTO app_users(username,full_name,phone,email,password_hash,role,personnel_id,permissions,active) VALUES(?,?,?,?,?,?,?,?,?)")
                 ->execute([
                     trim($_POST['username']),
@@ -28,7 +40,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                     trim($_POST['phone']),
                     trim($_POST['email']),
                     $hash,
-                    $_POST['role'],
+                    $role,
                     (int)$_POST['personnel_id'] ?: null,
                     json_encode($perms,JSON_UNESCAPED_UNICODE),
                     isset($_POST['active'])?1:0
@@ -39,7 +51,18 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         if(isset($_POST['update_user'])){
             $uid=(int)$_POST['user_id'];
             $perms=$_POST['permissions'] ?? [];
-            $role=$_POST['role']; $active=isset($_POST['active'])?1:0;
+            $active=isset($_POST['active'])?1:0;
+            $__postedRole = $_POST['role'] ?? '';
+            if(is_admin() && in_array($__postedRole, $__validRoles, true)){
+                $role = $__postedRole;
+            } else {
+                // Admin değil (veya geçersiz değer gönderildi) — rol alanı DEĞİŞTİRİLMEZ, mevcut
+                // DB kaydındaki rol korunur (kendi rolü dahil, hiçbir admin-olmayan kullanıcı rol
+                // değiştiremez).
+                $__cur = $pdo->prepare("SELECT role FROM app_users WHERE id=?");
+                $__cur->execute([$uid]);
+                $role = $__cur->fetch()['role'] ?? 'personel';
+            }
             // Ana yönetici (ilk kullanıcı, id=1) korunur: pasifleştirilemez, admin rolü düşürülemez.
             if($uid===1){ $role='admin'; $active=1; }
             $pdo->prepare("UPDATE app_users SET username=?, full_name=?, phone=?, email=?, role=?, personnel_id=?, permissions=?, active=? WHERE id=?")

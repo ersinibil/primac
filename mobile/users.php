@@ -22,10 +22,18 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['reset_pass'])){
 // Yetki/rol güncelle
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['save_perms'])){
     $uid=(int)$_POST['uid'];
-    $role=$_POST['role'] ?? 'personel';
+    // HOTFIX-02 EK (2026-07-17, ACİL — Ece code-review bulgusu): web users.php'deki rol whitelist +
+    // "ana yönetici (uid=1) korunur" kuralı burada hiç yoktu. Bu sayfa zaten yalnızca $isAdmin
+    // (admin/yönetici) erişimine kapalı olduğu için "admin-olmayan biri admin yapıyor" senaryosu
+    // web'deki gibi yok, ama whitelist dışı bir rol string'i doğrudan kaydedilebiliyordu VE uid=1
+    // (baş yönetici) burada rütbesi düşürülüp/pasifleştirilebiliyordu — web ile aynı korumaya taşındı.
+    $__validRoles = ['personel','yonetici','admin'];
+    $role = in_array($_POST['role'] ?? '', $__validRoles, true) ? $_POST['role'] : 'personel';
     $perms=$_POST['permissions'] ?? [];
+    $active=(int)($_POST['active'] ?? 1);
+    if($uid===1){ $role='admin'; $active=1; }
     try{
-        $pdo->prepare("UPDATE app_users SET role=?,permissions=?,active=? WHERE id=?")->execute([$role,json_encode($perms),(int)($_POST['active'] ?? 1),$uid]);
+        $pdo->prepare("UPDATE app_users SET role=?,permissions=?,active=? WHERE id=?")->execute([$role,json_encode($perms),$active,$uid]);
         $ok='Kullanıcı güncellendi.';
     }catch(Throwable $e){ $er=$e->getMessage(); }
     header('Location: users.php'); exit;
@@ -37,7 +45,9 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['create_user'])){
         $uname=trim($_POST['username'] ?? '');
         $fn=trim($_POST['full_name'] ?? '');
         $pw=trim($_POST['password'] ?? '');
-        $role=$_POST['role'] ?? 'personel';
+        // HOTFIX-02 EK: whitelist — geçersiz/rastgele bir rol string'i artık kaydedilemez.
+        $__validRoles = ['personel','yonetici','admin'];
+        $role = in_array($_POST['role'] ?? '', $__validRoles, true) ? $_POST['role'] : 'personel';
         $perms=$_POST['permissions'] ?? [];
         if(!$uname || !$pw) throw new Exception('Kullanıcı adı ve şifre zorunlu.');
         if(strlen($pw)<6) throw new Exception('Şifre en az 6 karakter.');
