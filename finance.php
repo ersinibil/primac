@@ -16,25 +16,25 @@ $pos=safe_sum("SELECT COALESCE(SUM(current_balance),0) s FROM finance_accounts W
 ?>
 
 <style>
-.finance-grid{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:14px;margin:14px 0 20px}
-.finance-tile{display:block;text-decoration:none;border-radius:22px;padding:18px;color:#101828;box-shadow:0 10px 30px rgba(16,24,40,.08);border:1px solid rgba(15,23,42,.06)}
-.finance-tile small{display:block;font-weight:900;color:#475467}
+.finance-grid{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:var(--df-space-4);margin:var(--df-space-4) 0 var(--df-space-5)}
+.finance-tile{display:block;text-decoration:none;border-radius:var(--df-radius-lg);padding:var(--df-space-4);color:var(--df-ink-900);box-shadow:var(--df-elevation-raised);border:1px solid var(--df-hairline)}
+.finance-tile small{display:block;font-weight:900;color:var(--df-ink-600)}
 .finance-tile strong{display:block;font-size:26px;margin:10px 0}
-.finance-tile span{font-size:13px;color:#667085}
+.finance-tile span{font-size:13px;color:var(--df-ink-500)}
 .ft-bank{background:linear-gradient(135deg,#dbeafe,#eff6ff)}
 .ft-cash{background:linear-gradient(135deg,#dcfce7,#f0fdf4)}
 .ft-card{background:linear-gradient(135deg,#fee2e2,#fff1f2)}
 .ft-pos{background:linear-gradient(135deg,#fef3c7,#fffbeb)}
 @media(max-width:960px){.finance-grid{grid-template-columns:1fr}}
-.command-grid{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:14px;margin:0 0 20px}
-.command-card{display:block;text-decoration:none;background:#fff;border-radius:20px;padding:18px;box-shadow:0 8px 28px rgba(16,24,40,.06);border:1px solid #eef2f6;color:#101828;transition:transform .12s ease,box-shadow .12s ease}
-.command-card:hover{transform:translateY(-2px);box-shadow:0 14px 36px rgba(16,24,40,.11)}
-.command-card small{display:block;color:#667085;font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+.command-grid{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:var(--df-space-4);margin:0 0 var(--df-space-5)}
+.command-card{display:block;text-decoration:none;background:var(--df-surface);border-radius:var(--df-radius-lg);padding:var(--df-space-4);box-shadow:var(--df-elevation-raised);border:1px solid var(--df-hairline);color:var(--df-ink-900);transition:transform .12s ease,box-shadow .12s ease}
+.command-card:hover{transform:translateY(-2px);box-shadow:var(--df-elevation-floating)}
+.command-card small{display:block;color:var(--df-ink-500);font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:.06em}
 .command-card strong{display:block;font-size:30px;margin:8px 0;line-height:1}
-.command-card span{color:#667085;font-size:13px}
-.command-card.green{border-left:6px solid #22c55e}
-.command-card.red{border-left:6px solid #ef4444}
-.command-card.blue{border-left:6px solid #3b82f6}
+.command-card span{color:var(--df-ink-500);font-size:13px}
+.command-card.green{border-left:6px solid var(--df-success)}
+.command-card.red{border-left:6px solid var(--df-danger)}
+.command-card.blue{border-left:6px solid var(--df-accent)}
 .command-card.purple{border-left:6px solid #8b5cf6}
 @media(max-width:960px){.command-grid{grid-template-columns:1fr}}
 </style>
@@ -42,14 +42,14 @@ $pos=safe_sum("SELECT COALESCE(SUM(current_balance),0) s FROM finance_accounts W
 <?php
 // UX-001 (2026-07-16): "+ Tahsilat" en sık işlem → birincil. "Hesaplar" bir kayıt oluşturmuyor,
 // başka sayfaya götürüyor → gezinme (ghost). Diğer ikisi ikincil aksiyon.
-$__actions = ds_button('+ Tahsilat', 'finance_new.php?direction=in', 'accent')
-    . ds_button('+ Ödeme', 'finance_new.php?direction=out', 'secondary')
-    . ds_button('+ Transfer', 'finance_transfer.php', 'secondary')
-    . ds_button('Hesaplar', 'finance_accounts.php', 'ghost');
-ds_page_header('Finans Paneli', '', '', $__actions, true);
+$__actions = ds_button('+ Tahsilat', 'finance_new.php?direction=in', 'primary', '', '', true)
+    . ds_button('+ Ödeme', 'finance_new.php?direction=out', 'secondary', '', '', true)
+    . ds_button('+ Transfer', 'finance_transfer.php', 'secondary', '', '', true)
+    . ds_button('Hesaplar', 'finance_accounts.php', 'ghost', '', '', true);
+ds_page_header('Finans Paneli', ds_icon('wallet',24), '', $__actions, false, true);
 ?>
 
-<?php if(isset($_GET['deleted'])): ?><div class="ok">Finans hareketi silindi, hesap bakiyesi güncellendi.</div><?php endif; ?>
+<?php if(isset($_GET['deleted'])): ?><?=ds_alert('success','Finans hareketi silindi, hesap bakiyesi güncellendi.')?><?php endif; ?>
 
 <section class="finance-grid">
 <a class="finance-tile ft-bank" href="finance_accounts.php?type=Banka"><small>🏦 Bankalar</small><strong><?=money($bank)?></strong><span>Banka hesapları</span></a>
@@ -65,9 +65,9 @@ ds_page_header('Finans Paneli', '', '', $__actions, true);
 <a class="command-card purple" href="finance_transfer.php"><small>Transfer</small><strong>↔</strong><span>Hesaplar arası aktarım</span></a>
 </section>
 
-<section class="panel section-card">
-<div class="panel-head"><h2>Son Finans Hareketleri</h2><a class="btn small secondary" href="finance_new.php">Yeni Hareket</a></div>
-<table>
+<section class="df-card">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--df-space-3)"><h2 style="font-size:var(--df-type-section-size);margin:0">Son Finans Hareketleri</h2><?=ds_button('Yeni Hareket','finance_new.php','secondary','df-btn--sm','',true)?></div>
+<div class="df-table-wrap"><table class="df-table">
 <thead>
 <tr>
 <th>Tarih</th>
@@ -115,31 +115,31 @@ try{
         echo "<td>".h($account)."</td>";
         echo "<td>".h($r['payment_channel'])."</td>";
         echo "<td>".money($r['amount'])."</td>";
-        echo "<td>".badge($r['status'],status_tone($r['status']))."</td>";
+        echo "<td>".ds_badge($r['status'])."</td>";
         echo "<td>".h($r['description'])."</td>";
         echo "<td><div class='row-actions'>";
         if($canEdit){
-            echo "<a class='btn small secondary' href='finance_new.php?id=".$rid."'>✏️ Düzenle</a>";
+            echo "<a class='df-btn df-btn--secondary df-btn--sm' href='finance_new.php?id=".$rid."'>✏️ Düzenle</a>";
             echo "<form method='post' action='sil.php' style='display:inline' onsubmit=\"return confirm('Bu finans hareketi KALICI olarak silinecek ve ilgili hesap bakiyesi geri alınacak. Emin misiniz?')\">"
                 ."<input type='hidden' name='t' value='finance'>"
                 ."<input type='hidden' name='id' value='".$rid."'>"
-                ."<button class='btn small danger' type='submit'>🗑 Sil</button>"
+                ."<button class='df-btn df-btn--danger df-btn--sm' type='submit'>🗑 Sil</button>"
                 ."</form>";
         }elseif($actions['source_url']){
-            echo "<a class='btn small secondary' href='".h($actions['source_url'])."' title='".h($actions['block_reason'])."'>".h($actions['source_label'])."</a>";
+            echo "<a class='df-btn df-btn--secondary df-btn--sm' href='".h($actions['source_url'])."' title='".h($actions['block_reason'])."'>".h($actions['source_label'])."</a>";
         }else{
-            echo "<span class='muted' title='".h($actions['block_reason'])."'>Otomatik</span>";
+            echo "<span style='color:var(--df-ink-500)' title='".h($actions['block_reason'])."'>Otomatik</span>";
         }
         echo "</div></td>";
         echo "</tr>";
     }
-    if(!$rows) echo "<tr><td colspan='10' class='muted'>Henüz finans hareketi yok.</td></tr>";
+    if(!$rows) echo "<tr><td colspan='10' style='color:var(--df-ink-500)'>Henüz finans hareketi yok.</td></tr>";
 }catch(Throwable $e){
-    echo "<tr><td colspan='10'><div class='alert'>".h($e->getMessage())."</div></td></tr>";
+    echo "<tr><td colspan='10'>".ds_alert('danger',$e->getMessage())."</td></tr>";
 }
 ?>
 </tbody>
-</table>
+</table></div>
 </section>
 
 <?php require_once __DIR__.'/layout_bottom.php'; ?>
