@@ -74,33 +74,15 @@ function finance_accounts_tab_url($typeVal, $status, $bank, $q){
 }
 ?>
 
-<style>
-.account-tabs{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0 12px}
-.account-tabs a{text-decoration:none;background:#eef2f6;color:#101828;border-radius:999px;padding:10px 14px;font-weight:900}
-.account-tabs a.active{background:#111827;color:white}
-.account-tabs a span{opacity:.65;font-weight:700}
-.account-filter-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;background:#f9fafb;border:1px solid #eef2f6;border-radius:14px;padding:10px 12px;margin:0 0 18px}
-.account-filter-bar label{display:flex;flex-direction:column;gap:3px;font-size:11px;font-weight:800;color:#667085;text-transform:uppercase;letter-spacing:.03em}
-.account-filter-bar select,.account-filter-bar input[type=text]{border:1px solid #e4e7ec;border-radius:9px;padding:8px 10px;font-size:14px;font-family:inherit;min-width:150px}
-.account-filter-bar .clear-link{margin-left:auto;align-self:flex-end;font-size:13px;font-weight:800;color:#dc2626;text-decoration:none}
-@media(max-width:720px){.account-filter-bar{flex-direction:column;align-items:stretch}.account-filter-bar select,.account-filter-bar input[type=text]{min-width:0}.account-filter-bar .clear-link{margin-left:0;align-self:flex-start}}
-.account-card-grid{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:14px;margin:14px 0 20px}
-.account-card{border-radius:22px;background:white;padding:18px;box-shadow:0 10px 30px rgba(16,24,40,.07);border:1px solid #eef2f6}
-.account-card small{color:#667085;font-weight:900}.account-card strong{display:block;font-size:24px;margin:8px 0}
-@media(max-width:960px){.account-card-grid{grid-template-columns:1fr}}
-</style>
+<?php
+$__faActions = ds_button('+ Finans Hareketi','finance_new.php','primary','','',true)
+    . ds_button('+ Transfer','finance_transfer.php','secondary','','',true)
+    . ds_button('Finans Paneli','finance.php','secondary','','',true);
+ds_page_header('Banka / Kasa / Kart Hesapları', ds_icon('wallet',24), '', $__faActions, false, true);
+?>
 
-<div class="panel-head">
-<h1>Banka / Kasa / Kart Hesapları</h1>
-<div class="actions">
-<a class="btn" href="finance_new.php">+ Finans Hareketi</a>
-<a class="btn secondary" href="finance_transfer.php">+ Transfer</a>
-<a class="btn secondary" href="finance.php">Finans Paneli</a>
-</div>
-</div>
-
-<?php if($error): ?><div class="alert"><?=h($error)?></div><?php endif; ?>
-<?php if($ok): ?><div class="ok"><?=h($ok)?></div><?php endif; ?>
+<?php if($error): ?><?=ds_alert('danger',$error)?><?php endif; ?>
+<?php if($ok): ?><?=ds_alert('success',$ok)?><?php endif; ?>
 
 <?php
 // Eski derin linkler (finance.php'nin ?type=POS gibi) "Diğer" havuzuna giren GERÇEK bir
@@ -108,99 +90,74 @@ function finance_accounts_tab_url($typeVal, $status, $bank, $q){
 // code review notu). Tanınmayan/garbage bir değer burada YOK sayılır (WHERE tarafı zaten onu
 // "Tümü" gibi ele alıyor, sekmede de hiçbiri aktif görünmez — tutarlı).
 $typeIsOther = in_array($type, ['Diger', 'POS', 'Diğer'], true);
+ds_tabs([
+    ['label'=>'Tümü ('.$typeCounts['all'].')','url'=>finance_accounts_tab_url('', $status, $bank, $q),'active'=>$type===''],
+    ['label'=>'💵 Kasalar ('.$typeCounts['Kasa'].')','url'=>finance_accounts_tab_url('Kasa', $status, $bank, $q),'active'=>$type==='Kasa'],
+    ['label'=>'🏦 Banka Hesapları ('.$typeCounts['Banka'].')','url'=>finance_accounts_tab_url('Banka', $status, $bank, $q),'active'=>$type==='Banka'],
+    ['label'=>'💳 Kredi Kartları ('.$typeCounts['Kredi Kartı'].')','url'=>finance_accounts_tab_url('Kredi Kartı', $status, $bank, $q),'active'=>$type==='Kredi Kartı'],
+    ['label'=>'➕ Diğer ('.$typeCounts['Diger'].')','url'=>finance_accounts_tab_url('Diger', $status, $bank, $q),'active'=>$typeIsOther],
+]);
 ?>
-<div class="account-tabs">
-<a class="<?=$type===''?'active':''?>" href="<?=h(finance_accounts_tab_url('', $status, $bank, $q))?>">Tümü <span>(<?=$typeCounts['all']?>)</span></a>
-<a class="<?=$type==='Kasa'?'active':''?>" href="<?=h(finance_accounts_tab_url('Kasa', $status, $bank, $q))?>">💵 Kasalar <span>(<?=$typeCounts['Kasa']?>)</span></a>
-<a class="<?=$type==='Banka'?'active':''?>" href="<?=h(finance_accounts_tab_url('Banka', $status, $bank, $q))?>">🏦 Banka Hesapları <span>(<?=$typeCounts['Banka']?>)</span></a>
-<a class="<?=$type==='Kredi Kartı'?'active':''?>" href="<?=h(finance_accounts_tab_url('Kredi Kartı', $status, $bank, $q))?>">💳 Kredi Kartları <span>(<?=$typeCounts['Kredi Kartı']?>)</span></a>
-<a class="<?=$typeIsOther?'active':''?>" href="<?=h(finance_accounts_tab_url('Diger', $status, $bank, $q))?>">➕ Diğer <span>(<?=$typeCounts['Diger']?>)</span></a>
-</div>
 
-<form method="get" class="account-filter-bar">
+<section class="df-card" style="margin:var(--df-space-4) 0">
+<form method="get" class="df-form-grid-3">
 <?php if($type!==''): ?><input type="hidden" name="type" value="<?=h($type)?>"><?php endif; ?>
-<label>Durum
-<select name="status" onchange="this.form.submit()">
-<option value="" <?=$status===''?'selected':''?>>Tümü</option>
-<option value="active" <?=$status==='active'?'selected':''?>>Aktif</option>
-<option value="passive" <?=$status==='passive'?'selected':''?>>Pasif</option>
-</select>
-</label>
-<label>Banka
-<select name="bank" onchange="this.form.submit()">
-<option value="">Tüm Bankalar</option>
-<?php foreach($bankOptions as $b): ?><option value="<?=h($b)?>" <?=$bank===$b?'selected':''?>><?=h($b)?></option><?php endforeach; ?>
-</select>
-</label>
-<label>Arama
-<input type="text" name="q" value="<?=h($q)?>" placeholder="Hesap, banka, IBAN veya kart ara...">
-</label>
-<button class="btn small" type="submit">Uygula</button>
-<?php if($hasFilter): ?><a class="clear-link" href="finance_accounts.php">✕ Filtreyi Temizle</a><?php endif; ?>
-</form>
+<?php
+ds_form_field('Durum', '<select name="status" onchange="this.form.submit()">
+<option value="" '.($status===''?'selected':'').'>Tümü</option>
+<option value="active" '.($status==='active'?'selected':'').'>Aktif</option>
+<option value="passive" '.($status==='passive'?'selected':'').'>Pasif</option>
+</select>');
 
-<section class="account-card-grid">
-<div class="account-card"><small>🏦 Banka</small><strong><?=money(safe_sum("SELECT COALESCE(SUM(current_balance),0) s FROM finance_accounts WHERE active=1 AND account_type='Banka'"))?></strong></div>
-<div class="account-card"><small>💵 Kasa</small><strong><?=money(safe_sum("SELECT COALESCE(SUM(current_balance),0) s FROM finance_accounts WHERE active=1 AND account_type='Kasa'"))?></strong></div>
-<div class="account-card"><small>💳 Kredi Kartı</small><strong><?=money(safe_sum("SELECT COALESCE(SUM(current_balance),0) s FROM finance_accounts WHERE active=1 AND account_type='Kredi Kartı'"))?></strong></div>
-<div class="account-card"><small>🧾 POS</small><strong><?=money(safe_sum("SELECT COALESCE(SUM(current_balance),0) s FROM finance_accounts WHERE active=1 AND account_type='POS'"))?></strong></div>
+$__bankOptsHtml='<option value="">Tüm Bankalar</option>';
+foreach($bankOptions as $b){ $__bankOptsHtml.='<option value="'.h($b).'" '.($bank===$b?'selected':'').'>'.h($b).'</option>'; }
+ds_form_field('Banka', '<select name="bank" onchange="this.form.submit()">'.$__bankOptsHtml.'</select>');
+
+ds_form_field('Arama', '<input type="text" name="q" value="'.h($q).'" placeholder="Hesap, banka, IBAN veya kart ara...">');
+?>
+<div class="df-form-span-3" style="display:flex;gap:var(--df-space-3);align-items:center">
+<button class="df-btn df-btn--secondary" type="submit">Uygula</button>
+<?php if($hasFilter): ?><a href="finance_accounts.php" style="font-size:13px;font-weight:700;color:var(--df-danger-ink)">✕ Filtreyi Temizle</a><?php endif; ?>
+</div>
+</form>
 </section>
 
-<section class="panel">
-<h2>Yeni Hesap</h2>
-<form method="post" class="form-grid">
+<section class="finance-grid">
+<div class="finance-tile ft-bank"><small>🏦 Banka</small><strong><?=money(safe_sum("SELECT COALESCE(SUM(current_balance),0) s FROM finance_accounts WHERE active=1 AND account_type='Banka'"))?></strong></div>
+<div class="finance-tile ft-cash"><small>💵 Kasa</small><strong><?=money(safe_sum("SELECT COALESCE(SUM(current_balance),0) s FROM finance_accounts WHERE active=1 AND account_type='Kasa'"))?></strong></div>
+<div class="finance-tile ft-card"><small>💳 Kredi Kartı</small><strong><?=money(safe_sum("SELECT COALESCE(SUM(current_balance),0) s FROM finance_accounts WHERE active=1 AND account_type='Kredi Kartı'"))?></strong></div>
+<div class="finance-tile ft-pos"><small>🧾 POS</small><strong><?=money(safe_sum("SELECT COALESCE(SUM(current_balance),0) s FROM finance_accounts WHERE active=1 AND account_type='POS'"))?></strong></div>
+</section>
 
-<label>Hesap Adı
-<input name="name" required placeholder="Örn: Ziraat Bankası, Merkez Kasa, İş Kredi Kartı">
-</label>
+<section class="df-card">
+<h2 style="font-size:var(--df-type-section-size);margin:0 0 var(--df-space-3)">Yeni Hesap</h2>
+<form method="post" class="df-form-grid-3">
 
-<label>Hesap Tipi
-<select name="account_type">
-<option <?=$type==='Banka'?'selected':''?>>Banka</option>
-<option <?=$type==='Kasa'?'selected':''?>>Kasa</option>
-<option <?=$type==='Kredi Kartı'?'selected':''?>>Kredi Kartı</option>
-<option <?=$type==='POS'?'selected':''?>>POS</option>
+<?php
+ds_form_field('Hesap Adı', '<input name="name" required placeholder="Örn: Ziraat Bankası, Merkez Kasa, İş Kredi Kartı">');
+ds_form_field('Hesap Tipi', '<select name="account_type">
+<option '.($type==='Banka'?'selected':'').'>Banka</option>
+<option '.($type==='Kasa'?'selected':'').'>Kasa</option>
+<option '.($type==='Kredi Kartı'?'selected':'').'>Kredi Kartı</option>
+<option '.($type==='POS'?'selected':'').'>POS</option>
 <option>Diğer</option>
-</select>
-</label>
+</select>');
+ds_form_field('Banka Adı', '<input name="bank_name">');
+ds_form_field('IBAN', '<input name="iban">');
+ds_form_field('Kart Son 4 Hane', '<input name="card_last4" maxlength="4">');
+ds_form_field('Para Birimi', '<select name="currency"><option>TRY</option><option>USD</option><option>EUR</option></select>');
+ds_form_field('Açılış Bakiyesi', '<input type="number" step="0.01" name="opening_balance" value="0">');
+?>
 
-<label>Banka Adı
-<input name="bank_name">
-</label>
-
-<label>IBAN
-<input name="iban">
-</label>
-
-<label>Kart Son 4 Hane
-<input name="card_last4" maxlength="4">
-</label>
-
-<label>Para Birimi
-<select name="currency">
-<option>TRY</option>
-<option>USD</option>
-<option>EUR</option>
-</select>
-</label>
-
-<label>Açılış Bakiyesi
-<input type="number" step="0.01" name="opening_balance" value="0">
-</label>
-
-<label class="full">Notlar
-<textarea name="notes" rows="2"></textarea>
-</label>
-
-<label class="full"><input type="checkbox" name="active" checked style="width:auto"> Aktif</label>
-
-<button class="btn" name="save_account" value="1">Hesabı Kaydet</button>
+<div class="df-form-span-3"><?php ds_form_field('Notlar', '<textarea name="notes" rows="2"></textarea>'); ?></div>
+<div class="df-form-span-3"><label style="display:flex;align-items:center;gap:8px"><input type="checkbox" name="active" checked style="width:auto"> Aktif</label></div>
+<div class="df-form-span-3"><button class="df-btn df-btn--primary" name="save_account" value="1">Hesabı Kaydet</button></div>
 </form>
 </section>
 
-<section class="panel">
-<h2>Hesaplar</h2>
-<table>
+<section class="df-card" style="margin-top:var(--df-space-4)">
+<h2 style="font-size:var(--df-type-section-size);margin:0 0 var(--df-space-3)">Hesaplar</h2>
+<div class="df-table-wrap"><table class="df-table">
 <thead><tr><th>Hesap</th><th>Tip</th><th>Banka</th><th>IBAN/Kart</th><th>Bakiye</th><th>Durum</th><th>İşlem</th></tr></thead>
 <tbody>
 <?php
@@ -226,52 +183,68 @@ foreach($rows as $a){
     echo "<td>".h($a['bank_name'] ?: '-')."</td>";
     echo "<td>".h($a['iban'] ?: ($a['card_last4'] ? '**** '.$a['card_last4'] : '-'))."</td>";
     echo "<td>".money($a['current_balance'])."</td>";
-    echo "<td>".($a['active']?badge('Aktif','green'):badge('Pasif','gray'))."</td>";
-    echo "<td>"
-        ."<a class='btn small secondary' href='finance_account_view.php?id=".$aid.h($returnQsStr)."'>📄 Ekstre</a> ";
+    echo "<td>".($a['active']?ds_badge('Aktif','green'):ds_badge('Pasif','gray'))."</td>";
+    echo "<td><div class='row-actions'>"
+        ."<a class='df-btn df-btn--secondary df-btn--sm' href='finance_account_view.php?id=".$aid.h($returnQsStr)."'>📄 Ekstre</a>";
     if(can_edit_delete()){
-        echo "<button type='button' class='btn small secondary' onclick=\"document.getElementById('edit-acc-".$aid."').style.display=(document.getElementById('edit-acc-".$aid."').style.display==='none'?'table-row':'none')\">✏️ Düzenle</button> ";
+        echo "<button type='button' class='df-btn df-btn--secondary df-btn--sm' onclick=\"document.getElementById('edit-acc-".$aid."').style.display=(document.getElementById('edit-acc-".$aid."').style.display==='none'?'table-row':'none')\">✏️ Düzenle</button>";
         echo "<form method='post' style='display:inline' onsubmit=\"return confirm('Bu hesabı silmek istediğinize emin misiniz? Hareketleri olan hesaplar kalıcı silinmez, pasife alınır.')\">"
             ."<input type='hidden' name='id' value='".$aid."'>"
-            ."<button class='btn small danger' name='delete_account' value='1'>🗑 Sil</button>"
+            ."<button class='df-btn df-btn--danger df-btn--sm' name='delete_account' value='1'>🗑 Sil</button>"
             ."</form>";
     }
-    echo "</td>";
+    echo "</div></td>";
     echo "</tr>";
     if(can_edit_delete()){
-    echo "<tr id='edit-acc-".$aid."' style='display:none;background:#f9fafb'><td colspan='7'>";
-    echo "<form method='post' class='form-grid' style='margin:10px 0'>";
+    echo "<tr id='edit-acc-".$aid."' style='display:none;background:var(--df-surface-sunken)'><td colspan='7'>";
+    echo "<form method='post' class='df-form-grid-3' style='margin:10px 0;padding:var(--df-space-3) 0'>";
     echo "<input type='hidden' name='id' value='".$aid."'>";
-    echo "<label>Hesap Adı<input name='name' required value='".h($a['name'])."'></label>";
-    echo "<label>Hesap Tipi<select name='account_type'>";
-    foreach($acctTypes as $t){ echo "<option ".($a['account_type']===$t?'selected':'').">".h($t)."</option>"; }
-    echo "</select></label>";
-    echo "<label>Banka Adı<input name='bank_name' value='".h($a['bank_name'])."'></label>";
-    echo "<label>IBAN<input name='iban' value='".h($a['iban'])."'></label>";
-    echo "<label>Kart Son 4 Hane<input name='card_last4' maxlength='4' value='".h($a['card_last4'])."'></label>";
-    echo "<label>Para Birimi<select name='currency'>";
-    foreach(['TRY','USD','EUR'] as $c){ echo "<option ".($a['currency']===$c?'selected':'').">".h($c)."</option>"; }
-    echo "</select></label>";
-    echo "<label class='full'>Notlar<textarea name='notes' rows='2'>".h($a['notes'])."</textarea></label>";
-    echo "<label class='full'><input type='checkbox' name='active' ".($a['active']?'checked':'')." style='width:auto'> Aktif</label>";
-    echo "<button class='btn' name='edit_account' value='1'>💾 Kaydet</button>";
+    echo "<div class='df-form-group'><label class='df-form-label'>Hesap Adı</label><input name='name' required value='".h($a['name'])."'></div>";
+    $__acctTypeOptsE='';
+    foreach($acctTypes as $t){ $__acctTypeOptsE.='<option '.($a['account_type']===$t?'selected':'').'>'.h($t).'</option>'; }
+    echo "<div class='df-form-group'><label class='df-form-label'>Hesap Tipi</label><select name='account_type'>".$__acctTypeOptsE."</select></div>";
+    echo "<div class='df-form-group'><label class='df-form-label'>Banka Adı</label><input name='bank_name' value='".h($a['bank_name'])."'></div>";
+    echo "<div class='df-form-group'><label class='df-form-label'>IBAN</label><input name='iban' value='".h($a['iban'])."'></div>";
+    echo "<div class='df-form-group'><label class='df-form-label'>Kart Son 4 Hane</label><input name='card_last4' maxlength='4' value='".h($a['card_last4'])."'></div>";
+    $__curOptsE='';
+    foreach(['TRY','USD','EUR'] as $c){ $__curOptsE.='<option '.($a['currency']===$c?'selected':'').'>'.h($c).'</option>'; }
+    echo "<div class='df-form-group'><label class='df-form-label'>Para Birimi</label><select name='currency'>".$__curOptsE."</select></div>";
+    echo "<div class='df-form-span-3 df-form-group'><label class='df-form-label'>Notlar</label><textarea name='notes' rows='2'>".h($a['notes'])."</textarea></div>";
+    echo "<div class='df-form-span-3'><label style='display:flex;align-items:center;gap:8px'><input type='checkbox' name='active' ".($a['active']?'checked':'')." style='width:auto'> Aktif</label></div>";
+    echo "<div class='df-form-span-3'><button class='df-btn df-btn--primary' name='edit_account' value='1'>💾 Kaydet</button></div>";
     echo "</form>";
     echo "</td></tr>";
     }
 }
 if(!$rows){
     if($hasFilter){
-        echo "<tr><td colspan='7' class='muted' style='text-align:center;padding:24px 12px'>Seçili filtrelere uygun hesap bulunamadı.<br><a href='finance_accounts.php' style='font-weight:800'>Filtreleri Temizle</a></td></tr>";
+        echo "<tr><td colspan='7' style='text-align:center;padding:24px 12px;color:var(--df-ink-500)'>Seçili filtrelere uygun hesap bulunamadı.<br><a href='finance_accounts.php' style='font-weight:800'>Filtreleri Temizle</a></td></tr>";
     } else {
-        echo "<tr><td colspan='7' class='muted'>Hesap yok.</td></tr>";
+        echo "<tr><td colspan='7' style='color:var(--df-ink-500)'>Hesap yok.</td></tr>";
     }
 }
 }catch(Throwable $e){
-echo "<tr><td colspan='7'><div class='alert'>".h($e->getMessage())."</div></td></tr>";
+echo "<tr><td colspan='7'>".ds_alert('danger',$e->getMessage())."</td></tr>";
 }
 ?>
 </tbody>
-</table>
+</table></div>
 </section>
+
+<style>
+.finance-grid{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:var(--df-space-4);margin:var(--df-space-4) 0 var(--df-space-5)}
+.finance-tile{display:block;border-radius:var(--df-radius-lg);padding:var(--df-space-4);color:var(--df-ink-900);box-shadow:var(--df-elevation-raised);border:1px solid var(--df-hairline)}
+.finance-tile small{display:block;font-weight:900;color:var(--df-ink-600)}
+.finance-tile strong{display:block;font-size:26px;margin:10px 0 0}
+.ft-bank{background:linear-gradient(135deg,#dbeafe,#eff6ff)}
+.ft-cash{background:linear-gradient(135deg,#dcfce7,#f0fdf4)}
+.ft-card{background:linear-gradient(135deg,#fee2e2,#fff1f2)}
+.ft-pos{background:linear-gradient(135deg,#fef3c7,#fffbeb)}
+@media(max-width:960px){.finance-grid{grid-template-columns:1fr}}
+body.nav-compact .df-form-grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0 var(--df-space-4)}
+body.nav-compact .df-form-span-3{grid-column:1 / -1}
+@media(max-width:900px){body.nav-compact .df-form-grid-3{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:640px){body.nav-compact .df-form-grid-3{grid-template-columns:1fr}}
+</style>
 
 <?php require_once __DIR__.'/layout_bottom.php'; ?>

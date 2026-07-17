@@ -62,110 +62,88 @@ $today=date('Y-m-d');
 $soon=date('Y-m-d', strtotime('+7 days'));
 ?>
 
-<div class="panel-head">
-<h1>Çek / Senet Takibi</h1>
-<div class="actions">
-<a class="btn secondary" href="finance.php">Finans Paneli</a>
-<a class="btn secondary" href="finance_accounts.php">Hesaplar</a>
-</div>
-</div>
+<?php
+$__cnActions = ds_button('Finans Paneli','finance.php','secondary','','',true) . ds_button('Hesaplar','finance_accounts.php','secondary','','',true);
+ds_page_header('Çek / Senet Takibi', ds_icon('tag',24), '', $__cnActions, false, true);
+?>
 
-<?php if($error): ?><div class="alert"><?=h($error)?></div><?php endif; ?>
-<?php if($ok): ?><div class="ok"><?=h($ok)?></div><?php endif; ?>
+<?php if($error): ?><?=ds_alert('danger',$error)?><?php endif; ?>
+<?php if($ok): ?><?=ds_alert('success',$ok)?><?php endif; ?>
 
-<section class="panel">
-<h2>Yeni Çek / Senet Kaydı</h2>
-<form method="post" class="form-grid" enctype="multipart/form-data">
+<section class="df-card">
+<h2 style="font-size:var(--df-type-section-size);margin:0 0 var(--df-space-3)">Yeni Çek / Senet Kaydı</h2>
+<form method="post" class="df-form-grid-2" enctype="multipart/form-data">
 
-<label>Yön <small style="font-weight:400;color:#667085">(bizim verdiğimiz mi, bize verilen mi)</small>
-<select name="direction" id="cn-dir-new" onchange="updateCnStatusLabels(this)">
-<?php foreach($dirOpts as $dk=>$dl): ?>
-<option value="<?=h($dk)?>"><?=h($dl)?></option>
-<?php endforeach; ?>
-</select>
-</label>
+<?php
+$__dirOptsHtml='';
+foreach($dirOpts as $dk=>$dl){ $__dirOptsHtml.='<option value="'.h($dk).'">'.h($dl).'</option>'; }
+ds_form_field('Yön', '<select name="direction" id="cn-dir-new" onchange="updateCnStatusLabels(this)">'.$__dirOptsHtml.'</select>', 'Bizim verdiğimiz mi, bize verilen mi');
 
-<label>Tür
-<select name="type">
-<?php foreach($typeOpts as $tk=>$tl): ?>
-<option value="<?=h($tk)?>"><?=h($tl)?></option>
-<?php endforeach; ?>
-</select>
-</label>
+$__typeOptsHtml='';
+foreach($typeOpts as $tk=>$tl){ $__typeOptsHtml.='<option value="'.h($tk).'">'.h($tl).'</option>'; }
+ds_form_field('Tür', '<select name="type">'.$__typeOptsHtml.'</select>');
+?>
 
-<label>Numara
-<input name="number" placeholder="Çek/senet numarası">
-</label>
+<?php ds_form_field('Numara', '<input name="number" placeholder="Çek/senet numarası">'); ?>
+<?php ds_form_field('Tutar', '<input type="number" step="0.01" name="amount" required>'); ?>
+<?php ds_form_field('Vade Tarihi', '<input type="date" name="due_date">'); ?>
 
-<label>Tutar
-<input type="number" step="0.01" name="amount" required>
-</label>
+<?php
+$__contactOptsHtml='<option value="">Cari seçilmedi</option>';
+foreach($contacts as $c){ $__contactOptsHtml.='<option value="'.$c['id'].'">'.h($c['name'].' / '.$c['type']).'</option>'; }
+$__contactOptsHtml.='<option value="__new__">➕ Listede yok — Yeni Cari Ekle…</option>';
+ds_form_field('Cari', '<select name="contact_id" id="contactSel" onchange="onCnContactChange()">'.$__contactOptsHtml.'</select>', 'Opsiyonel — kimden alındı/kime verildi');
+?>
 
-<label>Vade Tarihi
-<input type="date" name="due_date">
-</label>
-
-<label>Cari <small style="font-weight:400;color:#667085">(opsiyonel — kimden alındı/kime verildi)</small>
-<select name="contact_id" id="contactSel" onchange="onCnContactChange()">
-<option value="">Cari seçilmedi</option>
-<?php foreach($contacts as $c): ?>
-<option value="<?=$c['id']?>"><?=h($c['name'].' / '.$c['type'])?></option>
-<?php endforeach; ?>
-<option value="__new__">➕ Listede yok — Yeni Cari Ekle…</option>
-</select>
-</label>
-<div id="newContactBox" style="display:none;background:#eef4ff;border:1px solid #bfdbfe;border-radius:12px;padding:12px;margin:8px 0">
-  <input type="text" id="contactNameCheck" placeholder="Müşteri adı" style="width:100%;border:1px solid #d0d5dd;border-radius:10px;padding:10px;margin-bottom:8px">
-  <select id="contactTypeCheck" style="width:100%;border:1px solid #d0d5dd;border-radius:10px;padding:10px;margin-bottom:8px">
+<div class="df-form-span-2" id="newContactBox" style="display:none;background:var(--df-info-soft);border:1px solid var(--df-hairline);border-radius:var(--df-radius-md);padding:12px;margin:8px 0">
+  <input type="text" id="contactNameCheck" placeholder="Müşteri adı" style="width:100%;margin-bottom:8px">
+  <select id="contactTypeCheck" style="width:100%;margin-bottom:8px">
     <option>Müşteri</option><option>Tedarikçi</option><option>Diğer</option>
   </select>
-  <button type="button" class="btn" style="width:100%" onclick="quickAddContactCheck(document.getElementById('contactNameCheck').value, document.getElementById('contactTypeCheck').value)">✓ Ekle ve Seç</button>
+  <button type="button" class="df-btn df-btn--secondary" style="width:100%" onclick="quickAddContactCheck(document.getElementById('contactNameCheck').value, document.getElementById('contactTypeCheck').value)">✓ Ekle ve Seç</button>
 </div>
 
-<label>Banka Adı <small style="font-weight:400;color:#667085">(çek ise)</small>
-<input name="bank_name">
-</label>
+<?php
+ds_form_field('Banka Adı', '<input name="bank_name">', 'Çek ise');
 
-<label>Durum
-<select name="status" id="cn-status-new">
-<?php foreach($statusOpts as $sk=>$sl): ?>
-<option value="<?=h($sk)?>" <?=$sk==='portfoyde'?'selected':''?>><?=h($sl)?></option>
-<?php endforeach; ?>
-</select>
-</label>
+$__statusOptsHtml='';
+foreach($statusOpts as $sk=>$sl){ $__statusOptsHtml.='<option value="'.h($sk).'" '.($sk==='portfoyde'?'selected':'').'>'.h($sl).'</option>'; }
+ds_form_field('Durum', '<select name="status" id="cn-status-new">'.$__statusOptsHtml.'</select>');
+?>
 
-<label class="full">Not
-<textarea name="notes" rows="2"></textarea>
-</label>
+<div class="df-form-span-2"><?php ds_form_field('Not', '<textarea name="notes" rows="2"></textarea>'); ?></div>
+<div class="df-form-span-2"><?php ds_form_field('Fotoğraf / Dosya', '<input type="file" name="attachment" accept=".jpg,.jpeg,.png,.webp,.gif,.pdf">', 'Çekin/senedin fotoğrafı, opsiyonel — jpg/png/webp/gif/pdf, en fazla 15 MB'); ?></div>
 
-<label class="full">Fotoğraf / Dosya <small style="font-weight:400;color:#667085">(çekin/senedin fotoğrafı, opsiyonel — jpg/png/webp/gif/pdf, en fazla 15 MB)</small>
-<input type="file" name="attachment" accept=".jpg,.jpeg,.png,.webp,.gif,.pdf">
-</label>
-
-<button class="btn" name="save_cn" value="1">Kaydet</button>
+<div class="df-form-span-2"><button class="df-btn df-btn--primary" name="save_cn" value="1">Kaydet</button></div>
 </form>
 </section>
 
-<section class="panel">
-<h2>Kayıtlar</h2>
-<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
-<a class="btn small <?=$dirFilter===''?'':'secondary'?>" href="checks_notes.php?<?=($typeFilter?'type='.h($typeFilter).'&':'').($statusFilter?'status='.h($statusFilter):'')?>">Tüm Yönler</a>
-<?php foreach($dirOpts as $dk=>$dl): ?>
-<a class="btn small <?=$dirFilter===$dk?'':'secondary'?>" href="checks_notes.php?direction=<?=$dk?><?=$typeFilter?'&type='.h($typeFilter):''?><?=$statusFilter?'&status='.h($statusFilter):''?>"><?=h($dl)?></a>
-<?php endforeach; ?>
-<span style="width:1px;background:#e5e7eb;margin:0 4px"></span>
-<a class="btn small <?=$typeFilter===''?'':'secondary'?>" href="checks_notes.php?<?=($dirFilter?'direction='.h($dirFilter).'&':'').($statusFilter?'status='.h($statusFilter):'')?>">Tüm Türler</a>
-<?php foreach($typeOpts as $tk=>$tl): ?>
-<a class="btn small <?=$typeFilter===$tk?'':'secondary'?>" href="checks_notes.php?type=<?=$tk?><?=$dirFilter?'&direction='.h($dirFilter):''?><?=$statusFilter?'&status='.h($statusFilter):''?>"><?=h($tl)?></a>
-<?php endforeach; ?>
-<span style="width:1px;background:#e5e7eb;margin:0 4px"></span>
-<a class="btn small <?=$statusFilter===''?'':'secondary'?>" href="checks_notes.php?<?=($dirFilter?'direction='.h($dirFilter).'&':'').($typeFilter?'type='.h($typeFilter):'')?>">Tüm Durumlar</a>
-<?php foreach($statusOpts as $sk=>$sl): ?>
-<a class="btn small <?=$statusFilter===$sk?'':'secondary'?>" href="checks_notes.php?status=<?=$sk?><?=$dirFilter?'&direction='.h($dirFilter):''?><?=$typeFilter?'&type='.h($typeFilter):''?>"><?=h($sl)?></a>
-<?php endforeach; ?>
+<section class="df-card" style="margin-top:var(--df-space-4)">
+<h2 style="font-size:var(--df-type-section-size);margin:0 0 var(--df-space-3)">Kayıtlar</h2>
+
+<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+<?php
+$__dirTabs=[['label'=>'Tüm Yönler','url'=>'checks_notes.php?'.($typeFilter?'type='.h($typeFilter).'&':'').($statusFilter?'status='.h($statusFilter):''),'active'=>$dirFilter==='']];
+foreach($dirOpts as $dk=>$dl){ $__dirTabs[]=['label'=>$dl,'url'=>'checks_notes.php?direction='.$dk.($typeFilter?'&type='.h($typeFilter):'').($statusFilter?'&status='.h($statusFilter):''),'active'=>$dirFilter===$dk]; }
+ds_tabs($__dirTabs);
+?>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+<?php
+$__typeTabs=[['label'=>'Tüm Türler','url'=>'checks_notes.php?'.($dirFilter?'direction='.h($dirFilter).'&':'').($statusFilter?'status='.h($statusFilter):''),'active'=>$typeFilter==='']];
+foreach($typeOpts as $tk=>$tl){ $__typeTabs[]=['label'=>$tl,'url'=>'checks_notes.php?type='.$tk.($dirFilter?'&direction='.h($dirFilter):'').($statusFilter?'&status='.h($statusFilter):''),'active'=>$typeFilter===$tk]; }
+ds_tabs($__typeTabs);
+?>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">
+<?php
+$__statusTabs=[['label'=>'Tüm Durumlar','url'=>'checks_notes.php?'.($dirFilter?'direction='.h($dirFilter).'&':'').($typeFilter?'type='.h($typeFilter):''),'active'=>$statusFilter==='']];
+foreach($statusOpts as $sk=>$sl){ $__statusTabs[]=['label'=>$sl,'url'=>'checks_notes.php?status='.$sk.($dirFilter?'&direction='.h($dirFilter):'').($typeFilter?'&type='.h($typeFilter):''),'active'=>$statusFilter===$sk]; }
+ds_tabs($__statusTabs);
+?>
 </div>
 
-<table>
+<div class="df-table-wrap"><table class="df-table">
 <thead><tr><th>Yön</th><th>Tür</th><th>No</th><th>Tutar</th><th>Vade</th><th>Cari</th><th>Banka</th><th>Durum</th><th>Dosya</th><th>İşlem</th></tr></thead>
 <tbody>
 <?php
@@ -175,66 +153,73 @@ foreach($rows as $r){
     $rStatusOpts = checks_notes_statuses($rDir);
     $overdue = $r['status']==='portfoyde' && $r['due_date'] && $r['due_date']<$today;
     $upcoming = $r['status']==='portfoyde' && $r['due_date'] && $r['due_date']>=$today && $r['due_date']<=$soon;
-    $rowStyle = $overdue ? "background:#fef2f2" : ($upcoming ? "background:#fffbeb" : "");
+    $rowStyle = $overdue ? "background:var(--df-danger-soft)" : ($upcoming ? "background:var(--df-warning-soft)" : "");
     $statusTone = checks_notes_status_tone($r['status']);
     echo "<tr id='cn-row-".$rid."' style='$rowStyle'>";
-    echo "<td>".badge($dirOpts[$rDir] ?? $rDir, $rDir==='verilen'?'orange':'blue')."</td>";
+    echo "<td>".ds_badge($dirOpts[$rDir] ?? $rDir, $rDir==='verilen'?'orange':'blue')."</td>";
     echo "<td>".h($typeOpts[$r['type']] ?? $r['type'])."</td>";
     echo "<td>".h($r['number'] ?: '-')."</td>";
     echo "<td>".money($r['amount'])."</td>";
     echo "<td>".h($r['due_date'] ?: '-').($overdue?' ⚠️ Vadesi geçti':($upcoming?' ⏳ Yaklaşıyor':''))."</td>";
-    echo "<td>".h($r['contact_name'] ?: '-').(!empty($r['finance_movement_id'])?' <span title="Cari bakiyeye işlendi" style="color:#16a34a">💰</span>':(!empty($r['contact_id'])?' <span title="Finans hareketi oluşturulamadı" style="color:#dc2626">⚠️</span>':''))."</td>";
+    echo "<td>".h($r['contact_name'] ?: '-').(!empty($r['finance_movement_id'])?' <span title="Cari bakiyeye işlendi" style="color:var(--df-success)">💰</span>':(!empty($r['contact_id'])?' <span title="Finans hareketi oluşturulamadı" style="color:var(--df-danger)">⚠️</span>':''))."</td>";
     echo "<td>".h($r['bank_name'] ?: '-')."</td>";
-    echo "<td>".badge($rStatusOpts[$r['status']] ?? $r['status'], $statusTone)."</td>";
+    echo "<td>".ds_badge($rStatusOpts[$r['status']] ?? $r['status'], $statusTone)."</td>";
     echo "<td>";
-    if(!empty($r['attachment'])) echo "<a href='".h(base_url().$r['attachment'])."' target='_blank'>📎 Dosyayı Gör</a>"; else echo "<span class='muted'>-</span>";
+    if(!empty($r['attachment'])) echo "<a href='".h(base_url().$r['attachment'])."' target='_blank'>📎 Dosyayı Gör</a>"; else echo "<span style='color:var(--df-ink-500)'>-</span>";
     echo "</td>";
-    echo "<td>";
+    echo "<td><div class='row-actions'>";
     if(can_edit_delete()){
-        echo "<button type='button' class='btn small secondary' onclick=\"document.getElementById('edit-cn-".$rid."').style.display=(document.getElementById('edit-cn-".$rid."').style.display==='none'?'table-row':'none')\">✏️ Düzenle</button> ";
+        echo "<button type='button' class='df-btn df-btn--secondary df-btn--sm' onclick=\"document.getElementById('edit-cn-".$rid."').style.display=(document.getElementById('edit-cn-".$rid."').style.display==='none'?'table-row':'none')\">✏️ Düzenle</button>";
         echo "<form method='post' style='display:inline' onsubmit=\"return confirm('Bu kaydı silmek istediğinize emin misiniz?')\">"
             ."<input type='hidden' name='id' value='".$rid."'>"
-            ."<button class='btn small danger' name='delete_cn' value='1'>🗑 Sil</button>"
+            ."<button class='df-btn df-btn--danger df-btn--sm' name='delete_cn' value='1'>🗑 Sil</button>"
             ."</form>";
     }
-    echo "</td>";
+    echo "</div></td>";
     echo "</tr>";
 
     if(can_edit_delete()){
-    echo "<tr id='edit-cn-".$rid."' style='display:none;background:#f9fafb'><td colspan='10'>";
-    echo "<form method='post' class='form-grid' style='margin:10px 0' enctype='multipart/form-data'>";
+    echo "<tr id='edit-cn-".$rid."' style='display:none;background:var(--df-surface-sunken)'><td colspan='10'>";
+    echo "<form method='post' class='df-form-grid-2' style='margin:10px 0;padding:var(--df-space-3) 0' enctype='multipart/form-data'>";
     echo "<input type='hidden' name='id' value='".$rid."'>";
-    echo "<label>Yön<select name='direction' id='cn-dir-".$rid."' onchange='updateCnStatusLabels(this)'>";
-    foreach($dirOpts as $dk=>$dl){ echo "<option value='".h($dk)."' ".($rDir===$dk?'selected':'').">".h($dl)."</option>"; }
-    echo "</select></label>";
-    echo "<label>Tür<select name='type'>";
-    foreach($typeOpts as $tk=>$tl){ echo "<option value='".h($tk)."' ".($r['type']===$tk?'selected':'').">".h($tl)."</option>"; }
-    echo "</select></label>";
-    echo "<label>Numara<input name='number' value='".h($r['number'])."'></label>";
-    echo "<label>Tutar<input type='number' step='0.01' name='amount' value='".h($r['amount'])."' required></label>";
-    echo "<label>Vade Tarihi<input type='date' name='due_date' value='".h($r['due_date'])."'></label>";
-    echo "<label>Cari<select name='contact_id'><option value=''>Cari seçilmedi</option>";
-    foreach($contacts as $c){ echo "<option value='".$c['id']."' ".((int)$r['contact_id']===(int)$c['id']?'selected':'').">".h($c['name'].' / '.$c['type'])."</option>"; }
-    echo "</select></label>";
-    echo "<label>Banka Adı<input name='bank_name' value='".h($r['bank_name'])."'></label>";
-    echo "<label>Durum<select name='status' id='cn-status-".$rid."'>";
-    foreach($rStatusOpts as $sk=>$sl){ echo "<option value='".h($sk)."' ".($r['status']===$sk?'selected':'').">".h($sl)."</option>"; }
-    echo "</select></label>";
-    echo "<label class='full'>Not<textarea name='notes' rows='2'>".h($r['notes'])."</textarea></label>";
-    echo "<label class='full'>Fotoğraf / Dosya <small style='font-weight:400;color:#667085'>(yeni dosya seçilirse eskisinin yerine geçer, boş bırakılırsa mevcut korunur)</small>";
-    if(!empty($r['attachment'])) echo " — <a href='".h(base_url().$r['attachment'])."' target='_blank'>📎 Mevcut dosyayı gör</a>";
-    echo "<input type='file' name='attachment' accept='.jpg,.jpeg,.png,.webp,.gif,.pdf'></label>";
-    echo "<button class='btn' name='edit_cn' value='1'>💾 Kaydet</button>";
+    $__dirOptsHtmlE='';
+    foreach($dirOpts as $dk=>$dl){ $__dirOptsHtmlE.='<option value="'.h($dk).'" '.($rDir===$dk?'selected':'').'>'.h($dl).'</option>'; }
+    echo "<div class='df-form-group'><label class='df-form-label'>Yön</label><select name='direction' id='cn-dir-".$rid."' onchange='updateCnStatusLabels(this)'>".$__dirOptsHtmlE."</select></div>";
+    $__typeOptsHtmlE='';
+    foreach($typeOpts as $tk=>$tl){ $__typeOptsHtmlE.='<option value="'.h($tk).'" '.($r['type']===$tk?'selected':'').'>'.h($tl).'</option>'; }
+    echo "<div class='df-form-group'><label class='df-form-label'>Tür</label><select name='type'>".$__typeOptsHtmlE."</select></div>";
+    echo "<div class='df-form-group'><label class='df-form-label'>Numara</label><input name='number' value='".h($r['number'])."'></div>";
+    echo "<div class='df-form-group'><label class='df-form-label'>Tutar</label><input type='number' step='0.01' name='amount' value='".h($r['amount'])."' required></div>";
+    echo "<div class='df-form-group'><label class='df-form-label'>Vade Tarihi</label><input type='date' name='due_date' value='".h($r['due_date'])."'></div>";
+    $__contactOptsHtmlE="<option value=''>Cari seçilmedi</option>";
+    foreach($contacts as $c){ $__contactOptsHtmlE.='<option value="'.$c['id'].'" '.((int)$r['contact_id']===(int)$c['id']?'selected':'').'>'.h($c['name'].' / '.$c['type']).'</option>'; }
+    echo "<div class='df-form-group'><label class='df-form-label'>Cari</label><select name='contact_id'>".$__contactOptsHtmlE."</select></div>";
+    echo "<div class='df-form-group'><label class='df-form-label'>Banka Adı</label><input name='bank_name' value='".h($r['bank_name'])."'></div>";
+    $__statusOptsHtmlE='';
+    foreach($rStatusOpts as $sk=>$sl){ $__statusOptsHtmlE.='<option value="'.h($sk).'" '.($r['status']===$sk?'selected':'').'>'.h($sl).'</option>'; }
+    echo "<div class='df-form-group'><label class='df-form-label'>Durum</label><select name='status' id='cn-status-".$rid."'>".$__statusOptsHtmlE."</select></div>";
+    echo "<div class='df-form-span-2 df-form-group'><label class='df-form-label'>Not</label><textarea name='notes' rows='2'>".h($r['notes'])."</textarea></div>";
+    echo "<div class='df-form-span-2 df-form-group'><label class='df-form-label'>Fotoğraf / Dosya</label>";
+    echo "<input type='file' name='attachment' accept='.jpg,.jpeg,.png,.webp,.gif,.pdf'>";
+    echo "<div class='df-form-help'>Yeni dosya seçilirse eskisinin yerine geçer, boş bırakılırsa mevcut korunur";
+    if(!empty($r['attachment'])) echo " — <a href='".h(base_url().$r['attachment'])."' target='_blank'>Mevcut dosyayı gör</a>";
+    echo "</div></div>";
+    echo "<div class='df-form-span-2'><button class='df-btn df-btn--primary' name='edit_cn' value='1'>💾 Kaydet</button></div>";
     echo "</form>";
     echo "</td></tr>";
     }
 }
-if(!$rows) echo "<tr><td colspan='10' class='muted'>Kayıt yok.</td></tr>";
+if(!$rows) echo "<tr><td colspan='10' style='color:var(--df-ink-500)'>Kayıt yok.</td></tr>";
 ?>
 </tbody>
-</table>
+</table></div>
 </section>
 
+<style>
+body.nav-compact .df-form-grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 var(--df-space-4)}
+body.nav-compact .df-form-span-2{grid-column:1 / -1}
+@media(max-width:640px){body.nav-compact .df-form-grid-2{grid-template-columns:1fr}}
+</style>
 <script>
 // Yön (Alınan/Verilen) değişince Durum seçeneklerinin ETİKETLERİ değişir (değerler aynı kalır) —
 // ör. verilen bir çek için "Portföyde" yerine "Verildi (Bekliyor)" gösterilir (2026-07-03).

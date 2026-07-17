@@ -43,48 +43,38 @@ require_once __DIR__.'/layout_top.php';
 $accounts=$pdo->query("SELECT * FROM finance_accounts WHERE active=1 ORDER BY account_type,name")->fetchAll();
 ?>
 
-<div class="panel-head">
-<h1>Hesaplar Arası Transfer</h1>
-<a class="btn secondary" href="finance_accounts.php">Hesaplar</a>
-</div>
+<?php
+ds_page_header('Hesaplar Arası Transfer', ds_icon('wallet',24), '', ds_button('Hesaplar','finance_accounts.php','secondary','','',true), false, true);
+?>
 
-<?php if($error): ?><div class="alert"><?=h($error)?></div><?php endif; ?>
+<?php if($error): ?><?=ds_alert('danger',$error)?><?php endif; ?>
 
-<section class="panel">
-<form method="post" class="form-grid">
+<section class="df-card">
+<form method="post" class="df-form-grid-2">
 
-<label>Kaynak Hesap
-<select name="from_account_id" required>
-<option value="">Seçiniz</option>
-<?php foreach($accounts as $a): ?>
-<option value="<?=$a['id']?>"><?=h($a['account_type'].' - '.$a['name'].' / '.money($a['current_balance']))?></option>
-<?php endforeach; ?>
-</select>
-</label>
+<?php
+$__fromOpts='<option value="">Seçiniz</option>';
+foreach($accounts as $a){ $__fromOpts.='<option value="'.$a['id'].'">'.h($a['account_type'].' - '.$a['name'].' / '.money($a['current_balance'])).'</option>'; }
+ds_form_field('Kaynak Hesap', '<select name="from_account_id" required>'.$__fromOpts.'</select>');
 
-<label>Hedef Hesap
-<select name="to_account_id" required>
-<option value="">Seçiniz</option>
-<?php foreach($accounts as $a): ?>
-<option value="<?=$a['id']?>" <?=(int)($_GET['to']??0)===(int)$a['id']?'selected':''?>><?=h($a['account_type'].' - '.$a['name'].' / '.money($a['current_balance']))?></option>
-<?php endforeach; ?>
-</select>
-</label>
+$__toOpts='<option value="">Seçiniz</option>';
+foreach($accounts as $a){ $__toOpts.='<option value="'.$a['id'].'" '.((int)($_GET['to']??0)===(int)$a['id']?'selected':'').'>'.h($a['account_type'].' - '.$a['name'].' / '.money($a['current_balance'])).'</option>'; }
+ds_form_field('Hedef Hesap', '<select name="to_account_id" required>'.$__toOpts.'</select>');
 
-<label>Tutar
-<input type="number" step="0.01" name="amount" required>
-</label>
+ds_form_field('Tutar', '<input type="number" step="0.01" name="amount" required>');
+ds_form_field('Tarih', '<input type="date" name="movement_date" value="'.date('Y-m-d').'">');
+?>
 
-<label>Tarih
-<input type="date" name="movement_date" value="<?=date('Y-m-d')?>">
-</label>
+<div class="df-form-span-2"><?php ds_form_field('Açıklama', '<textarea name="description" rows="3"></textarea>'); ?></div>
 
-<label class="full">Açıklama
-<textarea name="description" rows="3"></textarea>
-</label>
-
-<button class="btn">Transfer Yap</button>
+<div class="df-form-span-2"><button class="df-btn df-btn--primary">Transfer Yap</button></div>
 </form>
 </section>
+
+<style>
+body.nav-compact .df-form-grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 var(--df-space-4)}
+body.nav-compact .df-form-span-2{grid-column:1 / -1}
+@media(max-width:640px){body.nav-compact .df-form-grid-2{grid-template-columns:1fr}}
+</style>
 
 <?php require_once __DIR__.'/layout_bottom.php'; ?>
