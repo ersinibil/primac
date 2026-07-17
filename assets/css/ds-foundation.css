@@ -609,16 +609,19 @@ body.nav-compact .df-rail::-webkit-scrollbar-thumb{background:var(--df-hairline)
 
 /* PX-002 FAZ 2B-ii-R EK — Brand Area (2026-07-17). ~56-72px yükseklik bütçesi: .df-rail'in kendi
    üst padding'i (--df-space-4) + bu blok. Logo her zaman brand_icon()'dan gelir (layout_top.php),
-   burada yalnızca kapsayıcı/boyut/hizalama var — dosya adı bu CSS'e hiç bağlı değil. */
-body.nav-compact .df-rail-brand{display:flex;align-items:center;gap:var(--df-space-3);padding:0 var(--df-space-3) var(--df-space-4);margin-bottom:var(--df-space-3);border-bottom:1px solid var(--df-hairline)}
-body.nav-compact .df-rail-brand-mark{width:34px;height:34px;border-radius:var(--df-radius-sm);background:var(--df-surface-sunken);display:flex;align-items:center;justify-content:center;flex:0 0 auto}
-body.nav-compact .df-rail-brand-mark img{width:100%;height:100%;object-fit:contain;padding:5px}
+   burada yalnızca kapsayıcı/boyut/hizalama var — dosya adı bu CSS'e hiç bağlı değil.
+   DEV PASS mikro-UX notu (2026-07-17): mark ~%25 büyütüldü (34→42px), logo/metin arası boşluk
+   artırıldı (--df-space-3→--df-space-4), metin ağırlığı düşürüldü (850→700) — ilk odak marka
+   işareti olsun, yazı onun önüne geçmesin. */
+body.nav-compact .df-rail-brand{display:flex;align-items:center;gap:var(--df-space-4);padding:0 var(--df-space-3) var(--df-space-4);margin-bottom:var(--df-space-3);border-bottom:1px solid var(--df-hairline)}
+body.nav-compact .df-rail-brand-mark{width:42px;height:42px;border-radius:var(--df-radius-sm);background:var(--df-surface-sunken);display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+body.nav-compact .df-rail-brand-mark img{width:100%;height:100%;object-fit:contain;padding:6px}
 /* Product Owner notu (2026-07-17): "PRIMAC OTS yazısını da logo gibi yaz" — düz UI metni değil,
-   kurumsal kimliğin kendi karakterini (geometrik, sıkı harf aralığı, güçlü ağırlık) yansıtan bir
-   wordmark hissi. Yeni bir yazı tipi indirilmedi/gömülmedi (mevcut sistem fontu ile ağırlık +
-   tracking + büyük harf ile elde edildi) — gerçek logo dosyasına hiç dokunulmadı, yalnızca bu
-   metin etiketi. */
-body.nav-compact .df-rail-brand-name{font-size:14.5px;font-weight:850;color:var(--df-ink-900);letter-spacing:.03em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+   kurumsal kimliğin kendi karakterini (geometrik, sıkı harf aralığı) yansıtan bir wordmark hissi,
+   ama marka işaretinin ÖNÜNE geçmeyecek ağırlıkta (DEV PASS notu). Yeni bir yazı tipi indirilmedi/
+   gömülmedi (mevcut sistem fontu ile tracking + büyük harf ile elde edildi) — gerçek logo
+   dosyasına hiç dokunulmadı, yalnızca bu metin etiketi. */
+body.nav-compact .df-rail-brand-name{font-size:13.5px;font-weight:700;color:var(--df-ink-900);letter-spacing:.03em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 body.nav-compact .df-rail-nav{padding:0 var(--df-space-3);flex:1;min-height:0;overflow-y:auto}
 body.nav-compact .df-rail-link{display:flex;align-items:center;gap:var(--df-space-3);padding:10px 12px;border-radius:var(--df-radius-sm);font-size:14px;font-weight:650;color:var(--df-ink-900);text-decoration:none;margin-bottom:var(--df-space-2)}
