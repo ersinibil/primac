@@ -44,12 +44,19 @@ hesap doğru güncelleniyor), hesabın başka personele "taşınmış" olduğu s
 (güvenlik) bağımsız incelemesi PASS — Ece'nin bulduğu 2 gerçek boşluk (guard'ın yetim id
 doğrulamaması, `users.php`'nin korumasız olması) aynı turda kapatıldı, Selin blocker bulmadı.
 
+**Gerçek veri teyidi (2026-07-17, Product Owner'ın primac.tr'de çalıştırdığı salt-okunur teşhis
+scripti sonucu):** kök neden hipotezi gerçek DEV verisinde DOĞRULANDI — `personnel.id=7` (Ersin
+İbil) tam olarak öngörülen mükerrer-hesap durumundaydı: `app_users.id=1` (`ersin`) ve
+`app_users.id=10` (`deneme`) aynı personele bağlı iki aktif hesap, `personnel.user_id` hiç set
+edilmemişti (NULL). Uyumsuz/yetim kayıt bulunmadı (0/0) — tek sorun mükerrerlikti. Düzeltme sonrası
+davranış: `user_id` NULL olduğu için artık deterministik olarak en eski hesaba (`id=1`, `ersin`)
+düşülüyor. Script kullanıldıktan hemen sonra sunucudan silindi.
+
 **Açık kalan (Claude'un erişimi dışında, primac.tr'de Product Owner/test ekibi tarafından
-yapılacak):** gerçek DEV verisinde bu mükerrer-hesap deseninin fiilen var olup olmadığının salt-
-okunur bir teşhis scriptiyle doğrulanması + gerçek bir personel hesabıyla uçtan uca web+mobil
-login testi. Paket: `~/Desktop/PRIMAC-OTS-P0-AUTH-01-Dogrulama-Paketi.pdf`. Bu yüzden madde
-"kod düzeltildi" olarak kapatıldı ama P0-AUTH-01'in kendisi (FAZ 2C-ii USER TEST kapsamında) gerçek
-doğrulama sonucu gelene kadar CLOSED değil — bkz. `memory/backlog.md`.
+yapılacak):** gerçek bir personel hesabıyla uçtan uca web+mobil login testi (Adım B, paket:
+`~/Desktop/PRIMAC-OTS-P0-AUTH-01-Dogrulama-Paketi.pdf`). Bu yüzden madde "kod düzeltildi" olarak
+kapatıldı ama P0-AUTH-01'in kendisi (FAZ 2C-ii USER TEST kapsamında) gerçek login testi sonucu
+gelene kadar CLOSED değil — bkz. `memory/backlog.md`.
 
 **Gelecek için not (migration gerektirir, şimdi yapılmadı):** `app_users.personnel_id`'de DB-
 seviyeli UNIQUE kısıt yok, uygulama-seviyesi guard TOCTOU yarışına karşı tam koruma sağlamıyor
