@@ -294,7 +294,9 @@ function addItemRow(prefill){
         + '<div class="new-prod-box df-card" style="display:none;background:var(--df-accent-soft);border-color:transparent;padding:8px;margin-top:6px">'
         + '<input type="text" class="np-name" placeholder="Ürün adı" style="margin-bottom:6px">'
         + '<button type="button" class="df-btn df-btn--primary df-btn--sm" style="width:100%" onclick="quickAddProductRow(this)">✓ Ekle ve Seç</button>'
-        + '</div></td>'
+        + '</div>'
+        + '<div class="cpa-hint" style="display:none;margin-top:6px;font-size:12px;color:var(--df-accent-soft-ink);background:var(--df-accent-soft);border-radius:var(--df-radius-sm);padding:6px 8px"></div>'
+        + '</td>'
         + '<td style="padding:4px 6px"><input type="number" step="0.01" min="0.01" name="quantity[]" class="row-qty" value="1" required oninput="calcAll()" style="width:80px"></td>'
         + '<td style="padding:4px 6px"><input type="number" step="0.01" min="0" name="unit_price[]" class="row-price" required oninput="calcAll()" style="width:110px"></td>'
         + '<td style="padding:4px 6px"><input type="text" inputmode="decimal" list="vatPresets" name="vat_rate[]" class="row-vat" value="20" oninput="calcAll()" style="width:70px"></td>'
@@ -307,6 +309,7 @@ function addItemRow(prefill){
         tr.querySelector('.row-qty').value = prefill.qty;
         tr.querySelector('.row-price').value = prefill.price;
         tr.querySelector('.row-vat').value = prefill.vat;
+        loadCpaHint(tr, prefill.id);
     }
     calcAll();
 }
@@ -329,8 +332,10 @@ function removeRow(btn){
 function onRowProductChange(sel){
     var tr = sel.closest('tr');
     var box = tr.querySelector('.new-prod-box');
+    var hint = tr.querySelector('.cpa-hint');
     if(sel.value === '__new__'){
         box.style.display = 'block';
+        if(hint) hint.style.display = 'none';
         sel.value = '';
         tr.querySelector('.np-name').focus();
         return;
@@ -341,7 +346,30 @@ function onRowProductChange(sel){
         if(!tr.querySelector('.row-price').value) tr.querySelector('.row-price').value = opt.dataset.price;
         tr.querySelector('.row-vat').value = opt.dataset.vat || 20;
     }
+    loadCpaHint(tr, sel.value);
     calcAll();
+}
+
+// P1 — CPA (2026-07-18): "akıllı öneri" — bu ürün için tanımlı müşteri-tedarikçi tercihlerini
+// bilgilendirici bir ipucu olarak gösterir, HİÇBİR ALANI otomatik doldurmaz/değiştirmez (Product
+// Owner: "öneri zorunlu değil"). purchase.php'de tek bir "cari" alanı zaten tedarikçinin kendisi
+// olduğu için (bu ekranda ayrı bir "müşteri" bağlamı yok), öneri ürün bazlı ve tüm müşteriler
+// için gösterilir — hangi müşteri için hangi tedarikçinin tercih edildiğini görmek satın alma
+// kararını bilgilendirir. Bağlantı hatasında sessizce hiçbir şey göstermez (arka plan ipucu).
+function loadCpaHint(tr, stockItemId){
+    var hint = tr.querySelector('.cpa-hint');
+    if(!hint || !stockItemId){ if(hint) hint.style.display='none'; return; }
+    fetch('cpa_suggest_ajax.php?stock_item_id='+encodeURIComponent(stockItemId))
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+            if(!data.ok || !data.suggestions || !data.suggestions.length){ hint.style.display='none'; return; }
+            var txt = '💡 Tercih edilen tedarikçiler: ' + data.suggestions.map(function(s){
+                return escPurch(s.customer_name) + ' → ' + escPurch(s.supplier_name) + (s.is_default?' (varsayılan)':'');
+            }).join(' · ');
+            hint.innerHTML = txt;
+            hint.style.display = 'block';
+        })
+        .catch(function(){ hint.style.display='none'; });
 }
 
 function quickAddProductRow(btn){

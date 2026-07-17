@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__.'/boot.php';
+require_once __DIR__.'/cpa_lib.php';
 require_login();
 
 $pdo=db();
@@ -203,6 +204,31 @@ if(!$rows) echo "<tr><td colspan='5' class='df-muted'>Tedarikçi tanımlı deği
 </tbody>
 </table></div>
 </section>
+
+<?php if(cpa_can_view()): ?>
+<section class="df-card" style="margin-top:var(--df-space-4)">
+<h2 class="df-section-title">🎯 CPA Kullanımı</h2>
+<p class="df-section-hint" style="margin:0 0 var(--df-space-3)">Bu ürün hangi müşteriler için özel tedarikçi tercihi içeriyor — yönetmek için ilgili cari kartındaki "Tercih Edilen Tedarikçiler (CPA)" bölümü kullanılır.</p>
+<div class="df-table-wrap"><table class="df-table">
+<thead><tr><th>Müşteri</th><th>Tercih Edilen Tedarikçi</th><th>Öncelik</th><th>Varsayılan</th><th>Durum</th></tr></thead>
+<tbody>
+<?php
+$__cpaUsage = cpa_list_for_product($pdo, $id, true);
+foreach($__cpaUsage as $cu){
+    echo "<tr>";
+    echo "<td><a href='contact_view.php?id=".(int)$cu['customer_id']."'>".h($cu['customer_name'] ?: '#'.$cu['customer_id'])."</a></td>";
+    echo "<td>".h($cu['supplier_name'] ?: '#'.$cu['supplier_id'])."</td>";
+    echo "<td>".(int)$cu['priority']."</td>";
+    echo "<td>".($cu['is_default']?ds_badge('Varsayılan','green'):'-')."</td>";
+    echo "<td>".ds_badge($cu['status'])."</td>";
+    echo "</tr>";
+}
+if(!$__cpaUsage) echo "<tr><td colspan='5' class='df-muted'>Bu ürün için tanımlı müşteri-tedarikçi tercihi yok.</td></tr>";
+?>
+</tbody>
+</table></div>
+</section>
+<?php endif; ?>
 
 <section class="df-card" style="margin-top:var(--df-space-4)">
 <h2 class="df-section-title">Stok Hareketleri</h2>

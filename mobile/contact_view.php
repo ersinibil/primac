@@ -1,6 +1,7 @@
 <?php
 require_once 'common.php';
 require_once dirname(__DIR__).'/finance_lib.php';
+require_once dirname(__DIR__).'/cpa_lib.php';
 $pdo=db();
 $id=(int)($_GET['id'] ?? 0);
 
@@ -67,8 +68,24 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['save_contact'])){
     }
     header('Location: contact_view.php?id='.$id.'&err=yetki'); exit;
 }
+
+// P1 — CPA (2026-07-18): web contact_view.php ile aynı iki işlem, aynı cpa_lib.php fonksiyonları.
+// Bu dosyanın mevcut flash-mesaj deseni GET param'a dayanıyor (?ok=1/?err=yetki) — session flash
+// yok, aynı desen izlendi.
+if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['cpa_save'])){
+    try{ cpa_upsert($pdo, $_SESSION['user']['id']??0, $id, $_POST['stock_item_id']??0, $_POST['supplier_id']??0, $_POST['priority']??1, !empty($_POST['is_default']), $_POST['notes']??''); header('Location: contact_view.php?id='.$id.'&cpaok=1'); }
+    catch(Throwable $e){ header('Location: contact_view.php?id='.$id.'&cpaerr='.urlencode($e->getMessage())); }
+    exit;
+}
+if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['cpa_toggle'])){
+    try{ cpa_set_status($pdo, $_SESSION['user']['id']??0, $_POST['cpa_id']??0, $_POST['cpa_toggle']==='activate'?'Aktif':'Pasif'); header('Location: contact_view.php?id='.$id.'&cpaok=1'); }
+    catch(Throwable $e){ header('Location: contact_view.php?id='.$id.'&cpaerr='.urlencode($e->getMessage())); }
+    exit;
+}
 topx('Cari Detay');
 if(!empty($_GET['ok'])) echo ds_alert('success','Cari güncellendi.');
+if(!empty($_GET['cpaok'])) echo ds_alert('success','Tedarik tercihi güncellendi.');
+if(!empty($_GET['cpaerr'])) echo ds_alert('danger',$_GET['cpaerr']);
 if(!empty($_GET['deleted'])) echo ds_alert('success','Finans hareketi silindi, hesap bakiyesi güncellendi.');
 if(!empty($_GET['err']) && $_GET['err']==='yetki') echo ds_alert('danger','Bu işlem için yetkiniz yok.');
 try{
@@ -234,6 +251,60 @@ try{
     <?php endif; ?>
   </div>
   <?php endforeach; ?>
+</div>
+<?php endif; ?>
+
+<?php if(cpa_can_view()): ?>
+<div class="df-panel" style="margin-top:10px">
+  <b>🎯 Tercih Edilen Tedarikçiler (CPA)</b>
+  <p class="df-text-caption" style="margin:4px 0 10px">Ürün bazlı tercih edilen tedarikçiler — satın alma sırasında akıllı öneri olarak kullanılır.</p>
+  <?php
+  $__cpaRowsM = cpa_list_for_customer($pdo, $id, true);
+  foreach($__cpaRowsM as $cr):
+  ?>
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:8px;border-top:1px solid var(--df-hairline);padding-top:8px">
+    <div style="flex:1;min-width:0">
+      <b><?=h($cr['product_name'] ?: '#'.$cr['stock_item_id'])?></b> → <?=h($cr['supplier_name'] ?: '#'.$cr['supplier_id'])?><br>
+      <small class="df-text-caption">Öncelik <?=(int)$cr['priority']?><?=$cr['is_default']?' · Varsayılan':''?> · <?=h($cr['status'])?></small>
+    </div>
+    <?php if(cpa_can_edit()): ?>
+    <form method="post" onsubmit="return confirm('<?=$cr['status']==='Aktif'?'Pasife almak':'Aktif etmek'?> istediğinize emin misiniz?')">
+      <input type="hidden" name="cpa_id" value="<?=(int)$cr['id']?>">
+      <button type="submit" class="df-btn df-btn--secondary df-btn--sm" name="cpa_toggle" value="<?=$cr['status']==='Aktif'?'deactivate':'activate'?>"><?=$cr['status']==='Aktif'?'Pasife Al':'Aktif Et'?></button>
+    </form>
+    <?php endif; ?>
+  </div>
+  <?php endforeach; ?>
+  <?php if(!$__cpaRowsM): ?><p class="df-text-caption" style="margin:8px 0 0">Henüz tercih tanımlanmamış.</p><?php endif; ?>
+
+  <?php if(cpa_can_edit()):
+  $__cpaProductsM = $pdo->query("SELECT id,name FROM stock_items WHERE COALESCE(active,1)=1 ORDER BY name")->fetchAll();
+  $__cpaSuppliersM = $pdo->query("SELECT id,name FROM contacts WHERE type IN ('Tedarikçi','Her İkisi') ORDER BY name")->fetchAll();
+  if(!$__cpaSuppliersM) $__cpaSuppliersM = $pdo->query("SELECT id,name FROM contacts ORDER BY name")->fetchAll();
+  ?>
+  <details style="margin-top:10px">
+    <summary style="cursor:pointer;font-weight:700">➕ Yeni Tercih Ekle</summary>
+    <form method="post" style="margin-top:8px">
+      <input type="hidden" name="cpa_save" value="1">
+      <label>Ürün / Stok Kartı</label>
+      <select name="stock_item_id" required>
+        <option value="">— Ürün seç —</option>
+        <?php foreach($__cpaProductsM as $p): ?><option value="<?=$p['id']?>"><?=h($p['name'])?></option><?php endforeach; ?>
+      </select>
+      <label>Tercih Edilen Tedarikçi</label>
+      <select name="supplier_id" required>
+        <option value="">— Tedarikçi seç —</option>
+        <?php foreach($__cpaSuppliersM as $s): ?><option value="<?=$s['id']?>"><?=h($s['name'])?></option><?php endforeach; ?>
+      </select>
+      <label>Öncelik</label>
+      <input type="number" name="priority" value="1" min="1">
+      <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" name="is_default" value="1" style="width:auto;margin:0"> Bu ürün için varsayılan tedarikçi</label>
+      <label>Açıklama</label>
+      <textarea name="notes" rows="2"></textarea>
+      <button type="submit" class="df-btn df-btn--primary df-btn--lg" style="width:100%;margin-top:8px">Tercihi Kaydet</button>
+    </form>
+  </details>
+  <?php endif; ?>
 </div>
 <?php endif; ?>
 
