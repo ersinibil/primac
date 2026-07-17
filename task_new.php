@@ -54,52 +54,48 @@ $pers=$pdo->query("SELECT id,name,role FROM personnel WHERE COALESCE(active,1)=1
 $jobs=$pdo->query("SELECT id,job_no,title FROM jobs ORDER BY id DESC LIMIT 100")->fetchAll();
 ?>
 
-<h1>İş Ekle</h1>
+<?php ds_page_header('Görev Ekle', ds_icon('calendar',24), '', '', false, true); ?>
 
-<?php if($error): ?><div class="alert"><?=h($error)?></div><?php endif; ?>
-<?php if($ok): ?><div class="ok"><?=h($ok)?></div><?php endif; ?>
+<?php if($error): ?><?=ds_alert('danger',$error)?><?php endif; ?>
+<?php if($ok): ?><?=ds_alert('success',$ok)?><?php endif; ?>
 
-<section class="panel">
-  <form method="post">
-    <label>Personel *</label>
-    <select name="personnel_id" required>
-      <option value="">— Seç —</option>
-      <?php foreach($pers as $p): ?>
-        <option value="<?=(int)$p['id']?>"><?=h($p['name'].($p['role']?' · '.$p['role']:''))?></option>
-      <?php endforeach; ?>
-    </select>
-
-    <label>Görev Başlığı *</label>
-    <input type="text" name="title" value="<?=h($_POST['title']??'')?>" required>
-
-    <label>Açıklama</label>
-    <textarea name="description" rows="3"><?=h($_POST['description']??'')?></textarea>
-
-    <div style="display:flex;gap:16px">
-      <div style="flex:1">
-        <label>Öncelik</label>
-        <select name="priority">
-          <option<?=($_POST['priority']??'Normal')==='Normal'?' selected':''?>>Normal</option>
-          <option<?=($_POST['priority']??'')==='Yüksek'?' selected':''?>>Yüksek</option>
-          <option<?=($_POST['priority']??'')==='Acil'?' selected':''?>>Acil</option>
-        </select>
-      </div>
-      <div style="flex:1">
-        <label>Termin Tarihi</label>
-        <input type="date" name="due_date" value="<?=h($_POST['due_date']??'')?>">
-      </div>
+<section class="df-card">
+  <form method="post" class="df-form-grid-2">
+    <div class="df-form-span-2">
+    <?php
+    $__persOpts='<option value="">— Seç —</option>';
+    foreach($pers as $p){ $__persOpts.='<option value="'.(int)$p['id'].'">'.h($p['name'].($p['role']?' · '.$p['role']:'')).'</option>'; }
+    ds_form_field('Personel *', '<select name="personnel_id" required>'.$__persOpts.'</select>');
+    ?>
     </div>
 
-    <label>İlgili İş (Opsiyonel)</label>
-    <select name="job_id">
-      <option value="">— Yok —</option>
-      <?php foreach($jobs as $j): ?>
-        <option value="<?=(int)$j['id']?>"<?=((int)($_POST['job_id']??0)===(int)$j['id']?' selected':'')?>><?=h($j['job_no'].' · '.$j['title'])?></option>
-      <?php endforeach; ?>
-    </select>
+    <div class="df-form-span-2"><?php ds_form_field('Görev Başlığı *', '<input type="text" name="title" value="'.h($_POST['title']??'').'" required>'); ?></div>
+    <div class="df-form-span-2"><?php ds_form_field('Açıklama', '<textarea name="description" rows="3">'.h($_POST['description']??'').'</textarea>'); ?></div>
 
-    <button class="btn dark" style="width:100%;padding:14px;margin-top:8px">🎯 İşi Ekle & Bildir</button>
+    <?php
+    $__pr=$_POST['priority']??'Normal';
+    $__prOpts='';
+    foreach(['Normal','Yüksek','Acil'] as $__p){ $__prOpts.='<option'.($__pr===$__p?' selected':'').'>'.$__p.'</option>'; }
+    ds_form_field('Öncelik', '<select name="priority">'.$__prOpts.'</select>');
+    ?>
+    <?php ds_form_field('Termin Tarihi', '<input type="date" name="due_date" value="'.h($_POST['due_date']??'').'">'); ?>
+
+    <div class="df-form-span-2">
+    <?php
+    $__jobOpts='<option value="">— Yok —</option>';
+    foreach($jobs as $j){ $__jobOpts.='<option value="'.(int)$j['id'].'"'.((int)($_POST['job_id']??0)===(int)$j['id']?' selected':'').'>'.h($j['job_no'].' · '.$j['title']).'</option>'; }
+    ds_form_field('İlgili İş (Opsiyonel)', '<select name="job_id">'.$__jobOpts.'</select>');
+    ?>
+    </div>
+
+    <div class="df-form-span-2"><button class="df-btn df-btn--primary df-btn--lg" style="width:100%"><?=ds_icon('calendar',16)?> İşi Ekle &amp; Bildir</button></div>
   </form>
 </section>
+
+<style>
+body.nav-compact .df-form-grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 var(--df-space-4)}
+body.nav-compact .df-form-span-2{grid-column:1 / -1}
+@media(max-width:640px){body.nav-compact .df-form-grid-2{grid-template-columns:1fr}}
+</style>
 
 <?php require_once __DIR__.'/layout_bottom.php'; ?>
