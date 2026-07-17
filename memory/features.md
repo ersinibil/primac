@@ -2,6 +2,67 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
+## FAZ 2B-ii-R/2b — Akıllı Arama (2026-07-17, henüz commit edilmedi — bu turun sonunda)
+Product Owner, R/2'nin USER TEST'inde `whatsapp`/`what`/`wha` için ekran görüntüleriyle 0 sonucu
+bizzat doğruladıktan sonra ("Bulgu nettir... R/2 USER TEST PASS. R/2 kapanmıştır.") R/2b'yi
+doğrudan başlattı — tam spec (9 madde) [[backlog]]'ta zaten kayıtlıydı, bu turda uygulandı.
+
+**Kapsam — yalnızca `search_run()`'ın 'pages' (modül/sayfa kısayolu) katmanı değişti, jobs/
+contacts/stock/... LIKE tabanlı kayıt sorguları HİÇ dokunulmadı (bilinçli karar — Product Owner'ın
+kendi ifadesiyle "SQL LIKE'ı geliştirmek değil, üstüne yeni bir katman").**
+
+- **`search_normalize()`** (search_lib.php, yeni) — ş/ğ/ı/ö/ü/ç → s/g/i/o/u/c, Türkçe İ/I → i
+  (mb_strtolower'ın noktalı-ı artefaktı önlendi, sıra: önce İ/I değişimi, sonra mb_strtolower,
+  sonra diğer harflerin foldingi).
+- **`search_module_score()`** (yeni) — 5 kademeli eşleşme: 0=kanonik tam eşleşme, 1=alias tam
+  eşleşme, 2=prefix (iki yönlü — hem "wha"→"whatsapp" hem "stok az"→"stok"), 3=kısmi/içerme (iki
+  yönlü), 4=fuzzy (Levenshtein, sorgu uzunluğuna göre eşik 1-2). Kısa sorgularda (prefix<2,
+  kısmi<3, fuzzy<4 karakter) ilgili kademe hiç denenmiyor — aşırı geniş eşleşme önlendi.
+  Levenshtein byte-bazlı çalıştığı için normalize sonrası kalan (Türkçe-dışı) çok-baytlı
+  karakterlerde teorik sapma olabilir — `nav_taxonomy()` etiketleri sabit/geliştirici kontrollü
+  olduğu için pratikte risksiz (Ece'nin incelemesinde teyit edildi).
+- **`search_module_shortcuts()`** (yeni) — `nav_lib.php::nav_search_index()`'in (PX-002 FAZ 2B-i'de
+  eklenmiş ama bu ana kadar **0 canlı çağrısı** olan TEK KAYNAK modül kataloğu) üstünde çalışıyor;
+  yeni bir modül/URL listesi tekrar tanımlanmadı (PARITY-003 sınıfı sapma riski açılmadı). Sonuçlar
+  skor kademesine göre sıralanıp ilk 8'e kırpılıyor.
+- **`search_run($pdo, $q, $platform='web')`** — 3. parametre eklendi (geriye dönük uyumlu, web
+  çağrı siteleri değişmedi). `mobile/search.php` artık `search_run($pdo,$q,'mobile')` çağırıyor ki
+  `nav_search_index()`'in `mobileHide` filtresi doğru platformla uygulansın.
+- **`search.php` + `mobile/search.php`**: elle yazılmış 4 girdilik `$pageTargets` haritaları
+  kaldırıldı, href artık `nav_module_by_key()+nav_url_for_platform()` üzerinden (TEK KAYNAK)
+  çözülüyor.
+- **Alias sözlüğü genişletmesi** (`nav_lib.php::nav_taxonomy()`, yalnızca `searchKeywords` dizileri
+  büyüdü, `perm`/`adminOnly` hiçbiri değişmedi — Selin'in incelemesinde satır satır teyit edildi):
+  `wa_conversations` +wp/wa/mesaj/sohbet/chat, `personnel` +maaş/çalışan, `contacts`
+  +firma/şirket/borç, `teklif` +fiyat/proforma/quotation — spec'in kendi örnek listeleriyle birebir.
+- **Yan bulgu/düzeltme:** arama genişlemesi `nav_taxonomy()`'de önceden fark edilmemiş bir mobil
+  parite boşluğunu açığa çıkardı — `dashboard`/`takvim`/`notes` kayıtlarının web dosya adından
+  farklı mobil karşılıkları (index.php/calendar.php/mytasks.php) `mobileUrl` alanında hiç kayıtlı
+  değildi (bu üç kayıt `primary=true` olduğu için Launcher/pin listelerinde zaten filtrelendiğinden
+  bug'ın kendisi bugüne kadar hiç görünür olmamıştı — `nav_search_index()` bu filtreyi
+  uygulamadığı için yeni arama özelliği bunu ilk kez görünür kılıyordu). Üçüne de `mobileUrl`
+  eklendi, aksi halde bu üç kayıt arama sonucunda mobilde 404 verirdi.
+
+**Kapsam dışı bırakılanlar (bilinçli):** Türkçe normalizasyon yalnızca bu yeni modül/sayfa
+kısayolu katmanında — jobs/contacts/stock/... alanlarındaki LIKE sorgularının kendisi/collation'ı
+DEĞİŞMEDİ (spec'in "sube→Şube" gibi genel örnekleri kayıt içeriği için değil, yalnızca modül
+tanıma için karşılanıyor). "Çapraz modül sonuçları" (madde 6, örn. "Mehmet") zaten mevcut
+mimarinin (her tablo kendi LIKE sorgusuyla, hepsi aynı ekranda) doğal sonucu — ayrı kod
+gerektirmedi. "stok az → Kritik Stok" için ayrı bir ekran yok (yalnızca "Stok Kontrol Et" önerilir,
+gerçek bir "Kritik Stok" sayfası icat edilmedi).
+
+**Doğrulama:** DB'siz test scripti (gerçek `nav_lib.php`/`search_lib.php` fonksiyonları) — Product
+Owner'ın 9 test terimi (whatsapp/what/wha/wa/mesaj/stok/teklif/cari/personel) + stres testleri
+(watsapp/whatsup/whtsapp/stokk/teklf/maaş/borç/"stok az") hepsi doğru modüle eşleşti; yetkisiz
+kullanıcı testi (0 sonuç), mobileHide platform testi (design.php web'de var/mobilde yok — doğru
+filtrelendi), XSS payload testi (crash yok) ayrıca yapıldı. `search_run()` uçtan uca SQLite stub
+PDO ile duman testinden geçti (15 anahtar sağlam, fatal hata yok). Ece (kod) ve Selin (güvenlik)
+incelemesi: **kritik/yüksek bulgu yok** — yetki filtreleri (`nav_search_index()`'in
+adminOnly→perm→mobileHide sırası menüyle birebir), XSS kaçırma (href+label h()/htmlspecialchars),
+IDOR alanları (notes/messages, bu turda dokunulmadı) doğrulandı.
+
+**Sıradaki:** Product Owner'ın gerçek cihaz/kullanıcı USER TEST'i (9 terim + serbest deneme).
+
 ## FAZ 2B-ii-R/2 — Search Referans Ekran Dönüşümü (2026-07-17, commit `9168999`)
 `search.php` ilk kez `$__navMode` compact/legacy ayrımı kazandı (önceki tüm P0 sayfalar gibi
 navMode'dan bağımsızdı). Legacy dal, 2026-07-04'ten beri var olan markup'ın satır satır aynısı
@@ -23,7 +84,21 @@ headless Chrome screenshot — 1440px masaüstü ve 390px mobil-genişlik, 3 dur
 sorgu/sonuçsuz), XSS payload + Türkçe karakter + tırnak testleri. 15 href hedefi tek tek orijinal
 legacy koduyla karşılaştırıldı, hepsi birebir aynı.
 
-**Sıradaki:** FAZ 2B-ii-R/2b (akıllı arama — fuzzy/alias) — Product Owner DEV PASS'i bekleniyor.
+**Product Owner değerlendirmesi (2026-07-17): UI tasarımı DEV PASS.** Home ile aynı tasarım
+dili, liste kartları/boş durum/sonuç yapısı önceki ekrana göre belirgin iyileşme olarak kabul
+edildi. **Ancak faz tamamen KAPANMADI** — gerekçe: "wha" gibi kısmi/kısaltma sorgularının 0 sonuç
+dönmesi teknik olarak doğru (mevcut algoritma tam/LIKE eşleşme yapıyor) ama ürün deneyimi
+açısından yetersiz bulundu ("Search yalnızca SQL LIKE değildir"). R/2 kapanışı için planlanan
+USER TEST'te ekran görüntüleriyle birlikte şu terimler de denenecek: `whatsapp`, `what`, `wha`,
+`wa`, `mesaj`, `stok`, `teklif`, `cari`, `personel`. Mevcut algoritmanın bunları döndürmemesi
+kabul edilebilir bulunacak (R/2 kapsamı yalnızca ekran/render dönüşümüydü, arama algoritması
+bilinçli olarak dokunulmadı) — ama bu, R/2b'nin (akıllı arama) birinci ve öncelikli maddesi
+olarak resmen belgelendi.
+
+**R/2 USER TEST PASS (2026-07-17):** Product Owner whatsapp/what/wha için ekran görüntüleriyle
+0 sonucu bizzat doğruladı ("Bulgu nettir ve Product Owner değerlendirmesini doğrulamaktadır...
+R/2 USER TEST PASS. R/2 kapanmıştır.") ve R/2b'yi doğrudan başlattı — bkz. yukarıda
+"FAZ 2B-ii-R/2b — Akıllı Arama". **R/2 CLOSED.**
 
 ## FAZ 2B-ii-R/1 — Ortak Helper Katmanı (2026-07-17, commit `6e14cf5`)
 `ds_lib.php`'ye 2 yeni fonksiyon: `ds_list_item()` (DF-ListItem — mevcut `.df-list-row` CSS'ini

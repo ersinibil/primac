@@ -6,11 +6,16 @@ $pdo = db();
 
 /* ═══════════════════════════════════════════════════════════════════════
  * FAZ 2B-ii-R/2 (2026-07-17) — SEARCH REFERANS EKRAN DÖNÜŞÜMÜ.
- * Yalnızca RENDER katmanı değişti — search_run()/search_hl()/$pageTargets hiçbiri dokunulmadı,
- * arama algoritması/yetki filtreleri/URL yapıları R/2 kapsamı dışında (Product Owner kuralı 1).
- * Legacy dal (aşağıdaki else:) 2026-07-04'ten beri var olan orijinal markup'ın BİREBİR kopyası.
+ * Yalnızca RENDER katmanı değişti — search_run()/search_hl() dokunulmadı, arama algoritması/yetki
+ * filtreleri/URL yapıları R/2 kapsamı dışında (Product Owner kuralı 1). Legacy dal (aşağıdaki
+ * else:) 2026-07-04'ten beri var olan orijinal markup'ın BİREBİR kopyası.
+ *
+ * FAZ 2B-ii-R/2b (2026-07-17) — AKILLI ARAMA. Elle yazılmış $pageTargets haritası (4 sabit girdi)
+ * KALDIRILDI — 'pages' artık nav_lib.php::nav_search_index()'in TEK KAYNAK kataloğuna bağlı
+ * (search_module_shortcuts()), href de aynı tek kaynaktan (nav_module_by_key()+
+ * nav_url_for_platform()) çözülüyor. Elle kopyalanmış bir URL haritasının zamanla sapması
+ * (PARITY-003 sınıfı hata) burada bir daha açılmadı.
  * ═══════════════════════════════════════════════════════════════════════ */
-$pageTargets = ['contacts_report'=>'contacts_report.php', 'report'=>'report.php', 'accounting'=>'accounting.php', 'takvim'=>'takvim.php'];
 
 if ($__navMode !== 'legacy'): // ── COMPACT ──────────────────────────────────────────────────
 
@@ -44,7 +49,7 @@ else:
         if ($pages): ?>
         <div class="df-text-section" style="margin-bottom:var(--df-space-2)">Sayfalar (<?=count($pages)?>)</div>
         <div class="df-list" style="margin-bottom:var(--df-space-5)">
-        <?php foreach($pages as $pg): $href = $pageTargets[$pg['target']] ?? null; if (!$href) continue;
+        <?php foreach($pages as $pg): $__navItem = nav_module_by_key($pg['target']); $href = $__navItem ? nav_url_for_platform($__navItem, 'web') : null; if (!$href) continue;
             ds_list_item(h($pg['label']), $href);
         endforeach; ?>
         </div>
@@ -265,7 +270,7 @@ else:
 <div class="panel" style="margin-bottom:20px">
     <div style="font-weight:900;font-size:16px;margin-bottom:12px">🔗 Sayfalar (<?=count($pages)?>)</div>
     <table style="width:100%;border-collapse:collapse">
-    <?php foreach($pages as $pg): $href = $pageTargets[$pg['target']] ?? null; if (!$href) continue; ?>
+    <?php foreach($pages as $pg): $__navItem = nav_module_by_key($pg['target']); $href = $__navItem ? nav_url_for_platform($__navItem, 'web') : null; if (!$href) continue; ?>
     <tr style="border-bottom:1px solid #f1f5f9">
         <td style="padding:10px 8px">
             <a href="<?=htmlspecialchars($href)?>" style="color:#101828;text-decoration:none;font-weight:700">

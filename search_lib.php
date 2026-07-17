@@ -9,6 +9,80 @@
 //   - Stok: `sku`/`description` yok → gerçek kolonlar `product_code`/`barcode`/`notes` (004_stock_products.sql).
 // Yani "İşler" dışındaki neredeyse tüm bölümler hep boş dönüyordu. Hepsi aşağıda düzeltildi.
 
+// FAZ 2B-ii-R/2b (2026-07-17) — AKILLI ARAMA. Product Owner kararı: "Search yalnızca SQL LIKE
+// değildir." Bu katman search_run()'ın kayıt bazlı LIKE sorgularına (jobs/contacts/stock/... —
+// hiçbiri bu turda DEĞİŞMEDİ, bilinçli kapsam kararı) DOKUNMAZ; yalnızca 'pages' (modül/sayfa
+// kısayolu) katmanını nav_lib.php::nav_search_index()'in TEK KAYNAK modül kataloğuna bağlar ve
+// üstüne Türkçe normalizasyon + prefix + kısmi + fuzzy (Levenshtein) eşleşme ekler. Yeni bir
+// modül/URL listesi burada TEKRAR TANIMLANMAZ — PARITY-003'ün (bkz. memory/backlog.md) önlediği
+// "elle kopyalanan URL haritası zamanla sapar" hatasını burada yeniden açmamak için.
+if (!function_exists('search_normalize')) {
+    // ş/ğ/ı/ö/ü/ç -> s/g/i/o/u/c, Türkçe İ/I -> i (mb_strtolower'ın noktalı-ı artefaktını önler).
+    // Yalnızca bu dosyadaki PHP-taraflı alias/fuzzy karşılaştırmasını etkiler — DB sorgularının
+    // LIKE/collation davranışı DEĞİŞMEDİ (bilinçli kapsam kararı, R/2b teslim notunda işlendi).
+    function search_normalize($s) {
+        $s = (string)$s;
+        $s = str_replace(['İ','I'], ['i','i'], $s);
+        $s = mb_strtolower($s, 'UTF-8');
+        return trim(strtr($s, ['ş'=>'s','ğ'=>'g','ı'=>'i','ö'=>'o','ü'=>'u','ç'=>'c']));
+    }
+}
+
+if (!function_exists('search_module_score')) {
+    // Normalize edilmiş sorgu ($qNorm) ile tek bir anahtar kelimenin ($kwNorm) eşleşme kademesi.
+    // Küçük sayı = güçlü eşleşme: 0=tam eşleşme (kanonik ad), 1=tam eşleşme (alias),
+    // 2=prefix (iki yönlü — "wha"->"whatsapp" ve "stok az"->"stok"), 3=kısmi/içerme (iki yönlü),
+    // 4=fuzzy (Levenshtein, küçük yazım hataları). Eşleşme yoksa null.
+    function search_module_score($qNorm, $kwNorm, $isCanonical) {
+        if ($qNorm === '' || $kwNorm === '') return null;
+        if ($qNorm === $kwNorm) return $isCanonical ? 0 : 1;
+        $qLen = mb_strlen($qNorm, 'UTF-8'); $kwLen = mb_strlen($kwNorm, 'UTF-8');
+        if ($qLen >= 2 && $kwLen >= 2 && (strpos($kwNorm, $qNorm) === 0 || strpos($qNorm, $kwNorm) === 0)) return 2;
+        if ($qLen >= 3 && $kwLen >= 3 && (strpos($kwNorm, $qNorm) !== false || strpos($qNorm, $kwNorm) !== false)) return 3;
+        if ($qLen >= 4 && $qLen <= 40 && $kwLen <= 40 && levenshtein($qNorm, $kwNorm) <= ($qLen <= 5 ? 1 : 2)) return 4;
+        return null;
+    }
+}
+
+if (!function_exists('search_module_shortcuts')) {
+    /**
+     * Modül/sayfa kısayolu sonuçları — search_run()'ın 'pages' anahtarını besler. $canSee/$isAdmin/
+     * $platform tıpkı nav_search_index() gibi (yetkisiz/platformda gizli hedef ASLA girmez).
+     * @return array<int, array{label:string, icon:string, target:string}> target = nav_taxonomy() key'i
+     *   (tüketici sayfa nav_module_by_key()+nav_url_for_platform() ile gerçek href'e çevirir).
+     */
+    function search_module_shortcuts($q, $canSee, $isAdmin, $platform = 'web') {
+        $qNorm = search_normalize($q);
+        if ($qNorm === '' || mb_strlen($qNorm, 'UTF-8') < 2) return [];
+        if (!function_exists('nav_search_index')) return [];
+
+        // Kategori bazlı emoji (legacy web + mobil dalları hâlâ $pg['icon']'u ham basıyor — bkz.
+        // mobile/search.php satır ~40, search.php legacy dalı — compact web dalı zaten hiçbir liste
+        // satırında ikon basmıyor, ds_list_item()'a icon parametresi bu turda EKLENMEDİ, kapsam dışı).
+        $catIcon = ['isler'=>'📋', 'ticaret'=>'🧾', 'uretim_stok'=>'📦', 'finans'=>'💰', 'yonetim'=>'⚙️'];
+        $keyIcon = ['dashboard'=>'🏠', 'messages'=>'💬', 'notifications'=>'🔔', 'wa_conversations'=>'💬', 'profile'=>'👤'];
+
+        $scored = [];
+        foreach (nav_search_index($canSee, $isAdmin, $platform) as $entry) {
+            $best = search_module_score($qNorm, search_normalize($entry['actionLabel']), true);
+            foreach ($entry['keywords'] as $kw) {
+                $s = search_module_score($qNorm, search_normalize($kw), false);
+                if ($s !== null && ($best === null || $s < $best)) $best = $s;
+            }
+            if ($best !== null) $scored[] = ['tier' => $best, 'entry' => $entry];
+        }
+        usort($scored, function($a, $b) {
+            return $a['tier'] !== $b['tier'] ? $a['tier'] <=> $b['tier'] : strcmp($a['entry']['actionLabel'], $b['entry']['actionLabel']);
+        });
+        $out = [];
+        foreach (array_slice($scored, 0, 8) as $s) {
+            $e = $s['entry'];
+            $out[] = ['label' => $e['actionLabel'], 'icon' => $keyIcon[$e['key']] ?? ($catIcon[$e['categoryKey']] ?? '🔗'), 'target' => $e['key']];
+        }
+        return $out;
+    }
+}
+
 if (!function_exists('search_hl')) {
     // Eşleşen kısmı <mark> ile vurgular. $text zaten htmlspecialchars'lanır (çağıran taraf tekrar kaçırmasın).
     function search_hl($text, $q) {
@@ -24,9 +98,13 @@ if (!function_exists('search_run')) {
     /**
      * Tüm modüllerde arama yapar, ham satırları döner (HTML/link üretmez — bunu çağıran sayfa yapar,
      * çünkü web ve mobil detay sayfalarının URL'leri farklı).
+     * $platform (FAZ 2B-ii-R/2b, 2026-07-17): 'web'|'mobile' — yalnızca 'pages' katmanının
+     * nav_search_index()'i (mobileHide filtresi) doğru platformla sorgulaması için. Varsayılan
+     * 'web' — mevcut web çağrı siteleri (search.php x2) DEĞİŞMEDİ, yalnızca mobile/search.php
+     * kendi çağrısına 'mobile' eklemesi gerekti (bkz. features.md R/2b notu).
      * @return array{jobs:array,contacts:array,stock:array,personnel:array,accounts:array,movements:array,checks:array,quotes:array,documents:array,files:array,tasks:array,users:array,notes:array,messages:array,pages:array}
      */
-    function search_run(PDO $pdo, $q) {
+    function search_run(PDO $pdo, $q, $platform = 'web') {
         $q = trim((string)$q);
         $out = ['jobs'=>[], 'contacts'=>[], 'stock'=>[], 'personnel'=>[], 'accounts'=>[], 'movements'=>[], 'checks'=>[], 'quotes'=>[], 'documents'=>[], 'files'=>[], 'tasks'=>[], 'users'=>[], 'notes'=>[], 'messages'=>[], 'pages'=>[]];
         if ($q === '') return $out;
@@ -254,22 +332,17 @@ if (!function_exists('search_run')) {
             }
         } catch (Throwable $e) {} }
 
-        // Sayfa kısayolları — veri satırı değil, doğrudan bir ekrana yönlendirme. Kullanıcı "ekstre"/
-        // "rapor" gibi bir SAYFA adı yazdığında hiçbir veri satırıyla eşleşmediği için (isim hiçbir
-        // kayıtta geçmiyor) sonuç hep boş dönüyordu — 2026-07-03 kullanıcı isteği: "arama kutusuna
-        // her şey bağlı olsun". Web/mobil URL'leri farklı olduğu için burada sadece anahtar/etiket/
-        // ikon döner, gerçek href'i çağıran sayfa (search.php / mobile/search.php) kendi rotasına göre kurar.
-        $pageCatalog = [
-            ['keys'=>['ekstre','ekstresi','cari ekstre'], 'label'=>'Cari Raporu / Toplu Ekstre', 'icon'=>'📊', 'target'=>'contacts_report', 'perm'=>'contacts'],
-            ['keys'=>['rapor','raporlar','raporu'],       'label'=>'Genel Özet Rapor',            'icon'=>'📊', 'target'=>'report',           'perm'=>'report'],
-            ['keys'=>['muhasebe','muhasebe kayıtları'],   'label'=>'Muhasebe Kayıtları',          'icon'=>'📒', 'target'=>'accounting',       'perm'=>'muhasebe'],
-            ['keys'=>['takvim'],                          'label'=>'Takvim',                      'icon'=>'📅', 'target'=>'takvim',           'perm'=>'jobs'],
-        ];
-        foreach ($pageCatalog as $pg) {
-            if (!in_array($qNorm, $pg['keys'], true)) continue;
-            if (function_exists('user_can') && !user_can($pg['perm'])) continue;
-            $out['pages'][] = ['label'=>$pg['label'], 'icon'=>$pg['icon'], 'target'=>$pg['target']];
-        }
+        // Sayfa kısayolları — veri satırı değil, doğrudan bir ekrana yönlendirme. 2026-07-03'te
+        // 4 elle-yazılmış girdiyle başladı (ekstre/rapor/muhasebe/takvim); FAZ 2B-ii-R/2b'de TÜM
+        // nav_taxonomy() kataloğuna (Türkçe-normalize + prefix + kısmi + fuzzy eşleşmeli) genişledi
+        // — bkz. search_module_shortcuts(). Web/mobil URL'leri farklı olduğu için burada sadece
+        // anahtar/etiket/ikon döner, gerçek href'i çağıran sayfa kendi platformuna göre kurar.
+        $out['pages'] = search_module_shortcuts(
+            $q,
+            function($p) { return function_exists('user_can') && user_can($p); },
+            function_exists('is_admin') && is_admin(),
+            $platform
+        );
 
         return $out;
     }

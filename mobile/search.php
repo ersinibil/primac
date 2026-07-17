@@ -17,14 +17,16 @@ topx('Arama');
     <p>İş no, müşteri adı, banka/kart, işlem, çek/senet, teklif, belge, ürün, personel, görev, kullanıcı, not veya mesaj metni girin.</p>
 </div>
 <?php else:
-    $r = search_run($pdo, $q);
+    $r = search_run($pdo, $q, 'mobile');
     $jobs = $r['jobs']; $contacts = $r['contacts']; $stock = $r['stock']; $personnel = $r['personnel'];
     $accounts = $r['accounts']; $movements = $r['movements']; $checks = $r['checks']; $quotes = $r['quotes'];
     $documents = $r['documents']; $pages = $r['pages'];
     $files = $r['files']; $tasks = $r['tasks']; $users = $r['users']; $notes = $r['notes']; $messages = $r['messages'];
     $found = search_total_count($r);
-    // Web'den farklı: mobil dosya adları kendi rotasına göre kurulur (takvim -> calendar.php).
-    $pageTargets = ['contacts_report'=>'contacts_report.php', 'report'=>'report.php', 'accounting'=>'accounting.php', 'takvim'=>'calendar.php'];
+    // FAZ 2B-ii-R/2b (2026-07-17): elle yazılmış $pageTargets (4 sabit girdi) kaldırıldı — href
+    // artık nav_lib.php::nav_module_by_key()+nav_url_for_platform('mobile') üzerinden çözülüyor
+    // (TEK KAYNAK, PARITY-003 sınıfı sapma riski yok). search_run()'a 3. parametre olarak 'mobile'
+    // verildi ki nav_search_index() mobileHide filtresini doğru platformla uygulasın.
 ?>
 <p class="small" style="margin:10px 2px">"<b><?=htmlspecialchars($q)?></b>" için <?=$found?> sonuç</p>
 
@@ -37,7 +39,7 @@ topx('Arama');
 
 <?php if ($pages): ?>
 <div class="panel"><b>🔗 Sayfalar (<?=count($pages)?>)</b>
-<?php foreach($pages as $pg): $href = $pageTargets[$pg['target']] ?? null; if (!$href) continue; ?>
+<?php foreach($pages as $pg): $__navItem = nav_module_by_key($pg['target']); $href = $__navItem ? nav_url_for_platform($__navItem, 'mobile') : null; if (!$href) continue; ?>
     <a class="item" href="<?=htmlspecialchars($href)?>">
         <b><?=$pg['icon']?> <?=htmlspecialchars($pg['label'])?></b>
     </a>
