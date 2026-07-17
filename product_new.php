@@ -54,39 +54,73 @@ $units=$pdo->query("SELECT * FROM product_units WHERE active=1 ORDER BY name")->
 $suppliers=$pdo->query("SELECT * FROM contacts WHERE type IN ('Tedarikçi','Her İkisi') ORDER BY name")->fetchAll();
 ?>
 
-<div class="panel-head">
-<h1>Yeni Ürün / Stok Kartı</h1>
-<div class="actions">
-<a class="btn secondary" href="stock.php">Stok Listesi</a>
-<a class="btn secondary" href="product_categories.php">+ Kategori</a>
-<a class="btn secondary" href="product_taxonomy.php">+ Marka/Birim</a>
+<?php
+// RELEASE 0.9 — DS Migration (2026-07-17): render katmanı ds_lib.php desenine taşındı, POST/iş
+// mantığı (yukarısı) HİÇ değişmedi — sadece HTML/CSS.
+$__actions = ds_button('Stok Listesi','stock.php','secondary','','',true)
+    .ds_button('+ Kategori','product_categories.php','secondary','','',true)
+    .ds_button('+ Marka/Birim','product_taxonomy.php','secondary','','',true);
+ds_page_header('Yeni Ürün / Stok Kartı', ds_icon('box',24), '', $__actions, false, true);
+?>
+
+<?php if($error): ?><?=ds_alert('danger',$error)?><?php endif; ?>
+
+<section class="df-card">
+<form method="post" class="df-form-grid-2">
+
+<?php ds_form_field('Ürün Kodu', '<input name="product_code" placeholder="Boş bırakılırsa otomatik oluşur">'); ?>
+<?php ds_form_field('Barkod', '<input name="barcode">'); ?>
+<?php ds_form_field('Ürün Adı', '<input name="name" required>'); ?>
+<?php ds_form_field('Varyant / Çeşit', '<input name="variant_name">'); ?>
+
+<?php
+$__brandOpts='<option value="">Marka seç</option>';
+foreach($brands as $b){ $__brandOpts.='<option value="'.(int)$b['id'].'">'.h($b['name']).'</option>'; }
+ds_form_field('Marka', '<select name="brand_id">'.$__brandOpts.'</select>');
+
+$__catOpts='<option value="">Kategori seç</option>';
+foreach($categories as $c){ $__catOpts.='<option value="'.(int)$c['id'].'">'.h(($c['parent_name'] ? $c['parent_name'].' / ' : '').$c['name']).'</option>'; }
+ds_form_field('Kategori', '<select name="category_id">'.$__catOpts.'</select>');
+
+$__unitOpts='<option value="">Seç</option>';
+foreach($units as $u){ $__unitOpts.='<option value="'.(int)$u['id'].'">'.h($u['name'].' / '.$u['short_name']).'</option>'; }
+ds_form_field('Birim', '<select name="unit_id">'.$__unitOpts.'</select>');
+?>
+
+<?php ds_form_field('Başlangıç Stok', '<input type="number" step="0.001" name="quantity" value="0">'); ?>
+<?php ds_form_field('Kritik Seviye', '<input type="number" step="0.001" name="critical_level" value="0">'); ?>
+<?php ds_form_field('Maksimum Stok', '<input type="number" step="0.001" name="max_stock" value="0">'); ?>
+<?php ds_form_field('Raf Kodu', '<input name="shelf_code">'); ?>
+<?php ds_form_field('Depo', '<input name="warehouse">'); ?>
+<?php ds_form_field('KDV %', '<input type="number" step="0.01" name="vat_rate" value="20">'); ?>
+<?php ds_form_field('Alış Fiyatı', '<input type="number" step="0.01" name="purchase_price" value="0">'); ?>
+<?php ds_form_field('Satış Fiyatı', '<input type="number" step="0.01" name="sale_price" value="0">'); ?>
+<?php ds_form_field('Para Birimi', '<select name="currency"><option>TRY</option><option>USD</option><option>EUR</option></select>'); ?>
+
+<div class="df-form-span-2">
+<?php
+$__supOpts='<option value="">Seçiniz</option>';
+foreach($suppliers as $s){ $__supOpts.='<option value="'.(int)$s['id'].'">'.h($s['name']).'</option>'; }
+ds_form_field('Varsayılan Tedarikçi', '<select name="default_supplier_id">'.$__supOpts.'</select>');
+?>
 </div>
+<div class="df-form-span-2"><?php ds_form_field('Notlar', '<textarea name="notes" rows="3"></textarea>'); ?></div>
+
+<div class="df-form-span-2">
+<label style="display:flex;align-items:center;gap:8px;font-size:var(--df-type-body-size);color:var(--df-ink-900)">
+<input type="checkbox" name="active" checked style="width:auto"> Aktif ürün
+</label>
 </div>
 
-<?php if($error): ?><div class="alert"><?=h($error)?></div><?php endif; ?>
+<div class="df-form-span-2"><button class="df-btn df-btn--primary">Ürünü Kaydet</button></div>
 
-<section class="panel">
-<form method="post" class="form-grid">
-<label>Ürün Kodu<input name="product_code" placeholder="Boş bırakılırsa otomatik oluşur"></label>
-<label>Barkod<input name="barcode"></label>
-<label>Ürün Adı<input name="name" required></label>
-<label>Varyant / Çeşit<input name="variant_name"></label>
-<label>Marka<select name="brand_id"><option value="">Marka seç</option><?php foreach($brands as $b): ?><option value="<?=$b['id']?>"><?=h($b['name'])?></option><?php endforeach; ?></select></label>
-<label>Kategori<select name="category_id"><option value="">Kategori seç</option><?php foreach($categories as $c): ?><option value="<?=$c['id']?>"><?=h(($c['parent_name'] ? $c['parent_name'].' / ' : '').$c['name'])?></option><?php endforeach; ?></select></label>
-<label>Birim<select name="unit_id"><option value="">Seç</option><?php foreach($units as $u): ?><option value="<?=$u['id']?>"><?=h($u['name'].' / '.$u['short_name'])?></option><?php endforeach; ?></select></label>
-<label>Başlangıç Stok<input type="number" step="0.001" name="quantity" value="0"></label>
-<label>Kritik Seviye<input type="number" step="0.001" name="critical_level" value="0"></label>
-<label>Maksimum Stok<input type="number" step="0.001" name="max_stock" value="0"></label>
-<label>Raf Kodu<input name="shelf_code"></label>
-<label>Depo<input name="warehouse"></label>
-<label>KDV %<input type="number" step="0.01" name="vat_rate" value="20"></label>
-<label>Alış Fiyatı<input type="number" step="0.01" name="purchase_price" value="0"></label>
-<label>Satış Fiyatı<input type="number" step="0.01" name="sale_price" value="0"></label>
-<label>Para Birimi<select name="currency"><option>TRY</option><option>USD</option><option>EUR</option></select></label>
-<label class="full">Varsayılan Tedarikçi<select name="default_supplier_id"><option value="">Seçiniz</option><?php foreach($suppliers as $s): ?><option value="<?=$s['id']?>"><?=h($s['name'])?></option><?php endforeach; ?></select></label>
-<label class="full">Notlar<textarea name="notes" rows="3"></textarea></label>
-<label class="full"><input type="checkbox" name="active" checked style="width:auto"> Aktif ürün</label>
-<button class="btn">Ürünü Kaydet</button>
 </form>
 </section>
+
+<style>
+body.nav-compact .df-form-grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 var(--df-space-4)}
+body.nav-compact .df-form-span-2{grid-column:1 / -1}
+@media(max-width:640px){body.nav-compact .df-form-grid-2{grid-template-columns:1fr}}
+</style>
+
 <?php require_once __DIR__.'/layout_bottom.php'; ?>

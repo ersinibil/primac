@@ -87,148 +87,108 @@ $cost=$outQty*$unitCostNow;
 $profit=$sales-$cost;
 ?>
 
-<div class="panel-head">
-<h1><?=h($p['name'])?></h1>
-<div class="actions">
-<a class="btn" href="stock_movement_new.php?type=in&product_id=<?=$id?>">+ Alış / Giriş</a>
-<a class="btn secondary" href="stock_movement_new.php?type=out&product_id=<?=$id?>">+ Satış / Çıkış</a>
-<a class="btn secondary" href="stock.php">Stok Listesi</a>
-<?=delete_button('product',$id)?>
-</div>
-</div>
+<?php
+// RELEASE 0.9 — DS Migration (2026-07-17): render katmanı ds_lib.php desenine taşındı. POST
+// handler'lar (yukarısı, user_can('stock') yetki kontrolleri DAHİL) HİÇ değişmedi — sadece HTML/CSS.
+$__actions = ds_button('+ Alış / Giriş','stock_movement_new.php?type=in&product_id='.$id,'primary','','',true)
+    .ds_button('+ Satış / Çıkış','stock_movement_new.php?type=out&product_id='.$id,'secondary','','',true)
+    .ds_button('Stok Listesi','stock.php','secondary','','',true)
+    .delete_button('product',$id);
+ds_page_header($p['name'], ds_icon('box',24), '', $__actions, false, true);
+?>
 
-<?php if($error): ?><div class="alert"><?=h($error)?></div><?php endif; ?>
-<?php if($ok): ?><div class="ok"><?=h($ok)?></div><?php endif; ?>
+<?php if($error): ?><?=ds_alert('danger',$error)?><?php endif; ?>
+<?php if($ok): ?><?=ds_alert('success',$ok)?><?php endif; ?>
 
-<div class="cards">
-<div class="card"><small>Ürün Kodu</small><strong><?=h($p['product_code'] ?: '-')?></strong></div>
-<div class="card"><small>Stok</small><strong><?=h($p['quantity']).' '.h($p['unit'])?></strong></div>
-<div class="card"><small>Ortalama Maliyet</small><strong><?=money($p['avg_cost'] ?: $p['purchase_price'])?></strong></div>
-<div class="card"><small>Satış Fiyatı</small><strong><?=money($p['sale_price'])?></strong></div>
-</div>
-
-<div class="cards">
-<div class="card"><small>Toplam Satış</small><strong><?=money($sales)?></strong></div>
-<div class="card"><small>Satış Maliyeti</small><strong><?=money($cost)?></strong></div>
-<div class="card"><small>Kâr / Zarar</small><strong><?=money($profit)?></strong></div>
-<div class="card"><small>Tedarikçi</small><strong><?=h($p['supplier_name'] ?: '-')?></strong></div>
+<div class="df-stat-row">
+<div class="df-stat"><span>Ürün Kodu</span><strong><?=h($p['product_code'] ?: '-')?></strong></div>
+<div class="df-stat"><span>Stok</span><strong><?=h($p['quantity']).' '.h($p['unit'])?></strong></div>
+<div class="df-stat"><span>Ortalama Maliyet</span><strong><?=money($p['avg_cost'] ?: $p['purchase_price'])?></strong></div>
+<div class="df-stat"><span>Satış Fiyatı</span><strong><?=money($p['sale_price'])?></strong></div>
 </div>
 
-<section class="panel">
-<h2>Ürün Profili</h2>
-<form method="post" class="form-grid">
+<div class="df-stat-row">
+<div class="df-stat"><span>Toplam Satış</span><strong><?=money($sales)?></strong></div>
+<div class="df-stat"><span>Satış Maliyeti</span><strong><?=money($cost)?></strong></div>
+<div class="df-stat"><span>Kâr / Zarar</span><strong><?=money($profit)?></strong></div>
+<div class="df-stat"><span>Tedarikçi</span><strong><?=h($p['supplier_name'] ?: '-')?></strong></div>
+</div>
+
+<section class="df-card" style="margin-top:var(--df-space-4)">
+<h2 class="df-section-title">Ürün Profili</h2>
+<form method="post" class="df-form-grid-2">
 
 <input type="hidden" name="save_product" value="1">
 
-<label>Ürün Kodu
-<input name="product_code" value="<?=h($p['product_code'] ?? '')?>">
+<?php ds_form_field('Ürün Kodu', '<input name="product_code" value="'.h($p['product_code'] ?? '').'">'); ?>
+<?php ds_form_field('Barkod', '<input name="barcode" value="'.h($p['barcode'] ?? '').'">'); ?>
+<?php ds_form_field('Ürün Adı', '<input name="name" required value="'.h($p['name']).'">'); ?>
+<?php ds_form_field('Varyant / Çeşit', '<input name="variant_name" value="'.h($p['variant_name'] ?? '').'">'); ?>
+<?php ds_form_field('Marka', '<input name="brand" value="'.h($p['brand'] ?? '').'">'); ?>
+
+<?php
+$__catOpts='<option value="">Kategori seç</option>';
+foreach($categories as $c){ $__catOpts.='<option value="'.(int)$c['id'].'" '.($p['category_id']==$c['id']?'selected':'').'>'.h($c['name']).'</option>'; }
+ds_form_field('Kategori', '<select name="category_id">'.$__catOpts.'</select>');
+?>
+
+<?php ds_form_field('Birim', '<input name="unit" value="'.h($p['unit']).'">'); ?>
+<?php ds_form_field('Kritik Seviye', '<input type="number" step="0.001" name="critical_level" value="'.h($p['critical_level']).'">'); ?>
+<?php ds_form_field('Alış Fiyatı', '<input type="number" step="0.01" name="purchase_price" value="'.h($p['purchase_price']).'">'); ?>
+<?php ds_form_field('Satış Fiyatı', '<input type="number" step="0.01" name="sale_price" value="'.h($p['sale_price']).'">'); ?>
+
+<?php
+$__curOpts='';
+foreach(['TRY','USD','EUR'] as $cur){ $__curOpts.='<option '.($p['currency']===$cur?'selected':'').'>'.h($cur).'</option>'; }
+ds_form_field('Para Birimi', '<select name="currency">'.$__curOpts.'</select>');
+?>
+
+<div class="df-form-span-2">
+<?php
+$__supOpts='<option value="">Seçiniz</option>';
+foreach($suppliers as $s){ $__supOpts.='<option value="'.(int)$s['id'].'" '.($p['default_supplier_id']==$s['id']?'selected':'').'>'.h($s['name']).'</option>'; }
+ds_form_field('Varsayılan Tedarikçi', '<select name="default_supplier_id">'.$__supOpts.'</select>');
+?>
+</div>
+
+<div class="df-form-span-2"><?php ds_form_field('Notlar', '<textarea name="notes" rows="3">'.h($p['notes'] ?? '').'</textarea>'); ?></div>
+
+<div class="df-form-span-2">
+<label style="display:flex;align-items:center;gap:8px;font-size:var(--df-type-body-size);color:var(--df-ink-900)">
+<input type="checkbox" name="active" <?=$p['active']?'checked':''?> style="width:auto"> Aktif ürün
 </label>
+</div>
 
-<label>Barkod
-<input name="barcode" value="<?=h($p['barcode'] ?? '')?>">
-</label>
-
-<label>Ürün Adı
-<input name="name" required value="<?=h($p['name'])?>">
-</label>
-
-<label>Varyant / Çeşit
-<input name="variant_name" value="<?=h($p['variant_name'] ?? '')?>">
-</label>
-
-<label>Marka
-<input name="brand" value="<?=h($p['brand'] ?? '')?>">
-</label>
-
-<label>Kategori
-<select name="category_id">
-<option value="">Kategori seç</option>
-<?php foreach($categories as $c): ?>
-<option value="<?=$c['id']?>" <?=$p['category_id']==$c['id']?'selected':''?>><?=h($c['name'])?></option>
-<?php endforeach; ?>
-</select>
-</label>
-
-<label>Birim
-<input name="unit" value="<?=h($p['unit'])?>">
-</label>
-
-<label>Kritik Seviye
-<input type="number" step="0.001" name="critical_level" value="<?=h($p['critical_level'])?>">
-</label>
-
-<label>Alış Fiyatı
-<input type="number" step="0.01" name="purchase_price" value="<?=h($p['purchase_price'])?>">
-</label>
-
-<label>Satış Fiyatı
-<input type="number" step="0.01" name="sale_price" value="<?=h($p['sale_price'])?>">
-</label>
-
-<label>Para Birimi
-<select name="currency">
-<?php foreach(['TRY','USD','EUR'] as $cur): ?>
-<option <?=$p['currency']===$cur?'selected':''?>><?=$cur?></option>
-<?php endforeach; ?>
-</select>
-</label>
-
-<label>Varsayılan Tedarikçi
-<select name="default_supplier_id">
-<option value="">Seçiniz</option>
-<?php foreach($suppliers as $s): ?>
-<option value="<?=$s['id']?>" <?=$p['default_supplier_id']==$s['id']?'selected':''?>><?=h($s['name'])?></option>
-<?php endforeach; ?>
-</select>
-</label>
-
-<label class="full">Notlar
-<textarea name="notes" rows="3"><?=h($p['notes'] ?? '')?></textarea>
-</label>
-
-<label class="full"><input type="checkbox" name="active" <?=$p['active']?'checked':''?> style="width:auto"> Aktif ürün</label>
-
-<button class="btn">Ürünü Güncelle</button>
+<div class="df-form-span-2"><button class="df-btn df-btn--primary">Ürünü Güncelle</button></div>
 
 </form>
 </section>
 
-<section class="panel">
-<h2>Tedarikçiler</h2>
-<form method="post" class="form-grid">
+<section class="df-card" style="margin-top:var(--df-space-4)">
+<h2 class="df-section-title">Tedarikçiler</h2>
+<form method="post" class="df-form-grid-2" style="margin-bottom:var(--df-space-4)">
 <input type="hidden" name="add_supplier" value="1">
 
-<label>Tedarikçi
-<select name="supplier_id" required>
-<option value="">Seçiniz</option>
-<?php foreach($suppliers as $s): ?>
-<option value="<?=$s['id']?>"><?=h($s['name'])?></option>
-<?php endforeach; ?>
-</select>
+<?php
+$__supOpts2='<option value="">Seçiniz</option>';
+foreach($suppliers as $s){ $__supOpts2.='<option value="'.(int)$s['id'].'">'.h($s['name']).'</option>'; }
+ds_form_field('Tedarikçi', '<select name="supplier_id" required>'.$__supOpts2.'</select>');
+?>
+<?php ds_form_field('Tedarikçi Ürün Kodu', '<input name="supplier_sku">'); ?>
+<?php ds_form_field('Son Alış Fiyatı', '<input type="number" step="0.01" name="last_purchase_price" value="0">'); ?>
+<?php ds_form_field('Para Birimi', '<select name="currency"><option>TRY</option><option>USD</option><option>EUR</option></select>'); ?>
+<?php ds_form_field('Tedarik Süresi / Gün', '<input type="number" name="lead_time_days" value="0">'); ?>
+
+<div class="df-form-span-2">
+<label style="display:flex;align-items:center;gap:8px;font-size:var(--df-type-body-size);color:var(--df-ink-900)">
+<input type="checkbox" name="is_default" style="width:auto"> Varsayılan tedarikçi yap
 </label>
+</div>
 
-<label>Tedarikçi Ürün Kodu
-<input name="supplier_sku">
-</label>
-
-<label>Son Alış Fiyatı
-<input type="number" step="0.01" name="last_purchase_price" value="0">
-</label>
-
-<label>Para Birimi
-<select name="currency"><option>TRY</option><option>USD</option><option>EUR</option></select>
-</label>
-
-<label>Tedarik Süresi / Gün
-<input type="number" name="lead_time_days" value="0">
-</label>
-
-<label class="full"><input type="checkbox" name="is_default" style="width:auto"> Varsayılan tedarikçi yap</label>
-
-<button class="btn secondary">Tedarikçi Ekle</button>
+<div class="df-form-span-2"><button class="df-btn df-btn--secondary">Tedarikçi Ekle</button></div>
 </form>
 
-<table>
+<div class="df-table-wrap"><table class="df-table">
 <thead><tr><th>Tedarikçi</th><th>Kod</th><th>Son Alış</th><th>Süre</th><th>Varsayılan</th></tr></thead>
 <tbody>
 <?php
@@ -236,17 +196,17 @@ $ps=$pdo->prepare("SELECT ps.*, c.name supplier_name FROM product_suppliers ps L
 $ps->execute([$id]);
 $rows=$ps->fetchAll();
 foreach($rows as $r){
-    echo "<tr><td>".h($r['supplier_name'])."</td><td>".h($r['supplier_sku'])."</td><td>".money($r['last_purchase_price'])."</td><td>".h($r['lead_time_days'])." gün</td><td>".($r['is_default']?badge('Evet','green'):'-')."</td></tr>";
+    echo "<tr><td>".h($r['supplier_name'])."</td><td>".h($r['supplier_sku'])."</td><td>".money($r['last_purchase_price'])."</td><td>".h($r['lead_time_days'])." gün</td><td>".($r['is_default']?ds_badge('Evet','green'):'-')."</td></tr>";
 }
-if(!$rows) echo "<tr><td colspan='5' class='muted'>Tedarikçi tanımlı değil.</td></tr>";
+if(!$rows) echo "<tr><td colspan='5' class='df-muted'>Tedarikçi tanımlı değil.</td></tr>";
 ?>
 </tbody>
-</table>
+</table></div>
 </section>
 
-<section class="panel">
-<h2>Stok Hareketleri</h2>
-<table>
+<section class="df-card" style="margin-top:var(--df-space-4)">
+<h2 class="df-section-title">Stok Hareketleri</h2>
+<div class="df-table-wrap"><table class="df-table">
 <thead><tr><th>Tarih</th><th>Yön</th><th>Miktar</th><th>Sebep</th><th>Not</th></tr></thead>
 <tbody>
 <?php
@@ -254,7 +214,7 @@ $mv=$pdo->prepare("SELECT * FROM stock_movements WHERE stock_item_id=? ORDER BY 
 $mv->execute([$id]);
 $rows=$mv->fetchAll();
 foreach($rows as $r){
-    $dirLabel=$r['direction']==='in' ? badge('Giriş','green') : badge('Çıkış','red');
+    $dirLabel=$r['direction']==='in' ? ds_badge('Giriş','green') : ds_badge('Çıkış','red');
     echo "<tr>";
     echo "<td>".h($r['created_at'])."</td>";
     echo "<td>".$dirLabel."</td>";
@@ -263,10 +223,22 @@ foreach($rows as $r){
     echo "<td>".h($r['note'])."</td>";
     echo "</tr>";
 }
-if(!$rows) echo "<tr><td colspan='5' class='muted'>Hareket yok.</td></tr>";
+if(!$rows) echo "<tr><td colspan='5' class='df-muted'>Hareket yok.</td></tr>";
 ?>
 </tbody>
-</table>
+</table></div>
 </section>
+
+<style>
+body.nav-compact .df-form-grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 var(--df-space-4)}
+body.nav-compact .df-form-span-2{grid-column:1 / -1}
+body.nav-compact .df-stat-row{display:flex;flex-wrap:wrap;gap:var(--df-space-3);margin:var(--df-space-4) 0}
+body.nav-compact .df-stat{flex:1;min-width:120px;background:var(--df-surface);border:1px solid var(--df-hairline);border-radius:var(--df-radius-md);padding:var(--df-space-3);display:flex;flex-direction:column;gap:4px}
+body.nav-compact .df-stat span{font-size:var(--df-type-caption-size);color:var(--df-ink-500)}
+body.nav-compact .df-stat strong{font-size:var(--df-type-subtitle-size);color:var(--df-ink-900)}
+body.nav-compact .df-section-title{font-size:var(--df-type-section-size);font-weight:var(--df-type-section-weight);color:var(--df-ink-900);margin:0 0 var(--df-space-3)}
+body.nav-compact .df-muted{color:var(--df-ink-500)}
+@media(max-width:640px){body.nav-compact .df-form-grid-2{grid-template-columns:1fr}}
+</style>
 
 <?php require_once __DIR__.'/layout_bottom.php'; ?>
