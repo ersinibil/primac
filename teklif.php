@@ -338,24 +338,24 @@ addRow(); calc();
 
 /* ---------- LİSTE ---------- */
 ?>
-<div class="panel-head"><h1>Teklifler</h1><a class="btn" href="teklif.php?new=1">+ Yeni Teklif</a></div>
-<section class="panel">
-<table>
+<?php ds_page_header('Teklifler', ds_icon('edit',24), '', ds_button('Yeni Teklif','teklif.php?new=1','primary','','',true), false, true); ?>
+<section class="df-card">
+<div class="df-table-wrap"><table class="df-table">
 <thead><tr><th>No</th><th>Müşteri</th><th>Tarih</th><th>Durum</th><th style="text-align:right">Tutar</th><th></th></tr></thead>
 <tbody>
 <?php
 try{
   $rows=$pdo->query("SELECT id,quote_no,customer_name,total,status,quote_date FROM quotes ORDER BY id DESC LIMIT 200")->fetchAll();
-  if(!$rows) echo '<tr><td colspan="6" class="muted">Henüz teklif yok.</td></tr>';
+  if(!$rows) echo '<tr><td colspan="6" style="color:var(--df-ink-500)">Henüz teklif yok.</td></tr>';
   foreach($rows as $r){
     echo '<tr style="cursor:pointer" onclick="location.href=\'teklif.php?id='.(int)$r['id'].'\'">';
     echo '<td>'.h($r['quote_no']).'</td><td>'.h($r['customer_name']?:'—').'</td><td>'.h($r['quote_date']).'</td>';
-    echo '<td>'.h($r['status']).'</td><td style="text-align:right;font-weight:700">'.money($r['total']).'</td>';
-    echo '<td style="white-space:nowrap"><a class="btn ghost" href="teklif.php?id='.(int)$r['id'].'" onclick="event.stopPropagation()">Detay</a></td></tr>';
+    echo '<td>'.ds_badge($r['status']).'</td><td style="text-align:right;font-weight:700">'.money($r['total']).'</td>';
+    echo '<td style="white-space:nowrap"><a class="df-btn df-btn--ghost df-btn--sm" href="teklif.php?id='.(int)$r['id'].'" onclick="event.stopPropagation()">Detay</a></td></tr>';
   }
-}catch(Throwable $e){ echo '<tr><td colspan="6"><div class="alert">'.h($e->getMessage()).'</div></td></tr>'; }
+}catch(Throwable $e){ echo '<tr><td colspan="6">'.ds_alert('danger',$e->getMessage()).'</td></tr>'; }
 ?>
 </tbody>
-</table>
+</table></div>
 </section>
 <?php require __DIR__.'/layout_bottom.php'; ?>
