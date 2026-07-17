@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__.'/boot.php';
 require_login();
+require_once __DIR__.'/request_lib.php';
 
 $pdo=db();
 $error='';
@@ -8,20 +9,42 @@ $error='';
 if($_SERVER['REQUEST_METHOD']==='POST'){
     try{
         $reqNo='TLP-'.date('Y').'-'.str_pad((string)random_int(1,999999),6,'0',STR_PAD_LEFT);
+        $jobId=$_POST['related_job_id'] ?: null;
+        $category=$_POST['category'];
+        $priority=$_POST['priority'];
+        $title=trim($_POST['title']);
+        $me=(int)($_SESSION['user']['id'] ?? 0);
         $stmt=$pdo->prepare("INSERT INTO management_requests(
             request_no,personnel_id,related_job_id,category,title,description,priority,status,created_by
         ) VALUES(?,?,?,?,?,?,?,?,?)");
         $stmt->execute([
             $reqNo,
             $_POST['personnel_id'] ?: null,
-            $_POST['related_job_id'] ?: null,
-            $_POST['category'],
-            trim($_POST['title']),
+            $jobId,
+            $category,
+            $title,
             trim($_POST['description']),
-            $_POST['priority'],
+            $priority,
             'Yeni',
-            $_SESSION['user']['id'] ?? null
+            $me ?: null
         ]);
+
+        // P0-REQ-01 (2026-07-17, ACİL): web tarafında önceden HİÇ bildirim/mesaj gönderilmiyordu —
+        // mobil ile parite (aynı hedefleme mantığı) için eklendi. Hedef, mobil ile birebir aynı
+        // şekilde request_lib.php::request_resolve_recipient() ile çözülür: sadece ilgili işin
+        // sorumlu personeline, atanmış/geçerli bir hedef yoksa hiç kimseye mesaj gönderilmez.
+        try{
+            $recipientUid=request_resolve_recipient($pdo,$jobId);
+            if($recipientUid && $recipientUid!==$me){
+                $myName=$_SESSION['user']['name'] ?? 'Personel';
+                $notifTitle='📨 Yeni talep: '.$title;
+                $notifMsg=$myName.' · '.$category.' · '.$priority;
+                try{ $pdo->prepare("INSERT INTO internal_notifications(title,message,target_user_id,action_url,is_read) VALUES(?,?,?,?,0)")->execute([$notifTitle,$notifMsg,$recipientUid,'requests.php']); }catch(Throwable $e2){}
+                try{ $pdo->prepare("INSERT INTO internal_messages(sender_user_id,receiver_user_id,message,is_read) VALUES(?,?,?,0)")->execute([$me?:null,$recipientUid,$notifTitle."\n".$notifMsg]); }catch(Throwable $e2){}
+                if(file_exists(__DIR__.'/push_lib.php')){ require_once __DIR__.'/push_lib.php'; try{ push_to_user($recipientUid,$notifTitle,$notifMsg,'requests.php'); }catch(Throwable $e2){} }
+            }
+        }catch(Throwable $e){}
+
         header("Location: requests.php");
         exit;
     }catch(Throwable $e){

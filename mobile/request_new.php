@@ -1,5 +1,6 @@
 <?php
 require_once 'common.php';
+require_once __DIR__.'/../request_lib.php';
 $pdo=db();
 $er='';
 
@@ -48,17 +49,21 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['save_request'])){
       ->execute([$reqNo,$myPid,$jobId,$category,$title,$desc,$priority,'Yeni',$ME?:null]);
     $rid=(int)$pdo->lastInsertId();
 
-    // Yöneticilere bildirim + iç mesaj
+    // P0-REQ-01 (2026-07-17, ACİL): önceden burada TÜM adminlere (role='admin') koşulsuz broadcast
+    // yapılıyordu — kategori/iş ile hiç ilgisi olmayan talepler de aynı admin(ler)in sohbetine
+    // düşüyordu (gerçek kullanıcı raporu: alakasız "Karbon"/"Muhasebe-Evrak" talepleri tek bir
+    // yöneticinin — Ahmet Emir İbil'in — sohbetinde birikti). Artık hedef SADECE ilgili işin
+    // sorumlu personeline (request_lib.php::request_resolve_recipient()) deterministik olarak
+    // çözülüyor; atanmış/geçerli bir hedef yoksa HİÇ KİMSEYE mesaj gönderilmez — talep yine de
+    // Talep Merkezi listesinde görünür durur, sadece proaktif bildirim gitmez.
     try{
-      $admins=$pdo->query("SELECT id FROM app_users WHERE role='admin' AND active=1")->fetchAll(PDO::FETCH_COLUMN);
-      $notifMsg=$name.' · '.$category.' · '.$priority;
-      foreach($admins as $aid){
-        $aid=(int)$aid;
-        if($aid===$ME) continue;
+      $recipientUid=request_resolve_recipient($pdo,$jobId);
+      if($recipientUid && $recipientUid!==$ME){
+        $notifMsg=$name.' · '.$category.' · '.$priority;
         if(function_exists('notify_user'))
-          notify_user($aid,'📨 Yeni talep: '.$title,$notifMsg,'requests.php');
+          notify_user($recipientUid,'📨 Yeni talep: '.$title,$notifMsg,'requests.php');
         // Mesajlar ekranında da görünsün
-        try{ $pdo->prepare("INSERT INTO internal_messages(sender_user_id,receiver_user_id,message,is_read) VALUES(?,?,?,0)")->execute([$ME?:null,$aid,'📨 Yeni talep: '.$title."\n".$notifMsg]); }catch(Throwable $e2){}
+        try{ $pdo->prepare("INSERT INTO internal_messages(sender_user_id,receiver_user_id,message,is_read) VALUES(?,?,?,0)")->execute([$ME?:null,$recipientUid,'📨 Yeni talep: '.$title."\n".$notifMsg]); }catch(Throwable $e2){}
       }
     }catch(Throwable $e){}
 
