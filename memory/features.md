@@ -2,6 +2,16 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
+## FAZ 2B-ii-R/1 — Ortak Helper Katmanı (2026-07-17, commit `6e14cf5`)
+`ds_lib.php`'ye 2 yeni fonksiyon: `ds_list_item()` (DF-ListItem — mevcut `.df-list-row` CSS'ini
+kullanır, `$url` verilirse gerçek `<a>` üretir — mytasks.php web tarafının div+onclick+closest()
+JS bağımlı deseni yerine JS'siz de çalışan tam-satır-tıklanabilir alternatif) ve `ds_highlight()`
+(DF-Match — `search_lib.php::search_hl()`'in `df-match` token'lı karşılığı, `search_hl()`'in
+kendisi web+mobil ortak/aktif olduğu için dokunulmadı). İkisi de XSS-güvenli (önce `h()`, sonra
+sarmalama) — DB'siz test scriptiyle doğrulandı. **0 canlı çağrı, sıfır sayfa değişikliği**
+(yalnızca `ds_lib.php` + `assets/css/ds-foundation.css` değişti, `git diff --name-only` ile
+doğrulandı). Sıradaki: FAZ 2B-ii-R/2 — search.php bu iki fonksiyonun ilk tüketicisi olacak.
+
 ## BRAND AREA v1 — Web Navigation Rail + Mobil Home (2026-07-17, commit `09be2e5`..`7bc8342`, CLOSED — DEV PASS)
 Kapsam kesin olarak bunlardır, başka hiçbir yüzey değişmedi: **Web Navigation Rail** (`.df-rail-brand`,
 compact dal, `layout_top.php`) ve **Mobil Home** (`mobile/index.php`, yalnızca compact modda başlık).
