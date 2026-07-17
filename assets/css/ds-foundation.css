@@ -639,15 +639,23 @@ body.nav-compact .df-rail-link:hover{background:var(--df-surface-sunken)}
 body.nav-compact .df-rail-link.is-active{background:var(--df-accent-soft);color:var(--df-accent-soft-ink)}
 body.nav-compact .df-rail-link:focus-visible{outline:0;box-shadow:var(--df-focus-ring)}
 
-body.nav-compact .df-rail-categories{display:flex;flex-direction:column;gap:2px;margin-top:var(--df-space-2);padding-top:var(--df-space-3);border-top:1px solid var(--df-hairline)}
-body.nav-compact .df-rail-cat-btn{display:flex;align-items:center;gap:var(--df-space-3);width:100%;padding:10px 12px;border:0;background:transparent;border-radius:var(--df-radius-sm);font:inherit;font-size:14px;font-weight:650;color:var(--df-ink-900);cursor:pointer;text-align:left}
+/* Kullanıcı komutu (2026-07-17) — "NAVIGATION RAIL: DİKEY MERKEZLİ İKON + YAZI DÜZENİ": ana
+   kategori butonları yatay satırdan (ikon|yazı|ok) dikey/merkezli fisişe (ikon üstte, yazı altta,
+   ok kaldırıldı) geçti. Yalnızca bu buton düzeni değişti — tek-açık akordeon mantığı, aria-*,
+   sessionStorage, kategori GÖVDESİ (alt liste) davranışı hiç dokunulmadı (dfRailToggle() JS'i
+   sınıf/aria toggle'ından ibaret, görsel düzenden bağımsız). Aktif/hover durumu mevcut görsel dile
+   (nötr sunken gri) aynen bırakıldı, yeni bir renk icat edilmedi. */
+body.nav-compact .df-rail-categories{display:flex;flex-direction:column;gap:0;margin-top:var(--df-space-2);padding-top:var(--df-space-3);border-top:1px solid var(--df-hairline)}
+body.nav-compact .df-rail-cat-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;width:100%;padding:16px 8px;border:0;border-bottom:1px solid var(--df-hairline);background:transparent;border-radius:0;font:inherit;font-size:13px;font-weight:600;color:var(--df-ink-900);cursor:pointer;text-align:center}
+body.nav-compact .df-rail-cat:last-child .df-rail-cat-btn{border-bottom:0}
 body.nav-compact .df-rail-cat-btn:hover{background:var(--df-surface-sunken)}
 body.nav-compact .df-rail-cat-btn:focus-visible{outline:0;box-shadow:var(--df-focus-ring)}
-body.nav-compact .df-rail-cat-btn>span:first-of-type{flex:1;min-width:0}
-body.nav-compact .df-rail-cat-chevron{width:7px;height:7px;border-right:1.6px solid var(--df-ink-500);border-bottom:1.6px solid var(--df-ink-500);transform:rotate(45deg);transition:transform var(--df-dur-fast) var(--df-ease-standard);flex:0 0 auto}
+body.nav-compact .df-rail-cat-btn>span:first-of-type{flex:none;min-width:0}
+/* Ok göstergesi dikey düzende kaldırıldı — açık/kapalı durumu artık yalnızca is-open'ın nötr
+   arkaplan vurgusuyla iletiliyor (aşağıda), aria-expanded ekran okuyucular için zaten korunuyor. */
+body.nav-compact .df-rail-cat-chevron{display:none}
 body.nav-compact .df-rail-cat.is-open .df-rail-cat-btn{background:var(--df-surface-sunken)}
-body.nav-compact .df-rail-cat.is-open .df-rail-cat-chevron{transform:rotate(225deg)}
-body.nav-compact .df-rail-cat-body{display:none;padding:2px 12px 8px 41px;flex-direction:column;gap:1px}
+body.nav-compact .df-rail-cat-body{display:none;padding:2px 12px 8px;flex-direction:column;gap:1px}
 body.nav-compact .df-rail-cat.is-open .df-rail-cat-body{display:flex}
 body.nav-compact .df-rail-item{display:block;padding:8px 10px;border-radius:var(--df-radius-sm);font-size:13px;font-weight:600;color:var(--df-ink-600);text-decoration:none}
 body.nav-compact .df-rail-item:hover{background:var(--df-surface-sunken);color:var(--df-ink-900)}

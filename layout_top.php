@@ -243,7 +243,7 @@ input,select,textarea{font-size:16px}
             ?>
             <div class="df-rail-cat<?=($__catHasActive?' is-open':'')?>" data-cat="<?=h($__cat)?>">
                 <button type="button" class="df-rail-cat-btn" aria-expanded="<?=($__catHasActive?'true':'false')?>" aria-controls="<?=h($__catId)?>" onclick="dfRailToggle(this)">
-                    <?=ds_icon($__catIconMap[$__cat] ?? 'menu', 18)?>
+                    <?=ds_icon($__catIconMap[$__cat] ?? 'menu', 22)?>
                     <span><?=h(nav_category_label($__cat))?></span>
                     <span class="df-rail-cat-chevron" aria-hidden="true"></span>
                 </button>
