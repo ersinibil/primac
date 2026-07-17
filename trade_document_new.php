@@ -139,27 +139,25 @@ $contacts=$pdo->query("SELECT id,name,type FROM contacts ORDER BY name")->fetchA
 $products=$pdo->query("SELECT id,name,product_code,unit,purchase_price,sale_price FROM stock_items ORDER BY name")->fetchAll();
 ?>
 
-<div class="panel-head">
-<h1><?=$type==='purchase'?'Alış Belgesi':'Satış Belgesi'?></h1>
-<div class="actions">
-<a class="btn secondary" href="trade_documents.php">Belgeler</a>
-<a class="btn secondary" href="contacts.php">Cariler</a>
-</div>
-</div>
+<?php
+$__actions = ds_button('Belgeler', 'trade_documents.php', 'secondary', '', '', true)
+    . ds_button('Cariler', 'contacts.php', 'secondary', '', '', true);
+ds_page_header($type==='purchase'?'Alış Belgesi':'Satış Belgesi', ds_icon('tag',24), '', $__actions, false, true);
+?>
 
-<?php if($error): ?><div class="alert"><?=h($error)?></div><?php endif; ?>
+<?php if($error): ?><?=ds_alert('danger',$error)?><?php endif; ?>
 
-<section class="panel">
+<section class="df-card">
 <div class="notice" style="margin-bottom:12px;background:#eef4ff;color:#1e3a8a">
 Bu ekran tahsilat/ödeme yapmaz — belge cariye açık borç/alacak (Bekliyor) olarak kaydedilir.
 Kapanış <a href="finance_new.php">Tahsilat/Ödeme ekranından</a> ayrıca girilir.
 </div>
-<form method="post" class="form-grid" id="tradeForm">
+<form method="post" id="tradeForm">
 
 <input type="hidden" name="document_type" value="<?=$type?>">
 
 <?php if($stockShortage): ?>
-<div class="alert full" style="background:#fffbeb;border:1px solid #fde68a;color:#92400e;margin-bottom:12px">
+<div class="alert" style="background:#fffbeb;border:1px solid #fde68a;color:#92400e;margin-bottom:12px">
   <b>⚠️ Mevcut stok bu satış belgesi için yetersiz.</b><br>
   İşlem tamamlanırsa aşağıdaki ürün(ler)de stok negatife düşecek — KONTROLLÜ NEGATİF STOK
   POLİTİKASI gereği, devam etmek için onayınız gerekiyor:
@@ -177,33 +175,32 @@ Kapanış <a href="finance_new.php">Tahsilat/Ödeme ekranından</a> ayrıca giri
 </div>
 <?php endif; ?>
 
-<label>Belge No
-<input name="document_no" value="<?=h($pf['document_no'] ?? trade_next_no($type))?>">
-</label>
+<div class="df-form-grid-2">
 
-<label>Cari
-<select name="contact_id" required>
-<option value="">Cari seçiniz</option>
-<?php foreach($contacts as $c): ?>
-<option value="<?=$c['id']?>" <?=(isset($pf) && (int)($pf['contact_id'] ?? 0)===(int)$c['id'])?'selected':''?>><?=h($c['name'].' / '.$c['type'])?></option>
-<?php endforeach; ?>
-</select>
-</label>
+<?php ds_form_field('Belge No', '<input name="document_no" value="'.h($pf['document_no'] ?? trade_next_no($type)).'">'); ?>
 
-<label>Tarih
-<input type="date" name="document_date" value="<?=h($pf['document_date'] ?? date('Y-m-d'))?>">
-</label>
+<?php
+$__contactOpts='<option value="">Cari seçiniz</option>';
+foreach($contacts as $c){
+    $__contactOpts.='<option value="'.(int)$c['id'].'" '.((isset($pf) && (int)($pf['contact_id'] ?? 0)===(int)$c['id'])?'selected':'').'>'.h($c['name'].' / '.$c['type']).'</option>';
+}
+ds_form_field('Cari', '<select name="contact_id" required>'.$__contactOpts.'</select>');
+?>
 
-<label class="full">Açıklama
-<textarea name="description" rows="2"><?=h($pf['description'] ?? '')?></textarea>
-</label>
+<?php ds_form_field('Tarih', '<input type="date" name="document_date" value="'.h($pf['document_date'] ?? date('Y-m-d')).'">'); ?>
 
-<div class="full">
-<h2>Ürün / Hizmet Satırları</h2>
-<p class="muted">Ürün seçebilir veya olmayan ürünü elle yazabilirsiniz. Elle yazılan ürün alışta otomatik stok kartı açar.</p>
+<div class="df-form-span-2">
+<?php ds_form_field('Açıklama', '<textarea name="description" rows="2">'.h($pf['description'] ?? '').'</textarea>'); ?>
+</div>
 
-<div style="overflow-x:auto">
-<table id="itemsTable" style="min-width:720px">
+</div>
+
+<div style="margin-top:var(--df-space-4)">
+<h2 style="font-size:var(--df-type-section-size);font-weight:var(--df-type-section-weight);color:var(--df-ink-900);margin:0 0 6px">Ürün / Hizmet Satırları</h2>
+<p style="color:var(--df-ink-500)">Ürün seçebilir veya olmayan ürünü elle yazabilirsiniz. Elle yazılan ürün alışta otomatik stok kartı açar.</p>
+
+<div class="df-table-wrap" style="overflow-x:auto">
+<table id="itemsTable" class="df-table" style="min-width:720px">
 <thead><tr><th>Mevcut Ürün</th><th>Ürün/Hizmet Adı</th><th>Birim</th><th>Miktar</th><th>Birim Fiyat</th><th>KDV %</th><th style="text-align:right">Ara Toplam</th></tr></thead>
 <tbody>
 <?php for($i=0;$i<5;$i++): ?>
@@ -238,10 +235,16 @@ Kapanış <a href="finance_new.php">Tahsilat/Ödeme ekranından</a> ayrıca giri
 </div>
 </div>
 
-<button class="btn"><?php if($stockShortage): ?>⚠️ Onaylıyorum, Devam Et<?php else: ?><?=$type==='purchase'?'Alış Belgesini Kaydet':'Satış Belgesini Kaydet'?><?php endif; ?></button>
+<button class="df-btn df-btn--primary"><?php if($stockShortage): ?>⚠️ Onaylıyorum, Devam Et<?php else: ?><?=$type==='purchase'?'Alış Belgesini Kaydet':'Satış Belgesini Kaydet'?><?php endif; ?></button>
 
 </form>
 </section>
+
+<style>
+body.nav-compact .df-form-grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 var(--df-space-4)}
+body.nav-compact .df-form-span-2{grid-column:1 / -1}
+@media(max-width:640px){body.nav-compact .df-form-grid-2{grid-template-columns:1fr}}
+</style>
 
 <script>
 var TRADE_GRAND_TOTAL = 0;

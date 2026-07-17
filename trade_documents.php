@@ -11,26 +11,24 @@ if(in_array($type,['purchase','sale'])){
 ?>
 
 <style>
-.command-grid{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:14px;margin:14px 0 20px}
-.command-card{display:block;text-decoration:none;background:#fff;border-radius:20px;padding:18px;box-shadow:0 8px 28px rgba(16,24,40,.06);border:1px solid #eef2f6;color:#101828;transition:transform .12s ease,box-shadow .12s ease}
-.command-card:hover{transform:translateY(-2px);box-shadow:0 14px 36px rgba(16,24,40,.11)}
-.command-card small{display:block;color:#667085;font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+.command-grid{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:var(--df-space-4);margin:0 0 var(--df-space-5)}
+.command-card{display:block;text-decoration:none;background:var(--df-surface);border-radius:var(--df-radius-lg);padding:var(--df-space-4);box-shadow:var(--df-elevation-raised);border:1px solid var(--df-hairline);color:var(--df-ink-900);transition:transform .12s ease,box-shadow .12s ease}
+.command-card:hover{transform:translateY(-2px);box-shadow:var(--df-elevation-floating)}
+.command-card small{display:block;color:var(--df-ink-500);font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:.06em}
 .command-card strong{display:block;font-size:30px;margin:8px 0;line-height:1}
-.command-card span{color:#667085;font-size:13px}
-.command-card.blue{border-left:6px solid #3b82f6}
+.command-card span{color:var(--df-ink-500);font-size:13px}
+.command-card.blue{border-left:6px solid var(--df-accent)}
 .command-card.purple{border-left:6px solid #8b5cf6}
-.command-card.green{border-left:6px solid #22c55e}
-.command-card.orange{border-left:6px solid #f97316}
+.command-card.green{border-left:6px solid var(--df-success)}
+.command-card.orange{border-left:6px solid var(--df-warning)}
 @media(max-width:960px){.command-grid{grid-template-columns:1fr}}
 </style>
 
-<div class="panel-head">
-<h1>Alış / Satış Belgeleri</h1>
-<div class="actions">
-<a class="btn" href="trade_document_new.php?type=purchase">+ Alış</a>
-<a class="btn secondary" href="trade_document_new.php?type=sale">+ Satış</a>
-</div>
-</div>
+<?php
+$__actions = ds_button('+ Alış', 'trade_document_new.php?type=purchase', 'primary', '', '', true)
+    . ds_button('+ Satış', 'trade_document_new.php?type=sale', 'secondary', '', '', true);
+ds_page_header('Alış / Satış Belgeleri', ds_icon('tag',24), '', $__actions, false, true);
+?>
 
 <section class="command-grid">
 <a class="command-card blue" href="trade_documents.php"><small>Tüm Belgeler</small><strong><?=safe_count("SELECT COUNT(*) c FROM trade_documents")?></strong><span>Alış ve satış hareketleri</span></a>
@@ -39,8 +37,8 @@ if(in_array($type,['purchase','sale'])){
 <a class="command-card orange" href="contacts.php"><small>Cari</small><strong><?=safe_count("SELECT COUNT(DISTINCT contact_id) c FROM trade_documents WHERE contact_id IS NOT NULL")?></strong><span>Belgesi olan cari sayısı</span></a>
 </section>
 
-<section class="panel">
-<table>
+<section class="df-card">
+<div class="df-table-wrap"><table class="df-table">
 <thead><tr><th>No</th><th>Tip</th><th>Cari</th><th>Tarih</th><th>Toplam</th><th>Ödenen</th><th>Durum</th><th>İşlem</th></tr></thead>
 <tbody>
 <?php
@@ -56,17 +54,17 @@ try{
         echo "<td>".h($r['document_date'])."</td>";
         echo "<td>".money($r['grand_total'])."</td>";
         echo "<td>".money($r['paid_amount'])."</td>";
-        echo "<td>".badge($r['status'],'green')."</td>";
-        echo "<td><a class='btn small secondary' href='trade_document_view.php?id=".$r['id']."'>Aç</a></td>";
+        echo "<td>".ds_badge($r['status'],'green')."</td>";
+        echo "<td><a class='df-btn df-btn--secondary df-btn--sm' href='trade_document_view.php?id=".$r['id']."'>Aç</a></td>";
         echo "</tr>";
     }
-    if(!$rows) echo "<tr><td colspan='8' class='muted'>Belge yok.</td></tr>";
+    if(!$rows) echo "<tr><td colspan='8' style='color:var(--df-ink-500)'>Belge yok.</td></tr>";
 }catch(Throwable $e){
-    echo "<tr><td colspan='8'><div class='alert'>".h($e->getMessage())."</div></td></tr>";
+    echo "<tr><td colspan='8'>".ds_alert('danger',$e->getMessage())."</td></tr>";
 }
 ?>
 </tbody>
-</table>
+</table></div>
 </section>
 
 <?php require_once __DIR__.'/layout_bottom.php'; ?>

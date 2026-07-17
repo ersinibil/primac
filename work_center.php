@@ -30,26 +30,24 @@ $sqlWhere=$where ? 'WHERE '.implode(' AND ',$where) : '';
 ?>
 
 <style>
-.command-grid{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:14px;margin:14px 0 20px}
-.command-card{display:block;text-decoration:none;background:#fff;border-radius:20px;padding:18px;box-shadow:0 8px 28px rgba(16,24,40,.06);border:1px solid #eef2f6;color:#101828;transition:transform .12s ease,box-shadow .12s ease}
-.command-card:hover{transform:translateY(-2px);box-shadow:0 14px 36px rgba(16,24,40,.11)}
-.command-card small{display:block;color:#667085;font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+.command-grid{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:var(--df-space-4);margin:0 0 var(--df-space-5)}
+.command-card{display:block;text-decoration:none;background:var(--df-surface);border-radius:var(--df-radius-lg);padding:var(--df-space-4);box-shadow:var(--df-elevation-raised);border:1px solid var(--df-hairline);color:var(--df-ink-900);transition:transform .12s ease,box-shadow .12s ease}
+.command-card:hover{transform:translateY(-2px);box-shadow:var(--df-elevation-floating)}
+.command-card small{display:block;color:var(--df-ink-500);font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:.06em}
 .command-card strong{display:block;font-size:30px;margin:8px 0;line-height:1}
-.command-card span{color:#667085;font-size:13px}
-.command-card.blue{border-left:6px solid #3b82f6}
-.command-card.red{border-left:6px solid #ef4444}
-.command-card.yellow{border-left:6px solid #eab308}
+.command-card span{color:var(--df-ink-500);font-size:13px}
+.command-card.blue{border-left:6px solid var(--df-accent)}
+.command-card.red{border-left:6px solid var(--df-danger)}
+.command-card.yellow{border-left:6px solid var(--df-warning)}
 .command-card.purple{border-left:6px solid #8b5cf6}
 @media(max-width:960px){.command-grid{grid-template-columns:1fr}}
 </style>
 
-<div class="panel-head">
-    <h1>📋 <?=h($title)?></h1>
-    <div class="actions">
-        <a class="btn" href="job_new.php">+ Yeni İş</a>
-        <a class="btn secondary" href="dashboard.php">Komuta Merkezi</a>
-    </div>
-</div>
+<?php
+$__actions = ds_button('+ Yeni İş', 'job_new.php', 'primary', '', '', true)
+    . ds_button('Komuta Merkezi', 'dashboard.php', 'secondary', '', '', true);
+ds_page_header($title, ds_icon('briefcase',24), '', $__actions, false, true);
+?>
 
 <section class="command-grid">
     <a class="command-card blue" href="work_center.php?filter=open"><small>Açık İşler</small><strong><?=safe_count("SELECT COUNT(*) c FROM jobs WHERE status NOT IN ('Tamamlandı','İptal','Teslim Edildi')")?></strong><span>Tüm açık işler</span></a>
@@ -58,8 +56,8 @@ $sqlWhere=$where ? 'WHERE '.implode(' AND ',$where) : '';
     <a class="command-card purple" href="work_center.php?filter=external"><small>Dışarıda</small><strong><?=safe_count("SELECT COUNT(*) c FROM jobs WHERE job_type IN ('dis_atolye','tedarikcide_uretim') AND status NOT IN ('Tamamlandı','İptal','Teslim Edildi')")?></strong><span>Dış tedarik / atölye</span></a>
 </section>
 
-<section class="panel">
-<table>
+<section class="df-card">
+<div class="df-table-wrap"><table class="df-table">
 <thead>
 <tr>
 <th>İş</th>
@@ -91,22 +89,22 @@ try{
 <td><?=h($r['customer_name'] ?: '-')?></td>
 <td><?=h($r['responsible_name'] ?: '-')?></td>
 <td><?=h($r['due_date'] ?: '-')?></td>
-<td><?=badge($r['status'],status_tone($r['status']))?></td>
+<td><?=ds_badge($r['status'])?></td>
 <td>
-    <div style="background:#eef2f6;border-radius:999px;height:10px;overflow:hidden;width:140px">
-        <div style="background:#111827;height:10px;width:<?=$progress?>%"></div>
+    <div style="background:var(--df-surface-sunken);border-radius:999px;height:10px;overflow:hidden;width:140px">
+        <div style="background:var(--df-ink-900);height:10px;width:<?=$progress?>%"></div>
     </div>
-    <span class="muted">%<?=$progress?></span>
+    <span style="color:var(--df-ink-500)">%<?=$progress?></span>
 </td>
-<td><a class="btn small" href="work_view.php?id=<?=$r['id']?>">İş Motoru</a></td>
+<td><a class="df-btn df-btn--secondary df-btn--sm" href="work_view.php?id=<?=$r['id']?>">İş Motoru</a></td>
 </tr>
 <?php endforeach; ?>
-<?php if(!$rows): ?><tr><td colspan="7" class="muted">Kayıt yok.</td></tr><?php endif; ?>
+<?php if(!$rows): ?><tr><td colspan="7" style="color:var(--df-ink-500)">Kayıt yok.</td></tr><?php endif; ?>
 <?php }catch(Throwable $e){ ?>
-<tr><td colspan="7"><div class="alert"><?=h($e->getMessage())?></div></td></tr>
+<tr><td colspan="7"><?=ds_alert('danger',$e->getMessage())?></td></tr>
 <?php } ?>
 </tbody>
-</table>
+</table></div>
 </section>
 
 <?php require_once __DIR__.'/layout_bottom.php'; ?>

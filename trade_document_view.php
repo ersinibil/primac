@@ -29,15 +29,11 @@ $items=$it->fetchAll();
 // hesaplanan (contacts_lib.php::contact_balance) gerçek bakiyesi gösteriliyor.
 require_once __DIR__.'/contacts_lib.php';
 $contactBalance = $d['contact_id'] ? contact_balance($pdo, $d['contact_id']) : 0;
-?>
 
-<div class="panel-head">
-<h1><?=h($d['document_no'])?></h1>
-<div class="actions">
-<a class="btn secondary" href="trade_documents.php">Belgeler</a>
-<a class="btn secondary" href="contact_view.php?id=<?=$d['contact_id']?>">Cari Profil</a>
-</div>
-</div>
+$__actions = ds_button('Belgeler', 'trade_documents.php', 'secondary', '', '', true)
+    . ds_button('Cari Profil', 'contact_view.php?id='.$d['contact_id'], 'secondary', '', '', true);
+ds_page_header($d['document_no'], ds_icon('tag',24), '', $__actions, false, true);
+?>
 
 <div class="cards">
 <div class="card"><small>Tip</small><strong><?=h($d['document_type']==='purchase'?'Alış':'Satış')?></strong></div>
@@ -46,9 +42,9 @@ $contactBalance = $d['contact_id'] ? contact_balance($pdo, $d['contact_id']) : 0
 <div class="card"><small>Cari Bakiyesi</small><strong><?=money($contactBalance)?></strong></div>
 </div>
 
-<section class="panel">
-<h2>Belge Satırları</h2>
-<table>
+<section class="df-card" style="margin-top:var(--df-space-4)">
+<h2 style="font-size:var(--df-type-section-size);font-weight:var(--df-type-section-weight);color:var(--df-ink-900);margin:0 0 var(--df-space-3)">Belge Satırları</h2>
+<div class="df-table-wrap"><table class="df-table">
 <thead><tr><th>Ürün/Hizmet</th><th>Birim</th><th>Miktar</th><th>Birim Fiyat</th><th>KDV</th><th>Toplam</th><th>Stok Kartı</th></tr></thead>
 <tbody>
 <?php foreach($items as $r): ?>
@@ -59,15 +55,15 @@ $contactBalance = $d['contact_id'] ? contact_balance($pdo, $d['contact_id']) : 0
 <td><?=money($r['unit_price'])?></td>
 <td><?=money($r['line_vat'])?></td>
 <td><?=money($r['line_grand'])?></td>
-<td><?=$r['auto_created_product']?badge('Otomatik Açıldı','green'):($r['stock_item_id']?badge('Bağlı','blue'):'-')?></td>
+<td><?=$r['auto_created_product']?ds_badge('Otomatik Açıldı','green'):($r['stock_item_id']?ds_badge('Bağlı','blue'):'-')?></td>
 </tr>
 <?php endforeach; ?>
 </tbody>
-</table>
+</table></div>
 </section>
 
-<section class="panel">
-<h2>Özet</h2>
+<section class="df-card" style="margin-top:var(--df-space-4)">
+<h2 style="font-size:var(--df-type-section-size);font-weight:var(--df-type-section-weight);color:var(--df-ink-900);margin:0 0 var(--df-space-3)">Özet</h2>
 <p><b>Ara Toplam:</b> <?=money($d['subtotal'])?></p>
 <p><b>KDV:</b> <?=money($d['vat_total'])?></p>
 <p><b>Genel Toplam:</b> <?=money($d['grand_total'])?></p>
