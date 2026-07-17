@@ -2,6 +2,20 @@
 
 <!-- Açık geliştirme görevleri. Kapanan madde buradan silinip memory/features.md'ye taşınır. -->
 
+## İLETİŞİM MERKEZİ — yeni ana modül kararı, mimari analiz bekleniyor (2026-07-17, PRODUCT OWNER KARARI)
+USER TEST/ürün değerlendirmesi sonrası navigasyon bilgi mimarisi kararı: "Mesajlar" tek başına
+modül olmaktan çıkıp yeni bir ana modül olan **İletişim Merkezi** altında birleşecek — 4 bölüm:
+Dahili Mesajlar (mevcut business logic korunur), WhatsApp (mevcut altyapı korunur), Gruplar (ilk
+sürümde yeni özellik yok), Bildirimler. Ürün prensibi: Mesaj (kullanıcılar arası iletişim) ile
+Bildirim (sistem olayı) aynı kavram değil, bu ayrım korunacak. Sol menüde "Mesajlar" yerine
+"İletişim Merkezi", Home Hızlı İşlemler'e de kısayol eklenecek (yetkiye göre ilgili bölümü açar).
+Gelecek mimari: Telegram/E-posta/SMS/Teams gibi kanalların da aynı yapı altında barınabilmesi.
+**Şu an istenen: kod yazmadan önce 7 başlıklı mimari analiz raporu** (mevcut veri yapısı, ortak
+kullanılabilecek bileşenler, ayrılması gereken business logic, birleştirilebilecek ekranlar,
+web+mobil bilgi mimarisi, Release 0.9 kapsamı, Release 1.0+ öneriler) — Product Owner onayından
+sonra implementasyona geçilecek. **P0-AUTH-01/Release 0.9 P0 kapısı nedeniyle bu, analiz raporu
+teslimiyle sınırlı; implementasyon P0 kapısı kapanmadan başlamayacak.**
+
 ## FAZ 2C-ii — Home v2 — DEV PASS, Product Owner onayı bekleniyor (2026-07-17, KOMUT 5)
 Onaylanmış IA/wireframe'e (A-F) göre kodlandı — commit `c5870c4`. 5 bölüm: Nabız/Kritik Uyarılar
 (`df-alert`, artık mobilde de çalışıyor), Queue/Sırada (değişmedi), Hızlı İşlemler (yeni kompakt
@@ -18,14 +32,59 @@ Elif (parite) bağımsız incelemesi — üçü de PASS/tutarlı, kritik/yüksek
 `is_admin()`/mobil `$isAdmin` tanım farkı — canlıda davranış farkı yaratmıyor). Tam rapor:
 `~/Desktop/PRIMAC-OTS-FAZ2C-ii-Home-DEV-PASS.pdf`.
 
-**DEV PASS ONAYLANDI (2026-07-17, Product Owner kararı).** Şimdi USER TEST aşamasındayız — gerçek
-cihaz/kullanıcı testi kimlik bilgisi gerektirdiği için Claude tarafında SİMÜLE EDİLEMEZ, primac.tr'de
-bizzat yürütülecek. Adım adım PASS/FAIL kontrol listesi hazırlandı: `~/Desktop/
-PRIMAC-OTS-FAZ2C-ii-USER-TEST-Checklist.pdf` (Admin + Personel/compact senaryoları, 320/390/430px
-mobil, web masaüstü, legacy regresyon kontrolü, "Dark/Light" maddesinin OTS'te gerçek bir tema
-anahtarı olmadığı — sabit mobil-koyu/web-açık ayrımı olduğu netleştirildi). **Yalnızca kritik hata
-bulunursa düzeltme yapılacak, yeni özellik eklenmeyecek. USER TEST PASS sonrası FAZ 2C-ii CLOSED
-işaretlenecek — FAZ 2D ancak bundan sonra başlayacak.**
+**DEV PASS ONAYLANDI (2026-07-17), ama USER TEST PASS VERİLMEDİ (2026-07-17, Product Owner kararı
+— "PRODUCT OWNER KARARI — FAZ 2C-ii USER TEST SONUCU").** Gerçek kullanıcı testinde 7 P0 blocker
+bulundu (sebep kod kalitesi değil, ürünün aktif kullanıma henüz hazır olmaması): (1) Nabız pasif
+banner, aksiyon üretmiyor — tıklanabilir aksiyon kartına çevrilecek; (2) Home'dan açılan ekranların
+önemli kısmı hâlâ legacy — Release 0.9 tamamlanana kadar günlük kullanılan tüm ekranlar DS'e
+taşınacak; (3) Personel ekranları aktif kullanım için kabul edilebilir değil, en yüksek önceliğe
+alındı; (4) Personel/Kullanıcı/Yetki oluşturma tek akışa birleştirilecek; (5) yetki sistemi gerçek
+testte beklendiği gibi davranmadı, personel görmemesi gereken alanları görebiliyor — web+mobil
+tüm modül görünürlükleri (sunucu tarafı dahil) yeniden denetlenecek; (6) **P0-AUTH-01** — personel
+yeni şifreyle giriş yapamıyor (bkz. aşağıdaki ayrı madde, DÜZELTİLDİ); (7) mobil alt navigasyon
+dokunma hassasiyeti yetersiz. **FAZ 2C-ii henüz CLOSED değil.** Yeni Release 0.9 öncelik sırası:
+P0=Authentication + Personel ekranları + Personel→Kullanıcı→Yetki + yetki doğrulaması + mobil
+navigasyon + Home aksiyon iyileştirmeleri; P1=Web&Mobil DS Migration (günlük ekranlar); P2=Customer
+Procurement Allocation; P3=Matematik/Veri Bütünlüğü Final Audit; P4=Pilot kullanıcı yayını. İlk iş:
+sadece P0 maddeleri için MASTER AUDIT (kök neden/etkilenen dosyalar/mimari/risk/çözüm/sıra) —
+henüz kod yazılmayacak, P0-AUTH-01 hariç (o ayrıca acil olarak işaretlendi, aşağıda).
+
+## P0-AUTH-01 — Personel yeni şifreyle giriş yapamıyor — KOD DÜZELTİLDİ, gerçek DB doğrulaması bekleniyor (2026-07-17)
+USER TEST'te bulunan P0 blocker madde 6. **Kök neden (kod incelemesiyle bulundu):** bir personele
+ikinci bir `app_users` hesabı daha açılmasını engelleyen bir kontrol yoktu
+(`personnel_lib.php::personnel_create_login()`), bu da personelin iki hesaba bağlı kalmasına yol
+açabiliyordu. Admin'in "Şifre Sıfırla" özelliği hedef hesabı `ORDER BY` içermeyen bir
+`LEFT JOIN ... OR ... LIMIT 1` sorgusuyla buluyordu — "şifre güncellendi" mesajı gösterilse bile
+MySQL personelin gerçekte kullandığı hesap yerine eski/kullanılmayan bir hesabı seçip
+güncelleyebiliyordu (tamamen sessiz, hiçbir hata üretmiyor). Self-servis şifre değiştirme
+(`profile.php`/`mobile/profile.php`) etkilenmedi — o akış her zaman oturum id'siyle çalışıyordu.
+
+**Düzeltme (commit `91d0567`):** `personnel_lib.php::personnel_create_login()` artık personele
+zaten bağlı bir hesap varsa (sahiplik doğrulamalı) ikinci hesap açılmasını engelliyor;
+`personnel_reset_password()` hedefi artık tek deterministik kaynaktan çözüyor
+(`personnel.user_id`, varlığı VE hâlâ bu personele ait olduğu doğrulanarak; yoksa `personnel_id`
+üzerinden en eski kayda güvenli fallback). `mobile/personnel_view.php`'nin bağımsız kopyasına aynı
+düzeltme + görüntüleme sorgusu da aynı deterministik mantığa çekildi. `users.php`'nin "Yeni
+Kullanıcı" akışı da (Ece'nin re-review'ında bulunan ikinci giriş noktası) aynı korumayı aldı ve
+artık `personnel.user_id`'yi senkron tutuyor. Migration yok. Gerçek PDO (SQLite bellek-içi) ile
+20/20 senaryo PASS (mükerrer hesap, taşınmış hesap, yetim user_id, normal tek-hesap regresyonu
+dahil). Ece (kod) + Selin (güvenlik) bağımsız incelemesi PASS (Ece'nin 2 bulgusu — guard'ın yetim
+id doğrulamaması, `users.php`'nin korumasız olması — aynı turda kapatıldı).
+
+**Bekleyen (Claude'un erişimi dışında):** primac.tr'nin gerçek DEV verisinde bu mükerrer/tutarsız
+kayıt deseninin fiilen var olup olmadığını doğrulamak ve gerçek bir personel hesabıyla uçtan uca
+web+mobil login testi — ikisi de Product Owner/test ekibi tarafından çalıştırılacak (Claude'a
+gerçek kimlik bilgisi hiçbir zaman verilmiyor — bkz. [[feedback_security_sprint_test_method]]).
+Salt-okunur teşhis scripti + adım adım test paketi hazır: `~/Desktop/
+PRIMAC-OTS-P0-AUTH-01-Dogrulama-Paketi.pdf`, script `~/Desktop/PRIMAC-GUNCELLEME/
+_TEMP_p0auth_diag.php` (primac.tr'ye geçici yüklenip çalıştırılıp SONRA silinecek).
+
+**Gelecek için not (şimdi yapılmadı — migration gerektirir):** Ece ve Selin ikisi de
+`app_users.personnel_id` üzerinde DB-seviyeli `UNIQUE` kısıt olmadığını, uygulama-seviyesi guard'ın
+teorik bir TOCTOU yarış durumuna (çift tıklama) karşı tam koruma sağlamadığını not etti — düşük
+risk (sadece güvenilir admin tetikleyebilir) ama kalıcı çözüm için gelecekte bir migration (Burak)
+önerilir: `ALTER TABLE app_users ADD UNIQUE KEY uniq_personnel (personnel_id)` (nullable kolonda
+MySQL birden çok NULL'a izin verdiği için güvenli).
 
 ## ACİL HOTFIX PAKETİ — KAPANDI (2026-07-17, PRODUCT OWNER KARARI — R0.9 hotfix kapısı)
 Master Envanter'in bulduğu 2 güvenlik açığı + 1 sessiz şema hatası, Home implementasyonuna (KOMUT 5)

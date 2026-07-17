@@ -2,6 +2,59 @@
 
 <!-- Çözülen ve açık bug'lar. Çözüldüğünde tarih+çözüm notu ekleyip üstte "ÇÖZÜLDÜ" ile işaretle, silmeyin. -->
 
+## ÇÖZÜLDÜ (kod) — P0-AUTH-01: personel yeni şifreyle giriş yapamıyor (2026-07-17, commit `91d0567`)
+FAZ 2C-ii USER TEST'inde bulunan P0 blocker. Gerçek kullanıcı raporu: personel şifresini birden
+fazla kez değiştirmesine (veya admin sıfırlamasına) rağmen yeni şifreyle giriş yapamıyor —
+tamamen sessiz, hiçbir PHP/DB hatası yok, ekranda "başarılı" mesajı gösteriliyor.
+
+**Kök neden (kod incelemesiyle bulundu, kodun kendi geçmiş yorumlarında zaten işaret edilen bir
+risk sınıfıydı — PDP-001, 2026-07-15):** bir personele ikinci bir `app_users` hesabı daha
+açılmasını engelleyen hiçbir kontrol yoktu (`personnel_lib.php::personnel_create_login()`,
+`mobile/personnel_view.php`'nin bağımsız `make_login` kopyası, `users.php`'nin `create_user`
+akışı — üç ayrı giriş noktası). Bu, aynı personele birden fazla aktif hesap bağlanmasına izin
+veriyordu. Admin'in "Şifre Sıfırla" özelliği hedef hesabı şu sorguyla buluyordu:
+`SELECT u.id FROM app_users u LEFT JOIN personnel p ON p.user_id=u.id WHERE u.personnel_id=? OR
+p.id=? LIMIT 1` — `ORDER BY` yok. Personele birden fazla hesap bağlıysa MySQL'in hangi kaydı
+döndüreceği garanti değildi; sonuç ekranda "şifre güncellendi" gösteriliyor ama güncellenen kayıt
+personelin gerçekte kullandığı hesap olmayabiliyordu — personel eski (değişmemiş) şifresiyle
+kalıyordu. Self-servis şifre değiştirme (`profile.php`/`mobile/profile.php`) etkilenmedi — o akış
+her zaman oturumdaki `id` ile çalıştığı için zaten deterministikti.
+
+**Düzeltme:**
+- `personnel_lib.php::personnel_create_login()` — INSERT'ten önce personelin zaten bağlı bir
+  hesabı olup olmadığını (`personnel.user_id` VEYA `app_users.personnel_id` üzerinden, sahiplik
+  doğrulamalı: hesap hem var hem HÂLÂ bu personele ait mi) kontrol edip varsa engelliyor.
+- `personnel_lib.php::personnel_reset_password()` — belirsiz OR/JOIN sorgusu tamamen kaldırıldı.
+  Hedef hesap artık tek deterministik sırayla çözülüyor: önce `personnel.user_id` (varlığı VE
+  sahipliği doğrulanarak), yoksa `app_users WHERE personnel_id=? ORDER BY id ASC LIMIT 1`
+  (web'in mevcut görüntüleme sorgusuyla — `personnel_edit.php:176` — aynı kural).
+- `mobile/personnel_view.php` — aynı iki düzeltme (bağımsız, kasıtlı ayrı tutulan kopyaya) +
+  hesap görüntüleme sorgusu da aynı deterministik mantığa çekildi (ekranda gösterilen hesap artık
+  her zaman gerçekte güncellenecek hesapla eşleşiyor — Ece'nin re-review'ında bulunan kozmetik
+  tutarsızlık).
+- `users.php::create_user` — Ece'nin re-review'ında bulunan ikinci (korumasız) giriş noktası: bu
+  form "Personel Bağlantısı" dropdown'undan zaten bağlı bir personel seçilerek ikinci hesap
+  açılmasına izin veriyordu ve `personnel.user_id`'yi hiç senkron tutmuyordu. Aynı koruma eklendi
+  + başarılı oluşturmadan sonra `personnel.user_id` artık senkron tutuluyor.
+
+Migration yok. Gerçek PDO (SQLite bellek-içi, kimlik bilgisi gerektirmez) üzerinde 20/20 senaryo
+PASS: normal tek-hesap regresyonu, mükerrer hesap (eski hesaba dokunulmuyor, güncel/kullanılan
+hesap doğru güncelleniyor), hesabın başka personele "taşınmış" olduğu senaryo (yanlış personelin
+şifresi asla değişmiyor), yetim `user_id` fallback'i, `users.php` guard mantığı. Ece (kod) + Selin
+(güvenlik) bağımsız incelemesi PASS — Ece'nin bulduğu 2 gerçek boşluk (guard'ın yetim id
+doğrulamaması, `users.php`'nin korumasız olması) aynı turda kapatıldı, Selin blocker bulmadı.
+
+**Açık kalan (Claude'un erişimi dışında, primac.tr'de Product Owner/test ekibi tarafından
+yapılacak):** gerçek DEV verisinde bu mükerrer-hesap deseninin fiilen var olup olmadığının salt-
+okunur bir teşhis scriptiyle doğrulanması + gerçek bir personel hesabıyla uçtan uca web+mobil
+login testi. Paket: `~/Desktop/PRIMAC-OTS-P0-AUTH-01-Dogrulama-Paketi.pdf`. Bu yüzden madde
+"kod düzeltildi" olarak kapatıldı ama P0-AUTH-01'in kendisi (FAZ 2C-ii USER TEST kapsamında) gerçek
+doğrulama sonucu gelene kadar CLOSED değil — bkz. `memory/backlog.md`.
+
+**Gelecek için not (migration gerektirir, şimdi yapılmadı):** `app_users.personnel_id`'de DB-
+seviyeli UNIQUE kısıt yok, uygulama-seviyesi guard TOCTOU yarışına karşı tam koruma sağlamıyor
+(düşük risk, sadece admin tetikleyebilir) — bkz. `KNOWN_BUGS.md` madde 9.
+
 ## ÇÖZÜLDÜ — ACİL HOTFIX PAKETİ (2026-07-17, commit `14f1485`/`b198be8`/`9404228`, PRODUCT OWNER KARARI)
 Master Envanter'de kodda satır numarasıyla doğrulanan 2 güvenlik açığı + 1 sessiz şema hatası,
 Home (FAZ 2C-ii) implementasyonuna geçmeden önce ayrı bir ACİL HOTFIX kapısı olarak kapatıldı.

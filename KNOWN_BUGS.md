@@ -33,6 +33,13 @@ ve en yakın zamanda çözülenlerin kısa özeti tutulur.
    yalnızca UPDATE/onay-red akışını kapsadı, okuma/liste hatası (satır ~79) ayrı, düşük ihtimalli
    bir kod yolu, bilinçli dokunulmadı (Ece'nin notu).
 
+## Açık — yeni (2026-07-17, P0-AUTH-01 review notları — kod DÜZELTİLDİ, aşağıdaki not sadece takip)
+9. **DÜŞÜK — `app_users.personnel_id` üzerinde DB-seviyeli UNIQUE kısıt yok** — P0-AUTH-01
+   düzeltmesi (commit `91d0567`) mükerrer hesap oluşumunu uygulama seviyesinde engelliyor, ama
+   DB'de zorlanmıyor; teorik bir TOCTOU yarış durumu (çift tıklama) hâlâ mümkün. Düşük risk (sadece
+   admin tetikleyebilir). Gelecekte migration: `ALTER TABLE app_users ADD UNIQUE KEY
+   uniq_personnel (personnel_id)`. Bilinçli olarak bu hotfix'in dışında bırakıldı (Ece+Selin notu).
+
 Tam denetim raporu (mimari/performans/UX/veri modeli dahil) → System Audit Artifact (2026-07-04),
 öncelik sırası → `ROADMAP.md` "SYSTEM AUDIT — Teknik Borç ve Öncelikler" bölümü.
 
