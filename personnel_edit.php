@@ -9,6 +9,10 @@ $id=(int)($_GET['id'] ?? 0);
 $error='';
 $ok='';
 $waCred='';
+// personnel_new.php'nin "aynı işlemde giriş hesabı oluştur" akışından (Kullanıcı/Yetki birleştirme,
+// 2026-07-17) redirect sonrası tek seferlik flash mesaj — session'da kalıp tekrar görünmesin.
+if(!empty($_SESSION['_new_personnel_wa'])){ $waCred=$_SESSION['_new_personnel_wa']; $ok='Personel ve giriş hesabı oluşturuldu.'; unset($_SESSION['_new_personnel_wa']); }
+if(!empty($_SESSION['_new_personnel_login_err'])){ $error=$_SESSION['_new_personnel_login_err']; unset($_SESSION['_new_personnel_login_err']); }
 $hasCvCol = personnel_has_cv_column($pdo);
 // PDP-001 (2026-07-15): mobile/personnel_view.php ile aynı yetki mantığı — şifre/hesap işlemleri
 // admin'e VEYA admin'in ayrıca 'personnel_accounts' yetkisi verdiği bir "alt yönetici"ye açık.

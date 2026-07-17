@@ -6,6 +6,11 @@ require_once __DIR__.'/personnel_lib.php';
 $pdo=db();
 $error='';
 $hasCvCol = personnel_has_cv_column($pdo);
+// RELEASE 0.9 — Kullanıcı/Yetki Akışı Birleştirme (2026-07-17, Product Owner kararı: "Yeni personel
+// oluşturulduğunda aynı işlem içinde OTS kullanıcısı oluşturulabilmelidir"). mobile/personnel_new.php'de
+// zaten var olan aynı desen (opsiyonel "make_login" checkbox'ı) web'e de eklendi — aynı yetki kuralı
+// (PDP-001: admin veya 'personnel_accounts' yetkili alt yönetici).
+$canManageAccounts = is_admin() || user_can('personnel_accounts');
 
 if($_SERVER['REQUEST_METHOD']==='POST'){
     try{
@@ -58,6 +63,18 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 $pdo->prepare("UPDATE personnel SET telegram_activation_code=? WHERE id=?")->execute([$code,$newId]);
             }
         }catch(Throwable $e){}
+
+        // Opsiyonel: aynı işlemde giriş hesabı da oluştur (personnel_lib.php::personnel_create_login()
+        // — mükerrer hesap koruması dahil, P0-AUTH-01 ile aynı güvenli fonksiyon; yeni personelin henüz
+        // hiçbir hesabı olamayacağı için o koruma burada devreye girmez, sadece tutarlılık için aynı yol).
+        if($canManageAccounts && !empty($_POST['make_login']) && trim($_POST['username']??'')!=='' && trim($_POST['password']??'')!==''){
+            try{
+                $res=personnel_create_login($pdo, $newId, $_POST['username'], $_POST['password']);
+                if(function_exists('cred_wa')) $_SESSION['_new_personnel_wa']=cred_wa($res['phone'], trim($_POST['username']), $_POST['password']);
+            }catch(Throwable $e){
+                $_SESSION['_new_personnel_login_err']='Personel eklendi ama giriş hesabı oluşturulamadı: '.$e->getMessage();
+            }
+        }
         header("Location: personnel_edit.php?id=".$newId);
         exit;
     }catch(Throwable $e){
@@ -117,6 +134,20 @@ ds_page_header('Yeni Personel', ds_icon('user',24), '', ds_button('Personel List
 <input type="checkbox" name="active" checked style="width:auto"> Aktif personel
 </label>
 </div>
+
+<?php if($canManageAccounts): ?>
+<div class="df-form-span-2 df-card" style="background:var(--df-accent-soft);border-color:transparent">
+<label style="display:flex;align-items:center;gap:8px;margin:0;font-weight:700;color:var(--df-ink-900)">
+<input type="checkbox" name="make_login" value="1" style="width:auto" onchange="document.getElementById('loginFields').style.display=this.checked?'grid':'none'">
+<?=ds_icon('user',16)?> Aynı işlemde uygulamaya giriş hesabı da oluştur
+</label>
+<div id="loginFields" class="df-form-grid-2" style="display:none;margin-top:var(--df-space-3)">
+<?php ds_form_field('Kullanıcı Adı', '<input name="username">'); ?>
+<?php ds_form_field('Şifre', '<input type="password" name="password">'); ?>
+</div>
+<p style="margin:var(--df-space-2) 0 0;font-size:var(--df-type-caption-size);color:var(--df-ink-500)">Personel bu bilgilerle giriş yapıp mesaj/iş/görev görür (yetkileri kısıtlı, daha sonra "Giriş Hesabı" sekmesinden düzenlenebilir).</p>
+</div>
+<?php endif; ?>
 
 <div class="df-form-span-2">
 <button class="df-btn df-btn--primary">Personeli Kaydet</button>
