@@ -198,7 +198,7 @@ function page_module_map(){
         'finance.php'=>'finance','finance_new.php'=>'finance','finance_accounts.php'=>'finance','finance_transfer.php'=>'finance','finance_account_view.php'=>'finance',
         'kasa.php'=>'finance','transfer.php'=>'finance','account_view.php'=>'finance','movement_view.php'=>'finance',
         'checks_notes.php'=>'finance','check_note_view.php'=>'finance','collection.php'=>'finance','payment.php'=>'finance',
-        'stock.php'=>'stock','product_new.php'=>'stock','stock_movement_new.php'=>'stock',
+        'stock.php'=>'stock','product_new.php'=>'stock','product_view.php'=>'stock','stock_movement_new.php'=>'stock',
         'product_categories.php'=>'stock','product_taxonomy.php'=>'stock','purchase.php'=>'stock',
         'sales.php'=>'stock','kpi.php'=>'personnel',
         'report.php'=>'report','gunluk_rapor.php'=>'report',
