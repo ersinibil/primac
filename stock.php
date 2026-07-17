@@ -14,55 +14,38 @@ $sqlWhere=$where ? 'WHERE '.implode(' AND ',$where) : '';
 $categories=db()->query("SELECT * FROM product_categories WHERE active=1 ORDER BY name")->fetchAll();
 ?>
 
-<style>
-.command-grid{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:14px;margin:14px 0 20px}
-.command-card{display:block;text-decoration:none;background:#fff;border-radius:20px;padding:18px;box-shadow:0 8px 28px rgba(16,24,40,.06);border:1px solid #eef2f6;color:#101828;transition:transform .12s ease,box-shadow .12s ease}
-.command-card:hover{transform:translateY(-2px);box-shadow:0 14px 36px rgba(16,24,40,.11)}
-.command-card small{display:block;color:#667085;font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:.06em}
-.command-card strong{display:block;font-size:30px;margin:8px 0;line-height:1}
-.command-card span{color:#667085;font-size:13px}
-.command-card.blue{border-left:6px solid #3b82f6}
-.command-card.red{border-left:6px solid #ef4444}
-.command-card.green{border-left:6px solid #22c55e}
-.command-card.orange{border-left:6px solid #f97316}
-@media(max-width:960px){.command-grid{grid-template-columns:1fr}}
-</style>
+<?php
+$__stockActions = ds_button('Ürün','product_new.php','primary','','',true)
+    . ds_button('Stok Giriş','stock_movement_new.php?type=in','secondary','','',true)
+    . ds_button('Stok Çıkış / Satış','stock_movement_new.php?type=out','secondary','','',true)
+    . ds_button('Kategoriler','product_categories.php','secondary','','',true);
+ds_page_header('Ürün / Stok Yönetimi', ds_icon('box',24), '', $__stockActions, false, true);
+?>
 
-<div class="panel-head">
-<h1>Ürün / Stok Yönetimi</h1>
-<div class="actions">
-<a class="btn" href="product_new.php">+ Ürün</a>
-<a class="btn secondary" href="stock_movement_new.php?type=in">+ Stok Giriş</a>
-<a class="btn secondary" href="stock_movement_new.php?type=out">+ Stok Çıkış / Satış</a>
-<a class="btn secondary" href="product_categories.php">Kategoriler</a>
-</div>
-</div>
-
-<section class="command-grid">
-<a class="command-card blue" href="stock.php"><small>Ürün</small><strong><?=safe_count("SELECT COUNT(*) c FROM stock_items")?></strong><span>Toplam ürün</span></a>
-<a class="command-card red" href="stock.php?critical=1"><small>Kritik</small><strong><?=safe_count("SELECT COUNT(*) c FROM stock_items WHERE quantity <= critical_level")?></strong><span>Kritik stok</span></a>
-<a class="command-card green" href="stock_movement_new.php?type=in"><small>Giriş</small><strong>+</strong><span>Alış / tedarik</span></a>
-<a class="command-card orange" href="stock_movement_new.php?type=out"><small>Çıkış</small><strong>-</strong><span>Satış / kullanım</span></a>
+<section class="crm-tabs" style="grid-template-columns:repeat(4,minmax(160px,1fr))">
+<a class="crm-card crm-blue" href="stock.php"><small>Ürün</small><strong><?=safe_count("SELECT COUNT(*) c FROM stock_items")?></strong><span>Toplam ürün</span></a>
+<a class="crm-card" style="background:linear-gradient(135deg,#fee2e2,#fef2f2)" href="stock.php?critical=1"><small>Kritik</small><strong><?=safe_count("SELECT COUNT(*) c FROM stock_items WHERE quantity <= critical_level")?></strong><span>Kritik stok</span></a>
+<a class="crm-card crm-green" href="stock_movement_new.php?type=in"><small>Giriş</small><strong>+</strong><span>Alış / tedarik</span></a>
+<a class="crm-card crm-orange" href="stock_movement_new.php?type=out"><small>Çıkış</small><strong>-</strong><span>Satış / kullanım</span></a>
 </section>
 
-<section class="panel">
-<form method="get" class="form-grid">
-<label>Kategori
-<select name="category_id">
-<option value="">Tüm Kategoriler</option>
-<?php foreach($categories as $c): ?>
-<option value="<?=$c['id']?>" <?=$categoryId===(int)$c['id']?'selected':''?>><?=h($c['name'])?></option>
-<?php endforeach; ?>
-</select>
-</label>
-<label style="align-self:end"><input type="checkbox" name="pasif_dahil" value="1" <?=$pasifDahil?'checked':''?> style="width:auto"> Pasif Dahil</label>
-<label style="align-self:end"><input type="checkbox" name="critical" value="1" <?=$criticalOnly?'checked':''?> style="width:auto"> Sadece Kritik Stok</label>
-<div style="align-self:end"><button class="btn secondary">Filtrele</button></div>
+<section class="df-card">
+<form method="get" class="df-form-grid-2">
+<?php
+$__catOpts='<option value="">Tüm Kategoriler</option>';
+foreach($categories as $c){ $__catOpts.='<option value="'.$c['id'].'" '.($categoryId===(int)$c['id']?'selected':'').'>'.h($c['name']).'</option>'; }
+ds_form_field('Kategori', '<select name="category_id">'.$__catOpts.'</select>');
+?>
+<div style="display:flex;gap:var(--df-space-4);align-items:center">
+<label style="display:flex;align-items:center;gap:6px"><input type="checkbox" name="pasif_dahil" value="1" <?=$pasifDahil?'checked':''?> style="width:auto"> Pasif Dahil</label>
+<label style="display:flex;align-items:center;gap:6px"><input type="checkbox" name="critical" value="1" <?=$criticalOnly?'checked':''?> style="width:auto"> Sadece Kritik Stok</label>
+<button class="df-btn df-btn--secondary">Filtrele</button>
+</div>
 </form>
 </section>
 
-<section class="panel">
-<table>
+<section class="df-card" style="margin-top:var(--df-space-4)">
+<div class="df-table-wrap"><table class="df-table">
 <thead>
 <tr>
 <th>Kod</th>
@@ -92,23 +75,33 @@ try{
         $rowStyle=$isPasif?' style="opacity:.45"':'';
         echo "<tr$rowStyle>";
         echo "<td><b>".h($r['product_code'] ?: '-')."</b></td>";
-        echo "<td><a href='product_view.php?id=".h($r['id'])."'><b>".h($r['name'])."</b></a>".($isPasif?" <span style='font-size:11px;background:#ef4444;color:#fff;border-radius:6px;padding:1px 6px'>Pasif</span>":'')."<br><span class='muted'>".h($r['variant_name'] ?: $r['brand'])."</span></td>";
+        echo "<td><a href='product_view.php?id=".h($r['id'])."'><b>".h($r['name'])."</b></a>".($isPasif?" <span class='df-badge df-badge--danger'>Pasif</span>":'')."<br><span style='color:var(--df-ink-500)'>".h($r['variant_name'] ?: $r['brand'])."</span></td>";
         echo "<td>".h($r['category_name'] ?: '-')."</td>";
         echo "<td>".h($r['quantity'])." ".h($r['unit'])."</td>";
         echo "<td>".h($r['critical_level'])." ".h($r['unit'])."</td>";
         echo "<td>".money($r['avg_cost'] ?: $r['purchase_price'])."</td>";
         echo "<td>".money($r['sale_price'])."</td>";
         echo "<td>".money($profit)."</td>";
-        echo "<td><a class='btn small secondary' href='product_view.php?id=".h($r['id'])."'>Profil</a></td>";
+        echo "<td><a class='df-btn df-btn--secondary df-btn--sm' href='product_view.php?id=".h($r['id'])."'>Profil</a></td>";
         echo "</tr>";
     }
-    if(!$rows) echo "<tr><td colspan='9' class='muted'>Ürün yok.</td></tr>";
+    if(!$rows) echo "<tr><td colspan='9' style='color:var(--df-ink-500)'>Ürün yok.</td></tr>";
 }catch(Throwable $e){
-    echo "<tr><td colspan='9'><div class='alert'>".h($e->getMessage())."</div></td></tr>";
+    echo "<tr><td colspan='9'>".ds_alert('danger',$e->getMessage())."</td></tr>";
 }
 ?>
 </tbody>
-</table>
+</table></div>
 </section>
+
+<style>
+body.nav-compact .df-form-grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 var(--df-space-4);align-items:end}
+@media(max-width:640px){body.nav-compact .df-form-grid-2{grid-template-columns:1fr}}
+.crm-tabs{display:grid;gap:var(--df-space-4);margin:var(--df-space-4) 0 var(--df-space-5)}
+.crm-card{display:block;text-decoration:none;border-radius:var(--df-radius-lg);padding:var(--df-space-4);box-shadow:var(--df-elevation-raised);border:1px solid var(--df-hairline);color:var(--df-ink-900)}
+.crm-card small{display:block;color:var(--df-ink-600);font-weight:900;margin-bottom:6px}.crm-card strong{display:block;font-size:26px;line-height:1;margin-bottom:8px}.crm-card span{display:block;color:var(--df-ink-500);font-size:13px}
+.crm-blue{background:linear-gradient(135deg,#dbeafe,#eff6ff)}.crm-green{background:linear-gradient(135deg,#dcfce7,#f0fdf4)}.crm-orange{background:linear-gradient(135deg,#ffedd5,#fff7ed)}
+@media(max-width:960px){.crm-tabs{grid-template-columns:1fr!important}}
+</style>
 
 <?php require_once __DIR__.'/layout_bottom.php'; ?>
