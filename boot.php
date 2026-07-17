@@ -182,7 +182,7 @@ function page_module_map(){
     return [
         // NOT: job_view.php / task detayları KORUMASIZ — personel kendine atanan işi/görevi
         // bildirimden açabilsin diye. Liste/oluşturma sayfaları yetkiye bağlı.
-        'jobs.php'=>'jobs','job_new.php'=>'jobs','job_edit.php'=>'jobs',
+        'jobs.php'=>'jobs','job_new.php'=>'jobs','job_edit.php'=>'jobs','ics.php'=>'jobs',
         'takvim.php'=>'jobs','calendar.php'=>'jobs','production.php'=>'jobs','assembly.php'=>'jobs','external.php'=>'jobs',
         'approval_waiting.php'=>'jobs','work_center.php'=>'jobs','design.php'=>'jobs',
         // PX-002 / Elif'in parite denetiminde bulduğu boşluk (2026-07-17): uretim.php/uretim_new.php
