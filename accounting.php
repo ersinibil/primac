@@ -6,7 +6,12 @@ $pdo=db();
 
 $month=(int)($_GET['m'] ?? date('m'));
 $year=(int)($_GET['y'] ?? date('Y'));
-$tab=$_GET['tab'] ?? 'kayitlar';
+// HOTFIX-01 (2026-07-17, ACİL): $_GET['tab'] önceden hiç doğrulanmadan href'lere basılıyordu
+// (reflected XSS). Sadece uygulamada gerçekten var olan 4 sekme kabul edilir, aksi halde güvenli
+// varsayılana düşer — whitelist + aşağıdaki h() çıktısı birlikte (savunma derinliği).
+$__accValidTabs = ['kayitlar','yeni','personel','ozet'];
+$tab = $_GET['tab'] ?? 'kayitlar';
+if(!in_array($tab, $__accValidTabs, true)) $tab = 'kayitlar';
 $msg=''; $err='';
 
 // Kayıt düzenleme
@@ -135,10 +140,10 @@ $groups=acc_group_summary($pdo,$month,$year);
 <h1>📒 Muhasebe</h1>
 
 <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
-  <a href="?m=<?=$prevM?>&y=<?=$prevY?>&tab=<?=$tab?>" class="btn secondary" style="padding:8px 14px">‹</a>
+  <a href="?m=<?=$prevM?>&y=<?=$prevY?>&tab=<?=h($tab)?>" class="btn secondary" style="padding:8px 14px">‹</a>
   <span style="font-weight:900;font-size:17px"><?=date('F Y',mktime(0,0,0,$month,1,$year))?></span>
-  <a href="?m=<?=$nextM?>&y=<?=$nextY?>&tab=<?=$tab?>" class="btn secondary" style="padding:8px 14px">›</a>
-  <a href="?m=<?=(int)date('m')?>&y=<?=(int)date('Y')?>&tab=<?=$tab?>" class="btn secondary" style="padding:8px 12px;font-size:12px">Bu Ay</a>
+  <a href="?m=<?=$nextM?>&y=<?=$nextY?>&tab=<?=h($tab)?>" class="btn secondary" style="padding:8px 14px">›</a>
+  <a href="?m=<?=(int)date('m')?>&y=<?=(int)date('Y')?>&tab=<?=h($tab)?>" class="btn secondary" style="padding:8px 12px;font-size:12px">Bu Ay</a>
 </div>
 
 <div class="acc-summary">
