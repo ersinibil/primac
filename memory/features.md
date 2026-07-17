@@ -2,7 +2,7 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
-## FAZ 2C-i — Mobile Shell Migration (2026-07-17, henüz commit edilmedi — DEV PASS bekleniyor)
+## FAZ 2C-i — Mobile Shell Migration (2026-07-17, commit `22d50b2`, DEV PASS + USER TEST PASS — CLOSED)
 Product Owner kararı: R/2b geçici backlog'a alındı, web/mobil tasarım farkını kapatmak için FAZ 2C
 (Mobile Design System Migration) başladı. Kod öncesi **Mobile Design System Audit** kabul edildi
 (67 sayfa envanteri → [[backlog]] "FAZ 2C"). 2C-i kapsamı KESİN olarak yalnızca ortak kabuk:
@@ -42,8 +42,22 @@ sayfa migration öncesi de/sonra da DF gövde kullanıyordu, tek fark artık kab
 gerçek moduna göre doğru (compact kullanıcı için önceki "DF gövde + legacy kabuk" karışıklığı
 ortadan kalktı).
 
-**Sıradaki:** Product Owner'ın ekran görüntüsü değerlendirmesi. DEV PASS alınmadan FAZ 2C-ii'ye
-geçilmeyecek (Product Owner'ın kendi kuralı).
+**DEV PASS (2026-07-17):** Product Owner ekran görüntülerini onayladı — "Kapsam korunmuş... Ortak
+kabuk artık Design System standardına alınmış."
+
+**USER TEST (2026-07-17):** Canlı hesap girişi yerine (kimlik bilgisi paylaşılmıyor — kurulu
+güvenlik kuralı) rol-simülasyonlu DB'siz harness: gerçek `topx()`/`botx()`/`nav_effective_mode()`
+10 senaryoda (Admin/Personel/Saha Personeli/pilot-Personel + rozet 0/1/9/10/99 + aşırı uzun isim)
+`error_reporting(E_ALL)` ile çalıştırıldı — **0 PHP warning/notice/fatal**. Sonuçlar: Admin→compact,
+Personel/Saha→legacy (varsayılan, beklenen), pilot-Personel→compact (compact admin'e özel değil,
+doğrulandı); Saha Personeli'nde İş/Cari sekmesi NAV-001B kuralınca sessizce kaldırılıyor (boş slot
+YOK); rozet 9→"9", 10/99→"9+" (`$um>9?'9+':$um` sınırı doğru); uzun isim (52 karakter) header'da
+ellipsis ile kesiliyor, mesaj/bildirim ikonları taşmıyor; legacy dal her rolde byte-identik;
+`env(safe-area-inset-top/bottom)` her iki dalda da mevcut (top: ortak `body` padding'i, bottom:
+legacy `.bottom` + yeni `.df-m-bottomnav` ayrı ayrı). **USER TEST PASS.**
+
+**FAZ 2C-i CLOSED.** Sıradaki: FAZ 2C-ii (Mobile Home) Audit raporu — kod YOK, kapsam onayı
+bekleniyor.
 
 ## FAZ 2B-ii-R/2b — Akıllı Arama (2026-07-17, commit `f817b32`)
 Product Owner, R/2'nin USER TEST'inde `whatsapp`/`what`/`wha` için ekran görüntüleriyle 0 sonucu

@@ -19,9 +19,10 @@ uygulama kullanıyormuş hissi yaşamamalı.
 TAM LEGACY. DF CSS + `ds_lib.php` her mobil sayfada zaten yükleniyor (kullanılmıyor) — göç yeni
 altyapı değil markup dönüşümü.
 
-**FAZ 2C-i (Mobile Shell Migration) UYGULANDI, DEV PASS bekleniyor** — bkz. [[features]] "FAZ 2C-i".
-Kalan fazlar (2C-ii Home, 2C-iii Search, 2C-iv Liste/Kart, 2C-v Formlar, 2C-vi Badge/EmptyState
-temizliği) 2C-i DEV PASS'i alınmadan başlamayacak.
+**FAZ 2C-i (Mobile Shell Migration) CLOSED** (DEV PASS + USER TEST PASS, 2026-07-17) — bkz.
+[[features]] "FAZ 2C-i". Kalan fazlar (2C-ii Home, 2C-iii Search, 2C-iv Liste/Kart, 2C-v Formlar,
+2C-vi Badge/EmptyState temizliği) sırayla, her biri kendi Audit + DEV PASS + USER TEST kapısından
+geçerek ilerleyecek. Şimdi sırada: **FAZ 2C-ii — Mobile Home**, yalnızca Audit aşamasında (kod YOK).
 
 ## ds-foundation.css'te kısmen ölü Launcher CSS'i (2026-07-17, Ece PX-002 FAZ 2B-ii review notu, çok düşük öncelik)
 FAZ 2B-ii'de `layout_top.php`'nin eski Launcher paneli (web "Tüm Modüller" sağdan-kayan drawer)
