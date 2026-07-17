@@ -91,47 +91,48 @@ function req_tone($s){
 
 topx('Talep Merkezi');
 ?>
-<?php if($er): ?><div class="err"><?=htmlspecialchars($er)?></div><?php endif; ?>
+<?php if($er): ?><?=ds_alert('danger',$er)?><?php endif; ?>
 
-<a class="btn dark" href="request_new.php" style="display:block;text-align:center;margin-bottom:10px">+ Yeni Talep</a>
+<?=ds_button(ds_icon('plus',15).' Yeni Talep','request_new.php','primary','','style="width:100%;justify-content:center;margin-bottom:12px"',true)?>
 
-<div class="panel" style="display:flex;gap:8px;flex-wrap:wrap;font-size:13px">
-<a class="<?=$status===''?'btn':''?>" href="requests.php" style="color:#fff;text-decoration:none;<?=$status===''?'':'opacity:.7'?>">Tümü</a>
+<div class="df-tabs" style="overflow:auto;max-width:100%;-webkit-overflow-scrolling:touch;margin-bottom:14px">
+<a class="df-tab<?=$status===''?' df-tab--active':''?>" href="requests.php">Tümü</a>
 <?php foreach($statuses as $s): ?>
-<a class="<?=$status===$s?'btn':''?>" href="requests.php?status=<?=urlencode($s)?>" style="color:#fff;text-decoration:none;<?=$status===$s?'':'opacity:.7'?>"><?=htmlspecialchars($s)?></a>
+<a class="df-tab<?=$status===$s?' df-tab--active':''?>" href="requests.php?status=<?=urlencode($s)?>"><?=h($s)?></a>
 <?php endforeach; ?>
 </div>
 
-<?php if(!$rows): ?><div class="panel muted">Henüz talep yok.</div><?php endif; ?>
+<?php if(!$rows): ?><?php ds_empty_state('Henüz talep yok.', null, ds_icon('info',20)); ?><?php endif; ?>
 
 <?php foreach($rows as $r): ?>
-<div class="panel">
+<div class="df-panel" style="margin-top:10px">
   <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start">
     <div style="min-width:0">
-      <b><?=htmlspecialchars($r['title'])?></b><br>
-      <span class="muted" style="font-size:12px"><?=htmlspecialchars($r['request_no'])?> · <?=htmlspecialchars($r['created_at'])?></span>
+      <div class="df-list-row-title"><?=h($r['title'])?></div>
+      <div class="df-text-caption"><?=h($r['request_no'])?> · <?=h($r['created_at'])?></div>
     </div>
-    <span class="card <?=req_tone($r['status'])?>" style="min-height:auto;padding:5px 10px;font-weight:900;font-size:12px;border-radius:12px"><?=htmlspecialchars($r['status'])?></span>
+    <?=ds_badge($r['status'], req_tone($r['status']))?>
   </div>
 
-  <div style="margin:8px 0;font-size:14px">
-    <div class="muted" style="font-size:12px">📂 <?=htmlspecialchars($r['category'])?> · ⚡ <?=htmlspecialchars($r['priority'])?></div>
-    <div class="muted" style="font-size:12px">👤 <?=htmlspecialchars($r['personnel_name']?:'-')?></div>
-    <?php if(!empty($r['job_no'])): ?><div class="muted" style="font-size:12px">📋 <?=htmlspecialchars($r['job_no'].' - '.$r['job_title'])?></div><?php endif; ?>
-    <?php if(trim((string)$r['description'])!==''): ?><div style="margin-top:6px"><?=nl2br(htmlspecialchars($r['description']))?></div><?php endif; ?>
+  <div class="df-list-row-meta" style="margin-top:8px">
+    <span><?=h($r['category'])?></span>
+    <?=ds_priority($r['priority'],$r['priority'])?>
+    <span><?=ds_icon('user',13)?> <?=h($r['personnel_name']?:'-')?></span>
+    <?php if(!empty($r['job_no'])): ?><span><?=ds_icon('briefcase',13)?> <?=h($r['job_no'].' - '.$r['job_title'])?></span><?php endif; ?>
   </div>
+  <?php if(trim((string)$r['description'])!==''): ?><p style="margin:8px 0 0"><?=nl2br(h($r['description']))?></p><?php endif; ?>
 
-  <form method="post">
+  <form method="post" style="margin-top:12px">
     <input type="hidden" name="request_id" value="<?=$r['id']?>">
-    <label class="muted">Durum</label>
+    <label>Durum</label>
     <select name="status">
-      <?php foreach($statuses as $s): ?><option <?=$r['status']===$s?'selected':''?>><?=htmlspecialchars($s)?></option><?php endforeach; ?>
+      <?php foreach($statuses as $s): ?><option <?=$r['status']===$s?'selected':''?>><?=h($s)?></option><?php endforeach; ?>
     </select>
-    <input name="manager_note" placeholder="Yönetim notu" value="<?=htmlspecialchars((string)$r['response_note'])?>">
-    <div style="display:flex;gap:8px">
-      <button class="btn" type="submit">Kaydet</button>
-      <button class="btn dark" type="submit" onclick="this.form.status.value='Onaylandı'" style="background:#16a34a">✓ Onayla</button>
-      <button class="btn dark" type="submit" onclick="this.form.status.value='Reddedildi'" style="background:#dc2626">✕ Reddet</button>
+    <input name="manager_note" placeholder="Yönetim notu" value="<?=h((string)$r['response_note'])?>">
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button type="submit" class="df-btn df-btn--secondary" style="flex:1;justify-content:center">Kaydet</button>
+      <button type="submit" class="df-btn df-btn--primary" onclick="this.form.status.value='Onaylandı'" style="flex:1;justify-content:center"><?=ds_icon('check',14)?> Onayla</button>
+      <button type="submit" class="df-btn df-btn--danger" onclick="this.form.status.value='Reddedildi'" style="flex:1;justify-content:center"><?=ds_icon('close',14)?> Reddet</button>
     </div>
   </form>
 </div>

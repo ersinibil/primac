@@ -33,37 +33,48 @@ $where[]=$statusMap[$s] ?? $statusMap['aktif'];
 $sql="SELECT j.*, c.name customer, p.name responsible FROM jobs j LEFT JOIN contacts c ON c.id=j.customer_id LEFT JOIN personnel p ON p.id=j.responsible_personnel_id WHERE ".implode(' AND ',$where).' ORDER BY j.id DESC LIMIT 120';
 
 topx('İş Emirleri');
-$tones=['Yeni'=>'#3b82f6','Devam Ediyor'=>'#a855f7','Bekliyor'=>'#eab308','Tamamlandı'=>'#22c55e','Teslim Edildi'=>'#22c55e','İptal'=>'#94a3b8'];
 $tabs=['aktif'=>'Aktif','bekleyen'=>'Bekleyen','devam'=>'Devam Eden','tamam'=>'Tamamlanan','iptal'=>'İptal','gec'=>'Geciken','bugun'=>'Bugün Teslim','tumu'=>'Tümü'];
 if($isAdmin) $tabs['atanmamis']='Atanmamış';
 ?>
-<div class="panel" style="padding:10px;display:flex;gap:8px"><a class="btn dark" style="flex:1;text-align:center" href="job_new.php">+ Yeni İş</a><a class="btn" style="flex:0 0 auto;background:#334155;color:#fff" href="calendar.php">📅</a><a class="btn" style="flex:0 0 auto;background:#334155;color:#fff" href="report.php?modul=is">📊</a></div>
-<div style="display:flex;gap:6px;overflow:auto;margin-bottom:10px;-webkit-overflow-scrolling:touch">
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+  <?=ds_button(ds_icon('plus',15).' Yeni İş','job_new.php','primary','','style="flex:1;justify-content:center;min-width:120px"',true)?>
+  <?=ds_button(ds_icon('calendar',15).' Takvim','calendar.php','secondary','','style="flex:1;justify-content:center;min-width:100px"',true)?>
+  <?=ds_button('Rapor','report.php?modul=is','secondary','','style="flex:1;justify-content:center;min-width:100px"',true)?>
+</div>
+<div class="df-tabs" style="overflow:auto;max-width:100%;-webkit-overflow-scrolling:touch;margin-bottom:14px">
   <?php foreach($tabs as $k=>$v): ?>
-    <a class="btn" style="white-space:nowrap;padding:8px 13px;<?=$s===$k?'background:#2563eb;color:#fff':'background:#334155;color:#cbd5e1'?>" href="jobs.php?s=<?=$k?>"><?=$v?></a>
+    <a class="df-tab<?=$s===$k?' df-tab--active':''?>" href="jobs.php?s=<?=h($k)?>"><?=h($v)?></a>
   <?php endforeach; ?>
 </div>
 <?php
 try{
   $st=$pdo->prepare($sql); $st->execute($params); $rows=$st->fetchAll();
-  if(!$rows) echo '<div class="panel muted" style="text-align:center">Bu kategoride iş yok.</div>';
-  foreach($rows as $r){ $col=$tones[$r['status']]??'#94a3b8'; $aktif=!in_array($r['status'],['Tamamlandı','Teslim Edildi','İptal']);
-    echo '<div class="panel" style="padding:12px">';
-    echo '<a href="job_view.php?id='.(int)$r['id'].'" style="text-decoration:none;color:#fff;display:block">';
-    echo '<div style="display:flex;justify-content:space-between;gap:8px"><b>'.htmlspecialchars($r['title']).'</b><span style="color:'.$col.';font-weight:900;font-size:12px;white-space:nowrap">●'.htmlspecialchars($r['status']).'</span></div>';
-    echo '<small class="muted">'.htmlspecialchars($r['job_no']??'').($r['customer']?' · 👤 '.htmlspecialchars($r['customer']):'').($r['responsible']?' · 👷 '.htmlspecialchars($r['responsible']):'').($r['due_date']?' · 📅 '.htmlspecialchars($r['due_date']):'').'</small>';
+  if(!$rows) ds_empty_state('Bu kategoride iş yok.', null, ds_icon('briefcase',20));
+  foreach($rows as $r){ $aktif=!in_array($r['status'],['Tamamlandı','Teslim Edildi','İptal']);
+    echo '<div class="df-panel" style="margin-top:10px">';
+    echo '<a href="job_view.php?id='.(int)$r['id'].'" style="text-decoration:none;color:inherit;display:block">';
+    echo '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start">';
+    echo '<div class="df-list-row-title" style="flex:1;min-width:0">'.h($r['title']).'</div>';
+    echo ds_badge($r['status']);
+    echo '</div>';
+    echo '<div class="df-list-row-meta" style="margin-top:6px">';
+    if(!empty($r['job_no'])) echo '<span>'.h($r['job_no']).'</span>';
+    if(!empty($r['customer'])) echo '<span>'.ds_icon('user',13).' '.h($r['customer']).'</span>';
+    if(!empty($r['responsible'])) echo '<span>'.ds_icon('users',13).' '.h($r['responsible']).'</span>';
+    if(!empty($r['due_date'])) echo '<span class="df-list-row-due">'.ds_icon('calendar',13).' '.h($r['due_date']).'</span>';
+    echo '</div>';
     echo '</a>';
     // Hızlı durum aksiyonları
     if($aktif){
       echo '<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">';
-      if($r['status']!=='Devam Ediyor') echo '<form method="post" style="flex:1;margin:0"><input type="hidden" name="jid" value="'.(int)$r['id'].'"><button class="btn" name="set" value="Devam Ediyor" style="width:100%;background:#2563eb;color:#fff;padding:9px">▶ Başlat</button></form>';
-      echo '<form method="post" style="flex:1;margin:0"><input type="hidden" name="jid" value="'.(int)$r['id'].'"><button class="btn" name="set" value="Tamamlandı" style="width:100%;background:#16a34a;color:#fff;padding:9px">✓ Tamamla</button></form>';
-      echo '<form method="post" style="flex:1;margin:0"><input type="hidden" name="jid" value="'.(int)$r['id'].'"><button class="btn" name="set" value="İptal" style="width:100%;background:#7f1d1d;color:#fff;padding:9px" onclick="return confirm(\'İptal edilsin mi?\')">✕</button></form>';
+      if($r['status']!=='Devam Ediyor') echo '<form method="post" style="flex:1;margin:0"><input type="hidden" name="jid" value="'.(int)$r['id'].'"><button type="submit" class="df-btn df-btn--secondary" name="set" value="Devam Ediyor" style="width:100%;justify-content:center">'.ds_icon('check',14).' Başlat</button></form>';
+      echo '<form method="post" style="flex:1;margin:0"><input type="hidden" name="jid" value="'.(int)$r['id'].'"><button type="submit" class="df-btn df-btn--primary" name="set" value="Tamamlandı" style="width:100%;justify-content:center">'.ds_icon('check',14).' Tamamla</button></form>';
+      echo '<form method="post" style="flex:1;margin:0" onsubmit="return confirm(\'İptal edilsin mi?\')"><input type="hidden" name="jid" value="'.(int)$r['id'].'"><button type="submit" class="df-btn df-btn--danger" name="set" value="İptal" style="width:100%;justify-content:center">'.ds_icon('close',14).'</button></form>';
       echo '</div>';
     } elseif($r['status']==='Tamamlandı'){
-      echo '<div style="display:flex;gap:6px;margin-top:10px"><form method="post" style="flex:1;margin:0"><input type="hidden" name="jid" value="'.(int)$r['id'].'"><button class="btn" name="set" value="Teslim Edildi" style="width:100%;background:#334155;color:#fff;padding:9px">📦 Teslim / Kapat</button></form></div>';
+      echo '<div style="margin-top:10px"><form method="post" style="margin:0"><input type="hidden" name="jid" value="'.(int)$r['id'].'"><button type="submit" class="df-btn df-btn--secondary" name="set" value="Teslim Edildi" style="width:100%;justify-content:center">'.ds_icon('box',14).' Teslim / Kapat</button></form></div>';
     }
     echo '</div>';
   }
-}catch(Throwable $e){ echo '<div class="err">'.htmlspecialchars($e->getMessage()).'</div>'; }
+}catch(Throwable $e){ echo ds_alert('danger',$e->getMessage()); }
 botx();

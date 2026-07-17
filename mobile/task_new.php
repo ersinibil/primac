@@ -33,13 +33,13 @@ topx('İş Ekle');
 $pers=$pdo->query("SELECT id,name,role FROM personnel WHERE COALESCE(active,1)=1 ORDER BY name")->fetchAll();
 $jobs=$pdo->query("SELECT id,job_no,title FROM jobs ORDER BY id DESC LIMIT 100")->fetchAll();
 ?>
-<?php if($ok): ?><div class="notice"><?=htmlspecialchars($ok)?></div><?php endif; ?>
-<?php if($er): ?><div class="err"><?=htmlspecialchars($er)?></div><?php endif; ?>
-<div class="panel">
+<?php if($ok): ?><?=ds_alert('success',$ok)?><?php endif; ?>
+<?php if($er): ?><?=ds_alert('danger',$er)?><?php endif; ?>
+<div class="df-panel">
 <form method="post">
   <label>Personel</label>
   <select name="personnel_id" required><option value="">— Seç —</option>
-  <?php foreach($pers as $p): ?><option value="<?=$p['id']?>"><?=htmlspecialchars($p['name'].($p['role']?' · '.$p['role']:''))?></option><?php endforeach; ?></select>
+  <?php foreach($pers as $p): ?><option value="<?=$p['id']?>"><?=h($p['name'].($p['role']?' · '.$p['role']:''))?></option><?php endforeach; ?></select>
   <label>Görev Başlığı</label><input name="title" required>
   <label>Açıklama</label><textarea name="description" rows="3"></textarea>
   <div style="display:flex;gap:10px">
@@ -47,8 +47,8 @@ $jobs=$pdo->query("SELECT id,job_no,title FROM jobs ORDER BY id DESC LIMIT 100")
     <div style="flex:1"><label>Termin</label><input type="date" name="due_date"></div>
   </div>
   <label>İlgili İş (ops.)</label>
-  <select name="job_id"><option value="">— Yok —</option><?php foreach($jobs as $j): ?><option value="<?=$j['id']?>"><?=htmlspecialchars($j['job_no'].' · '.$j['title'])?></option><?php endforeach; ?></select>
-  <button class="btn dark" style="width:100%;padding:14px;margin-top:8px">🎯 İşi Ekle & Bildir</button>
+  <select name="job_id"><option value="">— Yok —</option><?php foreach($jobs as $j): ?><option value="<?=$j['id']?>"><?=h($j['job_no'].' · '.$j['title'])?></option><?php endforeach; ?></select>
+  <button class="df-btn df-btn--primary df-btn--lg" style="width:100%;margin-top:8px"><?=ds_icon('check',16)?> İşi Ekle &amp; Bildir</button>
 </form>
 </div>
 <?php botx(); ?>

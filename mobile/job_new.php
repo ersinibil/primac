@@ -24,15 +24,15 @@ topx('Yeni İş');
 $cs=$pdo->query("SELECT id,name FROM contacts ORDER BY name")->fetchAll();
 $pers=$pdo->query("SELECT id,name FROM personnel WHERE COALESCE(active,1)=1 ORDER BY name")->fetchAll();
 ?>
-<?php if($ok): ?><div class="notice"><?=htmlspecialchars($ok)?> · <a href="jobs.php" style="color:#fff;text-decoration:underline">İşler</a></div><?php endif; ?>
-<?php if($er): ?><div class="err"><?=htmlspecialchars($er)?></div><?php endif; ?>
-<div class="panel">
+<?php if($ok): ?><?=ds_alert('success',$ok)?><a href="jobs.php" class="df-btn df-btn--secondary" style="width:100%;justify-content:center;margin-bottom:10px">İşler</a><?php endif; ?>
+<?php if($er): ?><?=ds_alert('danger',$er)?><?php endif; ?>
+<div class="df-panel">
 <form method="post">
   <label>İş Başlığı</label><input name="title" required>
   <label>Müşteri</label>
-  <select name="customer_id"><option value="">— Yok —</option><?php foreach($cs as $c): ?><option value="<?=$c['id']?>"><?=htmlspecialchars($c['name'])?></option><?php endforeach; ?></select>
+  <select name="customer_id"><option value="">— Yok —</option><?php foreach($cs as $c): ?><option value="<?=$c['id']?>"><?=h($c['name'])?></option><?php endforeach; ?></select>
   <label>Sorumlu Personel</label>
-  <select name="responsible_personnel_id"><option value="">— Atanmadı —</option><?php foreach($pers as $p): ?><option value="<?=$p['id']?>"><?=htmlspecialchars($p['name'])?></option><?php endforeach; ?></select>
+  <select name="responsible_personnel_id"><option value="">— Atanmadı —</option><?php foreach($pers as $p): ?><option value="<?=$p['id']?>"><?=h($p['name'])?></option><?php endforeach; ?></select>
   <label>İş Tipi</label>
   <select name="job_type"><option value="karma">Karma</option><option value="3d_imalat">3D İmalat</option><option value="uv_baski">UV Baskı</option><option value="lazer">Lazer</option><option value="grafik_tasarim">Grafik Tasarım</option><option value="montaj">Montaj</option><option value="dis_atolye">Dış Atölye</option></select>
   <div style="display:flex;gap:10px">
@@ -40,7 +40,7 @@ $pers=$pdo->query("SELECT id,name FROM personnel WHERE COALESCE(active,1)=1 ORDE
     <div style="flex:1"><label>Termin</label><input type="date" name="due_date"></div>
   </div>
   <label>Açıklama</label><textarea name="description" rows="3"></textarea>
-  <button class="btn dark" style="width:100%;padding:14px;margin-top:8px">📋 İşi Oluştur & Ata</button>
+  <button class="df-btn df-btn--primary df-btn--lg" style="width:100%;margin-top:8px"><?=ds_icon('briefcase',16)?> İşi Oluştur &amp; Ata</button>
 </form>
 </div>
 <?php botx(); ?>

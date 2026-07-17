@@ -68,9 +68,9 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['save_contact'])){
     header('Location: contact_view.php?id='.$id.'&err=yetki'); exit;
 }
 topx('Cari Detay');
-if(!empty($_GET['ok'])) echo '<div class="notice">Cari güncellendi.</div>';
-if(!empty($_GET['deleted'])) echo '<div class="notice">Finans hareketi silindi, hesap bakiyesi güncellendi.</div>';
-if(!empty($_GET['err']) && $_GET['err']==='yetki') echo '<div class="err">Bu işlem için yetkiniz yok.</div>';
+if(!empty($_GET['ok'])) echo ds_alert('success','Cari güncellendi.');
+if(!empty($_GET['deleted'])) echo ds_alert('success','Finans hareketi silindi, hesap bakiyesi güncellendi.');
+if(!empty($_GET['err']) && $_GET['err']==='yetki') echo ds_alert('danger','Bu işlem için yetkiniz yok.');
 try{
     $s=db()->prepare("SELECT * FROM contacts WHERE id=?"); $s->execute([$id]); $c=$s->fetch();
     if(!$c) throw new Exception('Cari bulunamadı.');
@@ -92,122 +92,129 @@ try{
     // düzeltmesi) — satış/alış (Bekliyor) borç yaratır, Tahsilat/Ödeme bunu ters işaretle kapatır.
     require_once __DIR__.'/../contacts_lib.php';
     $bal=contact_balance(db(), $id);
-    $balCol = $bal>0 ? '#22c55e' : ($bal<0 ? '#f87171' : '#94a3b8');
+    $balCol = $bal>0 ? 'var(--df-success-ink)' : ($bal<0 ? 'var(--df-danger-ink)' : 'var(--df-ink-500)');
 ?>
-<div class="panel">
-  <h2 style="margin:0 0 4px"><?=htmlspecialchars($c['name'])?></h2>
-  <div class="muted"><?=htmlspecialchars($c['type'] ?? '')?><?=$c['phone']?' · '.htmlspecialchars($c['phone']):''?></div>
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,.12)">
-    <div><div class="muted" style="font-size:12px">Bakiye</div><div style="font-size:24px;font-weight:900;color:<?=$balCol?>"><?=mm($bal)?></div></div>
-    <div style="text-align:right"><div class="muted" style="font-size:12px">Tahsilat / Ödeme</div><div style="font-weight:800"><?=mm($ft['tin'])?> / <?=mm($ft['tout'])?></div></div>
+<div class="df-panel">
+  <h2 style="margin:0 0 4px"><?=h($c['name'])?></h2>
+  <div class="df-text-caption"><?=h($c['type'] ?? '')?><?=$c['phone']?' · '.h($c['phone']):''?></div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--df-hairline)">
+    <div><div class="df-text-caption">Bakiye</div><div style="font-size:24px;font-weight:900;color:<?=$balCol?>"><?=mm($bal)?></div></div>
+    <div style="text-align:right"><div class="df-text-caption">Tahsilat / Ödeme</div><div style="font-weight:800"><?=mm($ft['tin'])?> / <?=mm($ft['tout'])?></div></div>
   </div>
 </div>
 
 <?php if(is_admin() || user_can('contacts')): ?>
 <?php $isActive=(int)($c['active'] ?? 1); ?>
-<div style="display:flex;gap:10px;margin-bottom:4px">
-  <form method="post" style="flex:1">
+<div style="display:flex;gap:10px;margin:10px 0">
+  <form method="post" style="flex:1;margin:0">
     <input type="hidden" name="toggle_active" value="<?=$isActive?0:1?>">
-    <button class="btn<?=$isActive?'':' dark'?>" style="width:100%;<?=$isActive?'background:#f1f5f9;color:#334155':'background:#22c55e;color:#fff'?>"
+    <button type="submit" class="df-btn <?=$isActive?'df-btn--secondary':'df-btn--primary'?>" style="width:100%;justify-content:center"
       onclick="return confirm('<?=$isActive?'Pasif yapmak istediğinize emin misiniz?':'Aktif yapmak istediğinize emin misiniz?'?>')">
-      <?=$isActive?'⏸ Pasif Yap':'✅ Aktif Yap'?>
+      <?=$isActive?ds_icon('close',15).' Pasif Yap':ds_icon('check',15).' Aktif Yap'?>
     </button>
   </form>
   <?php if(is_admin()): ?>
-  <form method="post" style="flex:1">
+  <form method="post" style="flex:1;margin:0">
     <input type="hidden" name="delete_contact" value="1">
-    <button class="btn" style="width:100%;background:#dc2626;color:#fff"
+    <button type="submit" class="df-btn df-btn--danger" style="width:100%;justify-content:center"
       onclick="return confirm('Bu cariyi silmek istediğinize emin misiniz? Bu işlem geri alınamaz.')">
-      🗑 Sil
+      <?=ds_icon('trash',15)?> Sil
     </button>
   </form>
   <?php endif; ?>
 </div>
 <?php endif; ?>
 
-<div class="grid">
-  <a class="card green" href="collection.php?contact_id=<?=$id?>"><span>💰</span><b>Tahsilat</b><small>Bu cariden tahsilat gir</small></a>
-  <a class="card orange" href="sales.php?contact_id=<?=$id?>"><span>🧾</span><b>Satış</b><small>Bu cariye satış yap</small></a>
-  <a class="card purple" href="thread_open.php?type=cari&ref=<?=$id?>"><span>💬</span><b>Cari Sohbeti</b><small>Bu cariyle ilgili ekip sohbeti</small></a>
-  <a class="card blue" href="report.php?modul=cari_detay&ref=<?=$id?>"><span>📊</span><b>Cari Raporu</b><small>Ekstre · hareketler · işler (PDF/paylaş)</small></a>
-  <?php if($waConvId): ?>
-  <a class="card green" href="wa_conversation_view.php?id=<?=(int)$waConvId?>"><span>📲</span><b>WhatsApp</b><small>Konuşma geçmişi</small></a>
-  <?php elseif(!empty($c['phone'])): ?>
-  <a class="card green" href="wa_conversation_view.php?phone=<?=urlencode($c['phone'])?>"><span>📲</span><b>WhatsApp</b><small>Mesaj gönder</small></a>
-  <?php endif; ?>
+<div class="df-panel" style="margin-top:10px">
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <?=ds_button(ds_icon('wallet',15).' Tahsilat','collection.php?contact_id='.$id,'secondary','','style="flex:1 1 45%;justify-content:center"',true)?>
+    <?=ds_button(ds_icon('box',15).' Satış','sales.php?contact_id='.$id,'secondary','','style="flex:1 1 45%;justify-content:center"',true)?>
+    <?=ds_button(ds_icon('chat',15).' Cari Sohbeti','thread_open.php?type=cari&ref='.$id,'secondary','','style="flex:1 1 45%;justify-content:center"',true)?>
+    <?=ds_button(ds_icon('info',15).' Cari Raporu','report.php?modul=cari_detay&ref='.$id,'secondary','','style="flex:1 1 45%;justify-content:center"',true)?>
+    <?php if($waConvId): ?>
+    <?=ds_button(ds_icon('send',15).' WhatsApp','wa_conversation_view.php?id='.(int)$waConvId,'secondary','','style="flex:1 1 100%;justify-content:center"',true)?>
+    <?php elseif(!empty($c['phone'])): ?>
+    <?=ds_button(ds_icon('send',15).' WhatsApp','wa_conversation_view.php?phone='.urlencode($c['phone']),'secondary','','style="flex:1 1 100%;justify-content:center"',true)?>
+    <?php endif; ?>
+  </div>
 </div>
 
 <?php if(!empty($c['phone']) || !empty($c['email']) || !empty($c['website'])): ?>
-<div class="grid">
-<?php if(!empty($c['phone'])): ?>
-  <a class="card blue" href="tel:<?=htmlspecialchars(preg_replace('/\s+/','',$c['phone']))?>"><span>📞</span><b>Ara</b><small><?=htmlspecialchars($c['phone'])?></small></a>
-  <a class="card teal" href="https://wa.me/<?=htmlspecialchars(preg_replace('/\D/','',$c['phone']))?>"><span>💬</span><b>WhatsApp</b><small>Mesaj gönder</small></a>
-<?php endif; ?>
-<?php if(!empty($c['email'])): ?>
-  <a class="card yellow" href="mailto:<?=htmlspecialchars($c['email'])?>"><span>✉️</span><b>E-posta</b><small><?=htmlspecialchars($c['email'])?></small></a>
-<?php endif; ?>
-<?php if(!empty($c['website'])): ?>
-  <a class="card purple" href="<?=htmlspecialchars($c['website'])?>" target="_blank" rel="noopener"><span>🌐</span><b>Web Sitesi</b><small><?=htmlspecialchars(parse_url($c['website'],PHP_URL_HOST) ?: $c['website'])?></small></a>
-<?php endif; ?>
+<div class="df-panel" style="margin-top:10px">
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+  <?php if(!empty($c['phone'])): ?>
+    <?=ds_button(ds_icon('phone',15).' Ara','tel:'.preg_replace('/\s+/','',$c['phone']),'secondary','','style="flex:1 1 45%;justify-content:center"',true)?>
+    <?=ds_button(ds_icon('send',15).' WhatsApp','https://wa.me/'.preg_replace('/\D/','',$c['phone']),'secondary','','style="flex:1 1 45%;justify-content:center"',true)?>
+  <?php endif; ?>
+  <?php if(!empty($c['email'])): ?>
+    <?=ds_button(ds_icon('info',15).' E-posta','mailto:'.$c['email'],'secondary','','style="flex:1 1 45%;justify-content:center"',true)?>
+  <?php endif; ?>
+  <?php if(!empty($c['website'])): ?>
+    <?=ds_button(ds_icon('tag',15).' '.h(parse_url($c['website'],PHP_URL_HOST) ?: $c['website']),$c['website'],'secondary','','target="_blank" rel="noopener" style="flex:1 1 100%;justify-content:center"',true)?>
+  <?php endif; ?>
+  </div>
 </div>
 <?php endif; ?>
 
 <?php if($canEdit): ?>
-<details class="panel">
-  <summary style="font-weight:900;cursor:pointer">✏️ Cari Bilgilerini Düzenle</summary>
+<details class="df-panel" style="margin-top:10px">
+  <summary style="cursor:pointer;font-weight:700;user-select:none"><?=ds_icon('edit',15)?> Cari Bilgilerini Düzenle</summary>
   <form method="post" style="margin-top:10px">
-    <label>Cari Adı</label><input name="name" value="<?=htmlspecialchars($c['name'])?>" required>
+    <label>Cari Adı</label><input name="name" value="<?=h($c['name'])?>" required>
     <label>Tür</label>
     <select name="type"><?php foreach(['Müşteri','Tedarikçi','Her İkisi'] as $tp): ?><option <?=($c['type']??'')===$tp?'selected':''?>><?=$tp?></option><?php endforeach; ?></select>
-    <label>Yetkili Kişi</label><input name="authorized_person" value="<?=htmlspecialchars($c['authorized_person']??'')?>">
-    <label>Telefon</label><input name="phone" type="tel" value="<?=htmlspecialchars($c['phone']??'')?>">
-    <label>2. Telefon</label><input name="phone2" type="tel" value="<?=htmlspecialchars($c['phone2']??'')?>">
-    <label>E-posta</label><input name="email" type="email" value="<?=htmlspecialchars($c['email']??'')?>">
-    <label>Web Sitesi</label><input name="website" type="url" value="<?=htmlspecialchars($c['website']??'')?>" placeholder="https://">
-    <label>Vergi Dairesi</label><input name="tax_office" value="<?=htmlspecialchars($c['tax_office']??'')?>">
-    <label>Vergi / TC No</label><input name="tax_number" value="<?=htmlspecialchars($c['tax_number']??'')?>">
-    <label>İl</label><input name="city" value="<?=htmlspecialchars($c['city']??'')?>">
-    <label>İlçe</label><input name="district" value="<?=htmlspecialchars($c['district']??'')?>">
-    <label>Posta Kodu</label><input name="postal_code" maxlength="10" value="<?=htmlspecialchars($c['postal_code']??'')?>">
-    <label>Adres</label><textarea name="address" rows="2"><?=htmlspecialchars($c['address']??'')?></textarea>
-    <label>IBAN</label><input name="iban" maxlength="32" value="<?=htmlspecialchars($c['iban']??'')?>" placeholder="TR00 0000 0000 0000 0000 0000 00">
-    <label>Açılış Bakiyesi (₺)</label><input name="opening_balance" value="<?=htmlspecialchars($c['opening_balance']??'0')?>">
-    <label>Notlar</label><textarea name="notes" rows="2"><?=htmlspecialchars($c['notes']??'')?></textarea>
-    <button class="btn dark" name="save_contact" value="1" style="width:100%;padding:13px;margin-top:8px">💾 Kaydet</button>
+    <label>Yetkili Kişi</label><input name="authorized_person" value="<?=h($c['authorized_person']??'')?>">
+    <label>Telefon</label><input name="phone" type="tel" value="<?=h($c['phone']??'')?>">
+    <label>2. Telefon</label><input name="phone2" type="tel" value="<?=h($c['phone2']??'')?>">
+    <label>E-posta</label><input name="email" type="email" value="<?=h($c['email']??'')?>">
+    <label>Web Sitesi</label><input name="website" type="url" value="<?=h($c['website']??'')?>" placeholder="https://">
+    <label>Vergi Dairesi</label><input name="tax_office" value="<?=h($c['tax_office']??'')?>">
+    <label>Vergi / TC No</label><input name="tax_number" value="<?=h($c['tax_number']??'')?>">
+    <label>İl</label><input name="city" value="<?=h($c['city']??'')?>">
+    <label>İlçe</label><input name="district" value="<?=h($c['district']??'')?>">
+    <label>Posta Kodu</label><input name="postal_code" maxlength="10" value="<?=h($c['postal_code']??'')?>">
+    <label>Adres</label><textarea name="address" rows="2"><?=h($c['address']??'')?></textarea>
+    <label>IBAN</label><input name="iban" maxlength="32" value="<?=h($c['iban']??'')?>" placeholder="TR00 0000 0000 0000 0000 0000 00">
+    <label>Açılış Bakiyesi (₺)</label><input name="opening_balance" value="<?=h($c['opening_balance']??'0')?>">
+    <label>Notlar</label><textarea name="notes" rows="2"><?=h($c['notes']??'')?></textarea>
+    <button type="submit" class="df-btn df-btn--primary df-btn--lg" name="save_contact" value="1" style="width:100%;margin-top:8px"><?=ds_icon('check',16)?> Kaydet</button>
   </form>
 </details>
 <?php endif; ?>
 
-<div class="panel">
-  <b>📋 İşler</b>
+<div class="df-panel" style="margin-top:10px">
+  <b><?=ds_icon('briefcase',16)?> İşler</b>
   <?php
   try{
     $jq=db()->prepare("SELECT id,job_no,title,status,due_date FROM jobs WHERE customer_id=? ORDER BY id DESC LIMIT 20");
     $jq->execute([$id]); $jobs=$jq->fetchAll();
   }catch(Throwable $e){ $jobs=[]; }
-  if(!$jobs) echo '<p class="muted" style="margin:10px 0 0">Bu cariye ait iş yok.</p>';
+  if(!$jobs) echo '<p class="df-text-caption" style="margin:10px 0 0">Bu cariye ait iş yok.</p>';
   foreach($jobs as $j):
-    $st=$j['status']; $sc=in_array($st,['Tamamlandı','Teslim Edildi'])?'#22c55e':($st==='İptal'?'#f87171':'#eab308');
   ?>
-  <a class="item" href="job_view.php?id=<?=(int)$j['id']?>">
-    <b><?=htmlspecialchars($j['title'])?></b> <span style="color:<?=$sc?>;font-weight:900;font-size:12px"><?=htmlspecialchars($st)?></span><br>
-    <small><?=htmlspecialchars($j['job_no']??'')?><?=$j['due_date']?' · 📅 '.htmlspecialchars($j['due_date']):''?></small>
+  <a href="job_view.php?id=<?=(int)$j['id']?>" style="display:block;text-decoration:none;color:inherit;margin-top:10px;border-top:1px solid var(--df-hairline);padding-top:10px">
+    <div style="display:flex;justify-content:space-between;gap:8px;align-items:center">
+      <b><?=h($j['title'])?></b><?=ds_badge($j['status'])?>
+    </div>
+    <div class="df-list-row-meta" style="margin-top:4px">
+      <?php if($j['job_no']): ?><span><?=h($j['job_no'])?></span><?php endif; ?>
+      <?php if($j['due_date']): ?><span class="df-list-row-due"><?=ds_icon('calendar',13)?> <?=h($j['due_date'])?></span><?php endif; ?>
+    </div>
   </a>
   <?php endforeach; ?>
 </div>
 
 <?php if(user_can('finance')): ?>
-<div class="panel">
+<div class="df-panel" style="margin-top:10px">
   <b>Son Hareketler</b>
   <?php
   $mv=db()->prepare("SELECT * FROM finance_movements WHERE contact_id=? ORDER BY id DESC LIMIT 25");
   $mv->execute([$id]); $rows=$mv->fetchAll();
-  if(!$rows) echo '<p class="muted" style="margin:10px 0 0">Henüz hareket yok.</p>';
+  if(!$rows) echo '<p class="df-text-caption" style="margin:10px 0 0">Henüz hareket yok.</p>';
   // FINANCE CRUD UX PATCH 001 (2026-07-12): "Tahsilat"/"Ödeme" etiketi direction'dan değil
   // finance_movement_type_label()'dan (web ile aynı fonksiyon) geliyor artık — satış/alış/belge
   // kaynaklı satırlar burada da yanlışlıkla "Tahsilat"/"Ödeme" göstermesin diye. Manuel hareketler
   // mevcut mobil düzenleme ekranına (movement_view.php) bağlanıyor — yeni bir CRUD YAZILMADI.
-  $srcIcon = ['sale'=>'🧾','purchase'=>'🛒','document'=>'🧾','settlement'=>'🔗'];
   foreach($rows as $m):
     $in=$m['direction']==='in';
     $actions=finance_movement_actions($m);
@@ -215,15 +222,15 @@ try{
     $srcUrl=$actions['source_url'];
     if($srcUrl && in_array($actions['source_type'],['document','settlement'],true)) $srcUrl='../'.$srcUrl; // trade_document_view.php/finance.php sadece kökte var
   ?>
-  <div class="item" style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:10px;border-top:1px solid var(--df-hairline);padding-top:10px">
     <div style="flex:1;min-width:0">
-      <b style="color:<?=$in?'#22c55e':'#f87171'?>"><?=htmlspecialchars(finance_movement_type_label($m))?>: <?=mm($m['amount'])?></b><br>
-      <small><?=htmlspecialchars($m['movement_date'] ?? '')?><?=$m['description']?' · '.htmlspecialchars($m['description']):''?></small>
+      <b style="color:<?=$in?'var(--df-success-ink)':'var(--df-danger-ink)'?>"><?=h(finance_movement_type_label($m))?>: <?=mm($m['amount'])?></b><br>
+      <small class="df-text-caption"><?=h($m['movement_date'] ?? '')?><?=$m['description']?' · '.h($m['description']):''?></small>
     </div>
     <?php if($canEdit): ?>
-    <a class="btn" style="background:rgba(37,99,235,.18);padding:8px 10px" href="movement_view.php?id=<?=(int)$m['id']?>&return_context=contact&return_ref=<?=$id?>">✏️</a>
+    <a class="df-icon-btn" href="movement_view.php?id=<?=(int)$m['id']?>&return_context=contact&return_ref=<?=$id?>" aria-label="Düzenle"><?=ds_icon('edit',16)?></a>
     <?php elseif($srcUrl): ?>
-    <a class="btn" style="background:rgba(37,99,235,.18);padding:8px 10px" href="<?=htmlspecialchars($srcUrl)?>"><?=$srcIcon[$actions['source_type']] ?? '🔗'?></a>
+    <a class="df-icon-btn" href="<?=h($srcUrl)?>" aria-label="Kaynağa git"><?=ds_icon('info',16)?></a>
     <?php endif; ?>
   </div>
   <?php endforeach; ?>
@@ -231,5 +238,5 @@ try{
 <?php endif; ?>
 
 <?php
-}catch(Throwable $e){ echo '<div class="err">'.htmlspecialchars($e->getMessage()).'</div>'; }
+}catch(Throwable $e){ echo ds_alert('danger',$e->getMessage()); }
 botx();

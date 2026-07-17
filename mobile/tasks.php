@@ -26,21 +26,23 @@ if($fp){ $where.=' AND t.personnel_id='.(int)$fp; }
 
 topx('Tüm Görevler');
 ?>
-<div class="panel" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-  <a class="btn <?=$f==='open'?'dark':''?>" style="<?=$f==='open'?'':'background:rgba(255,255,255,.12);color:#fff'?>" href="tasks.php?f=open">Açık</a>
-  <a class="btn <?=$f==='done'?'dark':''?>" style="<?=$f==='done'?'':'background:rgba(255,255,255,.12);color:#fff'?>" href="tasks.php?f=done">Tamamlanan</a>
-  <a class="btn <?=$f==='all'?'dark':''?>" style="<?=$f==='all'?'':'background:rgba(255,255,255,.12);color:#fff'?>" href="tasks.php?f=all">Tümü</a>
-  <a class="btn dark" href="task_new.php" style="margin-left:auto">+ Yeni</a>
+<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+  <div class="df-tabs">
+    <a class="df-tab<?=$f==='open'?' df-tab--active':''?>" href="tasks.php?f=open">Açık</a>
+    <a class="df-tab<?=$f==='done'?' df-tab--active':''?>" href="tasks.php?f=done">Tamamlanan</a>
+    <a class="df-tab<?=$f==='all'?' df-tab--active':''?>" href="tasks.php?f=all">Tümü</a>
+  </div>
+  <?=ds_button(ds_icon('plus',14).' Yeni','task_new.php','primary','df-btn--sm','',true)?>
 </div>
 
-<div class="panel">
-  <label style="color:#94a3b8;font-size:12px">Personel Filtresi</label>
-  <select onchange="if(this.value)location.href='tasks.php?f=<?=htmlspecialchars($f)?>&p='+this.value; else location.href='tasks.php?f=<?=htmlspecialchars($f)?>'">
+<div class="df-panel">
+  <label>Personel Filtresi</label>
+  <select onchange="if(this.value)location.href='tasks.php?f=<?=h($f)?>&p='+this.value; else location.href='tasks.php?f=<?=h($f)?>'">
     <option value="">— Personel Filtresi —</option>
     <?php
     try{
       $pl=$pdo->query("SELECT DISTINCT t.personnel_id, p.name FROM tasks t LEFT JOIN personnel p ON p.id=t.personnel_id WHERE t.personnel_id IS NOT NULL AND t.deleted_at IS NULL ORDER BY p.name")->fetchAll();
-      foreach($pl as $p) echo '<option value="'.(int)$p['personnel_id'].'"'.($fp==(int)$p['personnel_id']?' selected':'').'>'.htmlspecialchars($p['name']).'</option>';
+      foreach($pl as $p) echo '<option value="'.(int)$p['personnel_id'].'"'.($fp==(int)$p['personnel_id']?' selected':'').'>'.h($p['name']).'</option>';
     }catch(Throwable $e){}
     ?>
   </select>
@@ -49,41 +51,43 @@ topx('Tüm Görevler');
 <?php
 try{
 $rows=$pdo->query("SELECT t.*, j.job_no, j.id job_real_id, p.name personnel_name, p.id personnel_id FROM tasks t LEFT JOIN jobs j ON j.id=t.job_id LEFT JOIN personnel p ON p.id=t.personnel_id $where ORDER BY (t.due_date IS NULL), t.due_date, t.id DESC")->fetchAll();
-if(!$rows): ?>
-<div class="panel muted" style="text-align:center">Görev yok.</div>
-<?php else: foreach($rows as $r):
+if(!$rows){
+  ds_empty_state('Görev yok.', null, ds_icon('calendar',20));
+} else foreach($rows as $r):
   $jl = $r['job_real_id'] ? "job_view.php?id=".(int)$r['job_real_id'] : null;
   $gec = !empty($r['due_date']) && $r['due_date']<date('Y-m-d') && !in_array($r['status'],['Tamamlandı','İptal']);
+  $__tone = task_status_tone($r['status']);
 ?>
-<div class="item">
-  <b><?=htmlspecialchars($r['title'])?></b>
-  <?php if($r['description']): ?><br><small class="small"><?=htmlspecialchars(mb_substr($r['description'],0,80))?></small><?php endif; ?>
-  <br><small class="small">
-    <?php if($jl): ?><a href="<?=$jl?>" style="color:#93c5fd"><?=htmlspecialchars($r['job_no']?:'#'.$r['job_id'])?></a> · <?php endif; ?>
-    <?=htmlspecialchars($r['personnel_name']??'-')?> ·
-    <span style="color:<?=$gec?'#f87171':'#94a3b8'?>"><?=htmlspecialchars($r['due_date']??'-')?><?=$gec?' ⏰':''?></span> ·
-    <?=htmlspecialchars($r['priority'])?> ·
-    <span style="background:rgba(255,255,255,.12);border-radius:6px;padding:2px 6px"><?=htmlspecialchars($r['status'])?></span>
-  </small>
+<div class="df-panel" style="margin-top:10px">
+  <div class="df-list-row-title"><?=h($r['title'])?></div>
+  <?php if($r['description']): ?><div class="df-list-row-desc"><?=h(mb_substr($r['description'],0,80))?></div><?php endif; ?>
+  <div class="df-list-row-meta" style="margin-top:6px">
+    <?php if($jl): ?><a href="<?=h($jl)?>" style="color:inherit;font-weight:600"><?=h($r['job_no']?:'#'.$r['job_id'])?></a><?php endif; ?>
+    <span><?=h($r['personnel_name']??'-')?></span>
+    <?php if(!empty($r['due_date'])): ?><span class="df-list-row-due"><?=ds_icon('calendar',13)?> <?=h($r['due_date'])?></span><?php endif; ?>
+    <?php if($gec): ?><span style="color:var(--df-danger-ink);font-weight:600">Gecikti</span><?php endif; ?>
+    <?=ds_priority($r['priority'],$r['priority']!=='Normal'?$r['priority']:null)?>
+    <span class="df-badge df-badge--<?=h($__tone)?>"><?=h($r['status'])?></span>
+  </div>
 
-  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
-    <a class="btn" href="task_view.php?id=<?=(int)$r['id']?>" style="background:rgba(255,255,255,.12);color:#fff;padding:8px 12px;font-size:12px">👁 Detay</a>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
+    <a class="df-btn df-btn--secondary" href="task_view.php?id=<?=(int)$r['id']?>">Detay</a>
     <?php if($r['status']!=='Devam Ediyor' && $r['status']!=='Tamamlandı'): ?>
-    <form method="post"><input type="hidden" name="tid" value="<?=(int)$r['id']?>"><button class="btn" style="background:rgba(255,255,255,.12);color:#fff;padding:8px 12px;font-size:12px" name="task_status" value="Devam Ediyor">▶ Başla</button></form>
+    <form method="post" style="margin:0"><input type="hidden" name="tid" value="<?=(int)$r['id']?>"><button type="submit" class="df-btn df-btn--secondary" name="task_status" value="Devam Ediyor">Başla</button></form>
     <?php endif; ?>
     <?php if($r['status']!=='Tamamlandı'): ?>
-    <form method="post"><input type="hidden" name="tid" value="<?=(int)$r['id']?>"><button class="btn dark" style="padding:8px 12px;font-size:12px" name="task_status" value="Tamamlandı">✓ Tamamla</button></form>
+    <form method="post" style="margin:0"><input type="hidden" name="tid" value="<?=(int)$r['id']?>"><button type="submit" class="df-btn df-btn--primary" name="task_status" value="Tamamlandı"><?=ds_icon('check',14)?> Tamamla</button></form>
     <?php endif; ?>
   </div>
 
   <?php if(can_edit_delete()): ?>
-  <details style="margin-top:8px">
-    <summary style="font-size:12px;color:#60a5fa;cursor:pointer">✏️ Düzenle</summary>
-    <form method="post" style="margin-top:8px">
+  <details style="margin-top:10px">
+    <summary style="cursor:pointer;font-weight:700;color:var(--df-ink-600)"><?=ds_icon('edit',14)?> Düzenle</summary>
+    <form method="post" style="margin-top:10px">
       <input type="hidden" name="tid" value="<?=(int)$r['id']?>">
-      <input type="text" name="title" value="<?=htmlspecialchars($r['title'])?>" placeholder="Başlık" required>
-      <textarea name="description" placeholder="Açıklama" rows="2"><?=htmlspecialchars($r['description'])?></textarea>
-      <input type="date" name="due_date" value="<?=htmlspecialchars($r['due_date']??'')?>">
+      <input type="text" name="title" value="<?=h($r['title'])?>" placeholder="Başlık" required>
+      <textarea name="description" placeholder="Açıklama" rows="2"><?=h($r['description'])?></textarea>
+      <input type="date" name="due_date" value="<?=h($r['due_date']??'')?>">
       <select name="priority">
         <option <?=$r['priority']==='Normal'?'selected':''?>>Normal</option>
         <option <?=$r['priority']==='Yüksek'?'selected':''?>>Yüksek</option>
@@ -91,18 +95,18 @@ if(!$rows): ?>
       </select>
       <select name="personnel_id">
         <option value="">— Personel —</option>
-        <?php try{ $pl2=$pdo->query("SELECT id,name FROM personnel WHERE COALESCE(active,1)=1 ORDER BY name")->fetchAll(); foreach($pl2 as $p2) echo '<option value="'.(int)$p2['id'].'"'.($r['personnel_id']==(int)$p2['id']?' selected':'').'>'.htmlspecialchars($p2['name']).'</option>'; }catch(Throwable $e){} ?>
+        <?php try{ $pl2=$pdo->query("SELECT id,name FROM personnel WHERE COALESCE(active,1)=1 ORDER BY name")->fetchAll(); foreach($pl2 as $p2) echo '<option value="'.(int)$p2['id'].'"'.($r['personnel_id']==(int)$p2['id']?' selected':'').'>'.h($p2['name']).'</option>'; }catch(Throwable $e){} ?>
       </select>
-      <button class="btn dark" name="edit_task" value="1" style="width:100%;margin-top:6px">💾 Kaydet</button>
+      <button type="submit" class="df-btn df-btn--primary" name="edit_task" value="1" style="width:100%;margin-top:6px;justify-content:center"><?=ds_icon('check',14)?> Kaydet</button>
     </form>
   </details>
-  <form method="post" onsubmit="return confirm('Görev silinsin mi?')" style="margin-top:6px">
+  <form method="post" onsubmit="return confirm('Görev silinsin mi?')" style="margin-top:8px">
     <input type="hidden" name="tid" value="<?=(int)$r['id']?>">
-    <button class="btn" name="delete_task" value="1" style="width:100%;background:rgba(239,68,68,.2);color:#fca5a5;padding:8px">🗑 Sil</button>
+    <button type="submit" class="df-btn df-btn--danger" name="delete_task" value="1" style="width:100%;justify-content:center"><?=ds_icon('trash',14)?> Sil</button>
   </form>
   <?php endif; ?>
 </div>
-<?php endforeach; endif;
-}catch(Throwable $e){ echo '<div class="err">'.htmlspecialchars($e->getMessage()).'</div>'; }
+<?php endforeach;
+}catch(Throwable $e){ echo ds_alert('danger',$e->getMessage()); }
 ?>
 <?php botx(); ?>

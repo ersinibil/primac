@@ -10,30 +10,32 @@ topx('Cariler');
 
 $showPassive=!empty($_GET['show_passive']);
 
-echo '<div class="panel" style="display:flex;gap:8px;flex-wrap:wrap">
-  <a class="btn dark" href="contact_new.php">+ Yeni Cari</a>
-  <a class="btn" href="collection.php">+ Tahsilat</a>
-  <a class="btn" href="sales.php">+ Satış</a>
-  <a class="btn" href="contacts_report.php">📊 Cari Raporlar</a>
-  <a class="btn" href="contacts.php?show_passive='.($showPassive?'0':'1').'">'.($showPassive?'Sadece Aktif':'Pasif Dahil').'</a>
-</div>';
+echo '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">'
+    .ds_button(ds_icon('plus',15).' Yeni Cari','contact_new.php','primary','','style="flex:1;justify-content:center;min-width:110px"',true)
+    .ds_button('Tahsilat','collection.php','secondary','','style="flex:1;justify-content:center;min-width:90px"',true)
+    .ds_button('Satış','sales.php','secondary','','style="flex:1;justify-content:center;min-width:90px"',true)
+    .ds_button('Cari Raporlar','contacts_report.php','secondary','','style="flex:1;justify-content:center;min-width:110px"',true)
+    .'</div>';
+echo '<div style="margin-bottom:12px">'.ds_button($showPassive?'Sadece Aktif':'Pasif Dahil','contacts.php?show_passive='.($showPassive?'0':'1'),'ghost','df-btn--sm','',true).'</div>';
 
 try{
     $sql = $showPassive
         ? "SELECT id,name,type,phone,active FROM contacts ORDER BY name LIMIT 100"
         : "SELECT id,name,type,phone,active FROM contacts WHERE (active IS NULL OR active=1) ORDER BY name LIMIT 100";
     $rows=db()->query($sql)->fetchAll();
+    if(!$rows) ds_empty_state('Kayıtlı cari yok.', null, ds_icon('users',20));
     foreach($rows as $r){
         $isPassive=isset($r['active']) && (int)$r['active']===0;
-        $style = $isPassive ? ' style="opacity:.45"' : '';
-        $badge = $isPassive ? ' <span style="background:#f1f5f9;color:#64748b;border-radius:999px;padding:2px 7px;font-size:11px;font-weight:900">Pasif</span>' : '';
-        echo '<a class="item" href="contact_view.php?id='.(int)$r['id'].'"'.$style.'>'
-            .'<b>'.htmlspecialchars($r['name']).$badge.'</b><br>'
-            .'<small>'.htmlspecialchars($r['type']).' · '.htmlspecialchars($r['phone']??'').'</small>'
-            .'</a>';
+        echo '<a href="contact_view.php?id='.(int)$r['id'].'" class="df-panel" style="display:block;margin-top:10px;text-decoration:none;color:inherit'.($isPassive?';opacity:.55':'').'">';
+        echo '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center">';
+        echo '<div class="df-list-row-title">'.h($r['name']).'</div>';
+        if($isPassive) echo ds_badge('Pasif','gray');
+        echo '</div>';
+        echo '<div class="df-list-row-meta" style="margin-top:4px"><span>'.h($r['type']).'</span>'.(!empty($r['phone'])?'<span>'.ds_icon('phone',13).' '.h($r['phone']).'</span>':'').'</div>';
+        echo '</a>';
     }
 }catch(Throwable $e){
-    echo '<div class="err">'.htmlspecialchars($e->getMessage()).'</div>';
+    echo ds_alert('danger',$e->getMessage());
 }
 
 botx();

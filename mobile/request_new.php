@@ -84,39 +84,39 @@ $pris=['Normal','Acil','Çok Acil','Düşük'];
 
 topx('Yeni Talep');
 ?>
-<?php if($flash): ?><div class="ok"><?=htmlspecialchars($flash)?></div><?php endif; ?>
-<?php if($er): ?><div class="err"><?=htmlspecialchars($er)?></div><?php endif; ?>
+<?php if($flash): ?><?=ds_alert('success',$flash)?><?php endif; ?>
+<?php if($er): ?><?=ds_alert('danger',$er)?><?php endif; ?>
 
-<div class="panel">
+<div class="df-panel">
 <form method="post">
 <input type="hidden" name="save_request" value="1">
 
-<label class="muted">Talep Kategorisi</label>
+<label>Talep Kategorisi</label>
 <select name="category">
-<?php foreach($cats as $c): ?><option><?=htmlspecialchars($c)?></option><?php endforeach; ?>
+<?php foreach($cats as $c): ?><option><?=h($c)?></option><?php endforeach; ?>
 </select>
 
-<label class="muted">Öncelik</label>
+<label>Öncelik</label>
 <select name="priority">
-<?php foreach($pris as $p): ?><option><?=htmlspecialchars($p)?></option><?php endforeach; ?>
+<?php foreach($pris as $p): ?><option><?=h($p)?></option><?php endforeach; ?>
 </select>
 
-<label class="muted">İlgili İş (opsiyonel)</label>
+<label>İlgili İş (opsiyonel)</label>
 <select name="related_job_id">
 <option value="">İşle bağlantılı değil</option>
-<?php foreach($jobs as $j): ?><option value="<?=$j['id']?>"><?=htmlspecialchars($j['job_no'])?> - <?=htmlspecialchars($j['title'])?></option><?php endforeach; ?>
+<?php foreach($jobs as $j): ?><option value="<?=$j['id']?>"><?=h($j['job_no'])?> - <?=h($j['title'])?></option><?php endforeach; ?>
 </select>
 
-<label class="muted">Talep Başlığı</label>
+<label>Talep Başlığı</label>
 <input name="title" required placeholder="Örn: Siyah PLA alınması gerekiyor">
 
-<label class="muted">Açıklama</label>
+<label>Açıklama</label>
 <textarea name="description" rows="5" placeholder="Talebin detayını yazın."></textarea>
 
-<button class="btn dark" type="submit">Talebi Gönder</button>
+<button type="submit" class="df-btn df-btn--primary df-btn--lg" style="width:100%;margin-top:8px"><?=ds_icon('send',16)?> Talebi Gönder</button>
 </form>
 </div>
 
-<a class="item" href="requests.php">📋 Tüm Talepler</a>
+<a class="df-btn df-btn--secondary" href="requests.php" style="width:100%;justify-content:center;margin-top:12px"><?=ds_icon('briefcase',15)?> Tüm Talepler</a>
 
 <?php botx(); ?>

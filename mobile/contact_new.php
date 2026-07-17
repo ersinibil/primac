@@ -45,9 +45,9 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 }
 topx('Yeni Cari');
 ?>
-<?php if($ok): ?><div class="notice"><?=htmlspecialchars($ok)?> · <a href="contacts.php" style="color:#fff;text-decoration:underline">Cariler</a></div><?php endif; ?>
-<?php if($er): ?><div class="err"><?=htmlspecialchars($er)?></div><?php endif; ?>
-<div class="panel">
+<?php if($ok): ?><?=ds_alert('success',$ok)?><a href="contacts.php" class="df-btn df-btn--secondary" style="width:100%;justify-content:center;margin-bottom:10px">Cariler</a><?php endif; ?>
+<?php if($er): ?><?=ds_alert('danger',$er)?><?php endif; ?>
+<div class="df-panel">
 <form method="post">
   <label>Cari Adı</label><input name="name" required placeholder="Müşteri / tedarikçi adı">
   <label>Tip</label>
@@ -66,7 +66,7 @@ topx('Yeni Cari');
   <label>IBAN</label><input name="iban" maxlength="32" placeholder="TR00 0000 0000 0000 0000 0000 00">
   <label>Açılış Bakiyesi (₺)</label><input type="number" step="0.01" name="opening_balance" value="0">
   <label>Notlar</label><textarea name="notes" rows="3"></textarea>
-  <button class="btn dark" style="width:100%;padding:14px;margin-top:8px">➕ Cariyi Kaydet</button>
+  <button class="df-btn df-btn--primary df-btn--lg" style="width:100%;margin-top:8px"><?=ds_icon('plus',16)?> Cariyi Kaydet</button>
 </form>
 </div>
 <?php botx(); ?>
