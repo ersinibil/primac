@@ -290,8 +290,11 @@ function nav_module_is_active($key, $currentScript){
 // Tri-state layout modu: kullanıcı açıkça seçtiyse o kazanır; seçmediyse admin varsayılan
 // compact, diğerleri legacy görür (Product Owner kararı — "admin hesabı" otomatik pilotta).
 function nav_effective_mode($savedMode, $isAdmin, $isPilotUser){
-    if($savedMode === 'compact' || $savedMode === 'legacy') return $savedMode;
-    return ($isAdmin || $isPilotUser) ? 'compact' : 'legacy';
+    // RELEASE 0.9 — LEGACY TEMİZLİĞİ (2026-07-17, Product Owner kararı): "ne mobilde ne web de eski
+    // görünüm görmek istemiyorum, bütün sayfalar yeni görünüme geçsin" — Compact/DS artık pilot-gated
+    // değil, HERKES için tek mod. Daha önce kaydedilmiş 'legacy' tercihi de artık göz ardı edilir
+    // (bilinçli — eski tercih varlığını korumak "eski görünüme dönüş" kapısı bırakırdı).
+    return 'compact';
 }
 
 // app_settings üzerinden pilot kullanıcı listesi — BU SPRİNTTE ADMIN ARAYÜZÜ YOK (bilinçli kapsam

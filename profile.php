@@ -59,22 +59,6 @@ require_once __DIR__.'/layout_top.php';
 <?php if($ok): ?><div class="ok"><?=h($ok)?></div><?php endif; ?>
 <?php if(!empty($_GET['nav_ok'])): ?><div class="ok">Navigasyon tercihiniz kaydedildi.</div><?php endif; ?>
 
-<?php
-// NAV-001B (2026-07-16): kullanıcının şu anki fiili modu (kayıtlı tercih veya admin/pilot varsayılanı)
-$__navSaved = user_pref_get($pdo, $u['id'], 'nav_layout_mode', null);
-$__navNow = nav_effective_mode($__navSaved, is_admin(), nav_is_pilot_user($u['id']));
-?>
-<section class="panel">
-  <h3 style="margin:0 0 6px">Navigasyon</h3>
-  <p class="muted" style="margin:0 0 12px">
-    <?=$__navNow==='compact'?'Şu an sade (compact) navigasyon kullanıyorsunuz — çekirdek Çalışma menüsü + kendi sabitlediğiniz modüller.':'Şu an mevcut (klasik) navigasyonu kullanıyorsunuz.'?>
-  </p>
-  <form method="post" style="display:inline">
-    <input type="hidden" name="nav_mode_toggle" value="<?=$__navNow==='compact'?'legacy':'compact'?>">
-    <button class="btn secondary"><?=$__navNow==='compact'?'Eski geniş menüye dön':'Yeni sade navigasyonu dene'?></button>
-  </form>
-</section>
-
 <section class="panel">
 <form method="post" class="form-grid">
 
