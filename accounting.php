@@ -188,103 +188,119 @@ function accBuildTurOptions(selectEl,step){
 </script>
 
 <?php if($tab==='yeni'): ?>
-<section class="panel">
-<h2>Yeni Muhasebe Kaydı</h2>
-<form method="post" class="form-grid">
+<!-- RELEASE DS MIGRATION (2026-07-18): render katmanı df-card/df-form-grid-2'ye taşındı, POST
+     mantığı (yukarısı) ve tüm input name/id öznitelikleri HİÇ değişmedi — aşağıdaki script bloğu
+     (filterCats/accToggleWizard/accApplyStep/toggleVatRate/calcVat) birebir aynı id'lerle çalışır. -->
+<section class="df-card">
+<h2 class="df-section-title">Yeni Muhasebe Kaydı</h2>
+<form method="post" class="df-form-grid-2">
 <input type="hidden" name="save_entry" value="1">
 
-<label>Tür
+<div class="df-form-group">
+<label class="df-form-label">Tür</label>
 <select name="type" id="entryType" onchange="filterCats();accToggleWizard()">
   <option value="gider">Gider</option>
   <option value="gelir">Gelir</option>
 </select>
-</label>
+</div>
 
-<label id="accWizardLabel" class="full">Ne kaydediyorsun?
+<div class="df-form-group df-form-span-2" id="accWizardLabel">
+<label class="df-form-label">Ne kaydediyorsun?</label>
 <select name="record_step" id="accStep" onchange="accApplyStep()">
   <?php foreach(finance_record_type_options() as $key=>$o): ?><option value="<?=$key?>"><?=$o['icon']?> <?=h($o['label'])?></option><?php endforeach; ?>
 </select>
-</label>
+</div>
 
-<label>Tarih
+<div class="df-form-group">
+<label class="df-form-label">Tarih</label>
 <input type="date" name="entry_date" value="<?=date('Y-m-d')?>">
-</label>
+</div>
 
-<label id="accCatLabel">Kategori
+<div class="df-form-group" id="accCatLabel">
+<label class="df-form-label">Kategori</label>
 <select name="category_id" id="catSel">
   <option value="">— Seç —</option>
   <?php foreach($gelirCats as $c): ?>
   <option value="<?=(int)$c['id']?>" data-type="gelir">[<?=h($c['group_name'])?>] <?=h($c['name'])?></option>
   <?php endforeach; ?>
 </select>
-</label>
+</div>
 
-<label>Tutar (₺)
+<div class="df-form-group">
+<label class="df-form-label">Tutar (₺)</label>
 <input type="number" step="0.01" min="0.01" name="amount" id="amtInput" required placeholder="0,00" oninput="calcVat()">
-</label>
+</div>
 
-<label>KDV Durumu
+<div class="df-form-group">
+<label class="df-form-label">KDV Durumu</label>
 <select name="vat_mode" id="vatMode" onchange="toggleVatRate()">
   <option value="yok">KDV Yok / Belirtilmedi</option>
   <option value="dahil">KDV Dahil (girilen tutar toplam)</option>
   <option value="haric">KDV Hariç (girilen tutar KDV'siz taban)</option>
 </select>
-</label>
+</div>
 
-<label id="vatRateLabel" style="display:none">KDV Oranı
+<div class="df-form-group" id="vatRateLabel" style="display:none">
+<label class="df-form-label">KDV Oranı</label>
 <select name="vat_rate" id="vatRate" onchange="calcVat()">
   <?php foreach(acc_vat_rates() as $vr): ?>
   <option value="<?=$vr?>" <?=$vr===20?'selected':''?>>%<?=$vr?></option>
   <?php endforeach; ?>
 </select>
-</label>
-<div id="vatPreview" class="full" style="display:none;font-size:13px;color:#475467;margin-top:-8px"></div>
+</div>
+<div id="vatPreview" class="df-form-span-2" style="display:none;font-size:13px;color:#475467;margin-top:-8px"></div>
 
-<label>Açıklama
+<div class="df-form-group">
+<label class="df-form-label">Açıklama</label>
 <input name="description" id="accDesc" placeholder="İsteğe bağlı">
-</label>
+</div>
 
-<label>Belge / Ref No
+<div class="df-form-group">
+<label class="df-form-label">Belge / Ref No</label>
 <input name="reference_no" placeholder="Fatura no, makbuz no vb.">
-</label>
+</div>
 
-<label>Hesap (Kasa/Banka)
+<div class="df-form-group">
+<label class="df-form-label">Hesap (Kasa/Banka)</label>
 <select name="account_id">
   <option value="">— Seçme —</option>
   <?php foreach($accounts as $a): ?>
   <option value="<?=(int)$a['id']?>"><?=h($a['name'])?> (<?=h($a['account_type'])?>)</option>
   <?php endforeach; ?>
 </select>
-</label>
+</div>
 
-<label id="accContactLabel" style="display:none">Cari
+<div class="df-form-group" id="accContactLabel" style="display:none">
+<label class="df-form-label">Cari</label>
 <select name="contact_id">
   <option value="">— Cari seçilmedi —</option>
   <?php foreach($contacts as $c): ?>
   <option value="<?=(int)$c['id']?>"><?=h($c['name'])?></option>
   <?php endforeach; ?>
 </select>
-</label>
+</div>
 
-<label id="persLabel">Personel
+<div class="df-form-group" id="persLabel">
+<label class="df-form-label">Personel</label>
 <select name="personnel_id">
   <option value="">— Yok —</option>
   <?php foreach($personnel as $p): ?>
   <option value="<?=(int)$p['id']?>"><?=h($p['name'])?></option>
   <?php endforeach; ?>
 </select>
-</label>
+</div>
 
 <!-- GİDER TÜRÜ CONTEXT-AWARE (2026-07-04): önceden sadece "Personel ise" sabit bir liste sunan bu
      alan artık TÜM adımlara özel (finance_expense_type_options()), accApplyStep() ile yeniden kurulur. -->
-<label id="ptLabel">Gider Türü
+<div class="df-form-group" id="ptLabel">
+<label class="df-form-label">Gider Türü</label>
 <select name="payment_type" id="turSel">
   <option value="">— Seç —</option>
 </select>
-</label>
+</div>
 
-<div class="full">
-<button class="btn" type="submit">💾 Kaydet</button>
+<div class="df-form-span-2">
+<button class="df-btn df-btn--primary" type="submit">💾 Kaydet</button>
 </div>
 </form>
 </section>
@@ -357,33 +373,33 @@ function toggleVatRateEdit(id){
 </script>
 
 <?php elseif($tab==='personel'): ?>
-<section class="panel">
-<h2>Personel Ödemeleri — <?=$year?></h2>
+<section class="df-card">
+<h2 class="df-section-title">Personel Ödemeleri — <?=$year?></h2>
 <?php
 $py=acc_personnel_summary($pdo,$year);
-if(!$py){ echo '<p class="muted">Bu yıl personel ödemesi kaydı yok.</p>'; }
+if(!$py){ ds_empty_state('Bu yıl personel ödemesi kaydı yok.', null, ds_icon('users',32)); }
 else{
     $byPers=[];
     foreach($py as $r){ $byPers[$r['pers_name']][$r['payment_type']]=(float)$r['total']; }
-    echo '<table style="width:100%;border-collapse:collapse">';
-    echo '<thead><tr style="background:#f8fafc"><th style="padding:8px;text-align:left">Personel</th><th style="padding:8px">Maaş</th><th style="padding:8px">Avans</th><th style="padding:8px">Prim</th><th style="padding:8px">SGK</th><th style="padding:8px">Toplam</th></tr></thead><tbody>';
+    echo '<div class="df-table-wrap"><table class="df-table">';
+    echo '<thead><tr><th>Personel</th><th>Maaş</th><th>Avans</th><th>Prim</th><th>SGK</th><th>Toplam</th></tr></thead><tbody>';
     foreach($byPers as $name=>$types){
         $total=array_sum($types);
-        echo '<tr style="border-bottom:1px solid #f1f5f9">';
-        echo '<td style="padding:8px;font-weight:700">'.h($name).'</td>';
-        foreach(['maas','avans','prim','sgk'] as $pt) echo '<td style="padding:8px;text-align:right;font-size:13px">'.($types[$pt]??0?money($types[$pt]):'-').'</td>';
-        echo '<td style="padding:8px;text-align:right;font-weight:900">'.money($total).'</td>';
+        echo '<tr>';
+        echo '<td style="font-weight:700">'.h($name).'</td>';
+        foreach(['maas','avans','prim','sgk'] as $pt) echo '<td style="text-align:right;font-size:13px">'.($types[$pt]??0?money($types[$pt]):'-').'</td>';
+        echo '<td style="text-align:right;font-weight:900">'.money($total).'</td>';
         echo '</tr>';
     }
-    echo '</tbody></table>';
+    echo '</tbody></table></div>';
 }
 ?>
 </section>
 
 <?php elseif($tab==='ozet'): ?>
-<section class="panel">
-<h2>Grup Özeti — <?=date('F Y',mktime(0,0,0,$month,1,$year))?></h2>
-<?php if(!$groups){ echo '<p class="muted">Bu ay kayıt yok.</p>'; }
+<section class="df-card">
+<h2 class="df-section-title">Grup Özeti — <?=date('F Y',mktime(0,0,0,$month,1,$year))?></h2>
+<?php if(!$groups){ ds_empty_state('Bu ay kayıt yok.', null, ds_icon('wallet',32)); }
 else{
     $byType=['gider'=>[],'gelir'=>[]];
     foreach($groups as $g){ $byType[$g['type']][]=$g; }
@@ -402,13 +418,16 @@ else{
 </section>
 
 <?php else: ?>
-<section class="panel">
-<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
-  <a href="?m=<?=$month?>&y=<?=$year?>&tab=kayitlar" class="btn small <?=!$typeF?'secondary':''?>">Tümü</a>
-  <a href="?m=<?=$month?>&y=<?=$year?>&tab=kayitlar&type=gider" class="btn small <?=$typeF==='gider'?'':'secondary'?>" style="<?=$typeF==='gider'?'background:#dc2626;color:#fff':''?>">Gider</a>
-  <a href="?m=<?=$month?>&y=<?=$year?>&tab=kayitlar&type=gelir" class="btn small <?=$typeF==='gelir'?'':'secondary'?>" style="<?=$typeF==='gelir'?'background:#16a34a;color:#fff':''?>">Gelir</a>
-</div>
-<?php if(!$entries){ echo '<p class="muted">Bu dönemde kayıt yok.</p>'; }
+<section class="df-card">
+<?php
+ds_tabs([
+    ['label'=>'Tümü','url'=>'?m='.$month.'&y='.$year.'&tab=kayitlar','active'=>!$typeF],
+    ['label'=>'Gider','url'=>'?m='.$month.'&y='.$year.'&tab=kayitlar&type=gider','active'=>$typeF==='gider'],
+    ['label'=>'Gelir','url'=>'?m='.$month.'&y='.$year.'&tab=kayitlar&type=gelir','active'=>$typeF==='gelir'],
+]);
+?>
+<div style="margin-top:var(--df-space-3)">
+<?php if(!$entries){ ds_empty_state('Bu dönemde kayıt yok.', null, ds_icon('wallet',32)); }
 foreach($entries as $e):
     $isGider=$e['type']==='gider';
     $tColor=$isGider?'#dc2626':'#16a34a';
@@ -420,7 +439,7 @@ foreach($entries as $e):
       <?=h(date('d.m.Y',strtotime($e['entry_date'])))?>
       <?php if($e['contact_name']): ?> · 🤝 <?=h($e['contact_name'])?><?php endif; ?>
       <?php if($e['pers_name']): ?> · 👷 <?=h($e['pers_name'])?><?php endif; ?>
-      <?php if($e['acc_name']): ?> · 🏦 <?=h($e['acc_name'])?><?php else: ?> · <span class="badge status-badge yellow" title="Bu kayıt bir Kasa/Banka hesabına bağlı değil, Finans'taki hesap bakiyelerine yansımaz">⚠️ Hesaba bağlı değil</span><?php endif; ?>
+      <?php if($e['acc_name']): ?> · 🏦 <?=h($e['acc_name'])?><?php else: ?> · <span class="df-badge df-badge--warning" title="Bu kayıt bir Kasa/Banka hesabına bağlı değil, Finans'taki hesap bakiyelerine yansımaz">⚠️ Hesaba bağlı değil</span><?php endif; ?>
       <?php if($e['reference_no']): ?> · #<?=h($e['reference_no'])?><?php endif; ?>
     </div>
     <?php if($e['description']): ?><div style="font-size:12px;color:#374151;margin-top:2px"><?=h($e['description'])?></div><?php endif; ?>
@@ -431,100 +450,113 @@ foreach($entries as $e):
     <div style="font-size:10.5px;color:#94a3b8;margin-top:2px">KDV %<?=(int)$e['vat_rate']?> <?=$e['vat_mode']==='dahil'?'dahil':'hariç'?> (<?=money($e['vat_amount'])?>)</div>
     <?php endif; ?>
     <?php if(can_edit_delete()): ?>
-    <div style="display:flex;gap:4px;margin:4px 0 0">
-      <button class="btn secondary" style="padding:3px 8px;font-size:11px" type="button" onclick="document.getElementById('edit-acc-<?=(int)$e['id']?>').style.display=(document.getElementById('edit-acc-<?=(int)$e['id']?>').style.display==='none'?'block':'none')">✏️ Düzenle</button>
+    <div class="row-actions" style="margin:4px 0 0;justify-content:flex-end">
+      <button class="df-btn df-btn--secondary df-btn--sm" type="button" onclick="document.getElementById('edit-acc-<?=(int)$e['id']?>').style.display=(document.getElementById('edit-acc-<?=(int)$e['id']?>').style.display==='none'?'block':'none')">✏️ Düzenle</button>
       <form method="post" style="display:inline" onsubmit="return confirm('Bu kaydı silmek istediğinize emin misiniz?')">
-        <button name="del_entry" value="<?=(int)$e['id']?>" class="btn danger" style="padding:3px 8px;font-size:11px">🗑 Sil</button>
+        <button name="del_entry" value="<?=(int)$e['id']?>" class="df-btn df-btn--danger df-btn--sm">🗑 Sil</button>
       </form>
     </div>
     <?php endif; ?>
   </div>
 </div>
 <?php if(can_edit_delete()): ?>
-<div id="edit-acc-<?=(int)$e['id']?>" style="display:none;background:#f9fafb;padding:16px;border-radius:10px;margin:10px 0;border:1px solid #e5e7eb">
+<div id="edit-acc-<?=(int)$e['id']?>" class="df-card" style="display:none;background:var(--df-surface-sunken);margin:10px 0">
   <h3 style="margin:0 0 14px;font-size:15px">Kaydı Düzenle</h3>
-  <form method="post" class="form-grid">
+  <form method="post" class="df-form-grid-2">
     <input type="hidden" name="id" value="<?=(int)$e['id']?>">
-    <label>Tür
+    <div class="df-form-group">
+      <label class="df-form-label">Tür</label>
       <select name="type" id="editType<?=(int)$e['id']?>" onchange="filterCatsEdit(<?=(int)$e['id']?>);accToggleWizardEdit(<?=(int)$e['id']?>)">
         <option value="gider" <?=$e['type']==='gider'?'selected':''?>>Gider</option>
         <option value="gelir" <?=$e['type']==='gelir'?'selected':''?>>Gelir</option>
       </select>
-    </label>
+    </div>
     <?php $eStep=finance_record_type_info($e, $e['group_name']??null, $e['account_type']??null); ?>
-    <label id="editWizardLabel<?=(int)$e['id']?>" class="full" style="<?=$isGider?'':'display:none'?>">Ne kaydediyorsun?
+    <div class="df-form-group df-form-span-2" id="editWizardLabel<?=(int)$e['id']?>" style="<?=$isGider?'':'display:none'?>">
+      <label class="df-form-label">Ne kaydediyorsun?</label>
       <select name="record_step" id="editStep<?=(int)$e['id']?>" onchange="accApplyStepEdit(<?=(int)$e['id']?>)">
         <?php foreach(finance_record_type_options() as $key=>$o): ?><option value="<?=$key?>" <?=$eStep===$key?'selected':''?>><?=$o['icon']?> <?=h($o['label'])?></option><?php endforeach; ?>
       </select>
-    </label>
-    <label>Tarih
+    </div>
+    <div class="df-form-group">
+      <label class="df-form-label">Tarih</label>
       <input type="date" name="entry_date" value="<?=h($e['entry_date'])?>">
-    </label>
-    <label id="editCatLabel<?=(int)$e['id']?>" style="<?=$isGider?'display:none':''?>">Kategori
+    </div>
+    <div class="df-form-group" id="editCatLabel<?=(int)$e['id']?>" style="<?=$isGider?'display:none':''?>">
+      <label class="df-form-label">Kategori</label>
       <select name="category_id" id="editCatSel<?=(int)$e['id']?>">
         <option value="">— Seç —</option>
         <?php foreach($gelirCats as $c): ?>
         <option value="<?=(int)$c['id']?>" data-type="gelir" <?=$e['category_id']==$c['id']?'selected':''?>>[<?=h($c['group_name'])?>] <?=h($c['name'])?></option>
         <?php endforeach; ?>
       </select>
-    </label>
-    <label>Tutar (₺)
+    </div>
+    <div class="df-form-group">
+      <label class="df-form-label">Tutar (₺)</label>
       <input type="number" step="0.01" min="0.01" name="amount" required value="<?=h(str_replace('.',',',$e['amount']))?>">
-    </label>
-    <label>KDV Durumu
+    </div>
+    <div class="df-form-group">
+      <label class="df-form-label">KDV Durumu</label>
       <select name="vat_mode" id="editVatMode<?=(int)$e['id']?>" onchange="toggleVatRateEdit(<?=(int)$e['id']?>)">
         <option value="yok" <?=($e['vat_mode']??'yok')==='yok'?'selected':''?>>KDV Yok / Belirtilmedi</option>
         <option value="dahil" <?=($e['vat_mode']??'')==='dahil'?'selected':''?>>KDV Dahil</option>
         <option value="haric" <?=($e['vat_mode']??'')==='haric'?'selected':''?>>KDV Hariç</option>
       </select>
-    </label>
-    <label id="editVatRateLabel<?=(int)$e['id']?>" style="display:<?=in_array($e['vat_mode']??'yok',['dahil','haric'],true)?'block':'none'?>">KDV Oranı
+    </div>
+    <div class="df-form-group" id="editVatRateLabel<?=(int)$e['id']?>" style="display:<?=in_array($e['vat_mode']??'yok',['dahil','haric'],true)?'block':'none'?>">
+      <label class="df-form-label">KDV Oranı</label>
       <select name="vat_rate">
         <?php foreach(acc_vat_rates() as $vr): ?>
         <option value="<?=$vr?>" <?=(int)($e['vat_rate']??20)===$vr?'selected':''?>>%<?=$vr?></option>
         <?php endforeach; ?>
       </select>
-    </label>
-    <label class="full">Açıklama
+    </div>
+    <div class="df-form-group df-form-span-2">
+      <label class="df-form-label">Açıklama</label>
       <input name="description" id="editDesc<?=(int)$e['id']?>" value="<?=h($e['description'] ?? '')?>">
-    </label>
-    <label class="full">Belge / Ref No
+    </div>
+    <div class="df-form-group df-form-span-2">
+      <label class="df-form-label">Belge / Ref No</label>
       <input name="reference_no" value="<?=h($e['reference_no'] ?? '')?>">
-    </label>
-    <label>Hesap (Kasa/Banka)
+    </div>
+    <div class="df-form-group">
+      <label class="df-form-label">Hesap (Kasa/Banka)</label>
       <select name="account_id">
         <option value="">— Seçme —</option>
         <?php foreach($accounts as $a): ?>
         <option value="<?=(int)$a['id']?>" <?=$e['account_id']==$a['id']?'selected':''?>><?=h($a['name'])?> (<?=h($a['account_type'])?>)</option>
         <?php endforeach; ?>
       </select>
-    </label>
-    <label id="editContactLabel<?=(int)$e['id']?>" style="<?=($isGider && $eStep!=='cari')?'display:none':''?>">Cari
+    </div>
+    <div class="df-form-group" id="editContactLabel<?=(int)$e['id']?>" style="<?=($isGider && $eStep!=='cari')?'display:none':''?>">
+      <label class="df-form-label">Cari</label>
       <select name="contact_id">
         <option value="">— Cari seçilmedi —</option>
         <?php foreach($contacts as $c): ?>
         <option value="<?=(int)$c['id']?>" <?=$e['contact_id']==$c['id']?'selected':''?>><?=h($c['name'])?></option>
         <?php endforeach; ?>
       </select>
-    </label>
-    <label id="editPersLabel<?=(int)$e['id']?>" style="<?=($isGider && $eStep!=='personel')?'display:none':''?>">Personel
+    </div>
+    <div class="df-form-group" id="editPersLabel<?=(int)$e['id']?>" style="<?=($isGider && $eStep!=='personel')?'display:none':''?>">
+      <label class="df-form-label">Personel</label>
       <select name="personnel_id">
         <option value="">— Yok —</option>
         <?php foreach($personnel as $p): ?>
         <option value="<?=(int)$p['id']?>" <?=$e['personnel_id']==$p['id']?'selected':''?>><?=h($p['name'])?></option>
         <?php endforeach; ?>
       </select>
-    </label>
+    </div>
     <!-- GİDER TÜRÜ CONTEXT-AWARE (2026-07-04): payment_type-bağlı yeni "Gider Türü" — seçenekleri
          accApplyStepEdit() ile adıma özel yeniden oluşturulur. -->
-    <label id="editTurLabel<?=(int)$e['id']?>" style="<?=$isGider?'':'display:none'?>">Gider Türü
+    <div class="df-form-group" id="editTurLabel<?=(int)$e['id']?>" style="<?=$isGider?'':'display:none'?>">
+      <label class="df-form-label">Gider Türü</label>
       <select name="payment_type" id="editTurSel<?=(int)$e['id']?>" data-current="<?=h($e['payment_type'] ?? '')?>">
         <option value="">— Seç —</option>
       </select>
-    </label>
-    <div style="display:flex;gap:8px">
-      <button class="btn" type="submit" name="edit_entry" value="1">💾 Kaydet</button>
-      <button class="btn secondary" type="button" onclick="document.getElementById('edit-acc-<?=(int)$e['id']?>').style.display='none'">✕ Kapat</button>
+    </div>
+    <div class="df-form-span-2" style="display:flex;gap:8px">
+      <button class="df-btn df-btn--primary" type="submit" name="edit_entry" value="1">💾 Kaydet</button>
+      <button class="df-btn df-btn--secondary" type="button" onclick="document.getElementById('edit-acc-<?=(int)$e['id']?>').style.display='none'">✕ Kapat</button>
     </div>
   </form>
 </div>
@@ -537,6 +569,7 @@ document.addEventListener('DOMContentLoaded',function(){accToggleWizardEdit(<?=(
 </script>
 <?php endif; ?>
 <?php endforeach; ?>
+</div>
 </section>
 <?php endif; ?>
 
@@ -588,5 +621,12 @@ function accApplyStepEdit(id){
   document.getElementById('editDesc'+id).required=(step==='diger');
 }
 </script>
+
+<style>
+body.nav-compact .df-section-title{font-size:var(--df-type-section-size);font-weight:var(--df-type-section-weight);color:var(--df-ink-900);margin:0 0 var(--df-space-3)}
+body.nav-compact .df-form-grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 var(--df-space-4)}
+body.nav-compact .df-form-span-2{grid-column:1 / -1}
+@media(max-width:640px){body.nav-compact .df-form-grid-2{grid-template-columns:1fr}}
+</style>
 
 <?php require_once __DIR__.'/layout_bottom.php'; ?>
