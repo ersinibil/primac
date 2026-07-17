@@ -59,68 +59,52 @@ $personnel=$pdo->query("SELECT * FROM personnel WHERE active=1 ORDER BY name")->
 $jobs=$pdo->query("SELECT id, job_no, title FROM jobs ORDER BY id DESC LIMIT 100")->fetchAll();
 ?>
 
-<div class="panel-head">
-<h1>Yeni Yönetim Talebi</h1>
-<a class="btn secondary" href="requests.php">Talepler</a>
-</div>
+<?php
+// DS migration (2026-07-17) sırasında bulundu: bu link daha önce requests.php'ye gidiyordu — o
+// sayfa admin-only (is_admin() zorunlu), ama request_new.php'ye HERKES erişebiliyor (yetki
+// kontrolü yok). Admin olmayan bir personel bu linke tıklarsa 403 alıyordu. Artık İletişim
+// Merkezi'nin herkese açık "Taleplerim" sekmesine gidiyor.
+ds_page_header('Yeni Yönetim Talebi', ds_icon('send',24), '', ds_button('Taleplerim','taleplerim.php','secondary','','',true), false, true);
+?>
 
-<?php if($error): ?><div class="alert"><?=h($error)?></div><?php endif; ?>
+<?php if($error): ?><?=ds_alert('danger',$error)?><?php endif; ?>
 
-<section class="panel">
-<form method="post" class="form-grid">
+<section class="df-card">
+<form method="post" class="df-form-grid-2">
 
-<label>Talep Eden Personel
-<select name="personnel_id">
-<option value="">Seçiniz</option>
-<?php foreach($personnel as $p): ?><option value="<?=$p['id']?>"><?=h($p['name'])?> - <?=h($p['role'])?></option><?php endforeach; ?>
-</select>
-</label>
+<?php
+$__persOpts='<option value="">Seçiniz</option>';
+foreach($personnel as $p){ $__persOpts.='<option value="'.$p['id'].'">'.h($p['name']).' - '.h($p['role']).'</option>'; }
+ds_form_field('Talep Eden Personel', '<select name="personnel_id">'.$__persOpts.'</select>');
+?>
 
-<label>İlgili İş
-<select name="related_job_id">
-<option value="">İşle bağlantılı değil</option>
-<?php foreach($jobs as $j): ?><option value="<?=$j['id']?>"><?=h($j['job_no'])?> - <?=h($j['title'])?></option><?php endforeach; ?>
-</select>
-</label>
+<?php
+$__jobOpts='<option value="">İşle bağlantılı değil</option>';
+foreach($jobs as $j){ $__jobOpts.='<option value="'.$j['id'].'">'.h($j['job_no']).' - '.h($j['title']).'</option>'; }
+ds_form_field('İlgili İş', '<select name="related_job_id">'.$__jobOpts.'</select>');
+?>
 
-<label>Talep Kategorisi
-<select name="category">
-<option>Malzeme Talebi</option>
-<option>Satın Alma Talebi</option>
-<option>Avans Talebi</option>
-<option>İzin Talebi</option>
-<option>Mesai Talebi</option>
-<option>Arıza / Teknik Sorun</option>
-<option>Grafik Revize Talebi</option>
-<option>Dış Atölye Talebi</option>
-<option>Montaj Talebi</option>
-<option>Muhasebe / Evrak Talebi</option>
-<option>Ödeme Talebi</option>
-<option>Özel İzin/Talep</option>
-<option>Genel</option>
-</select>
-</label>
+<?php
+$__cats=['Malzeme Talebi','Satın Alma Talebi','Avans Talebi','İzin Talebi','Mesai Talebi','Arıza / Teknik Sorun','Grafik Revize Talebi','Dış Atölye Talebi','Montaj Talebi','Muhasebe / Evrak Talebi','Ödeme Talebi','Özel İzin/Talep','Genel'];
+$__catOpts='';
+foreach($__cats as $__c){ $__catOpts.='<option>'.$__c.'</option>'; }
+ds_form_field('Talep Kategorisi', '<select name="category">'.$__catOpts.'</select>');
+?>
 
-<label>Öncelik
-<select name="priority">
-<option>Normal</option>
-<option>Acil</option>
-<option>Çok Acil</option>
-<option>Düşük</option>
-</select>
-</label>
+<?php ds_form_field('Öncelik', '<select name="priority"><option>Normal</option><option>Acil</option><option>Çok Acil</option><option>Düşük</option></select>'); ?>
 
-<label class="full">Talep Başlığı
-<input name="title" required placeholder="Örn: Siyah PLA alınması gerekiyor">
-</label>
+<div class="df-form-span-2"><?php ds_form_field('Talep Başlığı', '<input name="title" required placeholder="Örn: Siyah PLA alınması gerekiyor">'); ?></div>
+<div class="df-form-span-2"><?php ds_form_field('Açıklama', '<textarea name="description" rows="5" placeholder="Talebin detayını yazın. Örn: K2 Plus işleri için siyah PLA stokta kalmadı. 10 kg alınmalı."></textarea>'); ?></div>
 
-<label class="full">Açıklama
-<textarea name="description" rows="5" placeholder="Talebin detayını yazın. Örn: K2 Plus işleri için siyah PLA stokta kalmadı. 10 kg alınmalı."></textarea>
-</label>
-
-<button class="btn">Talebi Gönder</button>
+<div class="df-form-span-2"><button class="df-btn df-btn--primary">Talebi Gönder</button></div>
 
 </form>
 </section>
+
+<style>
+body.nav-compact .df-form-grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 var(--df-space-4)}
+body.nav-compact .df-form-span-2{grid-column:1 / -1}
+@media(max-width:640px){body.nav-compact .df-form-grid-2{grid-template-columns:1fr}}
+</style>
 
 <?php require_once __DIR__.'/layout_bottom.php'; ?>
