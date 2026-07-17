@@ -28,7 +28,20 @@ kendi Audit + DEV PASS + USER TEST kapısından geçerek ilerleyecek.
 kararı: uygulamadan önce ayrı bir "Product Sprint" yapılacak — Home'un kullanıcı deneyimi yeniden
 tasarlanacak, legacy'den hangi bileşenlerin korunacağı ve yeni Home'un NİHAİ bilgi mimarisi
 (audit'te sunulan A/B seçeneğinin ötesinde, Product Owner'ın kendi tasarım kararı) bu sprintte
-belirlenecek. **Açık gate: bu IA kararı gelmeden 2C-ii'nin implementasyonuna geçilmeyecek.** Ana bulgu: Home'da 3 varyant var — Legacy-Admin (KPI grid+Hızlı İşlemler+ay
+belirlenecek. **Açık gate: bu IA kararı gelmeden 2C-ii'nin implementasyonuna geçilmeyecek.**
+
+**IA + Wireframe teslim edildi (2026-07-17), kod YOK.** Product Owner'ın onayladığı "queue-first,
+Operasyon Merkezi" yönü 5 bölümlük IA'ya döküldü: 1) Nabız/Kritik Uyarılar (`df-alert`), 2) Queue/
+Sırada (`df-home-hero`/`df-home-qlist`, değişmedi), 3) Hızlı İşlemler (YENİ kompakt chip satırı,
+legacy buton duvarı yerine), 4) Devam Et (`df-home-continue`, "Son Görev" veri eksik), 5) Genel
+Bakış (yalnızca Admin, `ds_accordion_item()` ile katlanabilir, Home'un ilk görünümüne hakim değil).
+Mobil (390px) + web (Rail/Topbar bağlamında) wireframe'ler gerçek `ds-foundation.css`/`ds_lib.php`
+ile render edildi. **Uygulama öncesi kapatılması gereken 3 boşluk bulundu:** (1) `df-alert`/
+`df-accordion` CSS'i yalnızca web'in `body.nav-compact` kapsamında — 2C-i'nin izole ettiği mobil
+`body.mob-compact`'a genişletilmesi gerekiyor, (2) `home_build_continue()`'a "Son Görev" eklenmesi
+gerekiyor (küçük, izole), (3) df-native bir KPI kart bileşeni yok (`ds_kpi_card()` hâlâ eski "ds-"
+isim alanında) — mini-stat satırı önerildi. Tam rapor: `~/Desktop/FAZ2C-ii-Home-IA-Wireframe.pdf`.
+**Product Owner'ın IA onayı bekleniyor — onay gelmeden implementasyona geçilmeyecek.** Ana bulgu: Home'da 3 varyant var — Legacy-Admin (KPI grid+Hızlı İşlemler+ay
 karşılaştırması), Legacy-Personel (aynı desenin sade hâli), Compact (tek, rol-agnostik queue modeli
 — `home_build_queue()`/`home_build_continue()` zaten `$canSee()` ile rol-farkında, web
 `dashboard.php` ile ORTAK). Personel'in bugün legacy görmesi component eksikliği değil,
