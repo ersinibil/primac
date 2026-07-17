@@ -213,115 +213,89 @@ $personnel=$pdo->query("SELECT * FROM personnel ORDER BY active DESC,name")->fet
 $users=$pdo->query("SELECT u.*, p.name personnel_name FROM app_users u LEFT JOIN personnel p ON p.id=u.personnel_id ORDER BY u.role,u.full_name")->fetchAll();
 ?>
 
-<div class="panel-head">
-<h1>Kullanıcılar & Yetkiler</h1>
-<a class="btn secondary" href="profile.php">Şifremi Değiştir</a>
-</div>
+<?php ds_page_header('Kullanıcılar & Yetkiler', ds_icon('users',24), '', ds_button('Şifremi Değiştir','profile.php','secondary','','',true), false, true); ?>
 
-<?php if($error): ?><div class="alert"><?=h($error)?></div><?php endif; ?>
-<?php if($ok): ?><div class="ok"><?=h($ok)?></div><?php endif; ?>
+<?php if($error): ?><?=ds_alert('danger',$error)?><?php endif; ?>
+<?php if($ok): ?><?=ds_alert('success',$ok)?><?php endif; ?>
 
 <?php if($wa_results):
     $res=json_decode($wa_results,true);
     if(is_array($res)):
 ?>
-<section class="panel" style="border-left:4px solid #16a34a">
-<h2>WhatsApp Gönderim Özeti</h2>
+<section class="df-card" style="border-left:4px solid var(--df-success);margin-bottom:var(--df-space-4)">
+<h2 style="font-size:var(--df-type-section-size);margin:0 0 var(--df-space-3)">WhatsApp Gönderim Özeti</h2>
 <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:12px 0">
-    <div style="background:rgba(22,163,74,.15);border-radius:12px;padding:12px;text-align:center">
-        <div style="font-size:28px;color:#16a34a;font-weight:bold"><?=$res['success']?></div>
-        <div style="font-size:13px;color:#16a34a">Başarılı</div>
+    <div style="background:var(--df-success-soft);border-radius:var(--df-radius-md);padding:12px;text-align:center">
+        <div style="font-size:28px;color:var(--df-success-ink);font-weight:bold"><?=$res['success']?></div>
+        <div style="font-size:13px;color:var(--df-success-ink)">Başarılı</div>
     </div>
-    <div style="background:rgba(239,68,68,.15);border-radius:12px;padding:12px;text-align:center">
-        <div style="font-size:28px;color:#ef4444;font-weight:bold"><?=$res['failed']?></div>
-        <div style="font-size:13px;color:#ef4444">Başarısız</div>
+    <div style="background:var(--df-danger-soft);border-radius:var(--df-radius-md);padding:12px;text-align:center">
+        <div style="font-size:28px;color:var(--df-danger-ink);font-weight:bold"><?=$res['failed']?></div>
+        <div style="font-size:13px;color:var(--df-danger-ink)">Başarısız</div>
     </div>
-    <div style="background:rgba(107,114,128,.15);border-radius:12px;padding:12px;text-align:center">
-        <div style="font-size:28px;color:#6b7280;font-weight:bold"><?=$res['no_phone']?></div>
-        <div style="font-size:13px;color:#6b7280">Telefon Yok</div>
+    <div style="background:var(--df-surface-sunken);border-radius:var(--df-radius-md);padding:12px;text-align:center">
+        <div style="font-size:28px;color:var(--df-ink-500);font-weight:bold"><?=$res['no_phone']?></div>
+        <div style="font-size:13px;color:var(--df-ink-500)">Telefon Yok</div>
     </div>
 </div>
 <?php if(!empty($res['details'])): ?>
-<table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:12px">
-<thead><tr style="border-bottom:1px solid #e5e7eb"><th style="text-align:left;padding:8px">Kişi</th><th style="text-align:left;padding:8px">Durum</th></tr></thead>
+<div class="df-table-wrap"><table class="df-table">
+<thead><tr><th>Kişi</th><th>Durum</th></tr></thead>
 <tbody>
 <?php foreach($res['details'] as $d): ?>
-<tr style="border-bottom:1px solid #e5e7eb">
-    <td style="padding:8px"><?=h($d['name'])?></td>
-    <td style="padding:8px">
-        <span style="display:inline-block;background:<?=$d['ok']?'rgba(22,163,74,.2)':'rgba(239,68,68,.2)'?>;color:<?=$d['ok']?'#16a34a':'#ef4444'?>;border-radius:6px;padding:3px 8px;font-size:12px">
-        <?=$d['ok']?'✓ ':'✗ '?><?=h($d['status'])?></span>
-    </td>
+<tr>
+    <td><?=h($d['name'])?></td>
+    <td><span class="df-badge df-badge--<?=$d['ok']?'success':'danger'?>"><?=$d['ok']?'✓ ':'✗ '?><?=h($d['status'])?></span></td>
 </tr>
 <?php endforeach; ?>
 </tbody>
-</table>
+</table></div>
 <?php endif; ?>
 </section>
 <?php endif; endif; ?>
 
-<section class="panel">
-<h2>Yeni Kullanıcı</h2>
-<form method="post" class="form-grid">
+<section class="df-card">
+<h2 style="font-size:var(--df-type-section-size);margin:0 0 var(--df-space-3)">Yeni Kullanıcı</h2>
+<form method="post" class="df-form-grid-3">
 <input type="hidden" name="create_user" value="1">
 
-<label>Ad Soyad
-<input name="full_name" required value="<?=h($prefillFullName)?>">
-</label>
+<?php ds_form_field('Ad Soyad', '<input name="full_name" required value="'.h($prefillFullName).'">'); ?>
+<?php ds_form_field('Kullanıcı Adı', '<input name="username" required>'); ?>
+<?php ds_form_field('Telefon', '<input name="phone" value="'.h($prefillPhone).'">'); ?>
+<?php ds_form_field('E-posta', '<input name="email">'); ?>
+<?php ds_form_field('Şifre', '<input name="password" type="password" placeholder="Boş kalırsa 123456">'); ?>
+<?php ds_form_field('Rol', '<select name="role"><option value="personel">Personel</option><option value="yonetici">Yönetici</option><option value="admin">Admin</option></select>'); ?>
 
-<label>Kullanıcı Adı
-<input name="username" required>
-</label>
+<div class="df-form-span-3">
+<?php
+$__persOpts='<option value="">Bağlama</option>';
+foreach($personnel as $p){ $__persOpts.='<option value="'.$p['id'].'" '.($prefillPersonnelId===(int)$p['id']?'selected':'').'>'.h($p['name'].' / '.($p['role'] ?: '-')).'</option>'; }
+ds_form_field('Personel Bağlantısı', '<select name="personnel_id">'.$__persOpts.'</select>');
+?>
+</div>
 
-<label>Telefon
-<input name="phone" value="<?=h($prefillPhone)?>">
-</label>
-
-<label>E-posta
-<input name="email">
-</label>
-
-<label>Şifre
-<input name="password" type="password" placeholder="Boş kalırsa 123456">
-</label>
-
-<label>Rol
-<select name="role">
-<option value="personel">Personel</option>
-<option value="yonetici">Yönetici</option>
-<option value="admin">Admin</option>
-</select>
-</label>
-
-<label class="full">Personel Bağlantısı
-<select name="personnel_id">
-<option value="">Bağlama</option>
-<?php foreach($personnel as $p): ?>
-<option value="<?=$p['id']?>" <?=$prefillPersonnelId===(int)$p['id']?'selected':''?>><?=h($p['name'].' / '.($p['role'] ?: '-'))?></option>
-<?php endforeach; ?>
-</select>
-</label>
-
-<div class="full">
-<h3>Yetkiler</h3>
-<div style="display:grid;grid-template-columns:repeat(3,minmax(160px,1fr));gap:10px">
+<div class="df-form-span-3">
+<b style="font-size:13px;color:var(--df-ink-600)">Yetkiler</b>
+<div class="df-permission-grid" style="margin-top:8px">
 <?php foreach($permLabels as $key=>$label): ?>
-<label style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:14px;padding:10px">
+<label class="df-permission-chip">
 <input type="checkbox" name="permissions[]" value="<?=$key?>" style="width:auto"> <?=h($label)?>
 </label>
 <?php endforeach; ?>
 </div>
 </div>
 
-<label class="full"><input type="checkbox" name="active" checked style="width:auto"> Aktif</label>
-<button class="btn">Kullanıcı Oluştur</button>
+<div class="df-form-span-3">
+<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" name="active" checked style="width:auto"> Aktif</label>
+</div>
+<div class="df-form-span-3"><button class="df-btn df-btn--primary">Kullanıcı Oluştur</button></div>
 </form>
 </section>
 
-<section class="panel">
-<h2>📲 Toplu WhatsApp Gönderimi</h2>
-<p style="color:#666;font-size:14px;margin:0 0 16px">Seçilen kullanıcılara giriş bilgilerini WhatsApp ile gönderin. İsterseniz yeni rastgele şifreler üretebilirsiniz.</p>
-<form method="post" class="form-grid">
+<section class="df-card" style="margin-top:var(--df-space-4)">
+<h2 style="font-size:var(--df-type-section-size);margin:0 0 var(--df-space-2)">📲 Toplu WhatsApp Gönderimi</h2>
+<p style="color:var(--df-ink-500);font-size:14px;margin:0 0 16px">Seçilen kullanıcılara giriş bilgilerini WhatsApp ile gönderin. İsterseniz yeni rastgele şifreler üretebilirsiniz.</p>
+<form method="post">
 <input type="hidden" name="send_bulk_wa" value="1">
 
 <div style="margin:0 0 12px">
@@ -329,89 +303,71 @@ $users=$pdo->query("SELECT u.*, p.name personnel_name FROM app_users u LEFT JOIN
 <label style="margin-bottom:4px"><input type="radio" name="wa_mode" value="selected"> Seçilenlere</label>
 </div>
 
-<div style="max-height:250px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px;padding:10px">
+<div style="max-height:250px;overflow-y:auto;border:1px solid var(--df-hairline);border-radius:var(--df-radius-sm);padding:10px">
 <?php foreach($users as $u): if(!($u['active']??1)) continue; ?>
-<label style="display:block;margin:6px 0;padding:8px;background:#f8fafc;border-radius:6px">
+<label style="display:block;margin:6px 0;padding:8px;background:var(--df-surface-sunken);border-radius:var(--df-radius-sm)">
 <input type="checkbox" name="selected_users[]" value="<?=$u['id']?>" style="width:auto;margin-right:8px">
 <?=h($u['full_name'] ?: $u['username'])?> (<?=h($u['username'])?>)
-<?php if(!($u['phone'] ?? '')): ?><span style="color:#ef4444;font-size:12px;margin-left:8px">Telefon yok</span><?php endif; ?>
+<?php if(!($u['phone'] ?? '')): ?><span class="df-badge df-badge--danger" style="margin-left:8px">Telefon yok</span><?php endif; ?>
 </label>
 <?php endforeach; ?>
 </div>
 
-<label style="margin-top:12px"><input type="checkbox" name="gen_new_password" value="1" checked> Yeni rastgele şifre üret ve kaydet</label>
+<label style="margin-top:12px;display:block"><input type="checkbox" name="gen_new_password" value="1" checked style="width:auto"> Yeni rastgele şifre üret ve kaydet</label>
 
-<button class="btn" style="width:100%;padding:12px;margin-top:12px;background:#16a34a;color:white">📲 WhatsApp ile Gönder</button>
+<button class="df-btn df-btn--primary" style="width:100%;margin-top:12px;background:var(--df-success)">📲 WhatsApp ile Gönder</button>
 </form>
 </section>
 
-<section class="panel">
-<h2>Mevcut Kullanıcılar</h2>
+<section class="df-card" style="margin-top:var(--df-space-4)">
+<h2 style="font-size:var(--df-type-section-size);margin:0 0 var(--df-space-3)">Mevcut Kullanıcılar</h2>
 <?php foreach($users as $u): 
 $perms=json_decode($u['permissions'] ?? '[]',true);
 if(!is_array($perms)) $perms=[];
 ?>
-<form method="post" class="form-grid" style="border-bottom:1px solid #eef2f6;padding-bottom:18px;margin-bottom:18px">
+<form method="post" class="df-form-grid-3" style="border-bottom:1px solid var(--df-hairline);padding-bottom:18px;margin-bottom:18px">
 <input type="hidden" name="update_user" value="1">
 <input type="hidden" name="user_id" value="<?=$u['id']?>">
 
-<label>Ad Soyad
-<input name="full_name" value="<?=h($u['full_name'])?>">
-</label>
+<?php ds_form_field('Ad Soyad', '<input name="full_name" value="'.h($u['full_name']).'">'); ?>
+<?php ds_form_field('Kullanıcı Adı', '<input name="username" value="'.h($u['username']).'">'); ?>
+<?php ds_form_field('Telefon', '<input name="phone" value="'.h($u['phone']).'">'); ?>
+<?php ds_form_field('E-posta', '<input name="email" value="'.h($u['email']).'">'); ?>
+<?php ds_form_field('Yeni Şifre', '<input name="password" type="password" placeholder="Değişmeyecekse boş bırak">'); ?>
+<?php
+$__roleOpts='';
+foreach(['personel'=>'Personel','yonetici'=>'Yönetici','admin'=>'Admin'] as $rk=>$rv){ $__roleOpts.='<option value="'.$rk.'" '.($u['role']===$rk?'selected':'').'>'.$rv.'</option>'; }
+ds_form_field('Rol', '<select name="role">'.$__roleOpts.'</select>');
+?>
 
-<label>Kullanıcı Adı
-<input name="username" value="<?=h($u['username'])?>">
-</label>
+<div class="df-form-span-3">
+<?php
+$__persOpts2='<option value="">Bağlama</option>';
+foreach($personnel as $p){ $__persOpts2.='<option value="'.$p['id'].'" '.($u['personnel_id']==$p['id']?'selected':'').'>'.h($p['name'].' / '.($p['role'] ?: '-')).'</option>'; }
+ds_form_field('Personel Bağlantısı', '<select name="personnel_id">'.$__persOpts2.'</select>');
+?>
+</div>
 
-<label>Telefon
-<input name="phone" value="<?=h($u['phone'])?>">
-</label>
-
-<label>E-posta
-<input name="email" value="<?=h($u['email'])?>">
-</label>
-
-<label>Yeni Şifre
-<input name="password" type="password" placeholder="Değişmeyecekse boş bırak">
-</label>
-
-<label>Rol
-<select name="role">
-<?php foreach(['personel'=>'Personel','yonetici'=>'Yönetici','admin'=>'Admin'] as $rk=>$rv): ?>
-<option value="<?=$rk?>" <?=$u['role']===$rk?'selected':''?>><?=$rv?></option>
-<?php endforeach; ?>
-</select>
-</label>
-
-<label class="full">Personel Bağlantısı
-<select name="personnel_id">
-<option value="">Bağlama</option>
-<?php foreach($personnel as $p): ?>
-<option value="<?=$p['id']?>" <?=$u['personnel_id']==$p['id']?'selected':''?>><?=h($p['name'].' / '.($p['role'] ?: '-'))?></option>
-<?php endforeach; ?>
-</select>
-</label>
-
-<div class="full">
-<b>Yetkiler</b>
-<div style="display:grid;grid-template-columns:repeat(3,minmax(160px,1fr));gap:10px;margin-top:8px">
+<div class="df-form-span-3">
+<b style="font-size:13px;color:var(--df-ink-600)">Yetkiler</b>
+<div class="df-permission-grid" style="margin-top:8px">
 <?php foreach($permLabels as $key=>$label): ?>
-<label style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:14px;padding:10px">
+<label class="df-permission-chip">
 <input type="checkbox" name="permissions[]" value="<?=$key?>" <?=in_array($key,$perms,true)?'checked':''?> style="width:auto"> <?=h($label)?>
 </label>
 <?php endforeach; ?>
 </div>
 </div>
 
-<label class="full"><input type="checkbox" name="active" <?=$u['active']?'checked':''?> style="width:auto"> Aktif</label>
-<button class="btn secondary">Güncelle</button>
+<div class="df-form-span-3"><label style="display:flex;align-items:center;gap:8px"><input type="checkbox" name="active" <?=$u['active']?'checked':''?> style="width:auto"> Aktif</label></div>
+<div class="df-form-span-3"><button class="df-btn df-btn--secondary">Güncelle</button></div>
 
 </form>
-<form method="post" style="display:flex;gap:8px;align-items:center;margin:0 0 14px;padding:10px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px">
+<form method="post" style="display:flex;gap:8px;align-items:center;margin:0 0 14px;padding:10px;background:var(--df-surface-sunken);border:1px solid var(--df-hairline);border-radius:var(--df-radius-md)">
 <input type="hidden" name="reset_user_pw" value="1">
 <input type="hidden" name="user_id" value="<?=$u['id']?>">
 <input type="password" name="newpw" placeholder="🔒 Yeni şifre (sadece şifreyi değiştirir)" minlength="4" required style="flex:1;margin:0">
-<button class="btn secondary" style="white-space:nowrap;margin:0">Şifreyi Değiştir</button>
+<button class="df-btn df-btn--secondary" style="white-space:nowrap">Şifreyi Değiştir</button>
 </form>
 <?php if(($u['phone'] ?? '') && ($u['active'] ?? true)): ?>
 <!-- P0-AUTH-02 (2026-07-17, ACİL): bu ayrı form ÖNCEDEN yukarıdaki "Güncelle" formunun İÇİNDE
@@ -420,17 +376,26 @@ if(!is_array($perms)) $perms=[];
      basıldığında update_user VE send_bulk_wa'nın birlikte, öngörülemez alan değerleriyle tetiklenme
      riski taşıyordu. Artık dıştaki formun DIŞINDA, kendi başına bağımsız bir form. -->
 <details style="margin-top:-8px;margin-bottom:18px;padding-top:0">
-<summary style="cursor:pointer;font-weight:500;color:#2563eb">📲 Şifre Sıfırla ve WhatsApp ile Gönder</summary>
+<summary style="cursor:pointer;font-weight:500;color:var(--df-accent)">📲 Şifre Sıfırla ve WhatsApp ile Gönder</summary>
 <form method="post" style="margin-top:10px">
 <input type="hidden" name="send_bulk_wa" value="1">
 <input type="hidden" name="wa_mode" value="selected">
 <input type="hidden" name="selected_users[]" value="<?=$u['id']?>">
 <input type="hidden" name="gen_new_password" value="1">
-<button class="btn" style="width:100%;padding:11px;background:#16a34a;color:white;margin-top:8px">📲 Şifre Sıfırla ve WhatsApp ile Gönder</button>
+<button class="df-btn df-btn--primary" style="width:100%;background:var(--df-success);margin-top:8px">📲 Şifre Sıfırla ve WhatsApp ile Gönder</button>
 </form>
 </details>
 <?php endif; ?>
 <?php endforeach; ?>
 </section>
+
+<style>
+body.nav-compact .df-form-grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0 var(--df-space-4)}
+body.nav-compact .df-form-span-3{grid-column:1 / -1}
+body.nav-compact .df-permission-grid{display:grid;grid-template-columns:repeat(3,minmax(160px,1fr));gap:var(--df-space-2)}
+body.nav-compact .df-permission-chip{background:var(--df-surface-sunken);border:1px solid var(--df-hairline);border-radius:var(--df-radius-md);padding:var(--df-space-2) var(--df-space-3);display:flex;align-items:center;gap:8px;font-size:var(--df-type-body-size);color:var(--df-ink-900)}
+@media(max-width:900px){body.nav-compact .df-form-grid-3{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:640px){body.nav-compact .df-form-grid-3,body.nav-compact .df-permission-grid{grid-template-columns:1fr}}
+</style>
 
 <?php require_once __DIR__.'/layout_bottom.php'; ?>
