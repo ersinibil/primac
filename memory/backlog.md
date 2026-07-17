@@ -2,6 +2,17 @@
 
 <!-- Açık geliştirme görevleri. Kapanan madde buradan silinip memory/features.md'ye taşınır. -->
 
+## Design System Backlog — DF-Modal/DF-ConfirmDialog/DF-Pagination/DF-LoadingState/DF-Skeleton (2026-07-17, PX-002 FAZ 2A "Dead Component Kararı")
+Product Owner kararı: bu 5 component bugün üretilmedi çünkü kod genelinde 0 gerçek kullanım
+yeri var (grep ile doğrulandı — modal/dialog markup'ı hiç yok, tüm onaylar native `confirm()`
+ile — 48 dosya; pagination hiç yok; loading-state/skeleton hiç yok, tüm render senkron PHP).
+**Karar verilmedi ama üretilmeyecek de değil** — gerçek bir sayfa bunlardan birini
+gerektirdiğinde (örn. Madde 5'te bir onay akışı `confirm()`'den DF-ConfirmDialog'a taşınmak
+istenirse) aynı token/component sözleşmesiyle (`body.nav-compact` kapsamı, df- namespace,
+`ds_*()` PHP API deseni) inşa edilecek. `ds_kpi_card()`/`.ds-kpi-card` de aynı gerekçeyle
+bu turda dokunulmadı — Product Owner'ın 44 component listesinde yoktu, 0 canlı çağrısı var
+(mevcut `ds-kpi-card` hâliyle duruyor, `df-` karşılığı yok).
+
 ## nav_module_is_active() mobileUrl'den habersiz (2026-07-17, Ece PX-002 Madde 1 review notu, çok düşük öncelik)
 `nav_lib.php::nav_module_is_active($key,$currentScript)` hâlâ sadece `$item['url']`'i
 karşılaştırıyor, yeni `mobileUrl` alanından habersiz. Şu an kod içinde HİÇBİR YERDEN çağrılmıyor

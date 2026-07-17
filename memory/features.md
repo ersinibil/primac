@@ -2,6 +2,55 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
+## PX-002 Madde 2 / FAZ 2A — Design System v1 + Application Shell v1 foundation (2026-07-17, commit `7834e1a`)
+Madde 1 USER TEST PASS sonrası, Product Owner'ın "Compact modda hiçbir sayfada legacy iz
+kalmayacak" kesin ürün kararının ilk fazı. Kapsam SADECE ortak altyapı — 3 dosya değişti
+(`assets/css/ds-foundation.css`, `ds_lib.php`, yeni `assets/js/ds-foundation.js`), **hiçbir
+sayfa dosyası değişmedi**, hiçbir sayfa henüz `body.nav-compact` taşımıyor — legacy piksel-
+piksel korunuyor (bu bir iddia değil, matematiksel gerçek: değişen sayfa yok).
+
+**ds-/df- konsolidasyonu — kör rename yapılmadı.** Kod öncesi canlı-referans taraması
+`ds_page_header()`'ın 8 dosyada, `ds_button()`'ın varsayılan dalının 6 dosyada CANLI
+olduğunu ortaya çıkardı (önceki turda "kullanılmıyor" varsayımı YANLIŞTI, bu tur düzeltildi).
+Bunlara dokunulmadı — `ds_page_header()`'a `$df` parametresi eklendi (aynı `ds_button()`
+deseni), varsayılan çıktı birebir korundu. `ds_badge()/ds_table_open()/ds_table_close()/
+ds_action_bar()` gerçekten 0 canlı çağrıya sahipti (grep ile doğrulandı) — bunlar doğrudan
+`df-*` çıktısına taşındı. `ds-form-grid/ds-field/ds-list-row/ds-menu/ds-quick-add` zaten
+kullanılmıyordu ve zaten `df-` eşleniği vardı (PX-001A'dan), dokunulmadı. `ds-kpi-card`
+Product Owner'ın 44 component listesinde yoktu, kapsam dışı bırakıldı.
+
+**Dead Component Kararı:** DF-Modal/DF-ConfirmDialog/DF-Pagination/DF-LoadingState/
+DF-Skeleton üretilmedi — kod genelinde 0 gerçek kullanım yeri (grep: modal/dialog markup'ı
+hiç yok, tüm onaylar native `confirm()` — 48 dosya; pagination hiç yok). DF-DataGrid,
+DF-Table'a katlandı. Design System Backlog'da, gerçek ihtiyaç çıktığında üretilecek.
+
+**Yeni component'ler (hepsi `body.nav-compact` kapsamında):** DF-PageHeader (df dalı),
+DF-ActionBar, DF-Card/DF-HeroCard, DF-Table, DF-Form(+FormGroup, global input/select/
+textarea reskin — markup değişmeden, çıplak etiket zaten her yerde kullanılıyordu), DF-Alert,
+DF-Accordion (YALNIZCA kabuk — "tek açık" zorlaması Madde 3/4'ün işi). `df-btn`'e hover/
+active/disabled/loading/focus-visible state'leri eklendi (mevcut 3 canlı ekranı — mytasks.php/
+task_view.php/mobile karşılıkları — etkilemeden, sadece ek kural). `ds_icon()`'a 6 yeni ikon
+(briefcase/users/chat/menu/box/wallet — emoji karşılıkları).
+
+**Review turu iki aşamalı oldu:** Ece/Selin/Elif ilk turda PASS verdi, ama Elif bağımsız
+taramasında gerçek bir kural ihlali buldu — yeni component CSS'inin büyük kısmı (`.df-page-
+header`'dan `.df-accordion-body`'ye kadar ~55 satır) yanlışlıkla `body.nav-compact` kapsamı
+DIŞINDA kalmıştı (boş bir `body.nav-compact{}` bloğu kardeş seçicileri kapsamıyordu — CSS'te
+nesting yok). Bugün canlı etkisi yoktu (hiçbir sayfa bu class'ları basmıyor) ama FAZ 2B'den
+önce kapanması gereken bir borçtu. Aynı turda düzeltildi (her seçiciye `body.nav-compact `
+öneki eklendi), yeniden ekran görüntüsüyle doğrulandı.
+
+**Gerçek kod önizlemesi:** DB'ye bağlanmadan, gerçek `ds_lib.php`'yi PHP CLI'dan require
+eden bir script (scratchpad, repoya girmedi) button/form/card/table/badge/alert/empty-state/
+accordion'ı hem web (açık) hem mobil (koyu, `body.mobile-shell`) token setiyle render etti,
+headless Chrome ile ekran görüntüsü alındı — token flip'i, negatif değer tonu, badge
+tonlarının genişletilmiş `ds_tone_map()`'i (yellow/orange/teal artık warning/warning/info,
+önceden sessizce info'ya düşüyordu) doğrulandı.
+
+**Durum:** DEV PASS henüz verilmedi, USER TEST bekleniyor. FAZ 2B (Web Navigation Rail/
+Top Bar/Page Container, Mobil Header/Bottom Navigation/Container) bu onay olmadan
+başlamayacak.
+
 ## PX-002 Madde 1 — Compact mobil Menü/Sabitlenenler 404 fix (2026-07-17, commit `924c367`)
 PX-001/PX-001B USER TEST FAIL raporunun (Product Owner, 2026-07-17) AŞAMA 1 kök neden denetiminde
 bulunan "kesin 404 listesi"nin (10 kalem) kapatılması — sprint sırasının 1. maddesi.
