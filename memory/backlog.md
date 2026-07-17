@@ -2,6 +2,23 @@
 
 <!-- Açık geliştirme görevleri. Kapanan madde buradan silinip memory/features.md'ye taşınır. -->
 
+## FAZ 2C-ii — Home v2 — DEV PASS, Product Owner onayı bekleniyor (2026-07-17, KOMUT 5)
+Onaylanmış IA/wireframe'e (A-F) göre kodlandı — commit `c5870c4`. 5 bölüm: Nabız/Kritik Uyarılar
+(`df-alert`, artık mobilde de çalışıyor), Queue/Sırada (değişmedi), Hızlı İşlemler (yeni kompakt
+chip satırı, yetkisiz aksiyon `dashboard_quick_actions_split()`'te zaten filtreleniyor), Devam Et
+(+ "Son Görev" — `home_build_continue()`'a opsiyonel `$pid` parametresiyle izole eklendi), Genel
+Bakış (yalnızca Admin, varsayılan kapalı accordion, yeni matematik icat edilmedi — her sorgu
+projede zaten var olan denetimden geçmiş bir ekrandan kopyalandı). Legacy mod (web+mobil) birebir
+korundu — `mobile/index.php`'de Nabız satırının render'ı legacy/compact olarak ayrıştırıldı, git
+diff ile legacy dalın byte-identical kaldığı doğrulandı. Rollout (F) için kod değişikliği
+gerekmedi — `nav_effective_mode()` zaten pilot personeli admin ile aynı compact Home'a yönlendiriyor.
+29/29 DB-free veri testi + web/mobil (320/390/430px) görsel doğrulama + Ece (kod)/Selin (güvenlik)/
+Elif (parite) bağımsız incelemesi — üçü de PASS/tutarlı, kritik/yüksek bulgu yok (yalnızca 2 düşük
+öncelikli, aksiyon gerektirmeyen not: `home_build_overview()`'da savunma-derinliği eksikliği,
+`is_admin()`/mobil `$isAdmin` tanım farkı — canlıda davranış farkı yaratmıyor). Tam rapor:
+`~/Desktop/PRIMAC-OTS-FAZ2C-ii-Home-DEV-PASS.pdf`. **DEV PASS raporu sonrası dur, Product Owner
+onayı bekleniyor — USER TEST/CLOSED henüz değil.**
+
 ## ACİL HOTFIX PAKETİ — KAPANDI (2026-07-17, PRODUCT OWNER KARARI — R0.9 hotfix kapısı)
 Master Envanter'in bulduğu 2 güvenlik açığı + 1 sessiz şema hatası, Home implementasyonuna (KOMUT 5)
 geçmeden önce ayrı bir kapı olarak kapatıldı — **3/3 hotfix PASS**, 58/58 test, Ece+Selin bağımsız
@@ -89,12 +106,12 @@ Sırada (`df-home-hero`/`df-home-qlist`, değişmedi), 3) Hızlı İşlemler (YE
 legacy buton duvarı yerine), 4) Devam Et (`df-home-continue`, "Son Görev" veri eksik), 5) Genel
 Bakış (yalnızca Admin, `ds_accordion_item()` ile katlanabilir, Home'un ilk görünümüne hakim değil).
 Mobil (390px) + web (Rail/Topbar bağlamında) wireframe'ler gerçek `ds-foundation.css`/`ds_lib.php`
-ile render edildi. **Uygulama öncesi kapatılması gereken 3 boşluk bulundu:** (1) `df-alert`/
-`df-accordion` CSS'i yalnızca web'in `body.nav-compact` kapsamında — 2C-i'nin izole ettiği mobil
-`body.mob-compact`'a genişletilmesi gerekiyor, (2) `home_build_continue()`'a "Son Görev" eklenmesi
-gerekiyor (küçük, izole), (3) df-native bir KPI kart bileşeni yok (`ds_kpi_card()` hâlâ eski "ds-"
-isim alanında) — mini-stat satırı önerildi. Tam rapor: `~/Desktop/FAZ2C-ii-Home-IA-Wireframe.pdf`.
-**Product Owner'ın IA onayı bekleniyor — onay gelmeden implementasyona geçilmeyecek.** Ana bulgu: Home'da 3 varyant var — Legacy-Admin (KPI grid+Hızlı İşlemler+ay
+ile render edildi. **Uygulama öncesi kapatılması gereken 3 boşluk bulundu (hepsi implementasyonda
+kapatıldı, aşağıya bakın):** (1) `df-alert`/`df-accordion` CSS'i yalnızca web'in `body.nav-compact`
+kapsamında — 2C-i'nin izole ettiği mobil `body.mob-compact`'a genişletilmesi gerekiyor, (2)
+`home_build_continue()`'a "Son Görev" eklenmesi gerekiyor (küçük, izole), (3) df-native bir KPI kart
+bileşeni yok (`ds_kpi_card()` hâlâ eski "ds-" isim alanında) — mini-stat satırı önerildi. Tam rapor:
+`~/Desktop/FAZ2C-ii-Home-IA-Wireframe.pdf`. Ana bulgu: Home'da 3 varyant var — Legacy-Admin (KPI grid+Hızlı İşlemler+ay
 karşılaştırması), Legacy-Personel (aynı desenin sade hâli), Compact (tek, rol-agnostik queue modeli
 — `home_build_queue()`/`home_build_continue()` zaten `$canSee()` ile rol-farkında, web
 `dashboard.php` ile ORTAK). Personel'in bugün legacy görmesi component eksikliği değil,
