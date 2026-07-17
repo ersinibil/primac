@@ -34,7 +34,22 @@ function ds_styles(){
 // (düz) daha yaygın deseni yansıtır; border'lı ekranlar (dashboard/sales/purchase/finance/
 // contact_view tarzı) $bordered=true geçmeli. DS-002A code-review'da (Ece) bu ayrımın
 // gözetilmediği, tüm ekranlara koşulsuz border uygulandığı tespit edilip düzeltildi.
-function ds_page_header($title, $icon='', $subtitle='', $actionsHtml='', $bordered=false){
+// PX-002 FAZ 2A EKİ (2026-07-17): $df=true → df-page-header (Compact Mode, DF-PageHeader/
+// DF-PageTitle/DF-PageSubtitle). $df=false VARSAYILAN — 8 canlı çağrı (external/mytasks/sales/
+// purchase/contact_view/mytask_new/task_view/finance) birebir eski ds-page-header çıktısını
+// almaya devam eder, davranış hiç değişmedi (ds_button()'daki aynı geriye-uyumlu desen).
+function ds_page_header($title, $icon='', $subtitle='', $actionsHtml='', $bordered=false, $df=false){
+    if($df){
+        echo '<div class="df-page-header'.($bordered?' df-page-header--bordered':'').'">';
+        echo '<div class="df-page-header-id">';
+        if($icon!=='') echo '<span class="df-page-header-icon">'.$icon.'</span>';
+        echo '<div><h1 class="df-page-title">'.h($title).'</h1>';
+        if($subtitle!=='') echo '<div class="df-page-subtitle">'.h($subtitle).'</div>';
+        echo '</div></div>';
+        if($actionsHtml!=='') echo '<div class="df-action-bar">'.$actionsHtml.'</div>';
+        echo '</div>';
+        return;
+    }
     echo '<div class="ds-page-header'.($bordered?' ds-page-header--bordered':'').'">';
     echo '<div class="ds-page-header-id">';
     if($icon!=='') echo '<span class="ds-page-header-icon">'.$icon.'</span>';
@@ -47,8 +62,11 @@ function ds_page_header($title, $icon='', $subtitle='', $actionsHtml='', $border
 
 // $html BİLEREK escape edilmiyor — yalnızca geliştirici-kontrollü sabit HTML (örn. birden çok
 // ds_button() çıktısının birleşimi), ASLA kullanıcı/veri kaynaklı ham string geçilmemeli.
+// PX-002 FAZ 2A (2026-07-17): bu fonksiyonun kendisi 0 canlı çağrıya sahipti (grep ile
+// doğrulandı) — ds_page_header()'ın kendi ds-action-bar'ı HARDCODED, bu fonksiyonu hiç
+// çağırmıyor, dolayısıyla df-action-bar'a geçiş risksiz.
 function ds_action_bar($html){
-    echo '<div class="ds-action-bar">'.$html.'</div>';
+    echo '<div class="df-action-bar">'.$html.'</div>';
 }
 
 function ds_kpi_card($title,$value,$desc,$url=null,$tone='blue'){
@@ -61,9 +79,12 @@ function ds_kpi_card($title,$value,$desc,$url=null,$tone='blue'){
     echo '</'.$tag.'>';
 }
 
+// PX-002 FAZ 2A (2026-07-17): 0 canlı çağrı (grep ile doğrulandı) — ds-badge yerine doğrudan
+// df-badge basılıyor, ds_tone_map() zaten legacy renk isimlerini df tonlarına köprülüyordu.
 function ds_badge($text, $tone=null){
     if($tone===null) $tone = function_exists('status_tone') ? status_tone($text) : 'gray';
-    return '<span class="ds-badge '.h($tone).'">'.h($text).'</span>';
+    $tone = ds_tone_map($tone);
+    return '<span class="df-badge df-badge--'.h($tone).'">'.h($text).'</span>';
 }
 
 // $attrs BİLEREK escape edilmiyor (data-*/onclick gibi ham HTML öznitelik eklemek için) —
@@ -100,8 +121,14 @@ function ds_priority($priority, $label=null){
 // olarak checks_notes_lib.php'ye DEĞİL buraya kondu — bu sprintin kapsamı checks_notes_* mantığını
 // kapsamıyor, bu sadece görsel bir eşleme (Ece/Elif review notu — task_view.php + mobile'de
 // tekrarlanan aynı diziyi tek yere çıkarır).
+// PX-002 FAZ 2A EKİ (2026-07-17): status_tone() (boot.php) 'yellow'/'orange'/'teal' de
+// döndürebiliyor (Onay Bekliyor/Dışarıda/Montajda) — önceden ikisi de sessizce 'info'ya
+// düşüyordu (df-badge'in 0 canlı çağrısı olduğu için fark edilmemişti). Sadece EKLEME —
+// mevcut 5 eşleme DEĞİŞMEDİ, task_view.php/mobile/task_view.php'nin checks_notes_status_tone()
+// çağrıları etkilenmez.
 function ds_tone_map($legacyTone){
-    $map=['blue'=>'info','green'=>'success','purple'=>'info','red'=>'danger','gray'=>'info'];
+    $map=['blue'=>'info','green'=>'success','purple'=>'info','red'=>'danger','gray'=>'info',
+        'yellow'=>'warning','orange'=>'warning','teal'=>'info'];
     return $map[$legacyTone] ?? 'info';
 }
 
@@ -130,6 +157,14 @@ function ds_icon($name, $size=20, $class=''){
         'home'=>'<path d="M4 11 12 4l8 7"/><path d="M6 10v9h12v-9"/>',
         'info'=>'<circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="13"/><circle cx="12" cy="16" r="0.6" fill="currentColor"/>',
         'filter'=>'<line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/>',
+        // PX-002 FAZ 2A EKİ (2026-07-17) — Compact Mode'da emoji ikon kalmasın diye eklenen
+        // eksik karşılıklar (madde 6): 📋→briefcase, 👥→users, 💬→chat, ☰→menu, 📦→box, 💰→wallet.
+        'briefcase'=>'<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="3" y1="12" x2="21" y2="12"/>',
+        'users'=>'<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.2 2.7-5.5 6-5.5s6 2.3 6 5.5"/><path d="M16 8.2a2.8 2.8 0 1 1 0 5.6"/><path d="M16.5 14.6c2.5.3 4.5 2.3 4.5 5.4"/>',
+        'chat'=>'<path d="M4 5h16v11H8l-4 4z"/>',
+        'menu'=>'<line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/>',
+        'box'=>'<path d="M3 8l9-5 9 5-9 5-9-5z"/><path d="M3 8v9l9 5 9-5V8"/><line x1="12" y1="13" x2="12" y2="22"/>',
+        'wallet'=>'<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><circle cx="16.5" cy="14.5" r="1.1" fill="currentColor" stroke="none"/>',
     ];
     if(!isset($__ds_icons[$name])) return '';
     $size = (int)$size; if($size<1) $size=20;
@@ -137,11 +172,74 @@ function ds_icon($name, $size=20, $class=''){
     return '<span class="'.h($cls).'" style="width:'.$size.'px;height:'.$size.'px" aria-hidden="true"><svg viewBox="0 0 24 24">'.$__ds_icons[$name].'</svg></span>';
 }
 
+// PX-002 FAZ 2A (2026-07-17): 0 canlı çağrı — ds-table-wrap/ds-table yerine df-table-wrap/
+// df-table basılıyor (DF-Table/DF-DataGrid — ayrı bir DataGrid ihtiyacı bulunamadı, Table'a
+// katlandı, bkz. Dead Component Kararı).
 function ds_table_open($headers){
-    echo '<div class="ds-table-wrap"><table class="ds-table"><thead><tr>';
+    echo '<div class="df-table-wrap"><table class="df-table"><thead><tr>';
     foreach($headers as $__h) echo '<th>'.h($__h).'</th>';
     echo '</tr></thead><tbody>';
 }
 function ds_table_close(){
     echo '</tbody></table></div>';
+}
+
+// PX-002 FAZ 2A EKİ (2026-07-17) — DF-Alert. $type: info|success|warning|danger. role="alert"
+// ekranı okuyan yardımcı teknolojiler için (madde 13 erişilebilirlik). $message h() ile
+// escape edilir — kullanıcı/veri kaynaklı metin güvenle geçilebilir.
+function ds_alert($type, $message){
+    if(!in_array($type, ['info','success','warning','danger'], true)) $type = 'info';
+    return '<div class="df-alert df-alert--'.h($type).'" role="alert">'.h($message).'</div>';
+}
+
+// DF-EmptyState — CSS (df-empty) DS-003A'dan beri vardı, PHP helper'ı yoktu. $icon geliştirici-
+// kontrollü ds_icon() çıktısı olmalı (escape edilmez), $title/$desc kullanıcı/veri kaynaklı
+// olabilir (h() ile escape edilir).
+function ds_empty_state($title, $desc=null, $icon=null, $error=false){
+    echo '<div class="df-empty'.($error?' df-empty--error':'').'">';
+    if($icon) echo '<div class="df-empty-icon">'.$icon.'</div>';
+    echo '<div class="df-empty-title">'.h($title).'</div>';
+    if($desc) echo '<div class="df-empty-desc">'.h($desc).'</div>';
+    echo '</div>';
+}
+
+// DF-Form / DF-FormGroup — tek satırlık label+input+help/error sarmalayıcı. $inputHtml BİLEREK
+// escape edilmiyor (gerçek <input>/<select>/<textarea> markup'ı taşır — çağıran taraf kendi
+// value/name özniteliklerini kendi h() ile escape etmeli, tıpkı önceki tüm ds_*'in $actionsHtml
+// deseninde olduğu gibi). $label/$help/$error kullanıcı okunur metin, h() ile escape edilir.
+function ds_form_field($label, $inputHtml, $help=null, $error=null){
+    echo '<div class="df-form-group'.($error?' has-error':'').'">';
+    echo '<label class="df-form-label">'.h($label).'</label>';
+    echo $inputHtml;
+    if($error) echo '<div class="df-form-error">'.h($error).'</div>';
+    elseif($help) echo '<div class="df-form-help">'.h($help).'</div>';
+    echo '</div>';
+}
+
+// DF-Accordion — YALNIZCA KABUK (Madde 2 sınırı). $id yoksa otomatik üretilir (aria-controls
+// için); $open başlangıç durumu. Tek-açık-kalsın zorlaması burada YOK — Madde 3/4'ün işi.
+// $bodyHtml BİLEREK escape edilmiyor (gerçek markup taşır, ds_action_bar/$actionsHtml deseniyle
+// aynı kural).
+function ds_accordion_item($title, $bodyHtml, $open=false, $id=null){
+    static $__auto = 0;
+    $id = $id ?: ('df-acc-'.(++$__auto));
+    echo '<div class="df-accordion-item'.($open?' is-open':'').'">';
+    echo '<button type="button" class="df-accordion-header" aria-expanded="'.($open?'true':'false').'" aria-controls="'.h($id).'" onclick="dfAccordionToggle(this)">';
+    echo '<span>'.h($title).'</span><span class="df-accordion-chevron" aria-hidden="true"></span>';
+    echo '</button>';
+    echo '<div class="df-accordion-body" id="'.h($id).'">'.$bodyHtml.'</div>';
+    echo '</div>';
+}
+
+// DF-Tabs / DF-FilterBar — aynı görsel dili paylaşıyor (bkz. FAZ 2A teslim raporu), ayrı bir
+// FilterBar CSS'i açılmadı. $items: [['label'=>'Tümü','url'=>'jobs.php','active'=>true], ...]
+// $item['url'] href olarak h() ile escape edilir, $item['label'] de h() ile escape edilir —
+// tamamen veri-güvenli, geliştirici $actionsHtml deseni burada yok.
+function ds_tabs($items){
+    echo '<div class="df-tabs">';
+    foreach($items as $__it){
+        $cls = 'df-tab'.(!empty($__it['active']) ? ' df-tab--active' : '');
+        echo '<a class="'.h($cls).'" href="'.h($__it['url']).'">'.h($__it['label']).'</a>';
+    }
+    echo '</div>';
 }

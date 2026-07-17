@@ -197,6 +197,17 @@ body.mobile-shell .ds-table tr:hover td{background:rgba(255,255,255,.06)}
   /* Motion — hızlı, sessiz, sıçramasız */
   --df-ease-standard:cubic-bezier(.2,.8,.2,1);
   --df-dur-instant:100ms;--df-dur-fast:150ms;--df-dur-base:220ms;--df-dur-slow:300ms;
+  /* PX-002 FAZ 2A EKİ (2026-07-17) — Product Owner'ın istediği ek token'lar. Yeni fiziksel değer
+     icat edilmedi: border zaten var olan hairline'a, hover/active mevcut accent'in koyulaştırılmış
+     halına, elevation mevcut shadow-*'a alias. */
+  --df-border:var(--df-hairline);--df-border-hover:var(--df-ink-300);
+  --df-accent-hover:#1D4ED8;--df-accent-active:#1E40AF;
+  --df-disabled-bg:var(--df-surface-sunken);--df-disabled-ink:var(--df-ink-300);
+  --df-focus-ring:0 0 0 3px var(--df-accent-soft);
+  --df-radius-hero:24px;
+  /* Elevation — Product Owner'ın istediği kavramsal isimler, fiziksel değer mevcut shadow-*'tan */
+  --df-elevation-flat:var(--df-shadow-none);--df-elevation-raised:var(--df-shadow-sm);
+  --df-elevation-floating:var(--df-shadow-md);--df-elevation-modal:var(--df-shadow-lg);
 }
 /* Dark (mobil chrome) yön değişimi — yalnızca ışık yönü tersine dönen token'lar yeniden tanımlanır */
 body.mobile-shell{
@@ -220,6 +231,7 @@ body.mobile-shell{
 .df-text-body{font-size:var(--df-type-body-size);font-weight:var(--df-type-body-weight);line-height:var(--df-type-body-lh)}
 .df-text-caption{font-size:var(--df-type-caption-size);font-weight:var(--df-type-caption-weight);line-height:var(--df-type-caption-lh);color:var(--df-ink-500)}
 .df-text-micro{font-size:var(--df-type-micro-size);font-weight:var(--df-type-micro-weight);line-height:var(--df-type-micro-lh);text-transform:uppercase;letter-spacing:.05em;color:var(--df-ink-500)}
+.df-text-tabular{font-variant-numeric:tabular-nums}
 
 /* Button — yeni namespace, PX-001A'dan itibaren ekran taşımaları burayı kullanacak */
 .df-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:0;cursor:pointer;font-family:inherit;font-weight:600;text-decoration:none;height:38px;padding:0 16px;border-radius:var(--df-radius-sm);font-size:13.5px;transition:background var(--df-dur-fast) var(--df-ease-standard),border-color var(--df-dur-fast) var(--df-ease-standard),transform var(--df-dur-instant) var(--df-ease-standard)}
@@ -227,11 +239,24 @@ body.mobile-shell{
 .df-btn--sm{height:32px;padding:0 12px;font-size:12.5px}
 .df-btn--lg{height:44px;padding:0 20px;font-size:14.5px}
 .df-btn--primary{background:var(--df-accent);color:var(--df-accent-ink)}
+.df-btn--primary:hover{background:var(--df-accent-hover)}
+.df-btn--primary:active{background:var(--df-accent-active)}
 .df-btn--secondary{background:var(--df-surface-sunken);color:var(--df-ink-900);border:1px solid var(--df-hairline)}
+.df-btn--secondary:hover{border-color:var(--df-border-hover)}
 .df-btn--ghost{background:transparent;color:var(--df-ink-600)}
 .df-btn--ghost:hover{background:var(--df-surface-sunken);color:var(--df-ink-900)}
 .df-btn--danger{background:var(--df-danger);color:#fff}
+.df-btn--danger:hover{filter:brightness(.9)}
 .df-btn--warn{background:var(--df-warning-soft);color:var(--df-warning-ink)}
+/* PX-002 FAZ 2A EKİ — normal/hover/active zaten yukarıda; disabled + loading + klavye-focus
+   eklendi (madde 13 erişilebilirlik gereği). :focus-visible fare tıklamasında halka göstermez,
+   yalnızca Tab ile gelindiğinde — mevcut hiçbir davranışı değiştirmez. */
+.df-btn:disabled,.df-btn[aria-disabled="true"]{background:var(--df-disabled-bg);color:var(--df-disabled-ink);cursor:not-allowed;transform:none}
+.df-btn.is-loading{color:transparent;pointer-events:none;position:relative}
+.df-btn.is-loading::after{content:'';position:absolute;width:14px;height:14px;border-radius:50%;border:2px solid rgba(255,255,255,.5);border-top-color:#fff;animation:df-spin .6s linear infinite}
+.df-btn--secondary.is-loading::after,.df-btn--ghost.is-loading::after{border-color:var(--df-hairline);border-top-color:var(--df-ink-600)}
+@keyframes df-spin{to{transform:rotate(360deg)}}
+.df-btn:focus-visible,.df-tab:focus-visible,.df-icon-btn:focus-visible{outline:0;box-shadow:var(--df-focus-ring)}
 .df-icon-btn{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:var(--df-radius-sm);background:transparent;color:var(--df-ink-600);border:0;cursor:pointer;transition:background var(--df-dur-fast) var(--df-ease-standard)}
 .df-icon-btn:hover{background:var(--df-surface-sunken)}
 /* .df-fab konumlandırmasını (right/bottom) kullanan ekran kendi context'ine göre verir */
@@ -474,3 +499,99 @@ body.mobile-shell .df-tab--active{background:var(--df-accent);color:#fff;box-sha
 .df-jd-bar-btn:hover{background:var(--df-surface-sunken);color:var(--df-ink-900)}
 .df-jd-bar-btn span{font-size:9.5px;font-weight:600}
 .df-jd-bar-btn.is-done{color:var(--df-success-ink)}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   PX-002 MADDE 2 / FAZ 2A — PRIMAC OTS DESIGN SYSTEM v1 + APPLICATION SHELL v1
+   FOUNDATION (2026-07-17). Product Owner kararı: "Compact CSS seçicileri kesinlikle
+   body.nav-compact... altında olacak" — bu blok, henüz hiçbir sayfaya bağlanmamış
+   YENİ component'lerin TAMAMI bu kural altında. Konsolidasyon tablosu (hangi ds-*
+   canlı kaldığı için dokunulmadı, hangisi risksiz olduğu için df-*'e taşındı) teslim
+   raporunda. Bu blok altında YOK olanlar (Modal/ConfirmDialog/Pagination/LoadingState/
+   Skeleton/DataGrid-ayrı) Product Owner'ın "Dead Component Kararı"yla bilinçli olarak
+   üretilmedi — Design System Backlog'da.
+   ═══════════════════════════════════════════════════════════════════════ */
+/* Elif'in FAZ 2A parite incelemesinde bulduğu kural ihlali (2026-07-17) düzeltildi: aşağıdaki
+   TÜM seçiciler artık gerçekten "body.nav-compact " öneklidir — CSS'te nesting olmadığı için
+   yukarıdaki tek satırlık kapsayıcı blok kardeş seçicileri kapsamıyordu, her satırın kendi
+   önekini taşıması gerekiyordu. Bugün canlı etkisi yoktu (hiçbir sayfa nav-compact class'ı
+   taşımıyor, hiçbir çağrı bu class'ları basmıyor) ama FAZ 2B'den önce kapatılması gereken bir
+   borçtu — şimdi kapatıldı. */
+body.nav-compact input:not([type="checkbox"]):not([type="radio"]),
+body.nav-compact select,
+body.nav-compact textarea{
+  width:100%;border:1.5px solid var(--df-border);border-radius:var(--df-radius-sm);
+  padding:10px 12px;font-size:15px;font-family:inherit;background:var(--df-surface);
+  color:var(--df-ink-900);transition:border-color var(--df-dur-fast) var(--df-ease-standard);
+}
+body.nav-compact input:focus,body.nav-compact select:focus,body.nav-compact textarea:focus{
+  outline:0;border-color:var(--df-accent);box-shadow:var(--df-focus-ring);
+}
+body.nav-compact input:disabled,body.nav-compact select:disabled,body.nav-compact textarea:disabled{
+  background:var(--df-disabled-bg);color:var(--df-disabled-ink);cursor:not-allowed;
+}
+body.nav-compact input[type="checkbox"],body.nav-compact input[type="radio"]{
+  width:18px;height:18px;accent-color:var(--df-accent);
+}
+body.nav-compact input[type="checkbox"]:focus-visible,body.nav-compact input[type="radio"]:focus-visible{
+  outline:0;box-shadow:var(--df-focus-ring);
+}
+
+/* DF-PageHeader — ds_page_header($df=true) çıktısı. Mevcut ds-page-header (8 canlı sayfa)
+   AYNEN KALIYOR, bu tamamen paralel/yeni bir sınıf seti. */
+body.nav-compact .df-page-header{display:flex;align-items:center;justify-content:space-between;gap:var(--df-space-3);margin-bottom:var(--df-space-4);flex-wrap:wrap}
+body.nav-compact .df-page-header--bordered{border-bottom:1px solid var(--df-hairline);padding-bottom:var(--df-space-4)}
+body.nav-compact .df-page-header-id{display:flex;align-items:center;gap:var(--df-space-3)}
+body.nav-compact .df-page-header-icon{display:flex;color:var(--df-ink-600)}
+body.nav-compact .df-page-title{font-size:var(--df-type-title-size);font-weight:var(--df-type-title-weight);line-height:var(--df-type-title-lh);color:var(--df-ink-900);margin:0}
+body.nav-compact .df-page-subtitle{font-size:var(--df-type-caption-size);color:var(--df-ink-500);margin-top:2px}
+
+/* DF-ActionBar — ds_action_bar() fonksiyonunun (0 canlı çağrı) yeni çıktısı, ds-action-bar
+   class'ına (ds_page_header() içinde hardcoded, 8 canlı sayfa) DOKUNULMADI. */
+body.nav-compact .df-action-bar{display:flex;gap:var(--df-space-2);flex-wrap:wrap;align-items:center}
+
+/* DF-Card / DF-InfoCard / DF-ActionCard(modifier) — df-panel'den (PX-001A) farkı: kendi
+   gölgesi var, bağımsız bir yüzey olarak tasarlandı (df-panel daha çok "gömülü blok"). */
+body.nav-compact .df-card{background:var(--df-surface);border:1px solid var(--df-hairline);border-radius:var(--df-radius-md);padding:var(--df-space-4);box-shadow:var(--df-elevation-raised)}
+body.nav-compact .df-card--action{cursor:pointer;transition:transform var(--df-dur-fast) var(--df-ease-standard),box-shadow var(--df-dur-fast) var(--df-ease-standard)}
+body.nav-compact .df-card--action:hover{transform:translateY(-1px);box-shadow:var(--df-elevation-floating)}
+
+/* DF-HeroCard — df-home-hero/df-jd-hero'nun genelleştirilmiş hâli, o iki ekranın kendi
+   sınıfları DEĞİŞMEDİ, bu yeni sayfalar için genel bir taban. */
+body.nav-compact .df-hero-card{display:flex;align-items:center;gap:var(--df-space-4);background:var(--df-accent-soft);border:1.5px solid var(--df-accent);border-radius:var(--df-radius-hero);padding:var(--df-space-5);text-decoration:none}
+
+/* DF-Table / DF-DataGrid (ayrı ihtiyaç bulunamadı, Table'a katlandı) — ds_table_open/close()
+   artık bunu basıyor (0 canlı çağrı olduğu için risksiz taşındı). */
+body.nav-compact .df-table-wrap{overflow-x:auto;border:1px solid var(--df-hairline);border-radius:var(--df-radius-md)}
+body.nav-compact .df-table{width:100%;border-collapse:collapse;font-size:13.5px;background:var(--df-surface)}
+body.nav-compact .df-table th{text-align:left;background:var(--df-surface-sunken);color:var(--df-ink-500);font-size:var(--df-type-micro-size);text-transform:uppercase;letter-spacing:.05em;font-weight:700;padding:10px 12px;font-variant-numeric:tabular-nums}
+body.nav-compact .df-table td{text-align:left;padding:10px 12px;border-top:1px solid var(--df-hairline);vertical-align:top;color:var(--df-ink-900);font-variant-numeric:tabular-nums}
+body.nav-compact .df-table tr:hover td{background:var(--df-surface-sunken)}
+body.nav-compact .df-table td.is-negative{color:var(--df-danger-ink)}
+
+/* DF-Form / DF-FormGroup — ds_form_field() çıktısı. Girdi elemanlarının kendisi yukarıdaki
+   global body.nav-compact input/select/textarea seçicisinden geliyor. */
+body.nav-compact .df-form-group{margin-bottom:var(--df-space-4)}
+body.nav-compact .df-form-label{display:block;font-size:var(--df-type-caption-size);font-weight:700;color:var(--df-ink-600);margin-bottom:6px}
+body.nav-compact .df-form-help{font-size:var(--df-type-caption-size);color:var(--df-ink-500);margin-top:4px}
+body.nav-compact .df-form-error{font-size:var(--df-type-caption-size);color:var(--df-danger-ink);margin-top:4px;display:flex;align-items:center;gap:4px}
+body.nav-compact .df-form-group.has-error input,body.nav-compact .df-form-group.has-error select,body.nav-compact .df-form-group.has-error textarea{border-color:var(--df-danger)}
+
+/* DF-Alert — .err/.notice/.card(kırmızı metin) yerine geçecek tek dil. role="alert" çağıran
+   tarafta ds_alert() ile eklenir (aşağıda). */
+body.nav-compact .df-alert{display:flex;align-items:flex-start;gap:var(--df-space-2);padding:var(--df-space-3) var(--df-space-4);border-radius:var(--df-radius-md);font-size:var(--df-type-body-size);line-height:1.5}
+body.nav-compact .df-alert--info{background:var(--df-info-soft);color:var(--df-info-ink)}
+body.nav-compact .df-alert--success{background:var(--df-success-soft);color:var(--df-success-ink)}
+body.nav-compact .df-alert--warning{background:var(--df-warning-soft);color:var(--df-warning-ink)}
+body.nav-compact .df-alert--danger{background:var(--df-danger-soft);color:var(--df-danger-ink)}
+
+/* DF-Accordion — YALNIZCA KABUK (Madde 2 sınırı, madde 6). Veri/kategori mantığı ve "tek açık"
+   zorlaması Madde 3/4'ün işi; burada tek bir öğe bağımsız açılıp kapanabilir (genel amaçlı).
+   assets/js/ds-foundation.js içindeki dfAccordionToggle() ile çalışır. */
+body.nav-compact .df-accordion-item{border-bottom:1px solid var(--df-hairline)}
+body.nav-compact .df-accordion-item:last-child{border-bottom:0}
+body.nav-compact .df-accordion-header{display:flex;align-items:center;justify-content:space-between;gap:var(--df-space-3);width:100%;background:transparent;border:0;padding:var(--df-space-3) var(--df-space-2);font:inherit;font-weight:650;color:var(--df-ink-900);cursor:pointer;text-align:left;min-height:44px}
+body.nav-compact .df-accordion-header:focus-visible{outline:0;box-shadow:var(--df-focus-ring);border-radius:var(--df-radius-sm)}
+body.nav-compact .df-accordion-chevron{width:8px;height:8px;border-right:1.6px solid var(--df-ink-500);border-bottom:1.6px solid var(--df-ink-500);transform:rotate(45deg);transition:transform var(--df-dur-fast) var(--df-ease-standard);flex:0 0 auto}
+body.nav-compact .df-accordion-item.is-open .df-accordion-chevron{transform:rotate(225deg)}
+body.nav-compact .df-accordion-body{display:none;padding:0 var(--df-space-2) var(--df-space-3)}
+body.nav-compact .df-accordion-item.is-open .df-accordion-body{display:block}
