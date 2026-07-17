@@ -2,6 +2,50 @@
 
 <!-- Açık geliştirme görevleri. Kapanan madde buradan silinip memory/features.md'ye taşınır. -->
 
+## MASTER ENVANTER & RELEASE 0.9 PLANI (2026-07-17, PRODUCT OWNER KARARI — çalışma modeli değişti)
+Product Owner kararı: geliştirme mantığı "yeni özellik" değil "PRIMAC OTS'yi aktif kullanıma hazır hale
+getirme" oldu (Evolution not Revolution, Business Logic korunur, Audit→Kod→DEV PASS→USER TEST→CLOSED
+zorunlu, her faz Product Owner onayıyla kapanır). Bu doğrultuda kod yazılmadan önce **tam kapsamlı
+Master Envanter** hazırlandı: 14 kategori (Design System/Personel-Kullanıcı-Yetki/Satış/Satın Alma/
+Cari/Stok/Finans/Mesajlaşma/Bildirim/Raporlama/UX/Güvenlik/Teknik Borç/Ertelenmiş Backlog), ~70 madde,
+her biri açıklama/mevcut durum/risk/bağımlılık/öncelik/büyüklük/Release alanlarıyla. Kaynak: memory/
+backlog.md + memory/bugs.md + KNOWN_BUGS.md + ROADMAP.md + VERSIONING.md + git log taraması — Güvenlik
+kategorisindeki her madde ayrıca **kodda satır numarasıyla yeniden doğrulandı** (bazı takip dosyaları
+2026-07-05/14'ten beri güncellenmemiş, stale çıktı).
+**Doğrulamada bulunanlar:**
+- **AÇIK, gerçek — GUV-01**: `accounting.php:9,138,140,141,154-157` — `$_GET['tab']` h() olmadan href'e
+  basılıyor, yansıtılmış XSS. Acil bugfix önerisi (R0.9, bağımsız).
+- **AÇIK, gerçek — PKY-03/GUV-02**: `users.php:42-44` — `users` yetkili admin-olmayan biri `role` POST
+  alanıyla herhangi bir kullanıcıyı (uid=1 hariç) admin'e yükseltebiliyor.
+- **MUHTEMELEN ÇÖZÜLDÜ, doküman güncel değil**: GUV-07 (`ajax_dashboard_order.php` CSRF — artık
+  `boot.php:529` enforced listede), GUV-09 (session fixation — `session_regenerate_id` index.php:63/
+  boot.php:467'de var), GUV-10 (CSRF genel — SECURITY SPRINT-004 zaten 57 sayfayı kapsıyor). Üçü de
+  KNOWN_BUGS.md'de hâlâ "açık" görünüyor — R1.0'da doküman temizliği yapılacak.
+- **TBR-08 (yeni bulgu)**: `requests.php`/`mobile/requests.php` `management_requests.manager_note`'a
+  yazıyor ama gerçek kolon `response_note` — güncelleme sessizce başarısız oluyor (FAZ-5D CSRF
+  turunda bulunmuş ama hiç kapatılmamış, ROADMAP.md'de kayıtlıydı).
+
+**Release Planı** (teknik bağımlılığa göre gerekçelendirildi):
+- **R0.9** (aktif kullanıma hazır): Home (FAZ 2C-ii) → Web&Mobil DS Migration (FAZ 2C tam + FAZ 2D 20
+  ekran) → Personel→Kullanıcı→Yetki (+ PKY-03 güvenlik açığı erken kapatılır) → Customer Procurement
+  Allocation → Matematik/Veri Bütünlüğü kapsamlı denetim → Pilot Kullanıcı Testi.
+- **R1.0**: Stabilizasyon — küçük/izole düzeltmeler + doküman temizliği (GUV-07/09/10) + R/2b USER TEST.
+- **R1.1**: Kullanıcı talepleri — bilinçli ertelenmiş orta boyutlu maddeler (Purchase&Sales 2.0 dahil).
+- **R1.2**: Yeni modüller — Workspace/Multi-Tenant gibi ayrı proje ölçeğinde kararlar.
+
+**Customer Procurement Allocation — mimari öneri (KOMUT 4, kod YOK):** Yeni additive `stock_allocations`
+tablosu (`purchase_movement_id`, `stock_item_id`, `contact_id` NULL=Genel Stok, `allocated_qty`,
+`consumed_qty`, `status`) — mevcut `stock_movements`/`stock_items.quantity` matematiğine SIFIR
+değişiklik, `stock_create_purchase()`/`stock_create_sale()`'e dokunulmuyor. Tahsis salt rezervasyon/
+izlenebilirlik defteri; bir alım satırı birden çok cariye/satışa bölünebiliyor (`consumed_qty` her
+tahsis satırında ayrı takip edilir). Reddedilen alternatif: `stock_items`'a `contact_id` eklemek —
+stok'un TEK gerçek kaynak olma özelliğini bozar, yüzlerce mevcut sorguyu etkiler.
+
+Tam rapor (tüm 70 madde + gerekçe + mimari diyagram): `~/Desktop/PRIMAC-OTS-Master-Envanter-Release-Plani.pdf`.
+**Sıradaki adım (KOMUT 5): Release 0.9 uygulaması, öncelik sırasıyla — 1) Home, 2) DS Migration,
+3) Personel→Kullanıcı→Yetki, 4) Customer Procurement Allocation, 5) Matematik/Veri Bütünlüğü,
+6) Pilot Kullanıcı Testi. Her faz kendi Audit→Kod→DEV PASS→USER TEST→CLOSED kapısından geçecek.**
+
 ## FAZ 2C — MOBILE DESIGN SYSTEM MIGRATION (2026-07-17, PRODUCT OWNER KARARI — AKTİF ÖNCELİK)
 Öncelik değişikliği: R/2b (Akıllı Arama) geçici olarak backlog'a alındı (kod/commit `f817b32`
 korunuyor, bkz. [[features]] "FAZ 2B-ii-R/2b") — gerekçe web ile mobil arasında Tek Ürün
