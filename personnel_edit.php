@@ -235,107 +235,76 @@ if(user_can('users') || $canManageAccounts) $tabLabels['giris']='🔑 Giriş Hes
 
 $tab = isset($_GET['tab']) ? (string)$_GET['tab'] : 'genel';
 if(!array_key_exists($tab,$tabLabels)) $tab='genel';
+
+// RELEASE 0.9 — Personel Ekranları DS Migration (2026-07-17): render katmanı ds_lib.php'ye
+// taşındı, POST/iş mantığı (yukarısı) HİÇ değişmedi. ds_tabs() zaten canlı kanıtlanmış bir
+// bileşen (search.php); df-table ilk kez burada kullanılıyor ama CSS'i tam ve stabil.
+ds_page_header($p['name'], ds_icon('user',24), '', ds_button('Personel Listesi','personnel.php','secondary','','',true).delete_button('personnel',$id), false, true);
 ?>
 
-<div class="panel-head">
-<h1><?=h($p['name'])?></h1>
-<div class="actions">
-<a class="btn secondary" href="personnel.php">Personel Listesi</a>
-<?=delete_button('personnel',$id)?>
-</div>
+<?php if($error): ?><?=ds_alert('danger',$error)?><?php endif; ?>
+<?php if($ok): ?><?=ds_alert('success',$ok)?><?php endif; ?>
+<?php if($waCred): ?><a href="<?=h($waCred)?>" target="_blank" rel="noopener" class="df-btn df-btn--primary" style="background:var(--df-success);margin-bottom:var(--df-space-3)">📲 Giriş bilgisini WhatsApp ile gönder</a><?php endif; ?>
+
+<div class="df-personnel-statrow">
+<div class="df-personnel-stat"><span>Rol</span><strong><?=h($p['role'] ?: '-')?></strong></div>
+<div class="df-personnel-stat"><span>Çalışma</span><strong><?=h($p['work_type'] ?: '-')?></strong></div>
+<div class="df-personnel-stat"><span>Durum</span><strong><?=$p['active']?ds_badge('Aktif','green'):ds_badge('Pasif','red')?></strong></div>
+<div class="df-personnel-stat"><span>Açık Görev</span><strong><?=safe_count("SELECT COUNT(*) c FROM tasks WHERE personnel_id=".(int)$id." AND status!='Tamamlandı' AND deleted_at IS NULL")?></strong></div>
 </div>
 
-<?php if($error): ?><div class="alert"><?=h($error)?></div><?php endif; ?>
-<?php if($ok): ?><div class="ok"><?=h($ok)?></div><?php endif; ?>
-<?php if($waCred): ?><a href="<?=h($waCred)?>" target="_blank" rel="noopener" class="btn" style="background:#16a34a;color:#fff;margin-bottom:12px">📲 Giriş bilgisini WhatsApp ile gönder</a><?php endif; ?>
-
-<div class="cards">
-<div class="card"><small>Rol</small><strong><?=h($p['role'] ?: '-')?></strong></div>
-<div class="card"><small>Çalışma</small><strong><?=h($p['work_type'] ?: '-')?></strong></div>
-<div class="card"><small>Durum</small><strong><?=$p['active']?badge('Aktif','green'):badge('Pasif','red')?></strong></div>
-<div class="card"><small>Açık Görev</small><strong><?=safe_count("SELECT COUNT(*) c FROM tasks WHERE personnel_id=".(int)$id." AND status!='Tamamlandı' AND deleted_at IS NULL")?></strong></div>
-</div>
-
-<div class="ptabs">
-<?php foreach($tabLabels as $tkey=>$tlabel): ?>
-<a class="ptab<?=$tab===$tkey?' active':''?>" href="personnel_edit.php?id=<?=$id?>&tab=<?=h($tkey)?>"><?=$tlabel?></a>
-<?php endforeach; ?>
-</div>
+<?php
+$__tabItems=[];
+foreach($tabLabels as $tkey=>$tlabel){ $__tabItems[]=['label'=>$tlabel,'url'=>'personnel_edit.php?id='.$id.'&tab='.$tkey,'active'=>$tab===$tkey]; }
+ds_tabs($__tabItems);
+?>
 
 <?php if($tab==='genel'): ?>
-<section class="panel">
-<h2>Profil Bilgileri</h2>
-<form method="post" class="form-grid" enctype="multipart/form-data">
+<section class="df-card" style="margin-top:var(--df-space-4)">
+<h2 class="df-section-title">Profil Bilgileri</h2>
+<form method="post" class="df-form-grid-2" enctype="multipart/form-data">
 
-<label>Ad Soyad
-<input name="name" required value="<?=h($p['name'])?>">
-</label>
+<?php ds_form_field('Ad Soyad', '<input name="name" required value="'.h($p['name']).'">'); ?>
+<?php ds_form_field('Rol / Görev', '<input name="role" value="'.h($p['role']).'">'); ?>
+<?php ds_form_field('Telefon', '<input name="phone" value="'.h($p['phone']).'">'); ?>
+<?php ds_form_field('E-posta', '<input name="email" value="'.h($p['email'] ?? '').'">'); ?>
 
-<label>Rol / Görev
-<input name="role" value="<?=h($p['role'])?>">
-</label>
+<?php
+$__workOpts='';
+foreach(['Tam Zamanlı','Yarı Zamanlı','Günlük','Dış Paydaş','Stajyer'] as $w){ $__workOpts.='<option '.($p['work_type']===$w?'selected':'').'>'.h($w).'</option>'; }
+ds_form_field('Çalışma Tipi', '<select name="work_type">'.$__workOpts.'</select>');
+?>
+<?php ds_form_field('İşe Giriş Tarihi', '<input type="date" name="start_date" value="'.h($p['start_date'] ?? '').'">'); ?>
+<?php ds_form_field('Saatlik Ücret', '<input type="number" step="0.01" name="hourly_rate" value="'.h($p['hourly_rate']).'">'); ?>
+<?php ds_form_field('Günlük / Maaş', '<input type="number" step="0.01" name="daily_wage" value="'.h($p['daily_wage']).'">'); ?>
 
-<label>Telefon
-<input name="phone" value="<?=h($p['phone'])?>">
-</label>
-
-<label>E-posta
-<input name="email" value="<?=h($p['email'] ?? '')?>">
-</label>
-
-<label>Çalışma Tipi
-<select name="work_type">
-<?php foreach(['Tam Zamanlı','Yarı Zamanlı','Günlük','Dış Paydaş','Stajyer'] as $w): ?>
-<option <?=$p['work_type']===$w?'selected':''?>><?=$w?></option>
-<?php endforeach; ?>
-</select>
-</label>
-
-<label>İşe Giriş Tarihi
-<input type="date" name="start_date" value="<?=h($p['start_date'] ?? '')?>">
-</label>
-
-<label>Saatlik Ücret
-<input type="number" step="0.01" name="hourly_rate" value="<?=h($p['hourly_rate'])?>">
-</label>
-
-<label>Günlük / Maaş
-<input type="number" step="0.01" name="daily_wage" value="<?=h($p['daily_wage'])?>">
-</label>
-
-<label class="full">IBAN
-<input name="iban" value="<?=h($p['iban'] ?? '')?>">
-</label>
-
-<label class="full">Adres
-<textarea name="address" rows="2"><?=h($p['address'] ?? '')?></textarea>
-</label>
-
-<label class="full">Notlar
-<textarea name="notes" rows="4"><?=h($p['notes'] ?? '')?></textarea>
-</label>
+<div class="df-form-span-2"><?php ds_form_field('IBAN', '<input name="iban" value="'.h($p['iban'] ?? '').'">'); ?></div>
+<div class="df-form-span-2"><?php ds_form_field('Adres', '<textarea name="address" rows="2">'.h($p['address'] ?? '').'</textarea>'); ?></div>
+<div class="df-form-span-2"><?php ds_form_field('Notlar', '<textarea name="notes" rows="4">'.h($p['notes'] ?? '').'</textarea>'); ?></div>
 
 <?php if($hasCvCol): ?>
-<label class="full">CV / Özgeçmiş <small style="font-weight:400;color:#667085">(opsiyonel — pdf/doc/docx/jpg/jpeg/png, en fazla 15 MB. Yeni dosya seçilirse eskisinin yerine geçer, boş bırakılırsa mevcut korunur. Mevcut CV'yi görüntülemek/kaldırmak için "📎 Dosyalar" sekmesine bakın)</small>
-<input type="file" name="cv" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
-</label>
+<div class="df-form-span-2">
+<?php ds_form_field('CV / Özgeçmiş', '<input type="file" name="cv" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">', 'Opsiyonel — pdf/doc/docx/jpg/jpeg/png, en fazla 15 MB. Yeni dosya seçilirse eskisinin yerine geçer, boş bırakılırsa mevcut korunur. Mevcut CV için "📎 Dosyalar" sekmesine bakın.'); ?>
+</div>
 <?php endif; ?>
 
-<label class="full">
+<div class="df-form-span-2">
+<label style="display:flex;align-items:center;gap:8px;font-size:var(--df-type-body-size);color:var(--df-ink-900)">
 <input type="checkbox" name="active" <?=$p['active']?'checked':''?> style="width:auto"> Aktif personel
 </label>
+</div>
 
-<button class="btn">Profili Kaydet</button>
+<div class="df-form-span-2"><button class="df-btn df-btn--primary">Profili Kaydet</button></div>
 
 </form>
 </section>
 <?php endif; ?>
 
 <?php if($tab==='gorevler'): ?>
-<section class="panel">
-<h2>Görevler</h2>
-<p class="muted" style="margin:0 0 8px">Bu personele atanmış son 20 görev (salt-okunur — durum değişikliği için <a href="tasks.php">Görevler</a> ekranı kullanılır).</p>
-<table>
+<section class="df-card" style="margin-top:var(--df-space-4)">
+<h2 class="df-section-title">Görevler</h2>
+<p class="df-section-hint">Bu personele atanmış son 20 görev (salt-okunur — durum değişikliği için <a href="tasks.php">Görevler</a> ekranı kullanılır).</p>
+<div class="df-table-wrap"><table class="df-table">
 <thead><tr><th>Görev</th><th>İş</th><th>Termin</th><th>Durum</th></tr></thead>
 <tbody>
 <?php foreach($tasks as $t): ?>
@@ -343,20 +312,20 @@ if(!array_key_exists($tab,$tabLabels)) $tab='genel';
 <td><?=h($t['title'])?></td>
 <td><?=h($t['job_no'] ? $t['job_no'].' - '.$t['job_title'] : '-')?></td>
 <td><?=h($t['due_date'])?></td>
-<td><?=badge($t['status'], status_tone($t['status']))?></td>
+<td><?=ds_badge($t['status'])?></td>
 </tr>
 <?php endforeach; ?>
-<?php if(!$tasks): ?><tr><td colspan="4" class="muted">Henüz görev yok.</td></tr><?php endif; ?>
+<?php if(!$tasks): ?><tr><td colspan="4" class="df-muted">Henüz görev yok.</td></tr><?php endif; ?>
 </tbody>
-</table>
+</table></div>
 </section>
 <?php endif; ?>
 
 <?php if($tab==='takvim'): ?>
-<section class="panel">
-<h2>Takvim</h2>
-<p class="muted" style="margin:0 0 8px">Bu personelin termin tarihli iş ve görevleri (tam takvim için <a href="takvim.php">Takvim</a> ekranı).</p>
-<table>
+<section class="df-card" style="margin-top:var(--df-space-4)">
+<h2 class="df-section-title">Takvim</h2>
+<p class="df-section-hint">Bu personelin termin tarihli iş ve görevleri (tam takvim için <a href="takvim.php">Takvim</a> ekranı).</p>
+<div class="df-table-wrap"><table class="df-table">
 <thead><tr><th>Tür</th><th>Başlık</th><th>Tarih</th><th>Durum</th></tr></thead>
 <tbody>
 <?php foreach($calendarItems as $ci): ?>
@@ -364,79 +333,79 @@ if(!array_key_exists($tab,$tabLabels)) $tab='genel';
 <td><?=h($ci['tip'])?></td>
 <td><?=h($ci['baslik'])?></td>
 <td><?=h($ci['tarih'])?></td>
-<td><?=badge($ci['durum'], status_tone($ci['durum']))?></td>
+<td><?=ds_badge($ci['durum'])?></td>
 </tr>
 <?php endforeach; ?>
-<?php if(!$calendarItems): ?><tr><td colspan="4" class="muted">Termin tarihli iş/görev yok.</td></tr><?php endif; ?>
+<?php if(!$calendarItems): ?><tr><td colspan="4" class="df-muted">Termin tarihli iş/görev yok.</td></tr><?php endif; ?>
 </tbody>
-</table>
+</table></div>
 </section>
 <?php endif; ?>
 
 <?php if($tab==='mesajlar'): ?>
-<section class="panel">
-<h2>Mesajlar</h2>
+<section class="df-card" style="margin-top:var(--df-space-4)">
+<h2 class="df-section-title">Mesajlar</h2>
 <?php if($staffUserId): ?>
-<p class="muted" style="margin:0 0 10px">Bu personelin bağlı kullanıcı hesabıyla birebir mesajlaşabilirsiniz.</p>
-<a class="btn" href="messages.php?u=<?=$staffUserId?>">💬 Mesaj Gönder</a>
+<p class="df-section-hint">Bu personelin bağlı kullanıcı hesabıyla birebir mesajlaşabilirsiniz.</p>
+<?=ds_button('Mesaj Gönder','messages.php?u='.$staffUserId,'primary','','',true)?>
 <?php else: ?>
-<p class="muted" style="margin:0">Bu personelin bağlı bir kullanıcı hesabı yok, mesaj gönderilemez.</p>
+<p class="df-muted">Bu personelin bağlı bir kullanıcı hesabı yok, mesaj gönderilemez.</p>
 <?php endif; ?>
 </section>
 <?php endif; ?>
 
 <?php if($tab==='notlar'): ?>
-<section class="panel">
-<h2>Notlar</h2>
+<section class="df-card" style="margin-top:var(--df-space-4)">
+<h2 class="df-section-title">Notlar</h2>
 <?php if(!$staffUserId): ?>
-<p class="muted" style="margin:0">Bu personelin bağlı bir kullanıcı hesabı yok, kişisel not kaydı görüntülenemez.</p>
+<p class="df-muted">Bu personelin bağlı bir kullanıcı hesabı yok, kişisel not kaydı görüntülenemez.</p>
 <?php elseif(!$personalNotes): ?>
-<p class="muted" style="margin:0">Bu kullanıcının kayıtlı kişisel notu yok.</p>
+<p class="df-muted">Bu kullanıcının kayıtlı kişisel notu yok.</p>
 <?php else: ?>
-<table>
+<div class="df-table-wrap"><table class="df-table">
 <thead><tr><th>Başlık</th><th>Termin</th><th>Durum</th></tr></thead>
 <tbody>
 <?php foreach($personalNotes as $n): ?>
 <tr>
 <td><?=h($n['title'])?></td>
 <td><?=h($n['due_date'] ?: '-')?></td>
-<td><?=badge($n['status'], status_tone($n['status']))?></td>
+<td><?=ds_badge($n['status'])?></td>
 </tr>
 <?php endforeach; ?>
 </tbody>
-</table>
+</table></div>
 <?php endif; ?>
 </section>
 <?php endif; ?>
 
 <?php if($hasCvCol && $tab==='dosyalar'): ?>
-<section class="panel">
-<h2>Dosyalar</h2>
+<section class="df-card" style="margin-top:var(--df-space-4)">
+<h2 class="df-section-title">Dosyalar</h2>
 <?php if(!empty($p['cv_path'])): ?>
 <p style="margin:0 0 10px"><a href="<?=h(base_url().$p['cv_path'])?>" target="_blank">📎 Mevcut CV'yi görüntüle</a></p>
 <form method="post" onsubmit="return confirm('CV dosyasını kaldırmak istediğinize emin misiniz?')">
-<button class="btn secondary" name="clear_cv" value="1">🗑 CV'yi Kaldır</button>
+<button class="df-btn df-btn--secondary" name="clear_cv" value="1"><?=ds_icon('trash',16)?> CV'yi Kaldır</button>
 </form>
 <?php else: ?>
-<p class="muted" style="margin:0">Henüz yüklenmiş bir CV yok.</p>
+<p class="df-muted">Henüz yüklenmiş bir CV yok.</p>
 <?php endif; ?>
-<p class="muted" style="margin:10px 0 0">CV yüklemek veya değiştirmek için "👤 Genel Bilgiler" sekmesindeki profil formunu kullanın.</p>
+<p class="df-section-hint" style="margin-top:var(--df-space-3)">CV yüklemek veya değiştirmek için "Genel Bilgiler" sekmesindeki profil formunu kullanın.</p>
 </section>
 <?php endif; ?>
 
 <?php if($tab==='performans'): ?>
-<section class="panel">
-<h2>Performans (KPI)</h2>
-<p class="muted" style="margin:0 0 10px">Tüm personel sıralaması ve puan hesaplama yöntemi için KPI ekranına gidin.</p>
-<a class="btn" href="kpi.php">📈 KPI Sayfasına Git</a>
+<section class="df-card" style="margin-top:var(--df-space-4)">
+<h2 class="df-section-title">Performans (KPI)</h2>
+<p class="df-section-hint">Tüm personel sıralaması ve puan hesaplama yöntemi için KPI ekranına gidin.</p>
+<?=ds_button('KPI Sayfasına Git','kpi.php','primary','','',true)?>
 </section>
 <?php endif; ?>
 
 <?php if($tab==='maas'): ?>
-<section class="panel">
-<h2>Maaş / Avans / Prim</h2>
-<p class="muted" style="margin:0 0 8px">Bu personele ait muhasebe kayıtları (tam yönetim için <a href="accounting.php">Muhasebe</a> ekranı).</p>
-<table>
+<section class="df-card" style="margin-top:var(--df-space-4)">
+<h2 class="df-section-title">Maaş / Avans / Prim</h2>
+<p class="df-section-hint">Bu personele ait muhasebe kayıtları (tam yönetim için <a href="accounting.php">Muhasebe</a> ekranı).</p>
+<div class="df-table-wrap"><table class="df-table">
 <thead><tr><th>Tarih</th><th>Tür</th><th>Kategori</th><th>Tutar</th><th>Durum</th><th>Açıklama</th></tr></thead>
 <tbody>
 <?php foreach($financeRows as $fr): ?>
@@ -445,13 +414,13 @@ if(!array_key_exists($tab,$tabLabels)) $tab='genel';
 <td><?=h($fr['payment_type'] ?: '-')?></td>
 <td><?=h($fr['category_name'] ?? '-')?></td>
 <td><?=money($fr['amount'])?></td>
-<td><?=badge($fr['status'], status_tone($fr['status']))?></td>
+<td><?=ds_badge($fr['status'])?></td>
 <td><?=h($fr['description'] ?? '')?></td>
 </tr>
 <?php endforeach; ?>
-<?php if(!$financeRows): ?><tr><td colspan="6" class="muted">Bu personele ait maaş/avans/prim kaydı yok.</td></tr><?php endif; ?>
+<?php if(!$financeRows): ?><tr><td colspan="6" class="df-muted">Bu personele ait maaş/avans/prim kaydı yok.</td></tr><?php endif; ?>
 </tbody>
-</table>
+</table></div>
 </section>
 <?php endif; ?>
 
@@ -464,51 +433,48 @@ if(!array_key_exists($tab,$tabLabels)) $tab='genel';
 $showInlineAccountMgmt = $canManageAccounts && !user_can('users');
 ?>
 <?php if((user_can('users') || $canManageAccounts) && $tab==='giris'): ?>
-<section class="panel">
-<h2>🔑 Giriş Hesabı<?=user_can('users')?' — 🔐 Yetkiler (Modül Erişimi)':''?></h2>
+<section class="df-card" style="margin-top:var(--df-space-4)">
+<h2 class="df-section-title"><?=ds_icon('user',20)?> Giriş Hesabı<?=user_can('users')?' — Yetkiler (Modül Erişimi)':''?></h2>
 
 <?php if($showInlineAccountMgmt): ?>
   <?php if($staffUserId): ?>
-  <h3 style="font-size:15px;margin:0 0 8px">🔒 Şifre Sıfırla</h3>
-  <form method="post" style="max-width:360px;margin-bottom:18px">
+  <h3 class="df-section-subtitle"><?=ds_icon('settings',16)?> Şifre Sıfırla</h3>
+  <form method="post" style="max-width:360px;margin-bottom:var(--df-space-5)">
     <input type="hidden" name="reset_pw" value="1">
-    <label>Yeni Şifre</label>
-    <input type="password" name="newpw" required minlength="4" style="width:100%">
-    <button class="btn" style="margin-top:8px">Şifreyi Güncelle</button>
+    <?php ds_form_field('Yeni Şifre', '<input type="password" name="newpw" required minlength="4">'); ?>
+    <button class="df-btn df-btn--primary">Şifreyi Güncelle</button>
   </form>
   <?php else: ?>
-  <h3 style="font-size:15px;margin:0 0 8px">➕ Giriş Hesabı Oluştur</h3>
-  <p class="muted" style="margin:0 0 10px">Bu personelin henüz giriş hesabı yok.</p>
-  <form method="post" style="max-width:360px;margin-bottom:18px">
+  <h3 class="df-section-subtitle"><?=ds_icon('plus',16)?> Giriş Hesabı Oluştur</h3>
+  <p class="df-section-hint">Bu personelin henüz giriş hesabı yok.</p>
+  <form method="post" style="max-width:360px;margin-bottom:var(--df-space-5)">
     <input type="hidden" name="make_login" value="1">
-    <label>Kullanıcı Adı</label>
-    <input name="username" required style="width:100%">
-    <label>Şifre</label>
-    <input type="password" name="password" required minlength="4" style="width:100%">
-    <button class="btn" style="margin-top:8px">Hesap Oluştur</button>
+    <?php ds_form_field('Kullanıcı Adı', '<input name="username" required>'); ?>
+    <?php ds_form_field('Şifre', '<input type="password" name="password" required minlength="4">'); ?>
+    <button class="df-btn df-btn--primary">Hesap Oluştur</button>
   </form>
   <?php endif; ?>
 <?php endif; ?>
 
 <?php if(user_can('users')): ?>
 <?php if($staffRole==='admin' || $staffRole==='yonetici'): ?>
-  <p class="muted" style="margin:0">Bu personelin giriş rolü <b><?=h($staffRole)?></b> — tüm modüllere yetkili. Kısıtlamak için <a href="users.php">Kullanıcılar</a> ekranından rolünü "Personel" yapın.</p>
+  <p class="df-section-hint">Bu personelin giriş rolü <b><?=h($staffRole)?></b> — tüm modüllere yetkili. Kısıtlamak için <a href="users.php">Kullanıcılar</a> ekranından rolünü "Personel" yapın.</p>
 <?php elseif($staffUserId): ?>
-  <p class="muted" style="margin:0 0 10px">İşaretli modülleri görür ve kullanabilir. İşaretsiz modüller bu personelin menüsünde görünmez ve açılamaz.</p>
+  <p class="df-section-hint">İşaretli modülleri görür ve kullanabilir. İşaretsiz modüller bu personelin menüsünde görünmez ve açılamaz.</p>
   <form method="post">
   <input type="hidden" name="save_perms" value="1">
   <input type="hidden" name="perm_user_id" value="<?=$staffUserId?>">
-  <div style="display:grid;grid-template-columns:repeat(2,minmax(170px,1fr));gap:10px">
+  <div class="df-permission-grid">
   <?php foreach(module_list() as $key=>$label): if($key==='users') continue; ?>
-    <label style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:14px;padding:10px;display:flex;align-items:center;gap:8px">
+    <label class="df-permission-chip">
       <input type="checkbox" name="permissions[]" value="<?=$key?>" <?=in_array($key,$staffPerms,true)?'checked':''?> style="width:auto"> <?=h($label)?>
     </label>
   <?php endforeach; ?>
   </div>
-  <button class="btn" style="margin-top:12px">🔐 Yetkileri Kaydet</button>
+  <button class="df-btn df-btn--primary" style="margin-top:var(--df-space-3)"><?=ds_icon('check',16)?> Yetkileri Kaydet</button>
   </form>
 <?php else: ?>
-  <p class="muted" style="margin:0">Bu personelin giriş hesabı yok. Yetki vermek için önce <a href="users.php?personnel_id=<?=$id?>&full_name=<?=urlencode($p['name'])?>&phone=<?=urlencode($p['phone']??'')?>">Kullanıcı &amp; Yetki</a> ekranından hesap oluşturup bu personele bağlayın (ad/telefon otomatik dolacak).</p>
+  <p class="df-section-hint">Bu personelin giriş hesabı yok. Yetki vermek için önce <a href="users.php?personnel_id=<?=$id?>&full_name=<?=urlencode($p['name'])?>&phone=<?=urlencode($p['phone']??'')?>">Kullanıcı &amp; Yetki</a> ekranından hesap oluşturup bu personele bağlayın (ad/telefon otomatik dolacak).</p>
 <?php endif; ?>
 <?php endif; ?>
 
@@ -516,17 +482,27 @@ $showInlineAccountMgmt = $canManageAccounts && !user_can('users');
 <?php endif; ?>
 
 <?php if($tab==='hareket'): ?>
-<section class="panel">
-<h2>🧾 Hareket Geçmişi</h2>
-<p class="muted" style="margin:0 0 8px">Bu personelin yaptığı son işlemler (ürün/cari düzenleme, satış, stok hareketi vb.).</p>
-<?php echo function_exists('activity_user_html') ? activity_user_html($pdo,$staffUserId,50) : '<p class="muted">İşlem kaydı modülü yüklü değil.</p>'; ?>
+<section class="df-card" style="margin-top:var(--df-space-4)">
+<h2 class="df-section-title">Hareket Geçmişi</h2>
+<p class="df-section-hint">Bu personelin yaptığı son işlemler (ürün/cari düzenleme, satış, stok hareketi vb.).</p>
+<?php echo function_exists('activity_user_html') ? activity_user_html($pdo,$staffUserId,50) : '<p class="df-muted">İşlem kaydı modülü yüklü değil.</p>'; ?>
 </section>
 <?php endif; ?>
 
 <style>
-.ptabs{display:flex;flex-wrap:wrap;gap:6px;margin:16px 0 4px}
-.ptab{background:#eef2f6;color:#101828;text-decoration:none;border-radius:999px;padding:9px 14px;font-weight:700;font-size:13.5px}
-.ptab.active{background:#111827;color:#fff}
+body.nav-compact .df-personnel-statrow{display:flex;flex-wrap:wrap;gap:var(--df-space-3);margin:var(--df-space-4) 0}
+body.nav-compact .df-personnel-stat{flex:1;min-width:120px;background:var(--df-surface);border:1px solid var(--df-hairline);border-radius:var(--df-radius-md);padding:var(--df-space-3);display:flex;flex-direction:column;gap:4px}
+body.nav-compact .df-personnel-stat span{font-size:var(--df-type-caption-size);color:var(--df-ink-500)}
+body.nav-compact .df-personnel-stat strong{font-size:var(--df-type-subtitle-size);color:var(--df-ink-900)}
+body.nav-compact .df-section-title{font-size:var(--df-type-section-size);font-weight:var(--df-type-section-weight);color:var(--df-ink-900);margin:0 0 var(--df-space-3);display:flex;align-items:center;gap:8px}
+body.nav-compact .df-section-subtitle{font-size:14px;font-weight:700;color:var(--df-ink-900);margin:0 0 var(--df-space-2);display:flex;align-items:center;gap:6px}
+body.nav-compact .df-section-hint{font-size:var(--df-type-caption-size);color:var(--df-ink-500);margin:0 0 var(--df-space-3)}
+body.nav-compact .df-muted{color:var(--df-ink-500)}
+body.nav-compact .df-form-grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 var(--df-space-4)}
+body.nav-compact .df-form-span-2{grid-column:1 / -1}
+body.nav-compact .df-permission-grid{display:grid;grid-template-columns:repeat(2,minmax(170px,1fr));gap:var(--df-space-2)}
+body.nav-compact .df-permission-chip{background:var(--df-surface-sunken);border:1px solid var(--df-hairline);border-radius:var(--df-radius-md);padding:var(--df-space-2) var(--df-space-3);display:flex;align-items:center;gap:8px;font-size:var(--df-type-body-size);color:var(--df-ink-900)}
+@media(max-width:640px){body.nav-compact .df-form-grid-2,body.nav-compact .df-permission-grid{grid-template-columns:1fr}}
 </style>
 
 <?php require_once __DIR__.'/layout_bottom.php'; ?>
