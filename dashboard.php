@@ -922,8 +922,13 @@ $__homeCanSee = function($perm){ return user_can($perm); };
 $__homeQ = home_build_queue($pdo, is_admin(), $__homeCanSee, $__homePid, 'web');
 $__homeC = home_build_continue($pdo, is_admin(), $__homeCanSee, $__homePid);
 $__homeDay = home_today_label();
+$__pulseUrl = home_pulse_target($__pulseOverdue, is_admin()||user_can('jobs'), $__pulseCriticalStock, is_admin()||user_can('stock'));
 ?>
+<?php if($__pulseUrl): ?>
+<a href="<?=h($__pulseUrl)?>" style="display:block;text-decoration:none;color:inherit"><?=ds_alert(home_pulse_alert_type($__pulse['level']), $__pulse['message'])?></a>
+<?php else: ?>
 <?=ds_alert(home_pulse_alert_type($__pulse['level']), $__pulse['message'])?>
+<?php endif; ?>
 <div class="df-home-daylabel"><span class="df-home-dow"><?=h($__homeDay['dow'])?></span><span class="df-home-date"><?=h($__homeDay['date'])?></span></div>
 
 <?php if($__homeQ['hero']): $__h=$__homeQ['hero']; ?>

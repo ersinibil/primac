@@ -123,6 +123,20 @@ function home_pulse_alert_type($level){
     return ['green'=>'success','yellow'=>'warning','red'=>'danger','neutral'=>'info'][$level] ?? 'info';
 }
 
+/**
+ * P0 USER TEST bulgusu (2026-07-17): Home v2 (compact) Nabız banner'ı pasifti, hiçbir aksiyona
+ * götürmüyordu — mobile/index.php'nin LEGACY dalında zaten var olan $__pulseTarget mantığı
+ * (jobs.php?s=gec / stock.php?critical=1, ikisi de mevcut, hazır filtreler) buraya taşındı, yeni
+ * rota/iş mantığı İCAT EDİLMEDİ. Gecikmiş iş varsa öncelik onda (dashboard_pulse_state()'in kırmızı
+ * eşiğinde de öncelik gecikmiş işte), yoksa kritik stokta.
+ * @return string|null hasDetail=false ise veya hedef yoksa null
+ */
+function home_pulse_target($overdueCount, $showOverdue, $criticalCount, $showCritical){
+    if($showOverdue && (int)$overdueCount > 0) return 'jobs.php?s=gec';
+    if($showCritical && (int)$criticalCount > 0) return 'stock.php?critical=1';
+    return null;
+}
+
 // FAZ 2C-ii EKİ (2026-07-17) — Hızlı İşlemler (C maddesi): dashboard_quick_action_defs() (boot.php)
 // emoji ikon taşıyor, yeni compact chip satırı ds_icon() istiyor — bu SADECE sunum katmanı eşlemesi,
 // veri kaynağına (dashboard_quick_actions_split()) dokunulmadı. Her key mevcut ds_icon() whitelist'inden.
