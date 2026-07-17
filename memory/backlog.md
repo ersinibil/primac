@@ -16,8 +16,16 @@ gerekmedi — `nav_effective_mode()` zaten pilot personeli admin ile aynı compa
 Elif (parite) bağımsız incelemesi — üçü de PASS/tutarlı, kritik/yüksek bulgu yok (yalnızca 2 düşük
 öncelikli, aksiyon gerektirmeyen not: `home_build_overview()`'da savunma-derinliği eksikliği,
 `is_admin()`/mobil `$isAdmin` tanım farkı — canlıda davranış farkı yaratmıyor). Tam rapor:
-`~/Desktop/PRIMAC-OTS-FAZ2C-ii-Home-DEV-PASS.pdf`. **DEV PASS raporu sonrası dur, Product Owner
-onayı bekleniyor — USER TEST/CLOSED henüz değil.**
+`~/Desktop/PRIMAC-OTS-FAZ2C-ii-Home-DEV-PASS.pdf`.
+
+**DEV PASS ONAYLANDI (2026-07-17, Product Owner kararı).** Şimdi USER TEST aşamasındayız — gerçek
+cihaz/kullanıcı testi kimlik bilgisi gerektirdiği için Claude tarafında SİMÜLE EDİLEMEZ, primac.tr'de
+bizzat yürütülecek. Adım adım PASS/FAIL kontrol listesi hazırlandı: `~/Desktop/
+PRIMAC-OTS-FAZ2C-ii-USER-TEST-Checklist.pdf` (Admin + Personel/compact senaryoları, 320/390/430px
+mobil, web masaüstü, legacy regresyon kontrolü, "Dark/Light" maddesinin OTS'te gerçek bir tema
+anahtarı olmadığı — sabit mobil-koyu/web-açık ayrımı olduğu netleştirildi). **Yalnızca kritik hata
+bulunursa düzeltme yapılacak, yeni özellik eklenmeyecek. USER TEST PASS sonrası FAZ 2C-ii CLOSED
+işaretlenecek — FAZ 2D ancak bundan sonra başlayacak.**
 
 ## ACİL HOTFIX PAKETİ — KAPANDI (2026-07-17, PRODUCT OWNER KARARI — R0.9 hotfix kapısı)
 Master Envanter'in bulduğu 2 güvenlik açığı + 1 sessiz şema hatası, Home implementasyonuna (KOMUT 5)
