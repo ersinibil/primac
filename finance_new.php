@@ -171,16 +171,13 @@ if($editRow){
 }
 ?>
 
-<div class="panel-head">
-<h1><?=$editId?'Hareketi Düzenle':(($direction==='in'?'Tahsilat':'Ödeme').' Kaydı')?></h1>
-<div class="actions">
-<a class="btn secondary" href="finance.php">Finans</a>
-<a class="btn secondary" href="finance_accounts.php">Hesaplar</a>
-</div>
-</div>
+<?php
+$__finActions = ds_button('Finans','finance.php','secondary','','',true) . ds_button('Hesaplar','finance_accounts.php','secondary','','',true);
+ds_page_header($editId?'Hareketi Düzenle':(($direction==='in'?'Tahsilat':'Ödeme').' Kaydı'), ds_icon('wallet',24), '', $__finActions, false, true);
+?>
 
-<?php if($error): ?><div class="alert"><?=h($error)?></div><?php endif; ?>
-<?php if($warning): ?><div class="alert" style="background:#fffbeb;border-color:#fcd34d;color:#92400e"><b>⚠️ Dikkat:</b> <?=$warning?></div><?php endif; ?>
+<?php if($error): ?><?=ds_alert('danger',$error)?><?php endif; ?>
+<?php if($warning): ?><div class="df-alert df-alert--warning">⚠️ Dikkat: <?=$warning?></div><?php endif; ?>
 
 <?php
 // Uyarı gösterildiğinde formu girilen değerlerle yeniden doldur (kaydedilmedi, kullanıcı
@@ -197,102 +194,86 @@ $fDesc=$src['description'] ?? '';
 $fPaymentType=$src['payment_type'] ?? '';
 $channelOpts=['Nakit','Banka / EFT','Kredi Kartı','POS','Çek','Senet','Diğer'];
 ?>
-<section class="panel">
-<form method="post" class="form-grid">
+<section class="df-card">
+<form method="post" class="df-form-grid-2">
 <?php if($editId): ?><input type="hidden" name="id" value="<?=$editId?>"><?php endif; ?>
 <?php if($returnContext): ?><input type="hidden" name="return_context" value="<?=h($returnContext)?>"><input type="hidden" name="return_ref" value="<?=h($returnRef)?>"><?php endif; ?>
 
-<label>İşlem Tipi
-<select name="direction" id="fnDirection" onchange="fnFilterCats();fnToggleWizard()">
-<option value="in" <?=$direction==='in'?'selected':''?>>Tahsilat</option>
-<option value="out" <?=$direction==='out'?'selected':''?>>Ödeme</option>
-</select>
-</label>
+<?php ds_form_field('İşlem Tipi', '<select name="direction" id="fnDirection" onchange="fnFilterCats();fnToggleWizard()"><option value="in" '.($direction==='in'?'selected':'').'>Tahsilat</option><option value="out" '.($direction==='out'?'selected':'').'>Ödeme</option></select>'); ?>
 
-<label id="fnWizardLabel" class="full" style="<?=$direction==='out'?'':'display:none'?>">Ne kaydediyorsun?
-<select name="record_step" id="fnStep" onchange="fnApplyStep()">
-<?php foreach($stepOpts as $key=>$o): ?><option value="<?=$key?>" <?=$initialStep===$key?'selected':''?>><?=$o['icon']?> <?=h($o['label'])?></option><?php endforeach; ?>
-</select>
-</label>
+<div id="fnWizardLabel" class="df-form-span-2" style="<?=$direction==='out'?'':'display:none'?>">
+<?php
+$__stepOpts='';
+foreach($stepOpts as $key=>$o){ $__stepOpts.='<option value="'.$key.'" '.($initialStep===$key?'selected':'').'>'.$o['icon'].' '.h($o['label']).'</option>'; }
+ds_form_field('Ne kaydediyorsun?', '<select name="record_step" id="fnStep" onchange="fnApplyStep()">'.$__stepOpts.'</select>');
+?>
+</div>
 
-<label id="fnField_contact_id">Cari
-<select name="contact_id">
-<option value="">Cari seçilmedi</option>
-<?php foreach($contacts as $c): ?>
-<option value="<?=$c['id']?>" <?=$contactId===$c['id']?'selected':''?>><?=h($c['name'].' / '.$c['type'])?></option>
-<?php endforeach; ?>
-</select>
-</label>
+<div id="fnField_contact_id">
+<?php
+$__contactOpts='<option value="">Cari seçilmedi</option>';
+foreach($contacts as $c){ $__contactOpts.='<option value="'.$c['id'].'" '.($contactId===$c['id']?'selected':'').'>'.h($c['name'].' / '.$c['type']).'</option>'; }
+ds_form_field('Cari', '<select name="contact_id">'.$__contactOpts.'</select>');
+?>
+</div>
 
-<label id="fnField_personnel_id" style="display:none">Personel
-<select name="personnel_id">
-<option value="">Personel seçilmedi</option>
-<?php foreach($personnelList as $p): ?>
-<option value="<?=(int)$p['id']?>" <?=(int)($editRow['personnel_id']??0)===(int)$p['id']?'selected':''?>><?=h($p['name'])?></option>
-<?php endforeach; ?>
-</select>
-</label>
+<div id="fnField_personnel_id" style="display:none">
+<?php
+$__persOpts='<option value="">Personel seçilmedi</option>';
+foreach($personnelList as $p){ $__persOpts.='<option value="'.(int)$p['id'].'" '.((int)($editRow['personnel_id']??0)===(int)$p['id']?'selected':'').'>'.h($p['name']).'</option>'; }
+ds_form_field('Personel', '<select name="personnel_id">'.$__persOpts.'</select>');
+?>
+</div>
 
 <!-- GİDER TÜRÜ CONTEXT-AWARE (2026-07-04): payment_type-bağlı yeni "Gider Türü" — seçenekleri
      fnApplyStep() ile adıma özel yeniden oluşturulur, Ödeme (out) tarafında görünür. -->
-<label id="fnField_payment_type" style="display:none">Gider Türü
-<select name="payment_type" id="fnTurSel" data-current="<?=h($fPaymentType)?>">
-<option value="">— Seç —</option>
-</select>
-</label>
+<div id="fnField_payment_type" style="display:none">
+<?php ds_form_field('Gider Türü', '<select name="payment_type" id="fnTurSel" data-current="'.h($fPaymentType).'"><option value="">— Seç —</option></select>'); ?>
+</div>
 
-<label id="fnField_category_id">Kategori
-<select name="category_id" id="fnCatSel">
-<option value="">— Seç —</option>
-<?php foreach($gelirCats as $c): ?>
-<option value="<?=(int)$c['id']?>" data-type="in" <?=$fCatId===(int)$c['id']?'selected':''?>>[<?=h($c['group_name'])?>] <?=h($c['name'])?></option>
-<?php endforeach; ?>
-</select>
-</label>
+<div id="fnField_category_id">
+<?php
+$__catOpts='<option value="">— Seç —</option>';
+foreach($gelirCats as $c){ $__catOpts.='<option value="'.(int)$c['id'].'" data-type="in" '.($fCatId===(int)$c['id']?'selected':'').'>['.h($c['group_name']).'] '.h($c['name']).'</option>'; }
+ds_form_field('Kategori', '<select name="category_id" id="fnCatSel">'.$__catOpts.'</select>');
+?>
+</div>
 
-<label>Hesap / Banka / Kasa / Kart
-<select name="account_id" required>
-<option value="">Seçiniz</option>
-<?php foreach($accounts as $a): ?>
-<option value="<?=$a['id']?>" <?=$fAccId===(int)$a['id']?'selected':''?>><?=h($a['account_type'].' - '.$a['name'].' / '.money($a['current_balance']))?></option>
-<?php endforeach; ?>
-</select>
-</label>
+<?php
+$__accOpts='<option value="">Seçiniz</option>';
+foreach($accounts as $a){ $__accOpts.='<option value="'.$a['id'].'" '.($fAccId===(int)$a['id']?'selected':'').'>'.h($a['account_type'].' - '.$a['name'].' / '.money($a['current_balance'])).'</option>'; }
+ds_form_field('Hesap / Banka / Kasa / Kart', '<select name="account_id" required>'.$__accOpts.'</select>');
+?>
 
-<label>Yöntem
-<select name="payment_channel">
-<?php foreach($channelOpts as $co): ?>
-<option <?=$fChannel===$co?'selected':''?>><?=h($co)?></option>
-<?php endforeach; ?>
-</select>
-</label>
+<?php
+$__chOpts='';
+foreach($channelOpts as $co){ $__chOpts.='<option '.($fChannel===$co?'selected':'').'>'.h($co).'</option>'; }
+ds_form_field('Yöntem', '<select name="payment_channel">'.$__chOpts.'</select>');
+?>
 
-<label>Tutar
-<input type="number" step="0.01" name="amount" value="<?=h($fAmount)?>" required>
-</label>
-
-<label>Tarih
-<input type="date" name="movement_date" value="<?=h($fDate)?>">
-</label>
-
-<label>Referans No
-<input name="reference_no" placeholder="Dekont, fiş, işlem no" value="<?=h($fRef)?>">
-</label>
-
-<label class="full">Açıklama
-<textarea name="description" id="fnDesc" rows="3"><?=h($fDesc)?></textarea>
-</label>
+<?php ds_form_field('Tutar', '<input type="number" step="0.01" name="amount" value="'.h($fAmount).'" required>'); ?>
+<?php ds_form_field('Tarih', '<input type="date" name="movement_date" value="'.h($fDate).'">'); ?>
+<?php ds_form_field('Referans No', '<input name="reference_no" placeholder="Dekont, fiş, işlem no" value="'.h($fRef).'">'); ?>
+<div class="df-form-span-2"><?php ds_form_field('Açıklama', '<textarea name="description" id="fnDesc" rows="3">'.h($fDesc).'</textarea>'); ?></div>
 
 <?php if($warning): ?>
-<label class="full" style="background:#fffbeb;border-radius:10px;padding:10px 12px">
-<input type="checkbox" name="confirm_duplicate" value="1" style="width:auto;display:inline-block;margin-right:6px">
+<div class="df-form-span-2" style="background:var(--df-warning-soft);border-radius:var(--df-radius-md);padding:10px 12px">
+<label style="display:flex;align-items:center;gap:8px;margin:0;color:var(--df-warning-ink)">
+<input type="checkbox" name="confirm_duplicate" value="1" style="width:auto">
 Bunun ayrı/yeni bir işlem olduğundan eminim, yine de kaydet.
 </label>
+</div>
 <?php endif; ?>
 
-<button class="btn"><?=$editId?'💾 Güncelle':($warning?'Yine de Kaydet':'Kaydet')?></button>
+<div class="df-form-span-2"><button class="df-btn df-btn--primary"><?=$editId?'💾 Güncelle':($warning?'Yine de Kaydet':'Kaydet')?></button></div>
 </form>
 </section>
+
+<style>
+body.nav-compact .df-form-grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 var(--df-space-4)}
+body.nav-compact .df-form-span-2{grid-column:1 / -1}
+@media(max-width:640px){body.nav-compact .df-form-grid-2{grid-template-columns:1fr}}
+</style>
 <script>
 // GİDER TÜRÜ CONTEXT-AWARE (2026-07-04): adıma özel "Gider Türü" katalogu — finance_lib.php'deki
 // finance_expense_type_options() ile BİREBİR aynı (web+mobil tek kaynak, PHP'den JSON'a dökülüyor).
