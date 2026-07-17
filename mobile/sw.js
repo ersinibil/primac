@@ -1,5 +1,9 @@
 // ACANS OTS mobil SW — Offline çalışma + Web Push (uygulama kapalıyken bildirim)
-const CACHE='acans-os-v27';
+// PX-002 BRAND AREA v1 (2026-07-17): v27→v28 — icon.php cache-first önbelleğe alınıyordu
+// (STATIC_ASSETS), logo_primac.png içeriği değişince PWA eski (kırmızımsı/krem) logoyu sonsuza
+// dek göstermeye devam ediyordu. Versiyon adı değişince activate() eski cache'i siler, install()
+// icon.php'yi yeniden fetch eder — kullanıcı hiçbir şey yapmadan (uygulamayı kapat/aç yeter).
+const CACHE='acans-os-v28';
 const STATIC_ASSETS=[
   './',
   './index.php',

@@ -220,8 +220,13 @@ input,select,textarea{font-size:16px}
     <div class="df-rail-brand" data-workspace="primac">
         <a class="df-rail-brand-mark" href="dashboard.php" aria-label="Ana sayfa">
             <?php $__brandLogo = function_exists('brand_icon') ? brand_icon() : ''; ?>
-            <?php if($__brandLogo && file_exists(__DIR__.'/'.$__brandLogo)): ?>
-            <img src="<?=h($__brandLogo)?>" alt="">
+            <?php if($__brandLogo && file_exists(__DIR__.'/'.$__brandLogo)):
+                // ds_styles() ile aynı desen (mtime cache-bust) — bu olmadan dosya içeriği
+                // değişse de tarayıcı aynı URL'i eskisi gibi önbellekten göstermeye devam eder
+                // (2026-07-17: "hala pempemsi logo" bulgusunun kök nedeni buydu).
+                $__brandLogoV = @filemtime(__DIR__.'/'.$__brandLogo) ?: 1;
+            ?>
+            <img src="<?=h($__brandLogo)?>?v=<?=(int)$__brandLogoV?>" alt="">
             <?php endif; ?>
         </a>
         <span class="df-rail-brand-name">PRIMAC OTS</span>
