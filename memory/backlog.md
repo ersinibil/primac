@@ -2,6 +2,16 @@
 
 <!-- Açık geliştirme görevleri. Kapanan madde buradan silinip memory/features.md'ye taşınır. -->
 
+## ds-foundation.css'te kısmen ölü Launcher CSS'i (2026-07-17, Ece PX-002 FAZ 2B-ii review notu, çok düşük öncelik)
+FAZ 2B-ii'de `layout_top.php`'nin eski Launcher paneli (web "Tüm Modüller" sağdan-kayan drawer)
+kaldırıldı. Bunu üreten CSS'ten yalnızca `.df-nav-overlay`/`.df-nav-launcher` (sabit 380px sağ
+panel kabuğu) ve `.nav-launcher-trigger`/`.nav-pin-empty` (sidebar'a özel tetikleyici) artık
+gerçekten ölü — grep ile doğrulandı, hiçbir dosya basmıyor. **`.df-nav-launcher-group`/
+`.df-nav-launcher-group-title`/`.df-nav-row*` ÖLÜ DEĞİL** — `mobile/more.php`'nin compact dalı
+bunları hâlâ kullanıyor (kendi tam-genişlik Menü listesinde, drawer değil). Temizlik yalnızca
+o dar kapsamda (overlay/launcher-panel/trigger) yapılmalı, FAZ 2B-iii'te mobil Launcher deseni
+de gözden geçirilirken ele alınabilir — şimdi tek başına silmek riskli değil ama erken.
+
 ## Design/Workflow Backlog — "Üretimi Başlat" hızlı aksiyonu (2026-07-17, PX-002 FAZ 2B IA FREEZE kararı)
 Mevcut bir işten üretim aşaması başlatma hızlı aksiyonu. Product Owner'ın IA revizyonu
 sırasında önerildi ama mevcut tek route'un (`production.php`/`mobile/uretim.php`) gerçek

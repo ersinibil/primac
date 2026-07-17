@@ -2,6 +2,44 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
+## PX-002 FAZ 2B-ii — Web Application Shell / Navigation Rail (2026-07-17, commit `7217e3f`)
+FAZ 2B-i'nin (NAV DATA FOUNDATION) veri katmanı ilk kez gerçek koda bağlandı — yalnızca web,
+yalnızca compact dal. 4 dosya değişti: `layout_top.php` (compact dal tamamen yeniden yazıldı),
+`ds_lib.php` (yeni `ds_scripts()` helper + tag/settings/logout ikonları), `assets/css/
+ds-foundation.css` (yeni `body.nav-compact .df-rail/.df-topbar/.df-page-container` bloğu),
+`assets/js/ds-foundation.js` (`dfRailToggle()` + sessionStorage). **Legacy dal (`else:`
+branch'leri) tek karakter değişmedi** — brand/workspace-box/eski nav/eski topbar aynı sırayla
+`else` içine taşındı, satır satır doğrulandı (Ece + benim byte-diff kontrolüm).
+
+**Eski Rail tamamen kaldırıldı:** primary satırlar (Görevlerim/İş Emirleri/Takvim/Mesajlar/
+Bildirimler/Notlarım), Sabitlenenler, "Tüm Modüller" Launcher paneli — yerine Ana Sayfa + 5
+kategori (İşler/Ticaret/Üretim & Stok/Finans/Yönetim, tek-açık) + Hesap alanı geldi. Top Bar
+sadeleşti: yalnızca Ara/Mesaj/Bildirim (Talep/+İş/kullanıcı-adı-pill'i kaldırıldı, Hesap artık
+yalnızca Rail'de).
+
+**Launcher/Pin Retirement (Flag 1) uygulandı:** `nav_pinned_modules()/nav_grouped_for_launcher()/
+ajax_nav_prefs.php` **silinmedi**, sadece compact koddan artık çağrılmıyor — DB'deki eski pin
+verisi dokunulmadan duruyor, Legacy Mode'a dönülürse eskisi gibi çalışıyor (fonksiyonel olarak
+doğrulandı: `nav_pinned_modules()` hâlâ eskisi gibi veri döndürüyor).
+
+**Tek-açık kategori mimarisi:** her sayfa kendi kategorisini sunucu tarafında otomatik açık
+render ediyor (`$__catHasActive` — JS'siz de doğru kategori görünür), sessionStorage yalnızca
+kategori-dışı (global) sayfalarda son açık kategoriyi hatırlatıyor. JS tamamen kapalıyken
+`<noscript>` override'ı tüm kategori gövdelerini görünür yapıyor (temel erişim kaybı yok).
+Kategori toggle gerçek `<button>` + `aria-expanded`/`aria-controls`.
+
+**Doğrulama:** gerçek `nav_lib.php`/`ds_lib.php` fonksiyonlarını çalıştıran DB'siz CLI-render
+scripti ile headless Chrome screenshot (Home + İşler-kategorisi-otomatik-açık jobs.php görünümü),
+1280/1440/1680/800px genişliklerde responsive doğrulandı (800px'te off-canvas Rail + hamburger
+doğru çalışıyor). Ece/Selin/Elif: PASS — Ece'nin 2 küçük notu (noscript'in body.nav-compact
+öneki eksikti, `ds_scripts()` `ds_styles()` gibi `function_exists()` korumasız çağrılıyordu)
+aynı turda düzeltildi. Elif'in notu: web (yeni kategori) / mobil (eski grup) arasındaki geçici
+gruplama farkı — beklenen ara durum, FAZ 2B-iii'te kapanacak.
+
+**Sıradaki:** FAZ 2B-iii (Mobil Application Shell / Menü — `mobile/common.php` topx()/botx()'a
+ilk kez nav-mode ayrımı, `mobile/more.php`'nin `?open=` parametresi) — Product Owner DEV PASS'i
+bekleniyor.
+
 ## PX-002 FAZ 2B-i — NAV DATA FOUNDATION: IA kategorileri nav_lib.php'ye işlendi (2026-07-17, commit `d0960cd`)
 FAZ 2B başında Product Owner, hazırlanan "Application Shell" görsel önizlemesini **reddetti**
 ("eski ERP'nin makyajı, sıfırdan düşünülmüş ürün istiyorum") ve süreci bir UI işinden Product
