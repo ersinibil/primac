@@ -67,9 +67,12 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         // Opsiyonel: aynı işlemde giriş hesabı da oluştur (personnel_lib.php::personnel_create_login()
         // — mükerrer hesap koruması dahil, P0-AUTH-01 ile aynı güvenli fonksiyon; yeni personelin henüz
         // hiçbir hesabı olamayacağı için o koruma burada devreye girmez, sadece tutarlılık için aynı yol).
+        // RELEASE 0.9 (2026-07-17, Personel/Kullanıcı/Yetki sadeleştirmesi): artık rol+yetki de aynı
+        // adımda seçilebiliyor — personnel_resolve_role_preset() yükseltme (Yönetici) korumasını yapar.
         if($canManageAccounts && !empty($_POST['make_login']) && trim($_POST['username']??'')!=='' && trim($_POST['password']??'')!==''){
             try{
-                $res=personnel_create_login($pdo, $newId, $_POST['username'], $_POST['password']);
+                $__presetDef = personnel_resolve_role_preset($_POST['role_preset'] ?? 'personel');
+                $res=personnel_create_login($pdo, $newId, $_POST['username'], $_POST['password'], $__presetDef['role'], $_POST['permissions'] ?? []);
                 if(function_exists('cred_wa')) $_SESSION['_new_personnel_wa']=cred_wa($res['phone'], trim($_POST['username']), $_POST['password']);
             }catch(Throwable $e){
                 $_SESSION['_new_personnel_login_err']='Personel eklendi ama giriş hesabı oluşturulamadı: '.$e->getMessage();
@@ -139,13 +142,14 @@ ds_page_header('Yeni Personel', ds_icon('user',24), '', ds_button('Personel List
 <div class="df-form-span-2 df-card" style="background:var(--df-accent-soft);border-color:transparent">
 <label style="display:flex;align-items:center;gap:8px;margin:0;font-weight:700;color:var(--df-ink-900)">
 <input type="checkbox" name="make_login" value="1" style="width:auto" onchange="document.getElementById('loginFields').style.display=this.checked?'grid':'none'">
-<?=ds_icon('user',16)?> Aynı işlemde uygulamaya giriş hesabı da oluştur
+<?=ds_icon('user',16)?> Aynı işlemde OTS hesabı da aç
 </label>
 <div id="loginFields" class="df-form-grid-2" style="display:none;margin-top:var(--df-space-3)">
 <?php ds_form_field('Kullanıcı Adı', '<input name="username">'); ?>
 <?php ds_form_field('Şifre', '<input type="password" name="password">'); ?>
+<div class="df-form-span-2"><?=personnel_role_permission_fields_html('personel', [])?></div>
 </div>
-<p style="margin:var(--df-space-2) 0 0;font-size:var(--df-type-caption-size);color:var(--df-ink-500)">Personel bu bilgilerle giriş yapıp mesaj/iş/görev görür (yetkileri kısıtlı, daha sonra "Giriş Hesabı" sekmesinden düzenlenebilir).</p>
+<p style="margin:var(--df-space-2) 0 0;font-size:var(--df-type-caption-size);color:var(--df-ink-500)">Personel bu bilgilerle giriş yapıp seçilen role göre modülleri görür — daha sonra bu personelin "Hesap ve Yetki" sekmesinden değiştirilebilir.</p>
 </div>
 <?php endif; ?>
 

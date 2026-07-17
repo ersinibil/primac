@@ -233,6 +233,17 @@ input,select,textarea{font-size:16px}
     </div>
     <nav class="df-rail-nav" aria-label="Ana navigasyon">
         <a class="df-rail-link<?=($cur==='dashboard.php'?' is-active':'')?>" href="dashboard.php"><?=ds_icon('home',18)?><span>Ana Sayfa</span></a>
+        <?php
+        // PİLOT KULLANIMA HAZIRLIK — TOPARLAMA TURU (2026-07-17, Product Owner kararı): "İletişim
+        // Merkezi'ni sol ana menüye kalıcı üst seviye modül olarak ekle." Önceden 'messages'
+        // nav_taxonomy'de category=null olduğu için Rail'in kategori döngüsüne hiç girmiyordu, sadece
+        // topbar'daki sohbet/zil ikonlarından erişilebiliyordu (aşağıda ayrıca duruyor, dokunulmadı —
+        // "hızlı erişim" olarak kalsın istendi). Bu satır Ana Sayfa ile kategoriler arasına, istenen
+        // sırayla (Ana Sayfa/İletişim Merkezi/İşler/Ticaret/Üretim & Stok/Finans/Yönetim) eklendi.
+        $__icPages = ['messages.php','notifications.php','taleplerim.php','duyurular.php'];
+        $__icBadge = (int)$unreadMsgCount + (int)$notifCount;
+        ?>
+        <a class="df-rail-link<?=(in_array($cur,$__icPages,true)?' is-active':'')?>" href="messages.php"><?=ds_icon('chat',18)?><span>İletişim Merkezi</span><?php if($__icBadge): ?><span class="df-count-badge" style="margin-left:auto"><?=$__icBadge>9?'9+':$__icBadge?></span><?php endif; ?></a>
         <div class="df-rail-categories">
             <?php foreach(nav_category_keys() as $__cat):
                 $__catItems = nav_items_for_category($__navCanSee, is_admin(), $__cat, 'web');

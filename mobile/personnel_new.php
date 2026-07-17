@@ -20,15 +20,16 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                            ($_POST['start_date']??'')?:null,trim($_POST['iban']??''),trim($_POST['notes']??'')]);
         }
         $pid=(int)$pdo->lastInsertId();
-        // Opsiyonel giriş hesabı
+        // Opsiyonel giriş hesabı — RELEASE 0.9 (2026-07-17, Personel/Kullanıcı/Yetki sadeleştirmesi):
+        // artık web'deki gibi paylaşılan personnel_lib.php::personnel_create_login() çağrılıyor (rol+
+        // yetki dahil) — önceden burada ayrı/duplike bir raw INSERT vardı, tekilleştirildi.
         if(!empty($_POST['make_login']) && trim($_POST['username']??'')!=='' && trim($_POST['password']??'')!==''){
-            $un=trim($_POST['username']); $pw=$_POST['password'];
-            $ex=$pdo->prepare("SELECT id FROM app_users WHERE username=?"); $ex->execute([$un]);
-            if($ex->fetch()) throw new Exception('Personel eklendi ama kullanıcı adı "'.$un.'" zaten var — giriş açılamadı.');
-            $pdo->prepare("INSERT INTO app_users(username,full_name,phone,email,password_hash,role,personnel_id,active,created_at) VALUES(?,?,?,?,?,?,?,1,NOW())")
-                ->execute([$un,$name,trim($_POST['phone']??''),trim($_POST['email']??''),password_hash($pw,PASSWORD_DEFAULT),'personel',$pid]);
-            $uid=(int)$pdo->lastInsertId();
-            $pdo->prepare("UPDATE personnel SET user_id=?, login_enabled=1 WHERE id=?")->execute([$uid,$pid]);
+            try{
+                $presetDef=personnel_resolve_role_preset($_POST['role_preset'] ?? 'personel');
+                personnel_create_login($pdo, $pid, $_POST['username'], $_POST['password'], $presetDef['role'], $_POST['permissions'] ?? []);
+            }catch(Throwable $e){
+                throw new Exception('Personel eklendi ama giriş hesabı oluşturulamadı: '.$e->getMessage());
+            }
         }
         try{ if(function_exists('activity_log')) activity_log('Personel','Yeni',$name,'','personnel',$pid,base_url().'mobile/personnel_view.php?id='.$pid,'👷'); }catch(Throwable $e){}
         header('Location: personnel_view.php?id='.$pid); exit;
@@ -50,10 +51,11 @@ topx('Yeni Personel');
   <input type="file" name="cv" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
   <?php endif; ?>
   <div class="df-panel" style="background:var(--df-accent-soft)">
-    <label style="display:flex;align-items:center;gap:8px;margin:0"><input type="checkbox" name="make_login" value="1" style="width:auto;margin:0" onchange="document.getElementById('lg').style.display=this.checked?'block':'none'"><?=ds_icon('user',16)?> Uygulamaya giriş hesabı oluştur</label>
+    <label style="display:flex;align-items:center;gap:8px;margin:0"><input type="checkbox" name="make_login" value="1" style="width:auto;margin:0" onchange="document.getElementById('lg').style.display=this.checked?'block':'none'"><?=ds_icon('user',16)?> Aynı işlemde OTS hesabı da aç</label>
     <div id="lg" style="display:none;margin-top:8px">
       <div style="display:flex;gap:10px"><div style="flex:1"><label>Kullanıcı Adı</label><input name="username"></div><div style="flex:1"><label>Şifre</label><input name="password"></div></div>
-      <small class="muted">Personel bu bilgilerle giriş yapıp mesaj/iş/görev görür (yetkisi kısıtlı).</small>
+      <?=personnel_role_permission_fields_html('personel', [])?>
+      <small class="muted">Personel bu bilgilerle giriş yapıp seçilen role göre modülleri görür.</small>
     </div>
   </div>
   <button class="df-btn df-btn--primary df-btn--lg" style="width:100%;margin-top:8px"><?=ds_icon('user',16)?> Personeli Kaydet</button>

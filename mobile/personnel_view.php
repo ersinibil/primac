@@ -72,32 +72,24 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             // yapabilir — düz "personnel" modül yetkisi personel bilgilerini görüntüleme/düzenleme
             // içindir, başkasının giriş hesabını yönetme yetkisi vermez.
             if(!$canManageAccounts) throw new Exception('Bu işlem için yönetici yetkisi gerekir.');
-            $un=trim($_POST['username']);
-            $ex=$pdo->prepare("SELECT id FROM app_users WHERE username=?"); $ex->execute([$un]);
-            if($ex->fetch()) throw new Exception('Bu kullanıcı adı zaten var.');
-            // P0-AUTH-01 (2026-07-17): bkz. reset_pw bloğu üstündeki not — aynı personele ikinci
-            // bir hesap daha açılması hangi hesabın "güncel" sayılacağını belirsizleştiriyordu.
-            // Ece'nin re-review'ında bulduğu düzeltme: sadece user_id set mi diye değil, işaret
-            // ettiği hesabın HÂLÂ bu personele ait olup olmadığı (personnel_id=?) da doğrulanır.
-            $pr0=$pdo->prepare("SELECT user_id FROM personnel WHERE id=?"); $pr0->execute([$id]); $p0=$pr0->fetch();
-            $existingUid=(int)($p0['user_id'] ?? 0);
-            $hasLink = false;
-            if($existingUid){
-                $chk0=$pdo->prepare("SELECT id FROM app_users WHERE id=? AND personnel_id=?"); $chk0->execute([$existingUid,$id]);
-                $hasLink = (bool)$chk0->fetch();
-            }
-            if(!$hasLink){
-                $le=$pdo->prepare("SELECT id FROM app_users WHERE personnel_id=? LIMIT 1"); $le->execute([$id]);
-                $hasLink = (bool)$le->fetch();
-            }
-            if($hasLink) throw new Exception('Bu personelin zaten bağlı bir giriş hesabı var. Yeni hesap oluşturmak yerine mevcut hesabın şifresini sıfırlayın.');
-            $p=$pdo->prepare("SELECT name,phone,email FROM personnel WHERE id=?"); $p->execute([$id]); $pr=$p->fetch();
-            $pdo->prepare("INSERT INTO app_users(username,full_name,phone,email,password_hash,role,personnel_id,active,created_at) VALUES(?,?,?,?,?,?,?,1,NOW())")
-                ->execute([$un,$pr['name'],$pr['phone'],$pr['email'],password_hash($_POST['password'],PASSWORD_DEFAULT),'personel',$id]);
-            $uid=(int)$pdo->lastInsertId();
-            $pdo->prepare("UPDATE personnel SET user_id=?,login_enabled=1 WHERE id=?")->execute([$uid,$id]);
+            // RELEASE 0.9 (2026-07-17, Personel/Kullanıcı/Yetki sadeleştirmesi): artık web'deki gibi
+            // paylaşılan personnel_lib.php::personnel_create_login() çağrılıyor (mükerrer-hesap
+            // koruması + rol/yetki dahil) — önceden burada ayrı/duplike bir raw INSERT vardı.
+            $presetDef=personnel_resolve_role_preset($_POST['role_preset'] ?? 'personel');
+            $res=personnel_create_login($pdo, $id, $_POST['username'], $_POST['password'], $presetDef['role'], $_POST['permissions'] ?? []);
             $ok='Giriş hesabı oluşturuldu.';
-            $waCred=cred_wa($pr['phone']??'',$un,$_POST['password']);
+            $waCred=cred_wa($res['phone']??'',trim($_POST['username']),$_POST['password']);
+        }
+        if(isset($_POST['save_account_role'])){
+            if(!$canManageAccounts) throw new Exception('Bu işlem için yönetici yetkisi gerekir.');
+            $uid=(int)$_POST['perm_user_id'];
+            // IDOR koruması: hedef hesap gerçekten BU personele bağlı mı.
+            $ownChk=$pdo->prepare("SELECT role FROM app_users WHERE id=? AND personnel_id=?"); $ownChk->execute([$uid,$id]);
+            $ownRow=$ownChk->fetch();
+            if(!$ownRow) throw new Exception('Geçersiz hesap.');
+            $presetDef=personnel_resolve_role_preset($_POST['role_preset'] ?? 'personel', $ownRow['role']);
+            personnel_update_account_role($pdo, $uid, $presetDef['role'], $_POST['permissions'] ?? []);
+            $ok='Rol ve yetkiler güncellendi.';
         }
         if(isset($_POST['reset_pw']) && trim($_POST['newpw']??'')!==''){
             // GÜVENLİK (2026-07-04 SECURITY SPRINT-001): şifre sıfırlama admin veya
@@ -106,29 +98,13 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             // hesabın id'si POST edilerek o hesabın şifresi değiştirilebiliyordu, hedef hesap her
             // zaman görüntülenen personele ($id) bağlı gerçek hesaptan çekiliyor.
             if(!$canManageAccounts) throw new Exception('Bu işlem için yönetici yetkisi gerekir.');
-            // P0-AUTH-01 (2026-07-17): gerçek kullanıcı testinde "şifre sıfırlandı" mesajı
-            // gösterilmesine rağmen personelin yeni şifreyle giriş yapamadığı bildirildi. Kök
-            // neden: eski sorgu (LEFT JOIN + OR + ORDER BY'sız LIMIT 1) personele birden fazla
-            // app_users kaydı bağlıysa HANGİ kaydın döneceğini garanti etmiyordu. Artık hedef
-            // hesap TEK deterministik kaynaktan çözülüyor: personnel.user_id (personel için
-            // "güncel hesap" — personnel_lib.php::personnel_reset_password() ile aynı mantık).
-            $bu=$pdo->prepare("SELECT user_id FROM personnel WHERE id=?"); $bu->execute([$id]); $brow=$bu->fetch();
-            $boundUid=(int)($brow['user_id'] ?? 0);
-            if($boundUid){
-                // Ece'nin re-review'ında bulduğu düzeltme: hesabın hâlâ BU personele ait olduğunu
-                // (personnel_id=?) da doğrula — başka personele taşınmışsa yanlış hesap hedeflenmesin.
-                $chk=$pdo->prepare("SELECT id FROM app_users WHERE id=? AND personnel_id=?"); $chk->execute([$boundUid,$id]);
-                if(!$chk->fetch()) $boundUid=0;
-            }
-            if(!$boundUid){
-                $fb=$pdo->prepare("SELECT id FROM app_users WHERE personnel_id=? ORDER BY id ASC LIMIT 1"); $fb->execute([$id]);
-                $fr=$fb->fetch();
-                $boundUid=(int)($fr['id'] ?? 0);
-            }
-            if(!$boundUid) throw new Exception('Bu personele bağlı bir giriş hesabı yok.');
-            $pdo->prepare("UPDATE app_users SET password_hash=? WHERE id=?")->execute([password_hash($_POST['newpw'],PASSWORD_DEFAULT),$boundUid]);
+            // RELEASE 0.9 (2026-07-17): artık web'deki gibi paylaşılan
+            // personnel_lib.php::personnel_reset_password() çağrılıyor — P0-AUTH-01'in deterministik
+            // hesap çözümlemesi (personnel.user_id + sahiplik doğrulaması) TEK yerden yönetiliyor,
+            // önceden burada ayrı/duplike bir kopyası vardı.
+            $res=personnel_reset_password($pdo, $id, $_POST['newpw']);
             $ok='Şifre güncellendi.';
-            try{ $cu=$pdo->prepare("SELECT username FROM app_users WHERE id=?"); $cu->execute([$boundUid]); $cr=$cu->fetch(); $pp=$pdo->prepare("SELECT phone FROM personnel WHERE id=?"); $pp->execute([$id]); $ppr=$pp->fetch(); if($cr) $waCred=cred_wa($ppr['phone']??'',$cr['username'],$_POST['newpw']); }catch(Throwable $e){}
+            $waCred=cred_wa($res['phone']??'',$res['username']??'',$_POST['newpw']);
         }
     }catch(Throwable $e){ $er=$e->getMessage(); }
 }
@@ -205,13 +181,26 @@ try{
 <?php endif; ?>
 
 <?php if($canManageAccounts): ?>
-<div class="df-panel"><b><?=ds_icon('user',16)?> Giriş Hesabı</b>
-<?php if($usr): ?>
+<div class="df-panel"><b><?=ds_icon('user',16)?> Hesap ve Yetki</b>
+<?php if($usr && (int)$usr['id']===1): ?>
+  <p class="muted" style="margin:8px 0">Bu hesap sistemin ana yöneticisi — korumalıdır, rolü buradan değiştirilemez.</p>
+<?php elseif($usr): ?>
   <p class="muted" style="margin:8px 0">Kullanıcı: <b><?=h($usr['username'])?></b> · durum: <?=$usr['active']?ds_badge('Aktif','green'):ds_badge('Pasif','red')?></p>
-  <form method="post" style="display:flex;gap:8px"><input name="newpw" placeholder="Yeni şifre" style="flex:1;margin:0"><button class="df-btn df-btn--secondary" name="reset_pw" value="1">Şifre Sıfırla</button></form>
+  <form method="post" style="display:flex;gap:8px;margin-bottom:12px"><input name="newpw" placeholder="Yeni şifre" style="flex:1;margin:0"><button class="df-btn df-btn--secondary" name="reset_pw" value="1">Şifre Sıfırla</button></form>
+  <?php
+    $__usrPerms=json_decode($usr['permissions']??'[]',true); if(!is_array($__usrPerms)) $__usrPerms=[];
+    $__usrPreset=personnel_detect_preset($usr['role']??'personel', $__usrPerms);
+  ?>
+  <form method="post">
+    <input type="hidden" name="save_account_role" value="1">
+    <input type="hidden" name="perm_user_id" value="<?=(int)$usr['id']?>">
+    <?=personnel_role_permission_fields_html($__usrPreset, $__usrPerms)?>
+    <button class="df-btn df-btn--primary df-btn--lg" style="width:100%;margin-top:8px"><?=ds_icon('check',16)?> Yetkileri Kaydet</button>
+  </form>
 <?php else: ?>
   <p class="muted" style="margin:8px 0">Bu personelin uygulama girişi yok. Oluştur:</p>
   <form method="post"><div style="display:flex;gap:8px"><input name="username" placeholder="Kullanıcı adı" style="flex:1;margin:0"><input name="password" placeholder="Şifre" style="flex:1;margin:0"></div>
+  <?=personnel_role_permission_fields_html('personel', [])?>
   <button class="df-btn df-btn--primary df-btn--lg" name="make_login" value="1" style="width:100%;margin-top:8px"><?=ds_icon('user',16)?> Giriş Hesabı Oluştur</button></form>
 <?php endif; ?>
 </div>

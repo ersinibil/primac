@@ -37,15 +37,25 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['clear_telegram_binding']
 }
 
 
-if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['save_perms'])){
+if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['save_account_role'])){
+    // RELEASE 0.9 — Personel/Kullanıcı/Yetki Sadeleştirme (2026-07-17): önceden bu işlem SADECE
+    // user_can('users') olanlara açıktı (users.php'nin ayrı erişim kuralı). Tek-ekran hedefi
+    // gereği artık $canManageAccounts (admin veya 'personnel_accounts' alt yönetici) yeterli —
+    // 'personnel_accounts' yetkisinin kapsamı bilinçli olarak modül-yetki düzenlemeyi de içerecek
+    // şekilde genişletildi. Rol YÜKSELTMESİ (Yönetici) yine SADECE gerçek admin/yönetici oturumuna
+    // açık kalır (personnel_resolve_role_preset() içinde), 'users' modül yetkisi bu ekrandan asla
+    // verilemez (personnel_sanitize_permissions() filtreler) — bu iki korumaya dokunulmadı.
     try{
-        if(!user_can('users')) throw new Exception('Yetki atama izniniz yok.');
+        if(!$canManageAccounts) throw new Exception('Yetki atama izniniz yok.');
         $uid=(int)$_POST['perm_user_id'];
-        $perms=$_POST['permissions'] ?? [];
-        if(!is_array($perms)) $perms=[];
-        $pdo->prepare("UPDATE app_users SET permissions=? WHERE id=?")
-            ->execute([json_encode(array_values($perms),JSON_UNESCAPED_UNICODE),$uid]);
-        $ok='Personel yetkileri güncellendi.';
+        // IDOR koruması: hedef hesap gerçekten BU personele bağlı mı (POST'tan gelen uid'e körü
+        // körüne güvenilmez — personnel_reset_password()'daki aynı gerekçe).
+        $ownChk=$pdo->prepare("SELECT role FROM app_users WHERE id=? AND personnel_id=?"); $ownChk->execute([$uid,$id]);
+        $ownRow=$ownChk->fetch();
+        if(!$ownRow) throw new Exception('Geçersiz hesap.');
+        $presetDef=personnel_resolve_role_preset($_POST['role_preset'] ?? 'personel', $ownRow['role']);
+        personnel_update_account_role($pdo, $uid, $presetDef['role'], $_POST['permissions'] ?? []);
+        $ok='Rol ve yetkiler güncellendi.';
     }catch(Throwable $e){ $error=$e->getMessage(); }
 }
 
@@ -65,9 +75,11 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['clear_cv'])){
 
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['make_login']) && trim($_POST['username']??'')!=='' && trim($_POST['password']??'')!==''){
     // PDP-001: paylaşılan işlem personnel_lib.php::personnel_create_login() — yetki kontrolü burada.
+    // RELEASE 0.9 (2026-07-17): rol+yetki artık aynı adımda seçilebiliyor.
     try{
         if(!$canManageAccounts) throw new Exception('Bu işlem için yönetici yetkisi gerekir.');
-        $res=personnel_create_login($pdo, $id, $_POST['username'], $_POST['password']);
+        $presetDef=personnel_resolve_role_preset($_POST['role_preset'] ?? 'personel');
+        $res=personnel_create_login($pdo, $id, $_POST['username'], $_POST['password'], $presetDef['role'], $_POST['permissions'] ?? []);
         $ok='Giriş hesabı oluşturuldu.';
         $waCred=cred_wa($res['phone'], trim($_POST['username']), $_POST['password']);
     }catch(Throwable $e){ $error=$e->getMessage(); }
@@ -84,7 +96,7 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['reset_pw']) && trim($_PO
     }catch(Throwable $e){ $error=$e->getMessage(); }
 }
 
-if($_SERVER['REQUEST_METHOD']==='POST' && !isset($_POST['regen_telegram_code']) && !isset($_POST['clear_telegram_binding']) && !isset($_POST['save_perms']) && !isset($_POST['clear_cv']) && !isset($_POST['make_login']) && !isset($_POST['reset_pw'])){
+if($_SERVER['REQUEST_METHOD']==='POST' && !isset($_POST['regen_telegram_code']) && !isset($_POST['clear_telegram_binding']) && !isset($_POST['save_account_role']) && !isset($_POST['clear_cv']) && !isset($_POST['make_login']) && !isset($_POST['reset_pw'])){
     try{
         $cvPath = $hasCvCol ? personnel_handle_cv_upload() : null;
 
@@ -176,9 +188,9 @@ try{
     $ts->execute([$id]);
     $tasks=$ts->fetchAll();
 }catch(Throwable $e){}
-$staffUserId=0; $staffPerms=[]; $staffRole='';
-try{ $uu=$pdo->prepare("SELECT id,permissions,role FROM app_users WHERE personnel_id=? ORDER BY id LIMIT 1"); $uu->execute([$id]);
-    if($su=$uu->fetch()){ $staffUserId=(int)$su['id']; $staffRole=$su['role']??''; $dp=json_decode($su['permissions']??'[]',true); $staffPerms=is_array($dp)?$dp:[]; }
+$staffUserId=0; $staffPerms=[]; $staffRole=''; $staffUsername='';
+try{ $uu=$pdo->prepare("SELECT id,permissions,role,username FROM app_users WHERE personnel_id=? ORDER BY id LIMIT 1"); $uu->execute([$id]);
+    if($su=$uu->fetch()){ $staffUserId=(int)$su['id']; $staffRole=$su['role']??''; $staffUsername=$su['username']??''; $dp=json_decode($su['permissions']??'[]',true); $staffPerms=is_array($dp)?$dp:[]; }
 }catch(Throwable $e){}
 
 // --- Sekmeli görünüm için ek, salt-okunur veriler (mevcut sorgu desenleriyle birebir aynı,
@@ -235,7 +247,7 @@ if($hasCvCol) $tabLabels['dosyalar']='📎 Dosyalar';
 $tabLabels['performans']='📈 Performans';
 $tabLabels['maas']='💰 Maaş/Avans/Prim';
 $tabLabels['hareket']='🧾 Hareket Geçmişi';
-if(user_can('users') || $canManageAccounts) $tabLabels['giris']='🔑 Giriş Hesabı';
+if($canManageAccounts) $tabLabels['giris']='🔑 Hesap ve Yetki';
 
 $tab = isset($_GET['tab']) ? (string)$_GET['tab'] : 'genel';
 if(!array_key_exists($tab,$tabLabels)) $tab='genel';
@@ -429,57 +441,47 @@ ds_form_field('Çalışma Tipi', '<select name="work_type">'.$__workOpts.'</sele
 <?php endif; ?>
 
 <?php
-// PDP-001: 'users' yetkisi tam olmayan ama 'personnel_accounts' yetkisi verilmiş bir alt-yönetici
-// users.php'ye hiç giremediği için (page_module_map tam 'users' istiyor) o ekrandaki hesap
-// oluşturma/şifre sıfırlama işini hiç yapamıyordu. Bu blok SADECE o boşluğu kapatır — zaten
-// user_can('users') olan (dolayısıyla users.php'yi kullanabilen) admin/yetkili için hiçbir şey
-// değişmez, mevcut akış (aşağıdaki "Yetkiler" bölümü) birebir korunuyor.
-$showInlineAccountMgmt = $canManageAccounts && !user_can('users');
+// RELEASE 0.9 — PİLOT KULLANIMA HAZIRLIK / Personel-Kullanıcı-Yetki Sadeleştirme (2026-07-17,
+// Product Owner kararı: "Personel oluşturmak veya düzenlemek için farklı ekranlar arasında
+// dolaşılmayacak — ayrı users.php mantığını kullanıcıya hissettirme"). Bu sekme artık account
+// oluşturma + şifre sıfırlama + rol + yetki düzenlemenin TEK yeri — user_can('users') ayrımı
+// kaldırıldı, $canManageAccounts (admin veya 'personnel_accounts' alt yönetici) tek yetki kapısı.
+// users.php hâlâ duruyor (toplu WhatsApp gönderimi + bağsız/eski hesaplar için), ama normal
+// personel akışı artık ona hiç ihtiyaç duymuyor.
 ?>
-<?php if((user_can('users') || $canManageAccounts) && $tab==='giris'): ?>
+<?php if($canManageAccounts && $tab==='giris'): ?>
 <section class="df-card" style="margin-top:var(--df-space-4)">
-<h2 class="df-section-title"><?=ds_icon('user',20)?> Giriş Hesabı<?=user_can('users')?' — Yetkiler (Modül Erişimi)':''?></h2>
+<h2 class="df-section-title"><?=ds_icon('user',20)?> Hesap ve Yetki</h2>
 
-<?php if($showInlineAccountMgmt): ?>
-  <?php if($staffUserId): ?>
+<?php if($staffUserId===1): ?>
+  <p class="df-section-hint">Bu hesap sistemin ana yöneticisi — korumalıdır, rolü buradan değiştirilemez.</p>
+<?php elseif(!$staffUserId): ?>
+  <h3 class="df-section-subtitle"><?=ds_icon('plus',16)?> OTS Hesabı Aç</h3>
+  <p class="df-section-hint">Bu personelin henüz OTS hesabı yok.</p>
+  <form method="post" style="max-width:420px;margin-bottom:var(--df-space-5)">
+    <input type="hidden" name="make_login" value="1">
+    <?php ds_form_field('Kullanıcı Adı', '<input name="username" required>'); ?>
+    <?php ds_form_field('Şifre', '<input type="password" name="password" required minlength="4">'); ?>
+    <?=personnel_role_permission_fields_html('personel', [])?>
+    <button class="df-btn df-btn--primary" style="margin-top:var(--df-space-3)">Hesap Oluştur</button>
+  </form>
+<?php else: ?>
   <h3 class="df-section-subtitle"><?=ds_icon('settings',16)?> Şifre Sıfırla</h3>
+  <p class="df-section-hint">Kullanıcı adı: <b><?=h($staffUsername)?></b></p>
   <form method="post" style="max-width:360px;margin-bottom:var(--df-space-5)">
     <input type="hidden" name="reset_pw" value="1">
     <?php ds_form_field('Yeni Şifre', '<input type="password" name="newpw" required minlength="4">'); ?>
     <button class="df-btn df-btn--primary">Şifreyi Güncelle</button>
   </form>
-  <?php else: ?>
-  <h3 class="df-section-subtitle"><?=ds_icon('plus',16)?> Giriş Hesabı Oluştur</h3>
-  <p class="df-section-hint">Bu personelin henüz giriş hesabı yok.</p>
-  <form method="post" style="max-width:360px;margin-bottom:var(--df-space-5)">
-    <input type="hidden" name="make_login" value="1">
-    <?php ds_form_field('Kullanıcı Adı', '<input name="username" required>'); ?>
-    <?php ds_form_field('Şifre', '<input type="password" name="password" required minlength="4">'); ?>
-    <button class="df-btn df-btn--primary">Hesap Oluştur</button>
-  </form>
-  <?php endif; ?>
-<?php endif; ?>
 
-<?php if(user_can('users')): ?>
-<?php if($staffRole==='admin' || $staffRole==='yonetici'): ?>
-  <p class="df-section-hint">Bu personelin giriş rolü <b><?=h($staffRole)?></b> — tüm modüllere yetkili. Kısıtlamak için <a href="users.php">Kullanıcılar</a> ekranından rolünü "Personel" yapın.</p>
-<?php elseif($staffUserId): ?>
-  <p class="df-section-hint">İşaretli modülleri görür ve kullanabilir. İşaretsiz modüller bu personelin menüsünde görünmez ve açılamaz.</p>
+  <h3 class="df-section-subtitle"><?=ds_icon('check',16)?> Rol ve Yetkiler</h3>
+  <p class="df-section-hint">Hazır bir rol seçin — sadece özel bir durumda "Gelişmiş Yetkiler" ile tek tek modül işaretleyin.</p>
   <form method="post">
-  <input type="hidden" name="save_perms" value="1">
-  <input type="hidden" name="perm_user_id" value="<?=$staffUserId?>">
-  <div class="df-permission-grid">
-  <?php foreach(module_list() as $key=>$label): if($key==='users') continue; ?>
-    <label class="df-permission-chip">
-      <input type="checkbox" name="permissions[]" value="<?=$key?>" <?=in_array($key,$staffPerms,true)?'checked':''?> style="width:auto"> <?=h($label)?>
-    </label>
-  <?php endforeach; ?>
-  </div>
-  <button class="df-btn df-btn--primary" style="margin-top:var(--df-space-3)"><?=ds_icon('check',16)?> Yetkileri Kaydet</button>
+    <input type="hidden" name="save_account_role" value="1">
+    <input type="hidden" name="perm_user_id" value="<?=$staffUserId?>">
+    <?=personnel_role_permission_fields_html(personnel_detect_preset($staffRole,$staffPerms), $staffPerms)?>
+    <button class="df-btn df-btn--primary" style="margin-top:var(--df-space-3)"><?=ds_icon('check',16)?> Yetkileri Kaydet</button>
   </form>
-<?php else: ?>
-  <p class="df-section-hint">Bu personelin giriş hesabı yok. Yetki vermek için önce <a href="users.php?personnel_id=<?=$id?>&full_name=<?=urlencode($p['name'])?>&phone=<?=urlencode($p['phone']??'')?>">Kullanıcı &amp; Yetki</a> ekranından hesap oluşturup bu personele bağlayın (ad/telefon otomatik dolacak).</p>
-<?php endif; ?>
 <?php endif; ?>
 
 </section>
