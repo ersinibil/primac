@@ -150,12 +150,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 
                     try{
                         $password=$_POST['password_'.$uid] ?? '';
-
-                        if($genNewPw){
-                            // Yeni rastgele şifre üret ve kaydet
-                            $password=generate_random_password(10);
-                            $pdo->prepare("UPDATE app_users SET password_hash=? WHERE id=?")->execute([password_hash($password,PASSWORD_DEFAULT),$uid]);
-                        }
+                        if($genNewPw) $password=generate_random_password(10);
 
                         if(!$password){
                             $results['failed']++;
@@ -170,15 +165,24 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                         $sent=wa_send($phone,$txt);
 
                         if($sent){
+                            // P0-AUTH-02 (2026-07-17, ACİL — gerçek kullanıcı raporu): şifre_hash DAHA
+                            // ÖNCE (gönderim denemeden önce) kaydediliyordu — WhatsApp API hatası/yanlış
+                            // numara yüzünden gönderim BAŞARISIZ olsa bile yeni rastgele şifre zaten
+                            // veritabanına yazılmış oluyordu. Kimse (admin dahil) bu şifreyi görmediği
+                            // için hesap fiilen kilitleniyordu (eski şifre de artık geçersiz). Artık DB
+                            // yazımı SADECE gönderim gerçekten başarılıysa yapılıyor.
+                            if($genNewPw){
+                                $pdo->prepare("UPDATE app_users SET password_hash=? WHERE id=?")->execute([password_hash($password,PASSWORD_DEFAULT),$uid]);
+                            }
                             $results['success']++;
                             $results['details'][]=['name'=>$full_name,'status'=>'Gönderildi','ok'=>true];
                         } else {
                             $results['failed']++;
-                            $results['details'][]=['name'=>$full_name,'status'=>'API hatası','ok'=>false];
+                            $results['details'][]=['name'=>$full_name,'status'=>'API hatası — şifre DEĞİŞTİRİLMEDİ, eski şifre geçerli','ok'=>false];
                         }
                     }catch(Throwable $e){
                         $results['failed']++;
-                        $results['details'][]=['name'=>$full_name,'status'=>'Hata: '.$e->getMessage(),'ok'=>false];
+                        $results['details'][]=['name'=>$full_name,'status'=>'Hata: '.$e->getMessage().' — şifre değiştirilmedi','ok'=>false];
                     }
                 }
 
@@ -388,8 +392,14 @@ if(!is_array($perms)) $perms=[];
 <label class="full"><input type="checkbox" name="active" <?=$u['active']?'checked':''?> style="width:auto"> Aktif</label>
 <button class="btn secondary">Güncelle</button>
 
+</form>
 <?php if(($u['phone'] ?? '') && ($u['active'] ?? true)): ?>
-<details style="margin-top:12px;padding-top:12px;border-top:1px solid #e5e7eb">
+<!-- P0-AUTH-02 (2026-07-17, ACİL): bu ayrı form ÖNCEDEN yukarıdaki "Güncelle" formunun İÇİNDE
+     (nested <form>) idi — HTML'de form iç içe geçemez, tarayıcı içteki form etiketini yok sayıp
+     alanlarını dıştaki forma katabiliyordu; bu da "Şifre Sıfırla ve WhatsApp ile Gönder"e
+     basıldığında update_user VE send_bulk_wa'nın birlikte, öngörülemez alan değerleriyle tetiklenme
+     riski taşıyordu. Artık dıştaki formun DIŞINDA, kendi başına bağımsız bir form. -->
+<details style="margin-top:-8px;margin-bottom:18px;padding-top:0">
 <summary style="cursor:pointer;font-weight:500;color:#2563eb">📲 Şifre Sıfırla ve WhatsApp ile Gönder</summary>
 <form method="post" style="margin-top:10px">
 <input type="hidden" name="send_bulk_wa" value="1">
@@ -400,7 +410,6 @@ if(!is_array($perms)) $perms=[];
 </form>
 </details>
 <?php endif; ?>
-</form>
 <?php endforeach; ?>
 </section>
 
