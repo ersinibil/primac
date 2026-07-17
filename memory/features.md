@@ -2,6 +2,55 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
+## BRAND AREA v1 — Web Navigation Rail + Mobil Home (2026-07-17, commit `09be2e5`)
+Kapsam kesin olarak bunlardır, başka hiçbir yüzey değişmedi: **Web Navigation Rail** (`.df-rail-brand`,
+compact dal, `layout_top.php`) ve **Mobil Home** (`mobile/index.php`, yalnızca compact modda başlık).
+FAZ 2B-ii USER TEST'in FAIL nedenlerinden biri "kullanıcı hangi üründe olduğunu anlayamıyor"du —
+bu tur o bulguyu kapatıyor, P0 legacy-surface remediation'ın (FAZ 2B-ii-R) kendisi değil.
+
+**Logo kaynağı:** Product Owner'ın Masaüstü'nden ilettiği resmi kurumsal kimlik dokümanı
+`PRİMAC KK.pdf` (tek sayfa, ~30×65 inç kurumsal kimlik panosu — renk paleti, sosyal medya
+rozetleri, gri/siyah/kırmızı 3 renk varyantlı tek-renk logo içeriyor). **PDF repoya eklenmedi**
+(116MB, yalnızca Masaüstü'nde kalıyor) — kaynak olarak yalnızca bu kayıt referans.
+
+**Çıkarma yöntemi:** PyMuPDF ile sayfanın ilgili bölgesi vektör-kalitede yüksek çözünürlükte
+render edildi, **gri tek-renk varyant, yalnızca ikon (P işareti, "primac" wordmark'ı OLMADAN)**
+seçildi — Product Owner kararı: "sistem rengine uyması için gri gibi olan logoyu kullanabilirsin,
+her yerde." Krem arka plan (`#fff7eb`, kurumsal panonun kendi zemin rengi) piksel-bazlı de-matte
+ile gerçek alfa şeffaflığa çevrildi — logonun kendi şekli/oranı hiç değişmedi, yalnızca düz zemin
+şeffaflaştırıldı. Açık Web Rail'de (`--df-surface:#FFFFFF`) 5.23:1, koyu mobil kabukta
+(`--df-surface:#101E38`) 3.17:1 kontrast — ikisi de WCAG grafik-nesne eşiğinin (3:1) üzerinde.
+
+**Nerede kullanıldı:** `logo_primac.png` + `mobile/logo_primac.png` **içeriği** bu çıkarılan
+dosyayla değiştirildi — **dosya adı/yol AYNI KALDI**, kod tarafında hiçbir yeni referans
+oluşmadı. `brand_icon()`/`brand_logo()` (`boot.php`) zaten bu dosya adını döndürüyordu, tek
+kaynak kuralı korundu: Rail'de `layout_top.php` yalnızca `brand_icon()` çağırıyor, mobilde
+`mobile/index.php`/`mobile/common.php::topx()` zincirinde değişiklik yok (yalnızca başlık metni,
+aşağıda). **Geri dönüş:** eski dosya git geçmişinde duruyor, bu commit'ten önceki herhangi bir
+commit'te `git show <eski-commit>:logo_primac.png` ile erişilebilir.
+
+**Web Rail:** `.df-rail-nav`'ın üstüne `.df-rail-brand` eklendi — 34px chip içinde logo + "PRIMAC
+OTS" metni, altında hairline ayraç, toplam ~64-72px yükseklik bütçesi içinde. `data-workspace=
+"primac"` ileride çoklu-workspace seçici için hazır kapsayıcı (bugün işlevsiz, yalnızca Ana
+Sayfa'ya link).
+
+**Mobil Home:** `mobile/index.php` satır 1 — `topx()`'e geçilen başlık, yalnızca `$__navMode!==
+'legacy'` iken sabit `'PRIMAC OTS'` oluyor (önceden her modda `app_config()['app_name']`, örn.
+lokal config'te "PRIMAC OS"). `topx()`'ün kendisi (logo+başlık+arama akışı, `icon.php`→
+`brand_icon()` zinciri) hiç değişmedi — yeni bileşen/ikinci arama kutusu eklenmedi, mevcut
+altyapı yeniden kullanıldı.
+
+**Dokunulmayanlar (bilinçli):** `share_lib.php::firm_list()`/`firm_info()` (ACANS/PRIMAC çoklu
+firma teklif/antet kaydı — uygulama markasıyla farklı kavram, karıştırılmadı). Legacy dal
+(`layout_top.php`'nin `else:` branch'i, mobilin `app_config()['app_name']` yolu) satır satır
+diff ile doğrulandı, tek karakter değişmedi. `report_lib.php` (PDF/rapor logosu) ve
+`mobile/icon.php` (PWA/favicon) zaten `brand_logo()`/`brand_icon()` üzerinden besleniyordu,
+denetlendi, dokunulmadı.
+
+**Sıradaki:** FAZ 2B-ii-R planına dönülüyor — R/1 (ortak helper katmanı) → R/2 (search.php
+referans ekran dönüşümü) → R/2b (akıllı arama) → R/3 (Mesajlar/Bildirimler). Brand Area bu
+sırayı değiştirmedi.
+
 ## PX-002 FAZ 2B-ii — Web Application Shell / Navigation Rail (2026-07-17, commit `7217e3f`)
 FAZ 2B-i'nin (NAV DATA FOUNDATION) veri katmanı ilk kez gerçek koda bağlandı — yalnızca web,
 yalnızca compact dal. 4 dosya değişti: `layout_top.php` (compact dal tamamen yeniden yazıldı),
