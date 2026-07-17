@@ -2,6 +2,27 @@
 
 <!-- Açık geliştirme görevleri. Kapanan madde buradan silinip memory/features.md'ye taşınır. -->
 
+## FAZ 2C — MOBILE DESIGN SYSTEM MIGRATION (2026-07-17, PRODUCT OWNER KARARI — AKTİF ÖNCELİK)
+Öncelik değişikliği: R/2b (Akıllı Arama) geçici olarak backlog'a alındı (kod/commit `f817b32`
+korunuyor, bkz. [[features]] "FAZ 2B-ii-R/2b") — gerekçe web ile mobil arasında Tek Ürün
+Prensibi'ni bozan belirgin tasarım farkı. FAZ 2C bitmeden R/2b'ye dönülmeyecek.
+
+**Hedef:** Mobil uygulama şu 12 alanda web ile AYNI tasarım sistemini (DF/`ds-foundation.css` +
+`ds_lib.php`) kullanacak: Home, Search, Navigation, Listeler, Kartlar, Formlar, Empty State,
+Badge, Typography, Spacing, Bottom Navigation, Header. Legacy mobil görünüm TAMAMEN
+kaldırılmayacak (mevcut `mobile/common.php` topx/botx/card/mc/mm çatısı yok edilmeyecek) — ama
+Compact Mobile yeni referans olacak. Kabul kriteri: kullanıcı platform değiştirdiğinde farklı
+uygulama kullanıyormuş hissi yaşamamalı.
+
+**Mobile Design System Audit (2026-07-17) kabul edildi** — 67 sayfa envanteri: 3 TAM COMPACT
+(index/job_view/more), 2 "özel" (mytasks/task_view — $__navMode hiç yok, gövde koşulsuz DF), 62
+TAM LEGACY. DF CSS + `ds_lib.php` her mobil sayfada zaten yükleniyor (kullanılmıyor) — göç yeni
+altyapı değil markup dönüşümü.
+
+**FAZ 2C-i (Mobile Shell Migration) UYGULANDI, DEV PASS bekleniyor** — bkz. [[features]] "FAZ 2C-i".
+Kalan fazlar (2C-ii Home, 2C-iii Search, 2C-iv Liste/Kart, 2C-v Formlar, 2C-vi Badge/EmptyState
+temizliği) 2C-i DEV PASS'i alınmadan başlamayacak.
+
 ## ds-foundation.css'te kısmen ölü Launcher CSS'i (2026-07-17, Ece PX-002 FAZ 2B-ii review notu, çok düşük öncelik)
 FAZ 2B-ii'de `layout_top.php`'nin eski Launcher paneli (web "Tüm Modüller" sağdan-kayan drawer)
 kaldırıldı. Bunu üreten CSS'ten yalnızca `.df-nav-overlay`/`.df-nav-launcher` (sabit 380px sağ

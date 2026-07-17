@@ -2,7 +2,50 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
-## FAZ 2B-ii-R/2b — Akıllı Arama (2026-07-17, henüz commit edilmedi — bu turun sonunda)
+## FAZ 2C-i — Mobile Shell Migration (2026-07-17, henüz commit edilmedi — DEV PASS bekleniyor)
+Product Owner kararı: R/2b geçici backlog'a alındı, web/mobil tasarım farkını kapatmak için FAZ 2C
+(Mobile Design System Migration) başladı. Kod öncesi **Mobile Design System Audit** kabul edildi
+(67 sayfa envanteri → [[backlog]] "FAZ 2C"). 2C-i kapsamı KESİN olarak yalnızca ortak kabuk:
+`mobile/common.php::topx()`/`botx()` (TÜM 68 mobil sayfanın paylaştığı header + bottom navigation).
+
+**İçerik ekranları/liste/form/search/home gövdesi/business logic bu fazda DOKUNULMADI** — hâlâ eski
+`.panel`/`.item`/`.card` deseninde (sonraki fazların işi).
+
+- `topx()`/`botx()` artık `$__navMode` (web ile AYNI `nav_effective_mode()`, dosyanın üstünde zaten
+  hesaplanıyordu — 64/68 sayfa bugüne kadar bunu hiç okumuyordu) değerine göre compact/legacy
+  dalına ayrılıyor. Legacy dal python normalize testiyle **byte-identik** doğrulandı (yalnızca
+  `<?php if/else/endif ?>` etiketlerinin ürettiği satır sonu farkı, DOM'da fark yok).
+  Compact dal: `ds_icon()` SVG ikonları (chevron/chat/bell/search/home/briefcase/users/menu) +
+  `ds-foundation.css`'in `--df-*` token'ları (typography/spacing/renk).
+- **Bilinçli mimari karar:** compact `<body>`'ye web'in `body.nav-compact` sınıfı EKLENMEDİ — o
+  kapsamda masaüstü-rail'e özgü global form-input override'ı ve `.df-page-container{margin-
+  left:240px}` var, mobile body'sine karışırsa kapsam dışı sızma olurdu. Bunun yerine ayrı, dar
+  `body.mob-compact` ad alanı (yeni CSS, `ds-foundation.css` sonu) — aynı token'lar, ayrı seçici.
+  Zaten var olan `body.mobile-shell` koyu tema token override'ı (`DESIGN SYSTEM SPRINT 001`'den)
+  hem legacy hem compact dalda değişmeden kalıyor.
+- chat-mode/kb JS toggle'ı (mobile/messages.php, DEĞİŞMEDİ) için compact dalda simetrik CSS
+  eklendi (`body.mob-compact.chat-mode`/`.kb` → arama kutusu + bottom nav gizlenir, legacy'nin
+  `body.chat-mode`/`.kb` davranışının birebir karşılığı).
+- Yeni: bottom nav "aktif sekme" vurgusu (`$__curPage` bazlı `is-active`) — legacy'de hiç yoktu,
+  web Rail'in `basename($_SERVER['SCRIPT_NAME'])` karşılaştırma idiomuyla birebir aynı desen.
+  `$__showJobs`/`$__showContacts` (NAV-001B yetki mantığı) tek yerde hesaplanıp iki dal da aynı
+  değişkeni okuyor — kod/yetki ikilemesi yok.
+
+**Doğrulama:** DB'siz harness (gerçek `ds_lib.php`/`nav_lib.php` fonksiyonları, iki ayrı common.php
+sürümü — commit'li HEAD ve working tree — aynı girdilerle çalıştırılıp diff'lendi) + headless
+Chrome screenshot (iframe hilesiyle GERÇEK 390px mobil genişlik — `--window-size` küçük değerlerde
+Chrome'un kendi 500px tabanına takılıyor, bu bir test-aracı kısıtı, kod hatası değildi) + rozet
+(9+ okunmamış sayaç) render testi. Ece (kod)/Selin (güvenlik)/Elif (parite) incelemesi: **kritik/
+yüksek bulgu yok**. Elif'in en kritik sorusu — `mytasks.php`/`task_view.php` (gövdesi `$__navMode`
+okumayan 2 "özel" sayfa) bu değişiklikten olumsuz etkilenir mi — **HAYIR, düzeltiyor**: bu iki
+sayfa migration öncesi de/sonra da DF gövde kullanıyordu, tek fark artık kabuk da kullanıcının
+gerçek moduna göre doğru (compact kullanıcı için önceki "DF gövde + legacy kabuk" karışıklığı
+ortadan kalktı).
+
+**Sıradaki:** Product Owner'ın ekran görüntüsü değerlendirmesi. DEV PASS alınmadan FAZ 2C-ii'ye
+geçilmeyecek (Product Owner'ın kendi kuralı).
+
+## FAZ 2B-ii-R/2b — Akıllı Arama (2026-07-17, commit `f817b32`)
 Product Owner, R/2'nin USER TEST'inde `whatsapp`/`what`/`wha` için ekran görüntüleriyle 0 sonucu
 bizzat doğruladıktan sonra ("Bulgu nettir... R/2 USER TEST PASS. R/2 kapanmıştır.") R/2b'yi
 doğrudan başlattı — tam spec (9 madde) [[backlog]]'ta zaten kayıtlıydı, bu turda uygulandı.
@@ -61,7 +104,10 @@ incelemesi: **kritik/yüksek bulgu yok** — yetki filtreleri (`nav_search_index
 adminOnly→perm→mobileHide sırası menüyle birebir), XSS kaçırma (href+label h()/htmlspecialchars),
 IDOR alanları (notes/messages, bu turda dokunulmadı) doğrulandı.
 
-**Sıradaki:** Product Owner'ın gerçek cihaz/kullanıcı USER TEST'i (9 terim + serbest deneme).
+**Product Owner kararı (2026-07-17): geçici olarak BACKLOG'a alındı.** Kod DEĞİŞMEDİ/geri
+alınmadı — commit `f817b32` DEV'de duruyor, yalnızca USER TEST'i ve varsa devamı FAZ 2C'den
+sonraya ertelendi. Gerekçe: web ile mobil arasında Tek Ürün Prensibi'ni bozan belirgin tasarım
+farkı oluştuğu tespit edildi — önce platformlar arası tutarlılık (FAZ 2C), sonra arama devamı.
 
 ## FAZ 2B-ii-R/2 — Search Referans Ekran Dönüşümü (2026-07-17, commit `9168999`)
 `search.php` ilk kez `$__navMode` compact/legacy ayrımı kazandı (önceki tüm P0 sayfalar gibi

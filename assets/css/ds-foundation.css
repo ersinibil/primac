@@ -696,3 +696,42 @@ body.nav-compact .df-topbar-actions .df-count-badge{position:absolute;top:4px;ri
   body.nav-compact .df-topbar-search{display:none}
   body.nav-compact .df-rail-toggle{display:flex}
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   FAZ 2C-i — MOBILE SHELL MIGRATION (2026-07-17)
+   Yalnızca mobil KABUK (topx()/botx() — ortak header + bottom navigation). İçerik ekranları/
+   liste/form/search/home gövdesi bu fazda DOKUNULMADI, kasıtlı olarak eski .panel/.item/.card
+   deseninde kalıyor (bkz. memory/features.md). Bilinçli olarak "body.nav-compact" kapsamını
+   TEKRAR KULLANMADIK — o seçici altında global input/select/textarea override'ı ve
+   .df-page-container{margin-left:240px} gibi masaüstü-rail'e özgü kurallar var; mobile body'sine
+   bulaşırsa formlar/genel layout kapsam dışı halde sessizce değişirdi. Bunun yerine ayrı,
+   dar kapsamlı "body.mob-compact" ad alanı kullanıldı — token'lar (var(--df-*)) aynı, sadece
+   seçici kapsamı farklı. Koyu tema zaten var olan body.mobile-shell token override'ından geliyor
+   (yukarıda, satır ~213) — burada yeni bir renk icat edilmedi.
+   ═══════════════════════════════════════════════════════════════════════ */
+body.mob-compact .df-m-topbar{position:sticky;top:0;z-index:50;background:var(--df-canvas);padding:var(--df-space-2) 0 var(--df-space-3);display:flex;flex-direction:column;gap:var(--df-space-2)}
+body.mob-compact .df-m-topbar-row{display:flex;align-items:center;gap:var(--df-space-3)}
+body.mob-compact .df-m-back{flex:0 0 auto}
+body.mob-compact .df-m-back .df-icon{transform:rotate(180deg)}
+body.mob-compact .df-m-brand{display:flex;align-items:center;gap:var(--df-space-3);color:var(--df-ink-900);text-decoration:none;min-width:0;flex:1}
+body.mob-compact .df-m-logo{width:42px;height:42px;border-radius:var(--df-radius-md);background:var(--df-surface);flex:0 0 auto;display:flex;align-items:center;justify-content:center;overflow:hidden}
+body.mob-compact .df-m-logo img{width:100%;height:100%;object-fit:contain}
+body.mob-compact .df-m-brand-text{min-width:0}
+body.mob-compact .df-m-title{display:block;font-size:var(--df-type-title-size);font-weight:var(--df-type-title-weight);line-height:var(--df-type-title-lh);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.mob-compact .df-m-subtitle{display:block;font-size:var(--df-type-caption-size);color:var(--df-ink-500);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.mob-compact .df-m-actions{display:flex;align-items:center;gap:var(--df-space-1);flex:0 0 auto}
+body.mob-compact .df-m-actions .df-icon-btn{position:relative;color:var(--df-ink-900)}
+body.mob-compact .df-m-actions .df-count-badge{position:absolute;top:2px;right:2px}
+body.mob-compact .df-m-search{display:flex;align-items:center;gap:var(--df-space-2);height:46px;background:var(--df-surface);border:1px solid var(--df-hairline);border-radius:var(--df-radius-pill);padding:0 var(--df-space-4)}
+body.mob-compact .df-m-search .df-icon{color:var(--df-ink-500);flex:0 0 auto}
+body.mob-compact .df-m-search input{border:0;background:transparent;outline:0;flex:1;font-size:var(--df-type-subtitle-size);color:var(--df-ink-900);min-width:0;font-family:inherit;padding:0;margin:0;height:100%}
+body.mob-compact .df-m-search input::placeholder{color:var(--df-ink-500)}
+body.mob-compact.chat-mode .df-m-search{display:none}
+body.mob-compact .df-m-bottomnav{position:fixed;left:0;right:0;bottom:0;background:var(--df-canvas);border-top:1px solid var(--df-hairline);padding:var(--df-space-1) var(--df-space-2) calc(var(--df-space-2) + env(safe-area-inset-bottom));z-index:1000}
+body.mob-compact .df-m-bottomnav-row{max-width:520px;margin:auto;display:flex;gap:4px}
+body.mob-compact .df-m-bottomnav-link{flex:1;min-width:0;position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center;color:var(--df-ink-500);text-decoration:none;font-size:var(--df-type-caption-size);font-weight:650;padding:var(--df-space-2) 2px;border-radius:var(--df-radius-sm)}
+body.mob-compact .df-m-bottomnav-link.is-active{color:var(--df-ink-900)}
+body.mob-compact .df-m-bottomnav-link .df-count-badge{position:absolute;top:0;right:14px}
+body.mob-compact.chat-mode .df-m-bottomnav{display:none}
+body.mob-compact.chat-mode{padding-bottom:0}
+body.mob-compact.kb .df-m-bottomnav{display:none!important}
