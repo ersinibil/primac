@@ -111,24 +111,24 @@ if(!$conv){
 $lastMsgId = $messages ? (int)end($messages)['id'] : 0;
 ?>
 <style>
-.wa-shell{display:flex;border:1px solid #eef2f6;border-radius:16px;overflow:hidden;min-height:60vh}
-.wa-list-col{width:320px;flex:0 0 auto;border-right:1px solid #eef2f6;overflow-y:auto;max-height:75vh;background:#fff}
-.wa-list-search{padding:10px;border-bottom:1px solid #eef2f6;position:sticky;top:0;background:#fff}
+.wa-shell{display:flex;border:1px solid var(--df-hairline);border-radius:var(--df-radius-lg);overflow:hidden;min-height:60vh}
+.wa-list-col{width:320px;flex:0 0 auto;border-right:1px solid var(--df-hairline);overflow-y:auto;max-height:75vh;background:var(--df-surface)}
+.wa-list-search{padding:10px;border-bottom:1px solid var(--df-hairline);position:sticky;top:0;background:var(--df-surface)}
 .wa-list-search input{margin:0}
-.wa-list-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px;border-bottom:1px solid #eef2f6;text-decoration:none;color:inherit}
-.wa-list-item:hover{background:#f8fafc}
-.wa-list-item.active{background:#eef4ff}
-.wa-badge{background:#dc2626;color:#fff;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:800}
+.wa-list-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px;border-bottom:1px solid var(--df-hairline);text-decoration:none;color:inherit}
+.wa-list-item:hover{background:var(--df-surface-sunken)}
+.wa-list-item.active{background:var(--df-accent-soft)}
+.wa-badge{background:var(--df-danger);color:#fff;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:800}
 .wa-thread-col{flex:1;min-width:0;display:flex;flex-direction:column}
-.wa-thread-head{padding:14px 16px;border-bottom:1px solid #eef2f6;display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
-.wa-thread{flex:1;display:flex;flex-direction:column;gap:8px;padding:14px;overflow-y:auto;background:#f8fafc;max-height:52vh}
+.wa-thread-head{padding:14px 16px;border-bottom:1px solid var(--df-hairline);display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.wa-thread{flex:1;display:flex;flex-direction:column;gap:8px;padding:14px;overflow-y:auto;background:var(--df-surface-sunken);max-height:52vh}
 .bubble{max-width:72%;padding:10px 13px;border-radius:16px;font-size:14px;line-height:1.4;word-wrap:break-word;white-space:pre-wrap}
 .bubble small{display:block;font-size:10px;opacity:.65;margin-top:4px;text-align:right}
-.bubble.mine{align-self:flex-end;background:#2563eb;color:#fff;border-bottom-right-radius:5px}
-.bubble.theirs{align-self:flex-start;background:#fff;border:1px solid #eef2f6;color:#101828;border-bottom-left-radius:5px}
-.wa-compose{display:flex;gap:8px;align-items:flex-end;padding:12px;border-top:1px solid #eef2f6;background:#fff}
+.bubble.mine{align-self:flex-end;background:var(--df-accent);color:var(--df-accent-ink);border-bottom-right-radius:5px}
+.bubble.theirs{align-self:flex-start;background:var(--df-surface);border:1px solid var(--df-hairline);color:var(--df-ink-900);border-bottom-left-radius:5px}
+.wa-compose{display:flex;gap:8px;align-items:flex-end;padding:12px;border-top:1px solid var(--df-hairline);background:var(--df-surface)}
 .wa-compose textarea{flex:1;resize:none;margin:0;max-height:110px}
-.wa-compose button.icon{border:1px solid #e5e7eb;background:#f8fafc;border-radius:10px;width:40px;height:40px;font-size:17px;cursor:not-allowed;opacity:.5;flex:0 0 auto}
+.wa-compose button.icon{border:1px solid var(--df-hairline);background:var(--df-surface-sunken);border-radius:10px;width:40px;height:40px;font-size:17px;cursor:not-allowed;opacity:.5;flex:0 0 auto}
 @media(max-width:900px){.wa-shell{flex-direction:column}.wa-list-col{width:100%;max-height:220px;border-right:0}}
 </style>
 
@@ -136,6 +136,7 @@ $lastMsgId = $messages ? (int)end($messages)['id'] : 0;
 ds_page_header('WhatsApp Konuşmaları', ds_icon('chat',24), '',
     ($conv['contact_real_id']?ds_button('👥 Cari Kartı','contact_view.php?id='.(int)$conv['contact_real_id'],'secondary','','',true):'').
     ds_button('Tüm Konuşmalar','wa_conversations.php','secondary','','',true), false, true);
+ic_tabs('whatsapp');
 ?>
 
 <section class="df-card" style="padding:0;margin-top:var(--df-space-4)">

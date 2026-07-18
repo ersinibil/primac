@@ -263,18 +263,18 @@ function wa_message_log($phone,$direction,$body,$source=null,$mediaUrl=null,$med
 // wa_conversations.php hem wa_conversation_view.php tarafından ORTAK kullanılır (REOPEN-003,
 // 2026-07-07) — kopya kod olmasın diye tek fonksiyona çıkarıldı (bkz. activity_lib.php'deki aynı desen).
 function wa_conversation_list_html($rows, $activeId=0){
-    if(!$rows) return "<p class='muted' style='padding:14px'>Henüz WhatsApp konuşması yok.</p>";
+    if(!$rows) return "<p class='df-muted' style='padding:14px'>Henüz WhatsApp konuşması yok.</p>";
     $h = '';
     foreach($rows as $r){
         $preview = mb_substr((string)($r['last_message_preview']??''),0,60);
         $active = ((int)$r['id']===(int)$activeId) ? ' active' : '';
         $h .= "<a class='wa-list-item$active' href='wa_conversation_view.php?id=".(int)$r['id']."'>";
         $h .= "<div style='min-width:0'><b>".h($r['contact_name'] ?: $r['phone'])."</b><br>";
-        $h .= "<span class='muted' style='font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block'>";
+        $h .= "<span class='df-muted' style='font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block'>";
         $h .= ($r['last_direction']==='outbound'?'Siz: ':'').h($preview)."</span></div>";
         $h .= "<div style='text-align:right;white-space:nowrap'>";
         if((int)$r['unread_count']>0) $h .= "<span class='wa-badge'>".(int)$r['unread_count']."</span><br>";
-        $h .= "<small class='muted'>".h($r['last_message_at']?date('d.m H:i',strtotime($r['last_message_at'])):'')."</small></div></a>";
+        $h .= "<small class='df-muted'>".h($r['last_message_at']?date('d.m H:i',strtotime($r['last_message_at'])):'')."</small></div></a>";
     }
     return $h;
 }
@@ -296,7 +296,7 @@ function wa_new_conversation_picker_html($pdo){
 </div>
 <form class="wa-list-search" method="get" action="wa_conversation_view.php" style="display:flex;gap:6px">
   <input type="text" name="phone" placeholder="veya telefon yazın…" style="flex:1;margin:0">
-  <button type="submit" class="btn secondary small">Git</button>
+  <button type="submit" class="df-btn df-btn--secondary df-btn--sm">Git</button>
 </form>
 <?php
     return ob_get_clean();
@@ -516,6 +516,12 @@ function ic_tabs($active){
         ['key'=>'taleplerim','label'=>'Taleplerim','url'=>'taleplerim.php'],
         ['key'=>'duyurular','label'=>'Duyurular','url'=>'duyurular.php'],
     ];
+    // P0 (2026-07-18, Product Owner kararı): "WhatsApp'ı İletişim Merkezi'nde al" — wa_conversations.php
+    // zaten require_permission('users') ile korunuyor, o yüzden bu sekme de SADECE aynı yetkiye sahip
+    // kullanıcıya görünür (aksi halde herkes tıklayıp 403 görürdü). Yeni bir izin kavramı icat edilmedi.
+    if((function_exists('is_admin') && is_admin()) || (function_exists('user_can') && user_can('users'))){
+        $items[]=['key'=>'whatsapp','label'=>'WhatsApp','url'=>'wa_conversations.php'];
+    }
     $tabs=[];
     foreach($items as $it){ $tabs[]=['label'=>$it['label'],'url'=>$it['url'],'active'=>$active===$it['key']]; }
     ds_tabs($tabs);

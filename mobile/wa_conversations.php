@@ -17,6 +17,7 @@ $personnel=$pdo->query("SELECT name,phone FROM personnel WHERE COALESCE(active,1
 $contactsAll=$pdo->query("SELECT name,phone FROM contacts WHERE phone<>'' ORDER BY name")->fetchAll();
 
 topx('WhatsApp Konuşmaları');
+ic_tabs('whatsapp');
 ?>
 <div class="df-panel">
 <select onchange="if(this.value) window.location='wa_conversation_view.php?phone='+encodeURIComponent(this.value)">
