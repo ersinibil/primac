@@ -245,8 +245,21 @@ input,select,textarea{font-size:16px}
         $__icPages = ['messages.php','notifications.php','taleplerim.php','duyurular.php','wa_conversations.php','wa_conversation_view.php','wa_send_now.php'];
         $__icBadge = (int)$unreadMsgCount + (int)$notifCount;
         ?>
-        <a class="df-rail-link<?=(in_array($cur,$__icPages,true)?' is-active':'')?>" href="messages.php"><?=ds_icon('chat',18)?><span>İletişim Merkezi</span><?php if($__icBadge): ?><span class="df-count-badge" style="margin-left:auto"><?=$__icBadge>9?'9+':$__icBadge?></span><?php endif; ?></a>
         <div class="df-rail-categories">
+            <?php /* İLETİŞİM MERKEZİ — SON UI BİRLİĞİ (2026-07-18, Product Owner kararı): "sol
+            menüde İletişim Merkezi'ni İşler/Ticaret/Üretim & Stok/Finans/Yönetim ile aynı ana
+            modül görsel standardına getir, ayrı küçük satır gibi görünmesin." Önceden .df-rail-link
+            (Ana Sayfa ile aynı, ince yatay satır) kullanıyordu — artık .df-rail-cat-btn'in TAM
+            AYNI dikey ikon-üstte kutu stilini paylaşıyor (aşağıdaki 5 kategoriyle birebir aynı
+            CSS sınıfı), .df-rail-categories'in İLK öğesi olarak — tek fark alt menüsü olmaması
+            (tek hedefe giden doğrudan bağlantı, aç/kapa değil). */ ?>
+            <div class="df-rail-cat<?=(in_array($cur,$__icPages,true)?' is-open':'')?>" data-cat="iletisim">
+                <a class="df-rail-cat-btn" href="messages.php">
+                    <?=ds_icon('chat',22)?>
+                    <span>İletişim Merkezi</span>
+                    <?php if($__icBadge): ?><span class="df-count-badge"><?=$__icBadge>9?'9+':$__icBadge?></span><?php endif; ?>
+                </a>
+            </div>
             <?php foreach(nav_category_keys() as $__cat):
                 $__catItems = nav_items_for_category($__navCanSee, is_admin(), $__cat, 'web');
                 if(!$__catItems) continue; // boş kategori: hiç render edilmez (disabled/gizli davranış)

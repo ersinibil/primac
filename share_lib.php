@@ -262,19 +262,25 @@ function wa_message_log($phone,$direction,$body,$source=null,$mediaUrl=null,$med
 // Konuşma listesini tek bir HTML bloğuna çevirir — web'de iki-kolon shell'in sol panelinde hem
 // wa_conversations.php hem wa_conversation_view.php tarafından ORTAK kullanılır (REOPEN-003,
 // 2026-07-07) — kopya kod olmasın diye tek fonksiyona çıkarıldı (bkz. activity_lib.php'deki aynı desen).
+// İLETİŞİM MERKEZİ — SON UI BİRLİĞİ (2026-07-18): artık messages.php'nin ".msg-row" DS diliyle
+// BİREBİR aynı markup'ı üretir (avatar dairesi + isim + önizleme + rozet) — önceden kendi bespoke
+// ".wa-list-item" düz-satır deseni vardı, iki sohbet yüzeyi (OTS Sohbetler/WhatsApp) artık aynı
+// bileşen görünümünü paylaşıyor. CSS sınıfları (.msg-row/.av/.meta/.badge) wa_conversations.php
+// ve wa_conversation_view.php'nin kendi <style> bloklarında (messages.php ile birebir aynı,
+// sayfa-yerel kopya deseni — bkz. df-form-grid-2 ile aynı proje kuralı) tanımlı.
 function wa_conversation_list_html($rows, $activeId=0){
-    if(!$rows) return "<p class='df-muted' style='padding:14px'>Henüz WhatsApp konuşması yok.</p>";
+    if(!$rows) return "<p class='df-muted' style='padding:20px;text-align:center'>Henüz WhatsApp konuşması yok.</p>";
     $h = '';
     foreach($rows as $r){
-        $preview = mb_substr((string)($r['last_message_preview']??''),0,60);
+        $preview = mb_substr((string)($r['last_message_preview']??''),0,40);
         $active = ((int)$r['id']===(int)$activeId) ? ' active' : '';
-        $h .= "<a class='wa-list-item$active' href='wa_conversation_view.php?id=".(int)$r['id']."'>";
-        $h .= "<div style='min-width:0'><b>".h($r['contact_name'] ?: $r['phone'])."</b><br>";
-        $h .= "<span class='df-muted' style='font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block'>";
-        $h .= ($r['last_direction']==='outbound'?'Siz: ':'').h($preview)."</span></div>";
-        $h .= "<div style='text-align:right;white-space:nowrap'>";
-        if((int)$r['unread_count']>0) $h .= "<span class='wa-badge'>".(int)$r['unread_count']."</span><br>";
-        $h .= "<small class='df-muted'>".h($r['last_message_at']?date('d.m H:i',strtotime($r['last_message_at'])):'')."</small></div></a>";
+        $nm = $r['contact_name'] ?: $r['phone'];
+        $h .= "<a class='msg-row$active' href='wa_conversation_view.php?id=".(int)$r['id']."'>";
+        $h .= "<div class='av' style='background:".ic_avatar_color((int)$r['id'])."'>".h(mb_strtoupper(mb_substr($nm,0,1)))."</div>";
+        $h .= "<div class='meta'><b>".h($nm)."</b>";
+        $h .= "<small>".($r['last_direction']==='outbound'?'Siz: ':'').($preview!==''?h($preview):"<span style='opacity:.6'>".h($r['phone'])."</span>")."</small></div>";
+        if((int)$r['unread_count']>0) $h .= "<span class='badge green'>".(int)$r['unread_count']."</span>";
+        $h .= "</a>";
     }
     return $h;
 }
@@ -283,21 +289,28 @@ function wa_conversation_list_html($rows, $activeId=0){
 // başlamak için (personel/cari listesinden seç ya da telefon yaz) — web'de wa_conversations.php
 // VE wa_conversation_view.php ORTAK kullanır (aynı sol panel shell'i paylaştıkları için).
 // wa_send_now.php'nin eski tekil modunun kaldırılmasıyla ortaya çıkan boşluğu kapatır (REOPEN-003).
+// İLETİŞİM MERKEZİ — SON UI BİRLİĞİ (2026-07-18): "ham/native form görünümü" şikayetini gidermek
+// için artık purchase.php'deki "➕ Yeni Tedarikçi Ekle" ile AYNI kapalı-kutu deseni (tam genişlik
+// birincil buton + varsayılan gizli df-card paneli) — messages.php'nin "👥 Yeni Grup" birincil
+// buton diliyle de tutarlı.
 function wa_new_conversation_picker_html($pdo){
     $personnel=$pdo->query("SELECT name,phone FROM personnel WHERE COALESCE(active,1)=1 AND phone<>'' ORDER BY name")->fetchAll();
     $contacts=$pdo->query("SELECT name,phone FROM contacts WHERE phone<>'' ORDER BY name")->fetchAll();
     ob_start(); ?>
-<div class="wa-list-search" style="border-bottom:1px solid #eef2f6">
-  <select onchange="if(this.value) window.location='wa_conversation_view.php?phone='+encodeURIComponent(this.value)">
-    <option value="">➕ Yeni Konuşma — kişi seç…</option>
-    <?php if($personnel): ?><optgroup label="Personel"><?php foreach($personnel as $p): ?><option value="<?=h($p['phone'])?>"><?=h($p['name'])?> — <?=h($p['phone'])?></option><?php endforeach; ?></optgroup><?php endif; ?>
-    <?php if($contacts): ?><optgroup label="Cari"><?php foreach($contacts as $c): ?><option value="<?=h($c['phone'])?>"><?=h($c['name'])?> — <?=h($c['phone'])?></option><?php endforeach; ?></optgroup><?php endif; ?>
-  </select>
+<div style="margin:4px 6px 10px">
+  <button type="button" class="df-btn df-btn--primary" style="width:100%;justify-content:center" onclick="var b=document.getElementById('waNewConvBox');b.style.display=b.style.display==='none'?'block':'none'">➕ Yeni Konuşma</button>
+  <div id="waNewConvBox" class="df-card" style="display:none;background:var(--df-accent-soft);border-color:transparent;margin-top:8px;padding:10px">
+    <select onchange="if(this.value) window.location='wa_conversation_view.php?phone='+encodeURIComponent(this.value)" style="margin-bottom:8px">
+      <option value="">Kayıtlı kişi seç…</option>
+      <?php if($personnel): ?><optgroup label="Personel"><?php foreach($personnel as $p): ?><option value="<?=h($p['phone'])?>"><?=h($p['name'])?> — <?=h($p['phone'])?></option><?php endforeach; ?></optgroup><?php endif; ?>
+      <?php if($contacts): ?><optgroup label="Cari"><?php foreach($contacts as $c): ?><option value="<?=h($c['phone'])?>"><?=h($c['name'])?> — <?=h($c['phone'])?></option><?php endforeach; ?></optgroup><?php endif; ?>
+    </select>
+    <form method="get" action="wa_conversation_view.php" style="display:flex;gap:6px">
+      <input type="text" name="phone" placeholder="veya telefon numarası yazın…" style="flex:1;margin:0">
+      <button type="submit" class="df-btn df-btn--secondary df-btn--sm">Git</button>
+    </form>
+  </div>
 </div>
-<form class="wa-list-search" method="get" action="wa_conversation_view.php" style="display:flex;gap:6px">
-  <input type="text" name="phone" placeholder="veya telefon yazın…" style="flex:1;margin:0">
-  <button type="submit" class="df-btn df-btn--secondary df-btn--sm">Git</button>
-</form>
 <?php
     return ob_get_clean();
 }
@@ -510,19 +523,29 @@ function rate_limit_clear($file, $bucketKey){
 // dizininde kullanıyor, mobilin KENDİ kopyaları var (mobile/ altında).
 function ic_tabs($active){
     if(!function_exists('ds_tabs')) return;
+    // İLETİŞİM MERKEZİ — SON UI BİRLİĞİ (2026-07-18, Product Owner kararı): sıra artık
+    // Sohbetler | WhatsApp | Bildirimler | Taleplerim | Duyurular — WhatsApp, OTS Sohbetler'in
+    // hemen yanına (2. sıra) taşındı; önceden en sonda tek başına ayrı bir modül gibi duruyordu.
     $items=[
         ['key'=>'sohbetler','label'=>'Sohbetler','url'=>'messages.php'],
-        ['key'=>'bildirimler','label'=>'Bildirimler','url'=>'notifications.php'],
-        ['key'=>'taleplerim','label'=>'Taleplerim','url'=>'taleplerim.php'],
-        ['key'=>'duyurular','label'=>'Duyurular','url'=>'duyurular.php'],
     ];
-    // P0 (2026-07-18, Product Owner kararı): "WhatsApp'ı İletişim Merkezi'nde al" — wa_conversations.php
-    // zaten require_permission('users') ile korunuyor, o yüzden bu sekme de SADECE aynı yetkiye sahip
-    // kullanıcıya görünür (aksi halde herkes tıklayıp 403 görürdü). Yeni bir izin kavramı icat edilmedi.
+    // wa_conversations.php zaten require_permission('users') ile korunuyor, o yüzden bu sekme de
+    // SADECE aynı yetkiye sahip kullanıcıya görünür (aksi halde herkes tıklayıp 403 görürdü).
     if((function_exists('is_admin') && is_admin()) || (function_exists('user_can') && user_can('users'))){
         $items[]=['key'=>'whatsapp','label'=>'WhatsApp','url'=>'wa_conversations.php'];
     }
+    $items[]=['key'=>'bildirimler','label'=>'Bildirimler','url'=>'notifications.php'];
+    $items[]=['key'=>'taleplerim','label'=>'Taleplerim','url'=>'taleplerim.php'];
+    $items[]=['key'=>'duyurular','label'=>'Duyurular','url'=>'duyurular.php'];
     $tabs=[];
     foreach($items as $it){ $tabs[]=['label'=>$it['label'],'url'=>$it['url'],'active'=>$active===$it['key']]; }
     ds_tabs($tabs);
+}
+
+// İLETİŞİM MERKEZİ — SON UI BİRLİĞİ (2026-07-18): messages.php'nin sohbet baloncuğu avatar
+// renklendirmesi (eskiden messages.php'ye özel yerel fonksiyondu) — WhatsApp ekranları da AYNI
+// DS dilini kullansın diye buraya taşındı, tek renk paleti her iki sohbet yüzeyinde de tutarlı.
+function ic_avatar_color($id){
+    $c=['#3b82f6','#22c55e','#f97316','#8b5cf6','#ef4444','#14b8a6','#eab308','#ec4899'];
+    return $c[((int)$id) % count($c)];
 }

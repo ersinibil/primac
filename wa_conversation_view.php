@@ -111,56 +111,65 @@ if(!$conv){
 $lastMsgId = $messages ? (int)end($messages)['id'] : 0;
 ?>
 <style>
-.wa-shell{display:flex;border:1px solid var(--df-hairline);border-radius:var(--df-radius-lg);overflow:hidden;min-height:60vh}
-.wa-list-col{width:320px;flex:0 0 auto;border-right:1px solid var(--df-hairline);overflow-y:auto;max-height:75vh;background:var(--df-surface)}
-.wa-list-search{padding:10px;border-bottom:1px solid var(--df-hairline);position:sticky;top:0;background:var(--df-surface)}
-.wa-list-search input{margin:0}
-.wa-list-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px;border-bottom:1px solid var(--df-hairline);text-decoration:none;color:inherit}
-.wa-list-item:hover{background:var(--df-surface-sunken)}
-.wa-list-item.active{background:var(--df-accent-soft)}
-.wa-badge{background:var(--df-danger);color:#fff;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:800}
-.wa-thread-col{flex:1;min-width:0;display:flex;flex-direction:column}
-.wa-thread-head{padding:14px 16px;border-bottom:1px solid var(--df-hairline);display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
-.wa-thread{flex:1;display:flex;flex-direction:column;gap:8px;padding:14px;overflow-y:auto;background:var(--df-surface-sunken);max-height:52vh}
+/* İLETİŞİM MERKEZİ — SON UI BİRLİĞİ (2026-07-18): messages.php ile BİREBİR AYNI blok — bkz.
+   wa_conversations.php'deki aynı notu. Canlı polling JS'i (.bubble/#waThread yerine artık
+   .bubble/#waThread AYNI kalıyor, sadece dış çerçeve sınıfları isim değiştirdi) aşağıda
+   DOKUNULMADAN duruyor — WhatsApp gönderim altyapısı değişmedi. */
+.msg-wrap{display:grid;grid-template-columns:320px 1fr;gap:16px;align-items:start}
+.msg-list{background:var(--df-surface);border-radius:var(--df-radius-lg);box-shadow:var(--df-elevation-raised);padding:12px;max-height:74vh;overflow:auto}
+.msg-list .lbl{font-size:11px;color:var(--df-ink-500);letter-spacing:.06em;font-weight:900;margin:6px 8px;text-transform:uppercase}
+.msg-row{display:flex;align-items:center;gap:11px;padding:11px;border-radius:var(--df-radius-md);text-decoration:none;color:var(--df-ink-900)}
+.msg-row:hover{background:var(--df-surface-sunken)}
+.msg-row.active{background:var(--df-accent-soft)}
+.msg-row .av{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;color:#fff;flex:0 0 auto}
+.msg-row .meta{flex:1;min-width:0}
+.msg-row .meta b{display:block;font-size:14px}
+.msg-row .meta small{display:block;color:var(--df-ink-500);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msg-row .badge.green{background:var(--df-success);color:#06281a;min-width:22px;justify-content:center}
+.chat-panel{background:var(--df-surface);border-radius:var(--df-radius-lg);box-shadow:var(--df-elevation-raised);display:flex;flex-direction:column;min-height:74vh;max-height:74vh}
+.chat-head{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--df-hairline)}
+.chat-head .av{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;color:#fff;flex:0 0 auto}
+.chat-body{flex:1;overflow:auto;padding:18px;display:flex;flex-direction:column;gap:8px;background:var(--df-surface-sunken)}
 .bubble{max-width:72%;padding:10px 13px;border-radius:16px;font-size:14px;line-height:1.4;word-wrap:break-word;white-space:pre-wrap}
 .bubble small{display:block;font-size:10px;opacity:.65;margin-top:4px;text-align:right}
 .bubble.mine{align-self:flex-end;background:var(--df-accent);color:var(--df-accent-ink);border-bottom-right-radius:5px}
 .bubble.theirs{align-self:flex-start;background:var(--df-surface);border:1px solid var(--df-hairline);color:var(--df-ink-900);border-bottom-left-radius:5px}
-.wa-compose{display:flex;gap:8px;align-items:flex-end;padding:12px;border-top:1px solid var(--df-hairline);background:var(--df-surface)}
-.wa-compose textarea{flex:1;resize:none;margin:0;max-height:110px}
-.wa-compose button.icon{border:1px solid var(--df-hairline);background:var(--df-surface-sunken);border-radius:10px;width:40px;height:40px;font-size:17px;cursor:not-allowed;opacity:.5;flex:0 0 auto}
-@media(max-width:900px){.wa-shell{flex-direction:column}.wa-list-col{width:100%;max-height:220px;border-right:0}}
+.composer{display:flex;gap:10px;padding:14px;border-top:1px solid var(--df-hairline)}
+.composer textarea{flex:1;border:1px solid var(--df-hairline);border-radius:var(--df-radius-md);padding:11px;resize:none;font-family:inherit;font-size:14px;min-height:46px;max-height:140px;background:var(--df-surface);color:var(--df-ink-900)}
+.composer button{flex:0 0 auto}
+@media(max-width:960px){ .msg-wrap{grid-template-columns:1fr} .chat-panel,.msg-list{max-height:none} }
 </style>
 
 <?php
-ds_page_header('WhatsApp Konuşmaları', ds_icon('chat',24), '',
+ds_page_header('WhatsApp', ds_icon('chat',24), 'İletişim Merkezi',
     ($conv['contact_real_id']?ds_button('👥 Cari Kartı','contact_view.php?id='.(int)$conv['contact_real_id'],'secondary','','',true):'').
     ds_button('Tüm Konuşmalar','wa_conversations.php','secondary','','',true), false, true);
 ic_tabs('whatsapp');
 ?>
 
-<section class="df-card" style="padding:0;margin-top:var(--df-space-4)">
-<div class="wa-shell">
-  <div class="wa-list-col">
+<div class="msg-wrap" style="margin-top:16px">
+  <div class="msg-list">
     <?=wa_new_conversation_picker_html($pdo)?>
-    <form class="wa-list-search" method="get">
+    <form method="get" style="margin:0 6px 10px">
       <input type="hidden" name="id" value="<?=(int)($conv['id'] ?? 0)?>">
       <input type="text" name="listq" placeholder="İsim veya telefon ara…" value="<?=h($q)?>" onchange="this.form.submit()">
     </form>
+    <div class="lbl">Konuşmalar</div>
     <?=wa_conversation_list_html($convList, $conv['id'] ?? 0)?>
   </div>
-  <div class="wa-thread-col">
-    <div class="wa-thread-head">
-      <div>
-        <b><?=h($conv['contact_name'] ?: $conv['phone'])?></b><br>
-        <span class="df-muted" style="font-size:13px"><?=h($conv['phone'])?><?php if($conv['contact_type']): ?> · <?=h($conv['contact_type'])?><?php endif; ?></span>
-        <?php if(!empty($conv['authorized_person'])): ?><br><span class="df-muted" style="font-size:13px">Yetkili: <?=h($conv['authorized_person'])?></span><?php endif; ?>
+
+  <div class="chat-panel">
+    <div class="chat-head">
+      <div class="av" style="background:<?=ic_avatar_color((int)($conv['contact_real_id'] ?: crc32($conv['phone'])))?>"><?=h(mb_strtoupper(mb_substr($conv['contact_name'] ?: $conv['phone'],0,1)))?></div>
+      <div style="flex:1">
+        <b style="font-size:16px"><?=h($conv['contact_name'] ?: $conv['phone'])?></b>
+        <div class="df-muted" style="font-size:13px"><?=h($conv['phone'])?><?php if($conv['contact_type']): ?> · <?=h($conv['contact_type'])?><?php endif; ?><?php if(!empty($conv['authorized_person'])): ?> · Yetkili: <?=h($conv['authorized_person'])?><?php endif; ?></div>
       </div>
     </div>
 
-    <div class="wa-thread" id="waThread">
+    <div class="chat-body" id="waThread">
     <?php if(!$messages): ?>
-      <p class="df-muted">Bu konuşmada henüz mesaj yok.</p>
+      <div class="chat-empty">Henüz mesaj yok.<br>İlk mesajı siz yazın 👇</div>
     <?php else: foreach($messages as $m): $mine=$m['direction']==='outbound'; ?>
       <div class="bubble <?=$mine?'mine':'theirs'?>" data-id="<?=(int)$m['id']?>">
         <?=h($m['body'])?><?php if($m['media_url']): ?><br>📎 <a href="<?=h($m['media_url'])?>" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline"><?=h($m['media_type']?:'Medya')?></a><?php endif; ?>
@@ -169,15 +178,13 @@ ic_tabs('whatsapp');
     <?php endforeach; endif; ?>
     </div>
 
-    <div class="wa-compose">
-      <button type="button" class="icon" title="Yakında" disabled>😀</button>
-      <button type="button" class="icon" title="Yakında" disabled>📎</button>
+    <div class="composer">
+      <?=emoji_picker_html('waComposeText')?>
       <textarea id="waComposeText" rows="1" placeholder="Mesajınızı yazın…"></textarea>
-      <button type="button" class="df-btn df-btn--primary" id="waSendBtn">Gönder</button>
+      <button type="button" class="df-btn df-btn--primary" id="waSendBtn">➤ Gönder</button>
     </div>
   </div>
 </div>
-</section>
 
 <script>
 (function(){

@@ -378,12 +378,6 @@ require_once __DIR__.'/layout_top.php';
 .no-peer{background:var(--df-surface);border-radius:var(--df-radius-lg);box-shadow:var(--df-elevation-raised);padding:40px;text-align:center;color:var(--df-ink-500)}
 @media(max-width:960px){ .msg-wrap{grid-template-columns:1fr} .chat-panel,.msg-list{max-height:none} }
 </style>
-<?php
-function msg_av_color($id){
-    $c=['#3b82f6','#22c55e','#f97316','#8b5cf6','#ef4444','#14b8a6','#eab308','#ec4899'];
-    return $c[((int)$id) % count($c)];
-}
-?>
 <?php ds_page_header('İletişim Merkezi', ds_icon('chat',24), '', '', false, true); ?>
 <?php ic_tabs('sohbetler'); ?>
 
@@ -401,7 +395,7 @@ function msg_av_color($id){
                 $ticon = ($t['type']==='job') ? '📋' : (($t['type']==='cari') ? '🏢' : '👥');
             ?>
                 <a class="msg-row <?=$tactive?'active':''?>" href="messages.php?thread=<?=(int)$t['id']?>">
-                    <div class="av" style="background:<?=msg_av_color((int)$t['id']+99)?>"><?=$ticon?></div>
+                    <div class="av" style="background:<?=ic_avatar_color((int)$t['id']+99)?>"><?=$ticon?></div>
                     <div class="meta">
                         <b><?=h($t['title'])?></b>
                         <small><?=$t['last_msg'] ? h(mb_substr($t['last_msg'],0,40)) : '<span style="opacity:.6">Yeni grup</span>'?></small>
@@ -419,7 +413,7 @@ function msg_av_color($id){
             $active = ($with === (int)$r['id']);
         ?>
             <a class="msg-row <?=$active?'active':''?>" href="messages.php?u=<?=(int)$r['id']?>">
-                <div class="av" style="background:<?=msg_av_color($r['id'])?>"><?=h(mb_strtoupper(mb_substr($nm,0,1)))?></div>
+                <div class="av" style="background:<?=ic_avatar_color($r['id'])?>"><?=h(mb_strtoupper(mb_substr($nm,0,1)))?></div>
                 <div class="meta">
                     <b><?=h($nm)?></b>
                     <small><?=$r['last_msg'] ? h(mb_substr($r['last_msg'],0,40)) : '<span style="opacity:.6">'.h($r['role'] ?: 'Yeni sohbet').'</span>'?></small>
@@ -470,7 +464,7 @@ function msg_av_color($id){
         ?>
             <div class="chat-panel">
                 <div class="chat-head">
-                    <div class="av" style="background:<?=msg_av_color((int)$tgroup['id']+99)?>"><?=$gicon?></div>
+                    <div class="av" style="background:<?=ic_avatar_color((int)$tgroup['id']+99)?>"><?=$gicon?></div>
                     <div style="flex:1">
                         <b style="font-size:16px"><?=h($tgroup['title'])?></b>
                         <div class="muted"><?=(int)$tmembers?> üye · <?=$tgroup['type']==='job'?'İş sohbeti':($tgroup['type']==='cari'?'Cari sohbeti':'Grup')?></div>
@@ -583,7 +577,7 @@ function delMsgT(id){
     ?>
         <div class="chat-panel">
             <div class="chat-head">
-                <div class="av" style="background:<?=msg_av_color($peer['id'])?>"><?=h(mb_strtoupper(mb_substr($pname,0,1)))?></div>
+                <div class="av" style="background:<?=ic_avatar_color($peer['id'])?>"><?=h(mb_strtoupper(mb_substr($pname,0,1)))?></div>
                 <div style="flex:1">
                     <b style="font-size:16px"><?=h($pname)?></b>
                     <div class="muted"><?=h($peer['role'] ?: 'Kullanıcı')?></div>

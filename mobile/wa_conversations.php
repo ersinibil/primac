@@ -16,36 +16,52 @@ $rows=$st->fetchAll();
 $personnel=$pdo->query("SELECT name,phone FROM personnel WHERE COALESCE(active,1)=1 AND phone<>'' ORDER BY name")->fetchAll();
 $contactsAll=$pdo->query("SELECT name,phone FROM contacts WHERE phone<>'' ORDER BY name")->fetchAll();
 
-topx('WhatsApp Konuşmaları');
+topx('WhatsApp');
 ic_tabs('whatsapp');
 ?>
-<div class="df-panel">
-<select onchange="if(this.value) window.location='wa_conversation_view.php?phone='+encodeURIComponent(this.value)">
-    <option value="">➕ Yeni Konuşma — kişi seç…</option>
-    <?php if($personnel): ?><optgroup label="Personel"><?php foreach($personnel as $p): ?><option value="<?=h($p['phone'])?>"><?=h($p['name'])?> — <?=h($p['phone'])?></option><?php endforeach; ?></optgroup><?php endif; ?>
-    <?php if($contactsAll): ?><optgroup label="Cari"><?php foreach($contactsAll as $c): ?><option value="<?=h($c['phone'])?>"><?=h($c['name'])?> — <?=h($c['phone'])?></option><?php endforeach; ?></optgroup><?php endif; ?>
-</select>
-<form method="get" action="wa_conversation_view.php" style="display:flex;gap:6px;margin-top:8px">
-<input type="text" name="phone" placeholder="veya telefon yazın…" style="flex:1;margin:0">
-<button type="submit" class="df-btn df-btn--secondary">Git</button>
-</form>
+<style>
+/* İLETİŞİM MERKEZİ — SON UI BİRLİĞİ (2026-07-18): mobile/messages.php'nin .chat-row/.av/.meta/
+   .unread-badge DS diliyle BİREBİR AYNI — önceden genel-amaçlı ds_list_item() (görev/iş/stok
+   listeleriyle aynı bileşen) kullanıyordu, sohbet yüzeyi kendi diline sahip değildi. */
+.chat-row{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:12px;text-decoration:none;color:#fff;min-width:0;margin-top:10px}
+.chat-row .av{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;color:#fff;flex:0 0 auto;font-size:17px}
+.chat-row .meta{flex:1;min-width:0}
+.chat-row .meta b{display:block;font-size:15px}
+.chat-row .meta small{display:block;color:var(--c-muted,#94a3b8);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.unread-badge{background:#16a34a;color:#fff;border-radius:10px;padding:3px 9px;font-size:12px;font-weight:800;flex:0 0 auto}
+</style>
+<?php function wa_avatar_color($id){ $c=['#3b82f6','#22c55e','#f97316','#8b5cf6','#ef4444','#14b8a6','#eab308','#ec4899']; return $c[((int)$id) % count($c)]; } ?>
+
+<div class="df-panel" style="padding:10px">
+  <a class="df-btn df-btn--primary" href="javascript:void(0)" style="width:100%;justify-content:center" onclick="var b=document.getElementById('waNewConvBox');b.style.display=b.style.display==='none'?'block':'none'">➕ Yeni Konuşma</a>
+  <div id="waNewConvBox" style="display:none;margin-top:10px">
+    <select onchange="if(this.value) window.location='wa_conversation_view.php?phone='+encodeURIComponent(this.value)">
+        <option value="">Kayıtlı kişi seç…</option>
+        <?php if($personnel): ?><optgroup label="Personel"><?php foreach($personnel as $p): ?><option value="<?=h($p['phone'])?>"><?=h($p['name'])?> — <?=h($p['phone'])?></option><?php endforeach; ?></optgroup><?php endif; ?>
+        <?php if($contactsAll): ?><optgroup label="Cari"><?php foreach($contactsAll as $c): ?><option value="<?=h($c['phone'])?>"><?=h($c['name'])?> — <?=h($c['phone'])?></option><?php endforeach; ?></optgroup><?php endif; ?>
+    </select>
+    <form method="get" action="wa_conversation_view.php" style="display:flex;gap:6px">
+    <input type="text" name="phone" placeholder="veya telefon numarası yazın…" style="flex:1;margin:0">
+    <button type="submit" class="df-btn df-btn--secondary">Git</button>
+    </form>
+  </div>
 </div>
-<form method="get" style="margin-bottom:10px">
+<form method="get" style="margin-bottom:4px">
 <input type="text" name="q" placeholder="İsim veya telefon ara…" value="<?=h($q)?>" onchange="this.form.submit()">
 </form>
 <?php if(!$rows): ?>
 <?php ds_empty_state('Henüz WhatsApp konuşması yok.', null, ds_icon('chat',32)); ?>
-<?php else: ?>
-<div class="df-list">
-<?php foreach($rows as $r):
-  $preview=mb_substr((string)($r['last_message_preview']??''),0,60);
-  $__title=h($r['contact_name'] ?: $r['phone']);
-  $__desc=h(($r['last_direction']==='outbound'?'Siz: ':'').$preview);
-  $__meta='';
-  if((int)$r['unread_count']>0) $__meta.='<span class="df-badge df-badge--danger">'.(int)$r['unread_count'].'</span>';
-  $__meta.='<span class="df-list-row-due">'.h($r['last_message_at']?date('d.m H:i',strtotime($r['last_message_at'])):'').'</span>';
-  ds_list_item($__title, 'wa_conversation_view.php?id='.(int)$r['id'], $__desc, $__meta);
-endforeach; ?>
-</div>
-<?php endif; ?>
+<?php else: foreach($rows as $r):
+  $preview=mb_substr((string)($r['last_message_preview']??''),0,42);
+  $nm=$r['contact_name'] ?: $r['phone'];
+?>
+<a class="chat-row" href="wa_conversation_view.php?id=<?=(int)$r['id']?>">
+  <div class="av" style="background:<?=wa_avatar_color((int)$r['id'])?>"><?=h(mb_strtoupper(mb_substr($nm,0,1)))?></div>
+  <div class="meta">
+    <b><?=h($nm)?></b>
+    <small><?=($r['last_direction']==='outbound'?'Siz: ':'').($preview!==''?h($preview):'<span style="opacity:.6">'.h($r['phone']).'</span>')?></small>
+  </div>
+  <?php if((int)$r['unread_count']>0): ?><span class="unread-badge"><?=(int)$r['unread_count']?></span><?php endif; ?>
+</a>
+<?php endforeach; endif; ?>
 <?php botx(); ?>

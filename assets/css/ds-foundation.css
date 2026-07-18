@@ -677,7 +677,13 @@ body.nav-compact .df-rail-link:focus-visible{outline:0;box-shadow:var(--df-focus
    sınıf/aria toggle'ından ibaret, görsel düzenden bağımsız). Aktif/hover durumu mevcut görsel dile
    (nötr sunken gri) aynen bırakıldı, yeni bir renk icat edilmedi. */
 body.nav-compact .df-rail-categories{display:flex;flex-direction:column;gap:0;margin-top:var(--df-space-2);padding-top:var(--df-space-3);border-top:1px solid var(--df-hairline)}
-body.nav-compact .df-rail-cat-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;width:100%;padding:16px 8px;border:0;border-bottom:1px solid var(--df-hairline);background:transparent;border-radius:0;font:inherit;font-size:13px;font-weight:600;color:var(--df-ink-900);cursor:pointer;text-align:center}
+body.nav-compact .df-rail-cat-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;width:100%;padding:16px 8px;border:0;border-bottom:1px solid var(--df-hairline);background:transparent;border-radius:0;font:inherit;font-size:13px;font-weight:600;color:var(--df-ink-900);cursor:pointer;text-align:center;text-decoration:none;position:relative}
+/* İLETİŞİM MERKEZİ — SON UI BİRLİĞİ (2026-07-18): İletişim Merkezi artık bu SINIFI bir <a> üzerinde
+   kullanıyor (submenu'sü olmayan tek-hedef bağlantı, 5 kategoriyle birebir aynı kutu görünümü) —
+   yukarıdaki text-decoration:none/position:relative eklentisi SADECE bunun için gerekliydi
+   (buton zaten altını çizmiyordu, position:relative rozet konumlandırması için). Rozet mobile
+   bottomnav'daki aynı desenle tutarlı (bkz. .df-m-bottomnav-link .df-count-badge). */
+body.nav-compact .df-rail-cat-btn .df-count-badge{position:absolute;top:8px;right:8px}
 body.nav-compact .df-rail-cat:last-child .df-rail-cat-btn{border-bottom:0}
 body.nav-compact .df-rail-cat-btn:hover{background:var(--df-surface-sunken)}
 body.nav-compact .df-rail-cat-btn:focus-visible{outline:0;box-shadow:var(--df-focus-ring)}

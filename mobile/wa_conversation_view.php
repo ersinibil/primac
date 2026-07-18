@@ -95,24 +95,34 @@ if(!$conv){ echo ds_alert('danger','Konuşma bulunamadı.'); botx(); exit; }
 $lastMsgId = $messages ? (int)end($messages)['id'] : 0;
 ?>
 <style>
-/* NOT (DS migrasyonu 2026-07-18): bu blok BİLEREK dokunulmadı — canlı güncelleme (3sn polling)
- * yapan JS aşağıda .bubble/.mine/.theirs/#waThread/p.muted seçicilerine bağlı. Risk yönetimi
- * gereği (CLAUDE.md/PROJECT_RULES.md) sohbet balonu alanı legacy bırakıldı, sadece dış çerçeve
- * (üst bilgi paneli + kısayol kartları) DS'e taşındı. */
-.wa-thread{display:flex;flex-direction:column;gap:8px;padding:4px 2px;max-height:52vh;overflow-y:auto}
+/* İLETİŞİM MERKEZİ — SON UI BİRLİĞİ (2026-07-18): mobile/messages.php'nin sohbet balonu + sabit
+ * (fixed) klavye-farkında composer deseniyle BİREBİR AYNI (chat-mode, visualViewport pin/unpin) —
+ * önceden sayfa-içi sabit-olmayan bir kompozisyon çubuğuydu, artık native sohbet hissi veriyor.
+ * WhatsApp gönderim/polling JS'i (.bubble/#waThread seçicileri, ajax_send/poll uçları) HİÇ
+ * değişmedi — sadece dış çerçeve ve kompozisyon çubuğunun konumlanması DS'e taşındı.
+ */
 .bubble{max-width:80%;padding:10px 13px;border-radius:18px;font-size:15px;line-height:1.35;word-wrap:break-word;white-space:pre-wrap}
 .bubble small{display:block;font-size:10px;opacity:.6;margin-top:3px;text-align:right}
 .bubble.mine{align-self:flex-end;background:#2563eb;color:#fff;border-bottom-right-radius:5px}
 .bubble.theirs{align-self:flex-start;background:rgba(255,255,255,.12);border-bottom-left-radius:5px}
-.wa-compose{display:flex;gap:8px;align-items:flex-end;padding:10px 0 0}
-.wa-compose textarea{flex:1;resize:none;margin:0;max-height:100px}
-.wa-compose button.icon{border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);color:#fff;border-radius:10px;width:40px;height:40px;font-size:16px;cursor:not-allowed;opacity:.5;flex:0 0 auto}
+.thread{display:flex;flex-direction:column;gap:8px;padding-bottom:8px}
+.composer{position:fixed;left:0;right:0;bottom:0;background:#071326;border-top:1px solid rgba(255,255,255,.12);padding:8px 8px calc(8px + env(safe-area-inset-bottom));z-index:1001}
+.composer .wrap{max-width:520px;margin:auto;display:flex;gap:8px;align-items:flex-end}
+.composer textarea{flex:1;margin:0;resize:none;max-height:100px}
+.composer button.send{flex:0 0 auto;width:50px;height:46px;border-radius:14px;font-size:18px}
+body.chat-mode{padding-bottom:0}
+body.chat-mode .thread{padding-bottom:88px}
 </style>
 
 <div class="df-panel">
-<b><?=h($conv['contact_name'] ?: $conv['phone'])?></b><br>
-<span class="muted"><?=h($conv['phone'])?><?php if($conv['contact_type']): ?> · <?=h($conv['contact_type'])?><?php endif; ?></span>
-<?php if(!empty($conv['authorized_person'])): ?><br><span class="muted">Yetkili: <?=h($conv['authorized_person'])?></span><?php endif; ?>
+<div style="display:flex;align-items:center;gap:12px">
+  <div style="width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;color:#fff;flex:0 0 auto;background:<?=wa_avatar_color2((int)($conv['contact_real_id'] ?: crc32($conv['phone'])))?>"><?=h(mb_strtoupper(mb_substr($conv['contact_name'] ?: $conv['phone'],0,1)))?></div>
+  <div style="min-width:0">
+    <b><?=h($conv['contact_name'] ?: $conv['phone'])?></b><br>
+    <span class="muted"><?=h($conv['phone'])?><?php if($conv['contact_type']): ?> · <?=h($conv['contact_type'])?><?php endif; ?></span>
+    <?php if(!empty($conv['authorized_person'])): ?><br><span class="muted">Yetkili: <?=h($conv['authorized_person'])?></span><?php endif; ?>
+  </div>
+</div>
 </div>
 
 <div style="display:flex;gap:8px;margin-bottom:10px">
@@ -120,8 +130,7 @@ $lastMsgId = $messages ? (int)end($messages)['id'] : 0;
 <?=ds_button(ds_icon('chat',15).' Tüm Konuşmalar','wa_conversations.php','secondary','','style="flex:1;justify-content:center"',true)?>
 </div>
 
-<div class="df-panel">
-<div class="wa-thread" id="waThread">
+<div class="thread" id="waThread">
 <?php if(!$messages): ?>
 <p class="muted">Bu konuşmada henüz mesaj yok.</p>
 <?php else: foreach($messages as $m): $mine=$m['direction']==='outbound'; ?>
@@ -131,25 +140,49 @@ $lastMsgId = $messages ? (int)end($messages)['id'] : 0;
 </div>
 <?php endforeach; endif; ?>
 </div>
-<div class="wa-compose">
-  <button type="button" class="icon" title="Yakında" disabled>😀</button>
-  <button type="button" class="icon" title="Yakında" disabled>📎</button>
-  <textarea id="waComposeText" rows="1" placeholder="Mesajınızı yazın…"></textarea>
-  <button type="button" class="df-btn df-btn--primary" id="waSendBtn">Gönder</button>
+
+<div class="composer" id="waComposer">
+  <div class="wrap">
+    <?=emoji_picker_html('waComposeText', true)?>
+    <textarea id="waComposeText" rows="1" placeholder="Mesajınızı yazın…" oninput="this.style.height='';this.style.height=this.scrollHeight+'px'"></textarea>
+    <button type="button" class="df-btn df-btn--primary send" id="waSendBtn">➤</button>
+  </div>
 </div>
-</div>
+
+<?php function wa_avatar_color2($id){ $c=['#3b82f6','#22c55e','#f97316','#8b5cf6','#ef4444','#14b8a6','#eab308','#ec4899']; return $c[((int)$id) % count($c)]; } ?>
 
 <script>
 (function(){
+  document.body.classList.add('chat-mode');
   var convId = <?=(int)($conv['id'] ?? 0)?>;
   var phone = <?=json_encode($conv['phone'])?>;
   var lastId = <?=(int)$lastMsgId?>;
   var thread = document.getElementById('waThread');
   var textEl = document.getElementById('waComposeText');
   var sendBtn = document.getElementById('waSendBtn');
+  var composer = document.getElementById('waComposer');
 
-  function scrollBottom(){ thread.scrollTop = thread.scrollHeight; }
+  function scrollBottom(){ window.scrollTo(0, document.body.scrollHeight); }
   scrollBottom();
+
+  // mobile/messages.php ile AYNI klavye-pin deseni (visualViewport) — kompozisyon çubuğu
+  // klavye açıkken görünür alanın tam dibinde kalır.
+  function pinComposer(){
+    if(!composer||!window.visualViewport) return;
+    var v=window.visualViewport;
+    composer.style.top=(v.offsetTop+v.height-composer.offsetHeight)+'px';
+    composer.style.bottom='auto'; composer.style.paddingBottom='8px';
+  }
+  function unpinComposer(){
+    if(!composer) return;
+    composer.style.top='auto'; composer.style.bottom='0'; composer.style.paddingBottom='';
+  }
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize', function(){ pinComposer(); scrollBottom(); });
+    window.visualViewport.addEventListener('scroll', pinComposer);
+  }
+  textEl.addEventListener('focus', function(){ setTimeout(function(){ pinComposer(); scrollBottom(); },250); });
+  textEl.addEventListener('blur', function(){ setTimeout(unpinComposer,100); });
 
   function escHtml(s){ return String(s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
 
