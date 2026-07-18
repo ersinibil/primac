@@ -92,6 +92,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['del_msg'])) {
     redirect($redir);
 }
 
+/* --- POST: sohbeti temizle (WEB/MOBİL PARİTE 2026-07-19) — mobile/messages.php'nin del_conv
+   aksiyonuyla BİREBİR aynı: iki taraf arasındaki TÜM internal_messages kayıtları silinir. Ek
+   yetki kontrolü gerekmiyor — sorgu zaten $me'nin taraf olduğu satırlarla sınırlı (kendi sohbet
+   geçmişi dışında hiçbir şeye erişemez), mobil sürüm de aynı şekilde çalışıyor. */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['del_conv'])) {
+    $o = (int)$_POST['del_conv'];
+    $isAjax = !empty($_POST['ajax']);
+    try {
+        $pdo->prepare("DELETE FROM internal_messages WHERE (sender_user_id=? AND receiver_user_id=?) OR (sender_user_id=? AND receiver_user_id=?)")
+            ->execute([$me,$o,$o,$me]);
+    } catch(Throwable $e){}
+    if ($isAjax) { header('Content-Type: application/json'); echo json_encode(['ok'=>true]); exit; }
+    redirect('messages.php');
+}
+
 /* --- POST: mesaj düzenle (sadece kendi metin mesajları) --- */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_msg'])) {
     $eid = (int)$_POST['edit_msg'];
@@ -582,6 +597,7 @@ function delMsgT(id){
                     <b style="font-size:16px"><?=h($pname)?></b>
                     <div class="muted"><?=h($peer['role'] ?: 'Kullanıcı')?></div>
                 </div>
+                <button type="button" onclick="delConv(<?=(int)$with?>)" style="background:rgba(248,113,113,.15);color:#f87171;border:0;border-radius:12px;padding:8px 12px;font-weight:700;font-size:13px;cursor:pointer">🗑 Temizle</button>
             </div>
 
             <div class="chat-body" id="chatBody">
@@ -668,6 +684,14 @@ function delMsg(id){
       if(d&&d.ok){ var b=document.getElementById('msg'+id); if(b)b.remove(); }
       else alert(d&&d.error?d.error:'Silinemedi.');
     }).catch(function(){ alert('Bağlantı hatası.'); });
+}
+/* WEB/MOBİL PARİTE (2026-07-19) — mobile/messages.php::delConv() ile AYNI backend aksiyonu
+   (del_conv), aynı onay diyaloğu, aynı "tüm sohbet geçmişini sil" semantiği. */
+function delConv(uid){
+  if(!confirm('Bu kişiyle tüm sohbet silinsin mi? Geri alınamaz.')) return;
+  var fd=new FormData(); fd.append('del_conv',uid); fd.append('ajax','1');
+  fetch('messages.php',{method:'POST',headers:{'X-CSRF-Token':window.CSRF_TOKEN},body:fd,credentials:'same-origin'})
+    .then(function(){ location.href='messages.php'; });
 }
 </script>
 
