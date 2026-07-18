@@ -2,6 +2,23 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
+## fix+feat: MOBİL SHELL/NAV KAPANIŞI (2026-07-18, commit c215360..2dabae1)
+Gerçek cihaz testinde bulunan "sistematik shell/navigation sorunları" denetimi. Sonuç: çoğu madde
+bu oturumun ÖNCEKİ turlarında zaten çözülmüştü (mekanik tarama ile doğrulandı, gereksiz tekrar
+yapılmadı) — Global shell/bottom-nav (66 gerçek sayfa taranmış, 0 eksik; 2 redirect-only utility
+dosya istisna), Sohbet/WhatsApp composer (zaten kodda mevcut), İletişim Merkezi sekme taşması
+(zaten P0'da çözülmüş), Bildirimler UX (line-clamp+"Devamını gör" zaten var). Gerçekten eksik olan
+iki şey düzeltildi:
+1. **Geri tuşu** — `topx($title,$backUrl=null)`: verilirse deterministik hedefe gider, verilmezse
+   eski history.back() davranışı korunur. Sohbet/Grup Detayı, WhatsApp Detayı, Bildirim Detayı,
+   Personel Detayı artık mantıksal üst ekranlarına döner.
+2. **Mobil Menü** — Launcher/Pin modeli (Sabitlenenler + her satırda pin ➕/✕ + ikinci "Modül ara"
+   kutusu) kaldırıldı, web Rail'in 2026-07-17'de zaten uyguladığı kategori IA'sı (nav_category_keys()
+   TEK kaynak) mobile/more.php'ye taşındı — 2 seviyeli (kategori kutuları → aksiyon listesi).
+
+WhatsApp mesaj düzenle/sil: backend'de yok (API'nin desteklemediği bir yetenek) — sahte UI
+eklenmedi. OTS iç mesajlaşması (messages.php) edit/sil zaten web+mobil paritede.
+
 ## fix: P0 KAPANIŞ PAKETİ — 5 P0 engeli (2026-07-18, commit 275a95f..bf15fda)
 Master Kapanış Denetimi'nde doğrulanan 5 P0'ın nokta atışı kapatılması (pilot öncesi son toparlama,
 yeni özellik açılmadı):
