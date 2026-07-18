@@ -12,28 +12,28 @@ $purchaseId=(int)($_GET['purchase_id'] ?? 0);
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['create_alloc'])){
     try{
         cpa_alloc_create($pdo, $u['id']??0, $purchaseId, $_POST['stock_item_id']??0, $_POST['customer_id']??0, $_POST['qty']??0, $_POST['notes']??'');
-        $_SESSION['cpa_alloc_ok']='Tahsis oluşturuldu.';
+        $_SESSION['cpa_alloc_ok']='Müşteriye ayrıldı.';
     }catch(Throwable $e){ $_SESSION['cpa_alloc_er']=$e->getMessage(); }
     header('Location: cpa_allocation.php?purchase_id='.$purchaseId); exit;
 }
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['reduce_alloc'])){
     try{
         cpa_alloc_reduce($pdo, $u['id']??0, $_POST['alloc_id']??0, $_POST['new_qty']??0);
-        $_SESSION['cpa_alloc_ok']='Tahsis miktarı güncellendi.';
+        $_SESSION['cpa_alloc_ok']='Ayrılan miktar güncellendi.';
     }catch(Throwable $e){ $_SESSION['cpa_alloc_er']=$e->getMessage(); }
     header('Location: cpa_allocation.php?purchase_id='.$purchaseId); exit;
 }
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['cancel_alloc'])){
     try{
         cpa_alloc_cancel($pdo, $u['id']??0, $_POST['alloc_id']??0);
-        $_SESSION['cpa_alloc_ok']='Tahsis iptal edildi.';
+        $_SESSION['cpa_alloc_ok']='Ayırma iptal edildi.';
     }catch(Throwable $e){ $_SESSION['cpa_alloc_er']=$e->getMessage(); }
     header('Location: cpa_allocation.php?purchase_id='.$purchaseId); exit;
 }
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['transfer_alloc'])){
     try{
         cpa_alloc_transfer($pdo, $u['id']??0, $_POST['alloc_id']??0, $_POST['new_customer_id']??0, $_POST['transfer_qty']??0);
-        $_SESSION['cpa_alloc_ok']='Tahsis aktarıldı.';
+        $_SESSION['cpa_alloc_ok']='Başka müşteriye aktarıldı.';
     }catch(Throwable $e){ $_SESSION['cpa_alloc_er']=$e->getMessage(); }
     header('Location: cpa_allocation.php?purchase_id='.$purchaseId); exit;
 }
@@ -45,7 +45,8 @@ if($purchaseId){
     $purchase=$ps->fetch();
 }
 
-topx('Tahsis Yönetimi');
+topx('Müşteriye Ayır');
+$__preselectItem = (int)($_GET['stock_item_id'] ?? 0);
 if(!empty($_SESSION['cpa_alloc_ok'])){ echo ds_alert('success',$_SESSION['cpa_alloc_ok']); unset($_SESSION['cpa_alloc_ok']); }
 if(!empty($_SESSION['cpa_alloc_er'])){ echo ds_alert('danger',$_SESSION['cpa_alloc_er']); unset($_SESSION['cpa_alloc_er']); }
 
@@ -68,7 +69,7 @@ try{ $customers=$pdo->query("SELECT id,name FROM contacts ORDER BY name")->fetch
 </div>
 
 <div class="df-panel" style="margin-top:12px">
-  <b><?=ds_icon('box',16)?> Alış Satırları — Tahsis Durumu</b>
+  <b><?=ds_icon('box',16)?> Alış Satırları — Müşteriye Ayrılan</b>
   <?php if(!$lineSummary): ?>
   <?php ds_empty_state('Bu alışa bağlı stok hareketi bulunamadı.'); ?>
   <?php else: foreach($lineSummary as $l): ?>
@@ -76,7 +77,7 @@ try{ $customers=$pdo->query("SELECT id,name FROM contacts ORDER BY name")->fetch
     <b><?=h($l['product_name'])?></b>
     <div class="df-list-row-meta" style="margin-top:6px">
       <span>Alınan: <?=stock_qty_fmt($l['purchased_qty'])?> <?=h($l['unit'])?></span>
-      <span>Tahsisli: <?=stock_qty_fmt($l['allocated_from_purchase'])?> <?=h($l['unit'])?></span>
+      <span>Müşteriye Ayrılan: <?=stock_qty_fmt($l['allocated_from_purchase'])?> <?=h($l['unit'])?></span>
     </div>
     <div style="margin-top:4px;font-weight:800;color:var(--df-success-ink)">Serbest: <?=stock_qty_fmt($l['free_on_purchase'])?> <?=h($l['unit'])?></div>
   </div>
@@ -84,13 +85,13 @@ try{ $customers=$pdo->query("SELECT id,name FROM contacts ORDER BY name")->fetch
 </div>
 
 <?php if($canEdit && $lineSummary): ?>
-<details class="df-panel" style="margin-top:12px"><summary style="font-weight:900;cursor:pointer"><?=ds_icon('plus',14)?> Yeni Tahsis Oluştur</summary>
+<details class="df-panel" style="margin-top:12px" <?=$__preselectItem?'open':''?>><summary style="font-weight:900;cursor:pointer"><?=ds_icon('plus',14)?> Müşteriye Ayır</summary>
 <form method="post" style="margin-top:10px">
 <input type="hidden" name="create_alloc" value="1">
 <label>Ürün (Bu Alıştan)</label>
 <select name="stock_item_id" required>
 <?php foreach($lineSummary as $l): ?>
-<option value="<?=(int)$l['stock_item_id']?>"><?=h($l['product_name'])?> — serbest <?=stock_qty_fmt($l['free_on_purchase'])?> <?=h($l['unit'])?></option>
+<option value="<?=(int)$l['stock_item_id']?>" <?=$__preselectItem===(int)$l['stock_item_id']?'selected':''?>><?=h($l['product_name'])?> — serbest <?=stock_qty_fmt($l['free_on_purchase'])?> <?=h($l['unit'])?></option>
 <?php endforeach; ?>
 </select>
 <label>Müşteri</label>
@@ -102,15 +103,15 @@ try{ $customers=$pdo->query("SELECT id,name FROM contacts ORDER BY name")->fetch
 <input type="number" step="0.001" min="0.001" name="qty" required>
 <label>Not <small class="muted">(opsiyonel)</small></label>
 <input name="notes">
-<button class="df-btn df-btn--primary df-btn--lg" style="width:100%;margin-top:8px">🎯 Tahsis Et</button>
+<button class="df-btn df-btn--primary df-btn--lg" style="width:100%;margin-top:8px">🤝 Müşteriye Ayır</button>
 </form>
 </details>
 <?php endif; ?>
 
 <div class="df-panel" style="margin-top:12px">
-<b><?=ds_icon('info',16)?> Bu Alıştan Yapılan Tahsisler</b>
+<b><?=ds_icon('info',16)?> Bu Alıştan Ayrılanlar</b>
 <?php if(!$allocations): ?>
-<?php ds_empty_state('Henüz tahsis yapılmamış.'); ?>
+<?php ds_empty_state('Henüz müşteriye ayrılmamış.'); ?>
 <?php else: foreach($allocations as $a):
     $remaining=(float)$a['allocated_qty']-(float)$a['consumed_qty'];
 ?>
@@ -121,7 +122,7 @@ try{ $customers=$pdo->query("SELECT id,name FROM contacts ORDER BY name")->fetch
   </div>
   <div class="df-list-row-desc" style="margin-top:4px"><?=h($a['product_name'])?></div>
   <div class="df-list-row-meta" style="margin-top:4px">
-    <span>Tahsis: <?=stock_qty_fmt($a['allocated_qty'])?> <?=h($a['unit'])?></span>
+    <span>Ayrılan: <?=stock_qty_fmt($a['allocated_qty'])?> <?=h($a['unit'])?></span>
     <span>Tüketilen: <?=stock_qty_fmt($a['consumed_qty'])?> <?=h($a['unit'])?></span>
   </div>
   <div style="margin-top:4px;font-weight:800">Kalan: <?=stock_qty_fmt($remaining)?> <?=h($a['unit'])?></div>

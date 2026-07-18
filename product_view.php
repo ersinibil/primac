@@ -208,8 +208,8 @@ if(!$rows) echo "<tr><td colspan='5' class='df-muted'>Tedarikçi tanımlı deği
 
 <?php if(cpa_can_view()): ?>
 <section class="df-card" style="margin-top:var(--df-space-4)">
-<h2 class="df-section-title">🎯 CPA Kullanımı</h2>
-<p class="df-section-hint" style="margin:0 0 var(--df-space-3)">Bu ürün hangi müşteriler için özel tedarikçi tercihi içeriyor — yönetmek için ilgili cari kartındaki "Tercih Edilen Tedarikçiler (CPA)" bölümü kullanılır.</p>
+<h2 class="df-section-title">🎯 Tercih Edilen Tedarikçi</h2>
+<p class="df-section-hint" style="margin:0 0 var(--df-space-3)">Bu ürün hangi müşteriler için özel tedarikçi tercihi içeriyor — yönetmek için ilgili cari kartındaki "Tercih Edilen Tedarikçiler" bölümü kullanılır.</p>
 <div class="df-table-wrap"><table class="df-table">
 <thead><tr><th>Müşteri</th><th>Tercih Edilen Tedarikçi</th><th>Öncelik</th><th>Varsayılan</th><th>Durum</th></tr></thead>
 <tbody>
@@ -236,11 +236,11 @@ $__free = cpa_alloc_free_stock($pdo, $id);
 $__allocUsage = cpa_alloc_list_for_product($pdo, $id, true);
 ?>
 <section class="df-card" style="margin-top:var(--df-space-4)">
-<h2 class="df-section-title">📦 Tahsisli Stok / Serbest Stok</h2>
+<h2 class="df-section-title">📦 Müşteriye Ayrılan / Serbest Stok</h2>
 <p class="df-section-hint" style="margin:0 0 var(--df-space-3)">Satın alınan miktarın müşterilere ayrılan (tahsis edilen) kısmı fiziksel stoktan ayrı izlenir — tahsis oluşturmak/yönetmek için ilgili alışın "Tahsis Et" bağlantısı kullanılır.</p>
 <div class="df-stat-row" style="margin:0 0 var(--df-space-4)">
 <div class="df-stat"><span>Fiziksel Stok</span><strong><?=stock_qty_fmt($__free['physical'])?></strong></div>
-<div class="df-stat"><span>Tahsisli</span><strong style="color:var(--df-warning-ink)"><?=stock_qty_fmt($__free['allocated'])?></strong></div>
+<div class="df-stat"><span>Müşteriye Ayrılan</span><strong style="color:var(--df-warning-ink)"><?=stock_qty_fmt($__free['allocated'])?></strong></div>
 <div class="df-stat"><span>Serbest Stok</span><strong style="color:var(--df-success-ink)"><?=stock_qty_fmt($__free['free'])?></strong></div>
 </div>
 <div class="df-table-wrap"><table class="df-table">

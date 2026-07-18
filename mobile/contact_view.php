@@ -263,7 +263,7 @@ try{
 
 <?php if(cpa_can_view()): ?>
 <div class="df-panel" style="margin-top:10px">
-  <b>🎯 Tercih Edilen Tedarikçiler (CPA)</b>
+  <b>🎯 Tercih Edilen Tedarikçiler</b>
   <p class="df-text-caption" style="margin:4px 0 10px">Ürün bazlı tercih edilen tedarikçiler — satın alma sırasında akıllı öneri olarak kullanılır.</p>
   <?php
   $__cpaRowsM = cpa_list_for_customer($pdo, $id, true);
@@ -319,17 +319,17 @@ try{
   $__allocRowsM = cpa_alloc_list_for_customer($pdo, $id, true);
 ?>
 <div class="df-panel" style="margin-top:10px">
-  <b>📦 Tahsisli Stok</b>
+  <b>📦 Müşteriye Ayrılan Stok</b>
   <p class="df-text-caption" style="margin:4px 0 10px">Bu müşteri için satın almadan ayrılan miktarlar — fiziksel stoktan ayrı izlenir, satış yapıldığında otomatik düşer.</p>
   <?php if(!$__allocRowsM): ?>
-  <p class="df-text-caption" style="margin:0">Henüz tahsis yapılmamış.</p>
+  <p class="df-text-caption" style="margin:0">Henüz müşteriye ayrılmamış.</p>
   <?php else: foreach($__allocRowsM as $ar): $__remM=(float)$ar['allocated_qty']-(float)$ar['consumed_qty']; ?>
   <div style="margin-top:8px;border-top:1px solid var(--df-hairline);padding-top:8px">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
       <b><?=h($ar['product_name'] ?: '#'.$ar['stock_item_id'])?></b>
       <?=ds_badge($ar['status'])?>
     </div>
-    <small class="df-text-caption">Tahsis <?=stock_qty_fmt($ar['allocated_qty'])?> · Tüketilen <?=stock_qty_fmt($ar['consumed_qty'])?> · Kalan <b><?=stock_qty_fmt($__remM)?></b></small>
+    <small class="df-text-caption">Ayrılan <?=stock_qty_fmt($ar['allocated_qty'])?> · Tüketilen <?=stock_qty_fmt($ar['consumed_qty'])?> · Kalan <b><?=stock_qty_fmt($__remM)?></b></small>
     <?php if(cpa_alloc_can_edit()): ?>
     <div style="display:flex;gap:6px;margin-top:6px">
       <a class="df-btn df-btn--secondary df-btn--sm" href="cpa_allocation.php?purchase_id=<?=(int)$ar['purchase_movement_id']?>">Yönet</a>

@@ -142,6 +142,24 @@ function cpa_alloc_purchase_line_summary($pdo, $purchaseMovementId){
     return $out;
 }
 
+/**
+ * Bir alıştan yapılmış AKTİF (iptal olmayan, kalan miktarı >0) tahsis var mı — CPA VERİ BÜTÜNLÜĞÜ
+ * (2026-07-18, Product Owner kararı 8. madde): bu alış düzenlenir/silinirse tahsis referansı
+ * geçersiz kalabileceği için, stock_lib.php::stock_can_edit_purchase()/stock_reverse_purchase()
+ * bu fonksiyonla ÖNCE kontrol eder — aktif tahsis varsa düzenleme/silme tamamen reddedilir (avg_cost
+ * güvenlik kapısıyla AYNI "sessizce bozma, açık mesajla reddet" felsefesi). Kullanıcı önce Tahsis
+ * Yönetimi ekranından ilgili tahsisleri azaltır/iptal eder/aktarır, sonra alış düzenlenebilir/silinebilir.
+ * @return float aktif tahsislerin toplam kalan miktarı (0 ise engel yok)
+ */
+function cpa_alloc_active_remaining_for_purchase($pdo, $purchaseMovementId){
+    if(!cpa_alloc_tables_ready()) return 0.0;
+    try{
+        $st=$pdo->prepare("SELECT COALESCE(SUM(GREATEST(allocated_qty-consumed_qty,0)),0) t FROM cpa_allocations WHERE purchase_movement_id=? AND status<>'İptal'");
+        $st->execute([(int)$purchaseMovementId]);
+        return (float)($st->fetch()['t'] ?? 0);
+    }catch(Throwable $e){ return 0.0; }
+}
+
 /** Bir alışa bağlı TÜM tahsisler (iptal dahil, geçmiş görünsün diye) — cpa_allocation.php listesi. */
 function cpa_alloc_list_for_purchase($pdo, $purchaseMovementId){
     if(!cpa_alloc_tables_ready()) return [];

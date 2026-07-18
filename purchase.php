@@ -2,6 +2,7 @@
 require_once __DIR__.'/boot.php';
 require_login();
 require_once __DIR__.'/stock_lib.php';
+require_once __DIR__.'/cpa_allocation_lib.php';
 
 $pdo=db();
 $ok=''; $er='';
@@ -50,6 +51,25 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['action']) && $_POST['act
         $res=stock_create_purchase($pdo, $supplier, $ids, $qtys, $prices, $vatRates, 'Alış');
         if(!$res['ok']) throw new Exception($res['message']);
 
+        // P0 CPA KULLANICI AKIŞI (2026-07-18, Product Owner kararı 3. madde) — "Bu ürün belirli
+        // bir müşteri için mi alındı?" opsiyonel satır alanı. stock_create_purchase() zaten satırları
+        // filtrelemiş olabilir (boş/geçersiz satırlar atlanır) — burada AYNI ($pid boş/qty<=0) atlama
+        // koşulu ham $ids/$qtys üzerinde tekrar uygulanıyor ki index hizası korunsun. Tahsis oluşturma
+        // opsiyonel bir yan etkidir — asla alışın kendisini BOZMAZ/geri almaz (best-effort, alış zaten
+        // yukarıda başarıyla kaydedildi); cpa_alloc_create()'in kendi kapasite kontrolü zaten bu
+        // alıştan fazlasının tahsis edilmesini engelliyor.
+        $__allocCids = $_POST['alloc_customer_id'] ?? [];
+        $__allocQtys = $_POST['alloc_qty'] ?? [];
+        foreach($ids as $__ai=>$__apid){
+            $__apid=(int)$__apid; $__aqtyLine=(float)($qtys[$__ai] ?? 0);
+            if(!$__apid || $__aqtyLine<=0) continue;
+            $__acid=(int)($__allocCids[$__ai] ?? 0);
+            if(!$__acid) continue;
+            $__aqty=(float)($__allocQtys[$__ai] ?? 0);
+            if($__aqty<=0) $__aqty=$__aqtyLine;
+            try{ cpa_alloc_create($pdo, $_SESSION['user']['id']??0, $res['purchase_id'], $__apid, $__acid, $__aqty, 'Alış girişinde ayrıldı'); }catch(Throwable $e){}
+        }
+
         try{
             if(function_exists('activity_log')){
                 $sn=$pdo->prepare("SELECT name FROM contacts WHERE id=?");
@@ -86,6 +106,9 @@ if($editId && can_edit_delete()){
 }
 
 $products=$pdo->query("SELECT id,name,unit,purchase_price,vat_rate FROM stock_items WHERE COALESCE(active,1)=1 ORDER BY name")->fetchAll();
+// P0 CPA KULLANICI AKIŞI (2026-07-18) — opsiyonel "Müşteriye Ayır" satır alanı için müşteri listesi.
+$__allocCustomers=[];
+try{ $__allocCustomers=$pdo->query("SELECT id,name FROM contacts WHERE type IN ('Müşteri','Her İkisi') ORDER BY name")->fetchAll(); }catch(Throwable $e){}
 
 require_once __DIR__.'/layout_top.php';
 ?>
@@ -208,7 +231,7 @@ if($recent): ?>
       <td><?=ds_badge($row['status'])?></td>
       <?php if(can_edit_delete()): ?>
       <td class="nowrap"><div class="row-actions">
-        <a class="df-btn df-btn--secondary df-btn--sm" href="cpa_allocation.php?purchase_id=<?=(int)$row['id']?>">🎯 Tahsis Et</a>
+        <a class="df-btn df-btn--secondary df-btn--sm" href="cpa_allocation.php?purchase_id=<?=(int)$row['id']?>">🤝 Müşteriye Ayır</a>
         <?php if($isDoc): ?>
         <a class="df-btn df-btn--secondary df-btn--sm" href="trade_document_view.php?id=<?=(int)$row['document_id']?>">🧾 Belgeyi Aç</a>
         <?php else: ?>
@@ -267,6 +290,14 @@ if(!empty($__jobsErr)): ?>
 var PRODUCTS = <?= json_encode(array_map(function($p){
     return ['id'=>(int)$p['id'],'name'=>$p['name'],'unit'=>$p['unit'],'price'=>$p['purchase_price'],'vat'=>$p['vat_rate']!==null?$p['vat_rate']:20];
 }, $products), JSON_UNESCAPED_UNICODE) ?>;
+// P0 CPA KULLANICI AKIŞI (2026-07-18) — "Bu ürün belirli bir müşteri için mi alındı?" opsiyonel
+// satır alanı için müşteri listesi (job_new.php'deki AYNI "Müşteri" tip filtresi).
+var CUSTOMERS = <?= json_encode(array_map(function($c){
+    return ['id'=>(int)$c['id'],'name'=>$c['name']];
+}, $__allocCustomers), JSON_UNESCAPED_UNICODE) ?>;
+// Düzenleme modunda alış hiçbir zaman aktif tahsisi varken açılamaz (stock_can_edit_purchase()
+// kapısı) — bu yüzden düzenleme modunda yeni tahsis alanı ANLAMSIZ, sadece yeni alışta gösterilir.
+var ALLOW_ALLOC = <?= (!$editMode && cpa_alloc_can_edit()) ? 'true' : 'false' ?>;
 // Düzenleme modunda mevcut alış satırlarını forma dolduran veri (sales.php ile aynı mantık).
 var PREFILL_LINES = <?= json_encode($editMode ? array_map(function($l){
     return ['id'=>$l['stock_item_id'],'qty'=>$l['quantity'],'price'=>$l['unit_price'],'vat'=>$l['vat_rate']];
@@ -285,6 +316,30 @@ function productOptionsHtmlPurch(){
     return html;
 }
 
+// P0 CPA KULLANICI AKIŞI (2026-07-18, Product Owner kararı 3. madde) — opsiyonel, zorunlu değil.
+// alloc_customer_id[]/alloc_qty[] alanları DOM'da HER ZAMAN mevcut (sadece görsel olarak
+// gizli/açık) — boş gönderilirse purchase.php'deki döngü sessizce atlar, index hizası bozulmaz.
+function allocBoxHtmlPurch(){
+    if(!ALLOW_ALLOC) return '';
+    var custOpts = '<option value="">— Müşteri seç —</option>';
+    CUSTOMERS.forEach(function(c){ custOpts += '<option value="'+c.id+'">'+escPurch(c.name)+'</option>'; });
+    return '<label class="row-alloc-toggle" style="display:flex;align-items:center;gap:6px;margin-top:6px;font-size:12px;font-weight:600;color:var(--df-ink-700)">'
+        + '<input type="checkbox" class="row-alloc-check" style="width:auto" onchange="toggleAllocBoxPurch(this)"> Bu ürün belirli bir müşteri için mi alındı?'
+        + '</label>'
+        + '<div class="row-alloc-box" style="display:none;margin-top:6px;gap:6px">'
+        + '<select name="alloc_customer_id[]" class="row-alloc-customer" style="margin-bottom:6px">'+custOpts+'</select>'
+        + '<input type="number" step="0.001" min="0" name="alloc_qty[]" class="row-alloc-qty" placeholder="Ayrılacak miktar (boşsa tümü)">'
+        + '</div>';
+}
+function toggleAllocBoxPurch(chk){
+    var box = chk.closest('td').querySelector('.row-alloc-box');
+    box.style.display = chk.checked ? 'block' : 'none';
+    if(!chk.checked){
+        box.querySelector('.row-alloc-customer').value = '';
+        box.querySelector('.row-alloc-qty').value = '';
+    }
+}
+
 function addItemRow(prefill){
     var idx = rowIndex++;
     var tr = document.createElement('tr');
@@ -297,6 +352,7 @@ function addItemRow(prefill){
         + '<button type="button" class="df-btn df-btn--primary df-btn--sm" style="width:100%" onclick="quickAddProductRow(this)">✓ Ekle ve Seç</button>'
         + '</div>'
         + '<div class="cpa-hint" style="display:none;margin-top:6px;font-size:12px;color:var(--df-accent-soft-ink);background:var(--df-accent-soft);border-radius:var(--df-radius-sm);padding:6px 8px"></div>'
+        + allocBoxHtmlPurch()
         + '</td>'
         + '<td style="padding:4px 6px"><input type="number" step="0.01" min="0.01" name="quantity[]" class="row-qty" value="1" required oninput="calcAll()" style="width:80px"></td>'
         + '<td style="padding:4px 6px"><input type="number" step="0.01" min="0" name="unit_price[]" class="row-price" required oninput="calcAll()" style="width:110px"></td>'
@@ -324,6 +380,8 @@ function removeRow(btn){
         tr.querySelector('.row-price').value = '';
         tr.querySelector('.row-vat').value = 20;
         tr.querySelector('.new-prod-box').style.display = 'none';
+        var __allocChk = tr.querySelector('.row-alloc-check');
+        if(__allocChk){ __allocChk.checked = false; toggleAllocBoxPurch(__allocChk); }
     } else {
         tr.remove();
     }

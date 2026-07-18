@@ -14,28 +14,28 @@ $error=''; $ok='';
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['create_alloc'])){
     try{
         cpa_alloc_create($pdo, $_SESSION['user']['id']??0, $purchaseId, $_POST['stock_item_id']??0, $_POST['customer_id']??0, $_POST['qty']??0, $_POST['notes']??'');
-        $_SESSION['cpa_alloc_ok']='Tahsis oluşturuldu.';
+        $_SESSION['cpa_alloc_ok']='Müşteriye ayrıldı.';
     }catch(Throwable $e){ $_SESSION['cpa_alloc_er']=$e->getMessage(); }
     header('Location: cpa_allocation.php?purchase_id='.$purchaseId); exit;
 }
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['reduce_alloc'])){
     try{
         cpa_alloc_reduce($pdo, $_SESSION['user']['id']??0, $_POST['alloc_id']??0, $_POST['new_qty']??0);
-        $_SESSION['cpa_alloc_ok']='Tahsis miktarı güncellendi.';
+        $_SESSION['cpa_alloc_ok']='Ayrılan miktar güncellendi.';
     }catch(Throwable $e){ $_SESSION['cpa_alloc_er']=$e->getMessage(); }
     header('Location: cpa_allocation.php?purchase_id='.$purchaseId); exit;
 }
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['cancel_alloc'])){
     try{
         cpa_alloc_cancel($pdo, $_SESSION['user']['id']??0, $_POST['alloc_id']??0);
-        $_SESSION['cpa_alloc_ok']='Tahsis iptal edildi.';
+        $_SESSION['cpa_alloc_ok']='Ayırma iptal edildi.';
     }catch(Throwable $e){ $_SESSION['cpa_alloc_er']=$e->getMessage(); }
     header('Location: cpa_allocation.php?purchase_id='.$purchaseId); exit;
 }
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['transfer_alloc'])){
     try{
         cpa_alloc_transfer($pdo, $_SESSION['user']['id']??0, $_POST['alloc_id']??0, $_POST['new_customer_id']??0, $_POST['transfer_qty']??0);
-        $_SESSION['cpa_alloc_ok']='Tahsis aktarıldı.';
+        $_SESSION['cpa_alloc_ok']='Başka müşteriye aktarıldı.';
     }catch(Throwable $e){ $_SESSION['cpa_alloc_er']=$e->getMessage(); }
     header('Location: cpa_allocation.php?purchase_id='.$purchaseId); exit;
 }
@@ -65,14 +65,15 @@ $customers=[];
 try{ $customers=$pdo->query("SELECT id,name FROM contacts ORDER BY name")->fetchAll(); }catch(Throwable $e){}
 
 require_once __DIR__.'/layout_top.php';
-ds_page_header('🎯 Tahsis Yönetimi — '.($purchase['supplier_name'] ?: 'Alış #'.$purchaseId), '', $purchase['movement_date'].' · '.money($purchase['amount']), ds_button('Satın Almaya Dön','purchase.php','secondary','','',true), false, true);
+ds_page_header('🤝 Müşteriye Ayır — '.($purchase['supplier_name'] ?: 'Alış #'.$purchaseId), '', $purchase['movement_date'].' · '.money($purchase['amount']), ds_button('Satın Almaya Dön','purchase.php','secondary','','',true), false, true);
+$__preselectItem = (int)($_GET['stock_item_id'] ?? 0);
 ?>
 
 <?php if($error): ?><?=ds_alert('danger',$error)?><?php endif; ?>
 <?php if($ok): ?><?=ds_alert('success',$ok)?><?php endif; ?>
 
 <section class="df-card">
-<h2 class="df-section-title">Alış Satırları — Tahsis Durumu</h2>
+<h2 class="df-section-title">Alış Satırları — Müşteriye Ayrılan</h2>
 <?php if(!$lineSummary): ?>
 <?php ds_empty_state('Bu alışa bağlı stok hareketi bulunamadı.'); ?>
 <?php else: ?>
@@ -94,12 +95,12 @@ ds_page_header('🎯 Tahsis Yönetimi — '.($purchase['supplier_name'] ?: 'Alı
 
 <?php if($canEdit && $lineSummary): ?>
 <section class="df-card" style="margin-top:var(--df-space-4)">
-<h2 class="df-section-title">Yeni Tahsis Oluştur</h2>
+<h2 class="df-section-title">🤝 Müşteriye Ayır</h2>
 <form method="post" class="df-form-grid-2">
 <input type="hidden" name="create_alloc" value="1">
 <?php
 $__lineOpts='';
-foreach($lineSummary as $l){ $__lineOpts.='<option value="'.(int)$l['stock_item_id'].'">'.h($l['product_name']).' — serbest '.stock_qty_fmt($l['free_on_purchase']).' '.h($l['unit']).'</option>'; }
+foreach($lineSummary as $l){ $__lineOpts.='<option value="'.(int)$l['stock_item_id'].'" '.($__preselectItem===(int)$l['stock_item_id']?'selected':'').'>'.h($l['product_name']).' — serbest '.stock_qty_fmt($l['free_on_purchase']).' '.h($l['unit']).'</option>'; }
 ds_form_field('Ürün (Bu Alıştan)', '<select name="stock_item_id" required>'.$__lineOpts.'</select>');
 $__custOpts='';
 foreach($customers as $c){ $__custOpts.='<option value="'.(int)$c['id'].'">'.h($c['name']).'</option>'; }
@@ -107,15 +108,15 @@ ds_form_field('Müşteri', '<select name="customer_id" required><option value=""
 ds_form_field('Miktar', '<input type="number" step="0.001" min="0.001" name="qty" required>');
 ?>
 <div class="df-form-span-2"><?php ds_form_field('Not', '<input name="notes" placeholder="Opsiyonel">'); ?></div>
-<div class="df-form-span-2"><button class="df-btn df-btn--primary">🎯 Tahsis Et</button></div>
+<div class="df-form-span-2"><button class="df-btn df-btn--primary">🤝 Müşteriye Ayır</button></div>
 </form>
 </section>
 <?php endif; ?>
 
 <section class="df-card" style="margin-top:var(--df-space-4)">
-<h2 class="df-section-title">Bu Alıştan Yapılan Tahsisler</h2>
+<h2 class="df-section-title">Bu Alıştan Ayrılanlar</h2>
 <?php if(!$allocations): ?>
-<?php ds_empty_state('Henüz tahsis yapılmamış.'); ?>
+<?php ds_empty_state('Henüz müşteriye ayrılmamış.'); ?>
 <?php else: foreach($allocations as $a):
     $remaining=(float)$a['allocated_qty']-(float)$a['consumed_qty'];
 ?>
@@ -124,7 +125,7 @@ ds_form_field('Miktar', '<input type="number" step="0.001" min="0.001" name="qty
 <div>
 <b><?=h($a['customer_name'] ?: '—')?></b> — <?=h($a['product_name'])?>
 <div class="df-muted" style="font-size:12px;margin-top:2px">
-Tahsis: <?=stock_qty_fmt($a['allocated_qty'])?> <?=h($a['unit'])?> · Tüketilen: <?=stock_qty_fmt($a['consumed_qty'])?> <?=h($a['unit'])?> · Kalan: <b><?=stock_qty_fmt($remaining)?> <?=h($a['unit'])?></b>
+Ayrılan: <?=stock_qty_fmt($a['allocated_qty'])?> <?=h($a['unit'])?> · Tüketilen: <?=stock_qty_fmt($a['consumed_qty'])?> <?=h($a['unit'])?> · Kalan: <b><?=stock_qty_fmt($remaining)?> <?=h($a['unit'])?></b>
 <?php if($a['notes']): ?><br><?=h($a['notes'])?><?php endif; ?>
 </div>
 </div>

@@ -134,7 +134,7 @@ try{
   $__cpaUsageM = cpa_list_for_product($pdo, $id, true);
 ?>
 <div class="df-panel" style="margin-top:12px">
-  <b><?=ds_icon('tag',16)?> CPA Kullanımı</b>
+  <b><?=ds_icon('tag',16)?> Tercih Edilen Tedarikçi</b>
   <p class="muted" style="font-size:12px;margin:4px 0 8px">Bu ürün hangi müşteriler için özel tedarikçi tercihi içeriyor.</p>
   <?php if(!$__cpaUsageM): ?>
   <p class="muted" style="margin:0">Tanımlı müşteri-tedarikçi tercihi yok.</p>
@@ -153,19 +153,19 @@ try{
   $__allocUsageM = cpa_alloc_list_for_product($pdo, $id, true);
 ?>
 <div class="df-panel" style="margin-top:12px">
-  <b>📦 Tahsisli Stok / Serbest Stok</b>
+  <b>📦 Müşteriye Ayrılan / Serbest Stok</b>
   <p class="muted" style="font-size:12px;margin:4px 0 8px">Satın alınan miktarın müşterilere ayrılan kısmı fiziksel stoktan ayrı izlenir.</p>
   <div class="df-stat-row" style="margin-bottom:8px">
     <div class="df-stat"><span>Fiziksel</span><strong><?=stock_qty_fmt($__freeM['physical'])?></strong></div>
-    <div class="df-stat"><span>Tahsisli</span><strong style="color:var(--df-warning-ink,#f59e0b)"><?=stock_qty_fmt($__freeM['allocated'])?></strong></div>
+    <div class="df-stat"><span>Müşteriye Ayrılan</span><strong style="color:var(--df-warning-ink,#f59e0b)"><?=stock_qty_fmt($__freeM['allocated'])?></strong></div>
     <div class="df-stat"><span>Serbest</span><strong style="color:var(--df-success-ink,#22c55e)"><?=stock_qty_fmt($__freeM['free'])?></strong></div>
   </div>
   <?php if(!$__allocUsageM): ?>
-  <p class="muted" style="margin:0">Bu ürün için henüz tahsis yapılmamış.</p>
+  <p class="muted" style="margin:0">Bu ürün için henüz müşteriye ayrılmamış.</p>
   <?php else: foreach($__allocUsageM as $au): $__remU=(float)$au['allocated_qty']-(float)$au['consumed_qty']; ?>
   <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-top:1px solid rgba(255,255,255,.08)">
     <div><a href="contact_view.php?id=<?=(int)$au['customer_id']?>"><?=h($au['customer_name']?:'#'.$au['customer_id'])?></a>
-      <br><small class="muted">Tahsis <?=stock_qty_fmt($au['allocated_qty'])?> · Kalan <?=stock_qty_fmt($__remU)?></small></div>
+      <br><small class="muted">Ayrılan <?=stock_qty_fmt($au['allocated_qty'])?> · Kalan <?=stock_qty_fmt($__remU)?></small></div>
     <?=ds_badge($au['status'])?>
   </div>
   <?php endforeach; endif; ?>

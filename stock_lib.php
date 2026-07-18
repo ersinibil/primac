@@ -656,6 +656,7 @@ function stock_purchase_avg_cost_safe($pdo, $purchaseId){
  */
 function stock_reverse_purchase($pdo, $purchaseId){
     require_once __DIR__.'/finance_lib.php';
+    require_once __DIR__.'/cpa_allocation_lib.php';
     try{
         $purchaseId = (int)$purchaseId;
         if($purchaseId < 1) return ['ok'=>false, 'message'=>'Geçersiz alış kaydı.'];
@@ -665,6 +666,15 @@ function stock_reverse_purchase($pdo, $purchaseId){
         $purchase = $s->fetch();
         if(!$purchase) return ['ok'=>false, 'message'=>'Alış kaydı bulunamadı.'];
         if(!empty($purchase['document_id'])) return ['ok'=>false, 'message'=>'Bu alış bir Alış/Satış Belgesine bağlı — buradan silinemez, belge görüntüleme ekranından kontrol edin.'];
+
+        // CPA VERİ BÜTÜNLÜĞÜ (2026-07-18, Product Owner kararı 8. madde): bu alıştan müşteriye
+        // ayrılmış (tahsisli) aktif miktar varsa silme reddedilir — sessizce tahsis referansını
+        // geçersiz bırakmak yerine, kullanıcı önce Tahsis Yönetimi'nden ilgili tahsisleri
+        // azaltmalı/iptal etmeli/aktarmalı.
+        $__cpaRem = cpa_alloc_active_remaining_for_purchase($pdo, $purchaseId);
+        if($__cpaRem > 0.0000001){
+            return ['ok'=>false, 'message'=>'Bu alıştan müşteriye ayrılmış '.stock_qty_fmt($__cpaRem).' adet var. Alış silinemez — önce "Tahsis Et" ekranından ilgili tahsisleri azaltın/iptal edin/aktarın.'];
+        }
 
         if(!stock_purchase_avg_cost_safe($pdo, $purchaseId)){
             return ['ok'=>false, 'message'=>'Bu alıştaki bir veya daha fazla ürün için, bu alıştan SONRA başka bir stok hareketi (alış/satış) oluşmuş. Ortalama maliyet güvenle geri alınamayacağı için bu kayıt silinemez.'];
@@ -696,12 +706,23 @@ function stock_reverse_purchase($pdo, $purchaseId){
  * @return array ['editable'=>bool, 'reason'=>string|null, 'purchase'=>array|null, 'lines'=>array]
  */
 function stock_can_edit_purchase($pdo, $purchaseId){
+    require_once __DIR__.'/cpa_allocation_lib.php';
     $purchaseId = (int)$purchaseId;
     $s = $pdo->prepare("SELECT * FROM finance_movements WHERE id=? AND movement_type='purchase'");
     $s->execute([$purchaseId]);
     $purchase = $s->fetch();
     if(!$purchase) return ['editable'=>false, 'reason'=>'Alış kaydı bulunamadı.', 'purchase'=>null, 'lines'=>[]];
     if(!empty($purchase['document_id'])) return ['editable'=>false, 'reason'=>'Bu alış bir Alış/Satış Belgesine bağlı — buradan düzenlenemez, belge görüntüleme ekranından kontrol edin.', 'purchase'=>$purchase, 'lines'=>[]];
+
+    // CPA VERİ BÜTÜNLÜĞÜ (2026-07-18, Product Owner kararı 8. madde): müşteriye ayrılmış aktif
+    // tahsis varken satır miktarları/ürünleri sessizce değiştirilip tahsis referansı geçersiz
+    // bırakılamaz — stock_reverse_purchase() ile AYNI tam-blok felsefesi (avg_cost kapısıyla aynı desen).
+    $__cpaRem = cpa_alloc_active_remaining_for_purchase($pdo, $purchaseId);
+    if($__cpaRem > 0.0000001){
+        return ['editable'=>false,
+            'reason'=>'Bu alıştan müşteriye ayrılmış '.stock_qty_fmt($__cpaRem).' adet var. Düzenlenemez — önce "Tahsis Et" ekranından ilgili tahsisleri azaltın/iptal edin/aktarın.',
+            'purchase'=>$purchase, 'lines'=>[]];
+    }
 
     $stk = $pdo->prepare("SELECT sm.*, si.name AS item_name, si.unit AS item_unit FROM stock_movements sm LEFT JOIN stock_items si ON si.id=sm.stock_item_id WHERE sm.finance_movement_id=? AND sm.direction='in' ORDER BY sm.id");
     $stk->execute([$purchaseId]);

@@ -24,6 +24,12 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         $qtys=$_POST['quantity'] ?? [];
         $prices=$_POST['unit_price'] ?? [];
         $vats=$_POST['vat_rate'] ?? [];
+        // P0 CPA KULLANICI AKIŞI (2026-07-18, Product Owner kararı 3. madde) — opsiyonel, sadece
+        // Alış Belgesi'nde anlamlı. $_POST'tan burada, $i hâlâ orijinal satır index'iyken okunup
+        // AŞAĞIDA $prepared[] içine gömülüyor — $prepared sıralı push ile oluştuğu için (boş satırlar
+        // atlanır) sonradan orijinal index'e göre eşleştirmeye çalışmak yanlış hizalanabilirdi.
+        $allocCids=$_POST['alloc_customer_id'] ?? [];
+        $allocQtys=$_POST['alloc_qty'] ?? [];
 
         $subtotal=0;
         $vatTotal=0;
@@ -65,7 +71,9 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 'line_total'=>$line,
                 'line_vat'=>$lineVat,
                 'line_grand'=>$lineGrand,
-                'auto_created_product'=>$auto?1:0
+                'auto_created_product'=>$auto?1:0,
+                'alloc_customer_id'=>(int)($allocCids[$i] ?? 0),
+                'alloc_qty'=>(float)($allocQtys[$i] ?? 0),
             ];
         }
 
@@ -106,6 +114,25 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 
             trade_apply_document($docId, $confirmNegativeStock);
 
+            // P0 CPA KULLANICI AKIŞI (2026-07-18, Product Owner kararı 3. madde) — opsiyonel satır
+            // bazlı "Müşteriye Ayır". Sadece Alış Belgesi'nde anlamlı. trade_apply_document() bu
+            // belgenin finance_movements(movement_type='purchase') satırını document_id ile OLUŞTURUR
+            // (stock_create_purchase() üzerinden) — burada TAZE okunuyor. Tahsis oluşturma opsiyonel
+            // bir yan etkidir, best-effort: hata fırlatırsa YUTULUR, belgenin kendisi asla bundan
+            // etkilenmez/rollback edilmez (cpa_alloc_consume_for_sale() ile AYNI felsefe).
+            if($type==='purchase'){
+                $__pmRow = $pdo->prepare("SELECT id FROM finance_movements WHERE document_id=? AND movement_type='purchase'");
+                $__pmRow->execute([$docId]);
+                $__purchaseMovementId = (int)($__pmRow->fetch()['id'] ?? 0);
+                if($__purchaseMovementId){
+                    foreach($prepared as $__it){
+                        if(!$__it['stock_item_id'] || !$__it['alloc_customer_id']) continue;
+                        $__aqty = $__it['alloc_qty'] > 0 ? $__it['alloc_qty'] : $__it['quantity'];
+                        try{ cpa_alloc_create($pdo, $_SESSION['user']['id']??0, $__purchaseMovementId, $__it['stock_item_id'], $__it['alloc_customer_id'], $__aqty, 'Belge oluştururken ayrıldı'); }catch(Throwable $e){}
+                    }
+                }
+            }
+
             // inTransaction() korumalı commit (2026-07-11): activity_log() -> activity_install()
             // "CREATE TABLE IF NOT EXISTS activity_logs" çalıştırıyor — bu bir DDL ifadesi ve MySQL/
             // MariaDB DDL'de İMPLİCİT COMMIT yapar (tablo zaten var olsa bile). trade_apply_document()
@@ -137,6 +164,12 @@ require_once __DIR__.'/layout_top.php';
 
 $contacts=$pdo->query("SELECT id,name,type FROM contacts ORDER BY name")->fetchAll();
 $products=$pdo->query("SELECT id,name,product_code,unit,purchase_price,sale_price FROM stock_items ORDER BY name")->fetchAll();
+// P0 CPA KULLANICI AKIŞI (2026-07-18) — opsiyonel "Müşteriye Ayır" satır alanı, sadece Alış Belgesi'nde.
+$__allocCustomers=[];
+$__allowAlloc = $type==='purchase' && cpa_alloc_can_edit();
+if($__allowAlloc){
+    try{ $__allocCustomers=$pdo->query("SELECT id,name FROM contacts WHERE type IN ('Müşteri','Her İkisi') ORDER BY name")->fetchAll(); }catch(Throwable $e){}
+}
 ?>
 
 <?php
@@ -201,7 +234,7 @@ ds_form_field('Cari', '<select name="contact_id" required>'.$__contactOpts.'</se
 
 <div class="df-table-wrap" style="overflow-x:auto">
 <table id="itemsTable" class="df-table" style="min-width:720px">
-<thead><tr><th>Mevcut Ürün</th><th>Ürün/Hizmet Adı</th><th>Birim</th><th>Miktar</th><th>Birim Fiyat</th><th>KDV %</th><th style="text-align:right">Ara Toplam</th></tr></thead>
+<thead><tr><th>Mevcut Ürün</th><th>Ürün/Hizmet Adı</th><th>Birim</th><th>Miktar</th><th>Birim Fiyat</th><th>KDV %</th><th style="text-align:right">Ara Toplam</th><?php if($__allowAlloc): ?><th>Müşteriye Ayır <small class="df-muted">(opsiyonel)</small></th><?php endif; ?></tr></thead>
 <tbody>
 <?php for($i=0;$i<5;$i++): ?>
 <tr>
@@ -219,6 +252,17 @@ ds_form_field('Cari', '<select name="contact_id" required>'.$__contactOpts.'</se
 <td><input type="number" step="0.01" name="unit_price[]" value="<?=h($pf['unit_price'][$i] ?? '0')?>" class="row-price" oninput="calcAll()"></td>
 <td><input type="number" step="0.01" name="vat_rate[]" value="<?=h($pf['vat_rate'][$i] ?? '20')?>" class="row-vat" oninput="calcAll()"></td>
 <td class="row-sub" style="text-align:right;font-weight:800">0,00 ₺</td>
+<?php if($__allowAlloc): ?>
+<td>
+<select name="alloc_customer_id[]" style="margin-bottom:4px">
+<option value="">— Müşteri yok —</option>
+<?php foreach($__allocCustomers as $c): ?>
+<option value="<?=(int)$c['id']?>" <?=(isset($pf) && (int)($pf['alloc_customer_id'][$i] ?? 0)===(int)$c['id'])?'selected':''?>><?=h($c['name'])?></option>
+<?php endforeach; ?>
+</select>
+<input type="number" step="0.001" min="0" name="alloc_qty[]" placeholder="Miktar (boşsa tümü)" value="<?=h($pf['alloc_qty'][$i] ?? '')?>">
+</td>
+<?php endif; ?>
 </tr>
 <?php endfor; ?>
 </tbody>

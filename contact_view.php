@@ -455,7 +455,7 @@ try{
 
 <?php if(cpa_can_view()): ?>
 <section class="df-card" style="margin-top:var(--df-space-4)">
-<h2 style="font-size:var(--df-type-section-size);margin:0 0 var(--df-space-2)">🎯 Tercih Edilen Tedarikçiler (CPA)</h2>
+<h2 style="font-size:var(--df-type-section-size);margin:0 0 var(--df-space-2)">🎯 Tercih Edilen Tedarikçiler</h2>
 <p class="df-section-hint" style="margin:0 0 var(--df-space-3)">Bu müşteri için ürün bazlı tercih edilen tedarikçiler — satın alma sırasında akıllı öneri olarak kullanılır, zorunlu değildir.</p>
 
 <div class="df-table-wrap"><table class="df-table">
@@ -523,13 +523,13 @@ ds_form_field('Öncelik', '<input type="number" name="priority" value="1" min="1
 $__allocRows = cpa_alloc_list_for_customer($pdo, $id, true);
 ?>
 <section class="df-card" style="margin-top:var(--df-space-4)">
-<h2 style="font-size:var(--df-type-section-size);margin:0 0 var(--df-space-2)">📦 Tahsisli Stok</h2>
-<p class="df-section-hint" style="margin:0 0 var(--df-space-3)">Bu müşteri için satın almadan ayrılan (tahsis edilen) miktarlar — fiziksel stoktan ayrı izlenir, satış yapıldığında otomatik düşer.</p>
+<h2 style="font-size:var(--df-type-section-size);margin:0 0 var(--df-space-2)">📦 Müşteriye Ayrılan Stok</h2>
+<p class="df-section-hint" style="margin:0 0 var(--df-space-3)">Bu müşteri için satın almadan ayrılan miktarlar — fiziksel stoktan ayrı izlenir, satış yapıldığında otomatik düşer.</p>
 <?php if(!$__allocRows): ?>
-<?php ds_empty_state('Bu müşteri için henüz tahsis yapılmamış.'); ?>
+<?php ds_empty_state('Bu müşteri için henüz müşteriye ayrılmamış.'); ?>
 <?php else: ?>
 <div class="df-table-wrap"><table class="df-table">
-<thead><tr><th>Ürün</th><th style="text-align:right">Tahsis</th><th style="text-align:right">Tüketilen</th><th style="text-align:right">Kalan</th><th>Durum</th><?php if(cpa_alloc_can_edit()): ?><th></th><?php endif; ?></tr></thead>
+<thead><tr><th>Ürün</th><th style="text-align:right">Ayrılan</th><th style="text-align:right">Tüketilen</th><th style="text-align:right">Kalan</th><th>Durum</th><?php if(cpa_alloc_can_edit()): ?><th></th><?php endif; ?></tr></thead>
 <tbody>
 <?php foreach($__allocRows as $ar): $__rem=(float)$ar['allocated_qty']-(float)$ar['consumed_qty']; ?>
 <tr>
