@@ -15,7 +15,9 @@
 // edilmesi gerekiyor — aksi halde aynı sınıf hata sessizce tekrarlanır.
 // P0 MOBİL HOTFIX (2026-07-19): v29→v30 — ds-foundation.css'te .df-m-bottomnav min-height kilidi
 // eklendi (composer/nav çakışması kök neden düzeltmesi) — AYNI KURAL, bump zorunlu.
-const CACHE='acans-os-v30';
+// P0 MOBİL LAYOUT CONTRACT (2026-07-19): v30→v31 — min-height→height+overflow:hidden SERT
+// kontrata geçildi (--df-navh token) — AYNI KURAL, bump zorunlu.
+const CACHE='acans-os-v31';
 const STATIC_ASSETS=[
   './',
   './index.php',
