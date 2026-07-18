@@ -156,26 +156,33 @@ topx($thread ? 'Grup' : ($with ? 'Sohbet' : 'İletişim Merkezi'), ($thread || $
 .chat-row .meta small{color:#94a3b8;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .chat-del-btn{flex:0 0 auto;background:rgba(248,113,113,.12);color:#f87171;border:0;border-radius:14px;width:46px;height:46px;font-size:18px}
 .unread-badge{background:#22c55e;color:#06281a;border-radius:999px;min-width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:12px;padding:0 6px}
-.thread{display:flex;flex-direction:column;gap:8px;padding-bottom:90px}
+.thread{display:flex;flex-direction:column;gap:8px}
 .bubble{max-width:80%;padding:10px 13px;border-radius:18px;font-size:15px;line-height:1.35;word-wrap:break-word}
 .bubble small{display:block;font-size:10px;opacity:.6;margin-top:3px;text-align:right}
 .mine{align-self:flex-end;background:#2563eb;border-bottom-right-radius:5px}
 .theirs{align-self:flex-start;background:rgba(255,255,255,.12);border-bottom-left-radius:5px}
-/* P0 MOBİL LAYOUT CONTRACT (2026-07-19, Product Owner FAIL raporu — "semptom değil contract'ı
-   düzelt") KÖK NEDEN: composer'ın konumu önce İKİ AYRI turda JS ölçümüne, sonra `min-height`
-   varsayımına bağlıydı — `min-height` sadece bir TABAN garantiliyordu, içerik (Dynamic Type/uzun
-   etiket) o tabanı aşınca kutu sessizce büyüyüp composer'ın ÜSTÜNE biniyordu. Artık nav
-   (ds-foundation.css .df-m-bottomnav) `height`+`overflow:hidden`+etiket nowrap/ellipsis ile SERT
-   bir üst sınıra kilitli — --df-navh (TEK kaynak) burada da okunuyor, ikisi runtime'da ASLA sapamaz. */
-.composer{position:fixed;left:0;right:0;bottom:calc(var(--df-navh, 76px) + env(safe-area-inset-bottom));background:#071326;border-top:1px solid rgba(255,255,255,.12);padding:8px 8px 8px;z-index:1001}
+.composer{position:static;flex:0 0 auto;background:#071326;border-top:1px solid rgba(255,255,255,.12);padding:8px 8px calc(8px + env(safe-area-inset-bottom));z-index:1001}
 .composer .wrap{max-width:520px;margin:auto;display:flex;gap:8px;align-items:flex-end}
 .composer textarea{flex:1;margin:0;resize:none;max-height:120px}
 .composer button{flex:0 0 auto;width:50px;height:46px;border-radius:14px;font-size:18px}
-.peer-head{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:10px 12px;margin-bottom:10px}
-/* CHAT MODU: composer + nav ikisi de fixed — thread'in alt boşluğu ikisinin sabit toplam
-   yüksekliğini karşılamalı ki son mesaj balonu arkalarında kalmasın (88px composer'ın kendi
-   yaklaşık yüksekliği — tek satır input+padding, çok satırlı yazımda içerik zaten scroll oluyor). */
-body.chat-mode .thread{padding-bottom:calc(88px + var(--df-navh, 76px) + env(safe-area-inset-bottom))}
+.peer-head{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:10px 12px;margin-bottom:10px;flex:0 0 auto}
+/* P0 KONUŞMA EKRANI SCROLL/SHELL DÜZELTMESİ (2026-07-19, Product Owner FAIL raporu — bug SADECE
+   konuşma detayında, global shell'e DOKUNULMADI) KÖK NEDEN: composer+thread+nav üçü de kendi
+   position:fixed/calc() matematiğiyle VİEWPORT'a ayrı ayrı bağlanıyordu — döküman/body scroll
+   ediyordu, composer'ın "doğru" bottom değeri her zaman nav'ın GERÇEK yüksekliğine bağımlı kalıyordu
+   (bu bağımlılık defalarca kırıldı). Kesin çözüm: SADECE bu 2 ekranda (body.chat-mode, global
+   .df-m-bottomnav CSS'i HİÇ değişmedi) `.app` viewport'a kilitli bir flex-column kabuk oluyor —
+   header/peer-head/composer sabit yükseklikte flex item, SADECE `.thread` scroll ediyor
+   (overflow-y:auto + min-height:0, klasik flex-scroll deseni). Composer artık position:static —
+   nav'ın ÜSTÜNE binmesi GEOMETRİK OLARAK imkansız çünkü `.app`'in kendi yüksekliği zaten
+   `100dvh - nav yüksekliği` ile sınırlı, composer o sınırın İÇİNDE normal akışta duruyor. Klavye
+   açıkken (pinC()/unpinC(), JS) composer geçici olarak position:fixed'e geçip visualViewport'a
+   pinleniyor — kapanınca static'e (normal flex konumuna) geri dönüyor. */
+body.chat-mode{height:100vh;height:100dvh;overflow:hidden}
+body.chat-mode .app{display:flex;flex-direction:column;height:calc(100vh - var(--df-navh, 76px) - env(safe-area-inset-bottom));height:calc(100dvh - var(--df-navh, 76px) - env(safe-area-inset-bottom));overflow:hidden}
+body.chat-mode.kb .app{height:100vh;height:100dvh}
+body.chat-mode .df-m-topbar{flex:0 0 auto;position:static}
+body.chat-mode .thread{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:8px}
 </style>
 <?php
 function avatar_color($id){ $c=['#3b82f6','#22c55e','#f97316','#8b5cf6','#ef4444','#14b8a6','#eab308','#ec4899']; return $c[$id % count($c)]; }
@@ -252,14 +259,15 @@ if ($thread):
 </form>
 <script>
 document.body.classList.add('chat-mode');
-function scrollBottom(){ window.scrollTo(0,document.body.scrollHeight); } scrollBottom();
+var thread=document.getElementById('thread');
+function scrollBottom(){ if(thread) thread.scrollTop=thread.scrollHeight; } scrollBottom();
 var THREADID=<?=$thread?>;
 <?php $tmax=0; foreach($tmsgs as $mm)$tmax=max($tmax,(int)$mm['id']); ?>
 /* Canlı grup akışı: common.php poll'u conv_thread için yeni mesajları buraya getirir */
 window.ACANS_CONV_THREAD=<?=$thread?>;
 window.ACANS_CONV_SINCE=<?=$tmax?>;
 window.ACANS_ON_CONV=function(list){
-  var th=document.getElementById('thread'); var em=document.getElementById('emptymsg'); if(em)em.remove();
+  var th=thread; var em=document.getElementById('emptymsg'); if(em)em.remove();
   list.forEach(function(m){
     if(m.id<=window.ACANS_CONV_SINCE) return; window.ACANS_CONV_SINCE=m.id;
     var d=document.createElement('div'); d.className='bubble '+(m.mine?'mine':'theirs');
@@ -268,7 +276,7 @@ window.ACANS_ON_CONV=function(list){
     d.innerHTML=name+esc(m.body).replace(/\n/g,'<br>')+'<small>'+m.at+'</small>';
     th.appendChild(d);
   });
-  window.scrollTo(0,document.body.scrollHeight);
+  scrollBottom();
 };
 function acansCompress(file,cb){ if(!file||!file.type||file.type.indexOf('image/')!==0){cb(file,file?file.name:'dosya');return;}
   var img=new Image(),u=URL.createObjectURL(file);
@@ -325,10 +333,11 @@ document.getElementById('msgform').addEventListener('submit',function(e){ e.prev
     if(queue.length>1)lbl.textContent='⬆ '+(i+1)+'/'+queue.length; one(queue[i],3,function(ok,err){ if(!ok){failed++; if(err)failMsgs.push(err);} setTimeout(function(){run(i+1);},150); }); }
   run(0);
 });
-// klavye: composer'ı görünür alanın dibine pinle
+// klavye: composer normalde .app flex akışında static'tir (nav'a asla binmez) — SADECE klavye
+// açıkken geçici olarak fixed'e alınıp visualViewport'un dibine pinlenir, kapanınca static'e döner.
 var composer=document.querySelector('.composer');
-function pinC(){ if(!composer||!window.visualViewport)return; var v=window.visualViewport; composer.style.top=(v.offsetTop+v.height-composer.offsetHeight)+'px'; composer.style.bottom='auto'; composer.style.paddingBottom='8px'; }
-function unpinC(){ if(!composer)return; composer.style.top='auto'; composer.style.bottom='calc(var(--df-navh, 76px) + env(safe-area-inset-bottom))'; composer.style.paddingBottom=''; }
+function pinC(){ if(!composer||!window.visualViewport)return; var v=window.visualViewport; composer.style.position='fixed'; composer.style.left='0'; composer.style.right='0'; composer.style.top=(v.offsetTop+v.height-composer.offsetHeight)+'px'; composer.style.bottom='auto'; composer.style.paddingBottom='8px'; }
+function unpinC(){ if(!composer)return; composer.style.position='static'; composer.style.top='auto'; composer.style.left=''; composer.style.right=''; composer.style.paddingBottom=''; }
 if(window.visualViewport){ window.visualViewport.addEventListener('resize',function(){pinC();scrollBottom();}); window.visualViewport.addEventListener('scroll',pinC); }
 var ta2=document.querySelector('.composer textarea');
 if(ta2){ ta2.addEventListener('focus',function(){ setTimeout(function(){pinC();scrollBottom();},250); }); ta2.addEventListener('blur',function(){ setTimeout(unpinC,100); }); }
@@ -451,7 +460,7 @@ window.ACANS_ON_CONV=function(list){
     d.innerHTML=(m.body||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>')+'<small>'+m.at+'</small>';
     th.appendChild(d);
   });
-  window.scrollTo(0,document.body.scrollHeight);
+  if(th) th.scrollTop=th.scrollHeight;
 };
 </script>
 
@@ -469,14 +478,17 @@ window.ACANS_ON_CONV=function(list){
 </form>
 <script>
 document.body.classList.add('chat-mode');
-function scrollBottom(){ window.scrollTo(0,document.body.scrollHeight); }
+var threadEl=document.getElementById('thread');
+function scrollBottom(){ if(threadEl) threadEl.scrollTop=threadEl.scrollHeight; }
 
-// ÇÖZÜM: composer fixed; JS ile GÖRÜNÜR ALANIN tam dibine (klavyenin üstüne) "top" ile pinle.
-// top kullanımı, iOS Safari'nin innerHeight tutarsızlığından etkilenmez.
+// Composer normalde .app flex akışında static'tir (nav'a asla binmez) — SADECE klavye açıkken
+// geçici olarak fixed'e alınıp visualViewport'un dibine ("top" ile, iOS Safari'nin innerHeight
+// tutarsızlığından etkilenmeyen yöntem) pinlenir, kapanınca static'e döner.
 var composer=document.querySelector('.composer');
 function pinComposer(){
   if(!composer||!window.visualViewport) return;
   var v=window.visualViewport;
+  composer.style.position='fixed'; composer.style.left='0'; composer.style.right='0';
   var topPos=v.offsetTop + v.height - composer.offsetHeight;
   composer.style.top=topPos+'px';
   composer.style.bottom='auto';
@@ -484,7 +496,7 @@ function pinComposer(){
 }
 function unpinComposer(){
   if(!composer) return;
-  composer.style.top='auto'; composer.style.bottom='calc(var(--df-navh, 76px) + env(safe-area-inset-bottom))';
+  composer.style.position='static'; composer.style.top='auto'; composer.style.left=''; composer.style.right='';
   composer.style.paddingBottom='';
 }
 if(window.visualViewport){

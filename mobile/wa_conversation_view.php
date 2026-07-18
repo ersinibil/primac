@@ -154,16 +154,21 @@ $lastMsgId = $messages ? (int)end($messages)['id'] : 0;
 .bubble small{display:block;font-size:10px;opacity:.6;margin-top:3px;text-align:right}
 .bubble.mine{align-self:flex-end;background:#2563eb;color:#fff;border-bottom-right-radius:5px}
 .bubble.theirs{align-self:flex-start;background:rgba(255,255,255,.12);border-bottom-left-radius:5px}
-.thread{display:flex;flex-direction:column;gap:8px;padding-bottom:8px}
-/* P0 MOBİL LAYOUT CONTRACT (2026-07-19, Product Owner FAIL raporu) — bkz. messages.php'deki AYNI
-   not: nav artık `height`+`overflow:hidden` ile SERT bir üst sınıra kilitli (önceki `min-height`
-   sadece taban garantiliyordu, içerik onu aşınca composer'ın üstüne biniyordu). --df-navh (TEK
-   kaynak) burada da okunuyor, ikisi runtime'da ASLA sapamaz. */
-.composer{position:fixed;left:0;right:0;bottom:calc(var(--df-navh, 76px) + env(safe-area-inset-bottom));background:#071326;border-top:1px solid rgba(255,255,255,.12);padding:8px 8px 8px;z-index:1001}
+.thread{display:flex;flex-direction:column;gap:8px}
+.composer{position:static;flex:0 0 auto;background:#071326;border-top:1px solid rgba(255,255,255,.12);padding:8px 8px calc(8px + env(safe-area-inset-bottom));z-index:1001}
 .composer .wrap{max-width:520px;margin:auto;display:flex;gap:8px;align-items:flex-end}
 .composer textarea{flex:1;margin:0;resize:none;max-height:100px}
 .composer button.send{flex:0 0 auto;width:50px;height:46px;border-radius:14px;font-size:18px}
-body.chat-mode .thread{padding-bottom:calc(88px + var(--df-navh, 76px) + env(safe-area-inset-bottom))}
+/* P0 KONUŞMA EKRANI SCROLL/SHELL DÜZELTMESİ (2026-07-19, Product Owner FAIL raporu — bug SADECE
+   konuşma detayında, global shell'e DOKUNULMADI — bkz. messages.php'deki AYNI not/mekanizma) —
+   `.app` viewport'a kilitli flex-column kabuk, SADECE `.thread` scroll ediyor, composer static
+   flex item olarak nav'ın üstünde normal akışta duruyor (nav'a binmesi geometrik olarak imkansız). */
+body.chat-mode{height:100vh;height:100dvh;overflow:hidden}
+body.chat-mode .app{display:flex;flex-direction:column;height:calc(100vh - var(--df-navh, 76px) - env(safe-area-inset-bottom));height:calc(100dvh - var(--df-navh, 76px) - env(safe-area-inset-bottom));overflow:hidden}
+body.chat-mode.kb .app{height:100vh;height:100dvh}
+body.chat-mode .df-m-topbar{flex:0 0 auto;position:static}
+body.chat-mode .app>div:not(.thread){flex:0 0 auto}
+body.chat-mode .thread{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:8px}
 </style>
 
 <div class="df-panel">
@@ -216,20 +221,23 @@ body.chat-mode .thread{padding-bottom:calc(88px + var(--df-navh, 76px) + env(saf
   var sendBtn = document.getElementById('waSendBtn');
   var composer = document.getElementById('waComposer');
 
-  function scrollBottom(){ window.scrollTo(0, document.body.scrollHeight); }
+  function scrollBottom(){ if(thread) thread.scrollTop=thread.scrollHeight; }
   scrollBottom();
 
-  // mobile/messages.php ile AYNI klavye-pin deseni (visualViewport) — kompozisyon çubuğu
-  // klavye açıkken görünür alanın tam dibinde kalır.
+  // mobile/messages.php ile AYNI desen: composer normalde .app flex akışında static'tir (nav'a
+  // asla binmez) — SADECE klavye açıkken geçici olarak fixed'e alınıp visualViewport'un dibine
+  // pinlenir, kapanınca static'e (normal flex konumuna) döner.
   function pinComposer(){
     if(!composer||!window.visualViewport) return;
     var v=window.visualViewport;
+    composer.style.position='fixed'; composer.style.left='0'; composer.style.right='0';
     composer.style.top=(v.offsetTop+v.height-composer.offsetHeight)+'px';
     composer.style.bottom='auto'; composer.style.paddingBottom='8px';
   }
   function unpinComposer(){
     if(!composer) return;
-    composer.style.top='auto'; composer.style.bottom='calc(var(--df-navh, 76px) + env(safe-area-inset-bottom))'; composer.style.paddingBottom='';
+    composer.style.position='static'; composer.style.top='auto'; composer.style.left=''; composer.style.right='';
+    composer.style.paddingBottom='';
   }
   if(window.visualViewport){
     window.visualViewport.addEventListener('resize', function(){ pinComposer(); scrollBottom(); });
