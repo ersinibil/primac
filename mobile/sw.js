@@ -13,7 +13,9 @@
 // "Ana Ekrandaki uygulamayı kapatıp yeniden açması" yeterli olur, cache elle temizlenmesine gerek
 // kalmaz. Bundan sonra bu dosyanın HER ds-foundation.css/js değişikliğiyle BİRLİKTE bump
 // edilmesi gerekiyor — aksi halde aynı sınıf hata sessizce tekrarlanır.
-const CACHE='acans-os-v29';
+// P0 MOBİL HOTFIX (2026-07-19): v29→v30 — ds-foundation.css'te .df-m-bottomnav min-height kilidi
+// eklendi (composer/nav çakışması kök neden düzeltmesi) — AYNI KURAL, bump zorunlu.
+const CACHE='acans-os-v30';
 const STATIC_ASSETS=[
   './',
   './index.php',
