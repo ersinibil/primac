@@ -111,7 +111,7 @@ ds_page_header($task['title'], ds_icon('check',24), '', $__actions);
   </div>
   <?php if($cn['notes']): ?><p class="df-task-desc"><?=nl2br(h($cn['notes']))?></p><?php endif; ?>
   <?php if(!empty($cn['finance_movement_id'])): ?>
-    <a class="df-btn df-btn--ghost" href="checks_notes.php?open=<?=(int)$cn['id']?>">Finans Kaydına Git</a>
+    <a class="df-btn df-btn--ghost" href="check_note_view.php?id=<?=(int)$cn['id']?>">Finans Kaydına Git</a>
   <?php else: ?>
     <span class="df-text-caption">Finans hareketi oluşturulamadı</span>
   <?php endif; ?>

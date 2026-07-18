@@ -3,7 +3,9 @@
  * checks_notes.php / check_note_view.php / mobile/checks_notes.php / mobile/check_note_view.php ortak kullanır.
  * Tablo: database/migrations/024_checks_notes.sql
  * Dosya eki + otomatik görev: database/migrations/026_checks_notes_attachment.sql,
- * database/migrations/027_checks_notes_task_link.sql */
+ * database/migrations/027_checks_notes_task_link.sql
+ * Yaşam döngüsü (tahsil/ciro/öde/karşılıksız/iptal): database/migrations/048_checks_notes_lifecycle.sql */
+require_once __DIR__.'/finance_lib.php'; // finance_movement_apply_balance()/finance_movement_reverse_balance() için
 
 function checks_notes_types(){
     return ['cek'=>'Çek','senet'=>'Senet'];
@@ -216,8 +218,13 @@ function checks_notes_create($pdo, array $data, $userId=null){
     $direction = ($data['direction'] ?? 'alinan')==='verilen' ? 'verilen' : 'alinan';
     $amount = (float)str_replace(',', '.', (string)($data['amount'] ?? 0));
     if($amount<=0) throw new Exception('Tutar sıfırdan büyük olmalı.');
-    $status = $data['status'] ?? 'portfoyde';
-    if(!array_key_exists($status, checks_notes_statuses($direction))) $status='portfoyde';
+    // P0 ÇEK/SENET YAŞAM DÖNGÜSÜ (2026-07-18, Product Owner kararı): "Başlangıç durumu: PORTFÖYDE"
+    // / "VERİLDİ-BEKLİYOR" — yeni kayıt HER ZAMAN portfoyde ile başlar, serbestçe seçilebilir
+    // olmaktan çıkarıldı (önceden burada gelen $data['status'] doğrudan kabul ediliyordu — bu, bir
+    // kaydın hiçbir gerçek kasa/banka hareketi olmadan doğrudan "Tahsil Edildi" olarak
+    // oluşturulabilmesine izin veriyordu). Tahsil/ciro/ödeme SADECE checks_notes_collect()/pay()/
+    // endorse() üzerinden, gerçek finans hareketiyle BİRLİKTE olur.
+    $status = 'portfoyde';
     $dueDate = trim($data['due_date'] ?? '') ?: null;
     $contactId = (int)($data['contact_id'] ?? 0) ?: null;
     $number = trim($data['number'] ?? '');
@@ -261,17 +268,26 @@ function checks_notes_create($pdo, array $data, $userId=null){
     return $newId;
 }
 
+// P0 ÇEK/SENET YAŞAM DÖNGÜSÜ (2026-07-18, Product Owner kararı): bu genel düzenleme fonksiyonu
+// ARTIK durum (status) alanını KABUL ETMEZ — önceden serbest bir "Durum" dropdown'ıyla, hiçbir
+// kasa/banka/cari hareketi oluşturmadan doğrudan 'tahsil_edildi'/'ciro_edildi' yazılabiliyordu
+// (kritik veri bütünlüğü açığı: rozet "Tahsil Edildi" derdi ama hiçbir yerde gerçek para hareketi
+// olmazdı). Durum SADECE checks_notes_collect()/pay()/endorse()/bounce()/cancel() üzerinden,
+// doğru finans hareketiyle BİRLİKTE değişir. Ayrıca sadece 'portfoyde' (henüz hiçbir finansal
+// aksiyon almamış) kayıtlar düzenlenebilir — "Final durumdaki kayıt üzerinde tekrar finansal işlem
+// yapılamasın" kuralı, temel alan düzenlemesini de kapsar (tutar/tarih/cari sonradan değişirse
+// zaten tamamlanmış bir tahsilat/ciro ile tutarsız kalırdı).
 function checks_notes_update($pdo, $id, array $data){
     $id=(int)$id;
     $row=checks_notes_get($pdo,$id);
     if(!$row) throw new Exception('Kayıt bulunamadı.');
+    if($row['status']!=='portfoyde') throw new Exception('Bu kayıt sonuçlanmış (tahsil/ödeme/ciro/karşılıksız/iptal) — artık düzenlenemez.');
 
     $type = ($data['type'] ?? $row['type'])==='senet' ? 'senet' : 'cek';
     $direction = ($data['direction'] ?? ($row['direction'] ?? 'alinan'))==='verilen' ? 'verilen' : 'alinan';
     $amount = (float)str_replace(',', '.', (string)($data['amount'] ?? $row['amount']));
     if($amount<=0) throw new Exception('Tutar sıfırdan büyük olmalı.');
-    $status = $data['status'] ?? $row['status'];
-    if(!array_key_exists($status, checks_notes_statuses($direction))) $status=$row['status'];
+    $status = 'portfoyde'; // durum bu fonksiyondan asla değişmez — bkz. üstteki not
     $dueDate = array_key_exists('due_date',$data) ? (trim($data['due_date'] ?? '') ?: null) : $row['due_date'];
     $contactId = array_key_exists('contact_id',$data) ? ((int)$data['contact_id'] ?: null) : $row['contact_id'];
 
@@ -293,9 +309,6 @@ function checks_notes_update($pdo, $id, array $data){
             $id,
         ]);
 
-    // Durum "Tahsil Edildi/Ciro Edildi/İptal" olduysa ilişkili hatırlatma görevini tamamlanmış işaretle.
-    checks_notes_sync_task_status($pdo, $row['task_id'] ?? null, $status);
-
     // Bağlı finans hareketini (cari bakiye) yeni değerlerle senkronize et.
     try{
         $fmId = checks_notes_sync_finance($pdo, $id, $type, $direction, $amount, $contactId, trim($data['bank_name'] ?? $row['bank_name']), trim($data['number'] ?? $row['number']), $row['finance_movement_id'] ?? null);
@@ -306,11 +319,17 @@ function checks_notes_update($pdo, $id, array $data){
 }
 
 // Dönüş: ['ok'=>bool,'msg'=>string]
+// P0 ÇEK/SENET YAŞAM DÖNGÜSÜ (2026-07-18, Product Owner kararı): "Tahsil edilmiş, ödenmiş veya
+// ciro edilmiş bir çek silinmemeli" — silme artık checks_notes_can_delete() kapısından geçmeden
+// hiçbir zaman canlı bir kasa/banka veya tedarikçi-kapama hareketini orphan BIRAKMAZ.
 function checks_notes_delete($pdo, $id){
     $id=(int)$id;
     if($id<1) return ['ok'=>false,'msg'=>'Geçersiz kayıt.'];
     $row=checks_notes_get($pdo,$id);
     if(!$row) return ['ok'=>false,'msg'=>'Kayıt bulunamadı.'];
+    if(!checks_notes_can_delete($row)){
+        return ['ok'=>false,'msg'=>'Tahsil edilmiş, ödenmiş veya ciro edilmiş bir çek/senet silinemez — önce "İptal" akışıyla ilgili hareketi geri alın.'];
+    }
     if(!empty($row['finance_movement_id'])) checks_notes_reverse_finance($pdo, $row['finance_movement_id']);
     $pdo->prepare("DELETE FROM checks_notes WHERE id=?")->execute([$id]);
     return ['ok'=>true,'msg'=>'Kayıt silindi (bağlı finans hareketi de kaldırıldı).'];
@@ -322,4 +341,244 @@ function checks_notes_overdue_count($pdo){
         $s=$pdo->query("SELECT COUNT(*) c FROM checks_notes WHERE status='portfoyde' AND due_date IS NOT NULL AND due_date<CURDATE()");
         return (int)$s->fetch()['c'];
     }catch(Throwable $e){ return 0; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════
+ * ÇEK / SENET — GERÇEK FİNANSAL YAŞAM DÖNGÜSÜ (2026-07-18, Product Owner kararı)
+ * ═══════════════════════════════════════════════════════════════════════════════════════════
+ * TEMEL MUHASEBE KURALI: checks_notes_create() (yukarıda) bir çek/senet kabul edildiğinde/
+ * verildiğinde, cari_id doluysa ZATEN gerçek bir finance_movements kaydı (finance_movement_id,
+ * account_id=NULL) oluşturup carinin borcunu/alacağını kapatıyor. Bu bölümdeki fonksiyonlar
+ * (tahsil/ciro/öde/karşılıksız/iptal) o cariyi İKİNCİ KEZ ETKİLEMEZ — sadece:
+ *   - Tahsil Et / Öde: SEÇİLEN kasa/banka hesabına (settle_account_id) gerçek nakit hareketi
+ *     (contact_id=NULL, account_id DOLU) — finance_movement_apply_balance() ile.
+ *   - Ciro Et: ciro edilen tedarikçinin borcunu kapatan bir hareket (contact_id=ciro_contact_id,
+ *     account_id=NULL) — "Mevcut cari ödeme mantığını kullan" (aynı desen: checks_notes_create()'in
+ *     orijinal kabul hareketiyle BİREBİR aynı yapı, kasa/banka hareketi OLUŞTURMAZ).
+ *   - Karşılıksız / İptal: orijinal kabul hareketini (finance_movement_id) checks_notes_reverse_
+ *     finance() ile geri alır — carinin borcu/alacağı yeniden açılır, çift kayıt ÜRETİLMEZ (aynı
+ *     tek fonksiyon hem silmede hem burada kullanılıyor).
+ *
+ * NOT (Product Owner'a AYRICA bildirilecek — bu turun kapsamı DIŞINDA bırakıldı): checks_notes_
+ * sync_finance()'in ürettiği kabul-anı hareketinin contact_balance_case_sql() işaretİ incelendi —
+ * movement_type='cek_senet' 'normal'/'mobile' listesinde olmadığı için ELSE dalına düşüyor (satış/
+ * alış gibi "yeni borç" işareti alıyor), oysa kod yorumu ve status='Tahsil Edildi' etiketi niyetin
+ * "Tahsilat" (borç AZALTAN) olduğunu gösteriyor — bu, MEVCUT (bu oturumdan önceki) bir işaret
+ * tutarsızlığı olabilir. Bu migration/lib bunu SESSİZCE değiştirmedi (tüm mevcut cari bakiyelerini
+ * geriye dönük etkiler, bu turun "yaşam döngüsü" kapsamının dışında bir karar) — sadece MEVCUT
+ * davranışla tutarlı yeni fonksiyonlar eklendi. Kesin karar Product Owner'a bırakıldı.
+ */
+
+// Durum makinesi: hangi aksiyon butonları gösterilsin. Terminal durumlarda (tahsil_edildi/
+// ciro_edildi/karsiliksiz/iptal) HİÇBİR finansal aksiyon yok — sadece rozet + geçmiş.
+function checks_notes_available_actions($row){
+    if(($row['status'] ?? '') !== 'portfoyde') return [];
+    return $row['direction']==='verilen' ? ['ode','duzenle','iptal'] : ['tahsil','ciro','karsiliksiz','duzenle','iptal'];
+}
+
+// Silme SADECE finansal olarak "dokunulmamış" kayıtlarda mümkün — tahsil edilmiş/ödenmiş/ciro
+// edilmiş bir çek silinirse canlı bir kasa/banka veya tedarikçi-kapama hareketi ORPHAN kalırdı
+// (Product Owner kararı: "gerekiyorsa kontrollü bir İşlemi Geri Al/İptal akışı" — silme değil).
+function checks_notes_can_delete($row){
+    return !in_array($row['status'] ?? '', ['tahsil_edildi','ciro_edildi'], true);
+}
+
+/**
+ * TAHSİL ET — alınan bir çeki/senedi fiilen kasaya/bankaya geçirir. Cariye DOKUNMAZ (zaten kapalı).
+ * @throws Exception geçersiz durum/yön, kayıt yok veya geçersiz hesap
+ */
+function checks_notes_collect($pdo, $userId, $id, $accountId, $date, $desc=''){
+    $id=(int)$id; $accountId=(int)$accountId;
+    $row=checks_notes_get($pdo,$id);
+    if(!$row) throw new Exception('Kayıt bulunamadı.');
+    if($row['direction']!=='alinan') throw new Exception('Bu işlem sadece alınan çek/senetler için geçerli.');
+    if($row['status']!=='portfoyde') throw new Exception('Bu kayıt portföyde değil, tekrar tahsil edilemez.');
+    $acc=$pdo->prepare("SELECT * FROM finance_accounts WHERE id=? AND active=1"); $acc->execute([$accountId]); $account=$acc->fetch();
+    if(!$account) throw new Exception('Geçerli bir kasa/banka hesabı seçin.');
+    $date = trim((string)$date) ?: date('Y-m-d');
+
+    $ownsTx=!$pdo->inTransaction();
+    if($ownsTx) $pdo->beginTransaction();
+    try{
+        $label = ($row['type']==='senet'?'Senet':'Çek').' Tahsilatı — '.($row['type']==='senet'?'Senet':'Çek').' No: '.($row['number']?:'—').($row['contact_name']?' — '.$row['contact_name']:'');
+        $pdo->prepare("INSERT INTO finance_movements(contact_id,direction,amount,account_id,payment_channel,status,movement_date,description,movement_type)
+            VALUES(NULL,'in',?,?,?,'Tahsil Edildi',?,?,'cek_senet_tahsil')")
+            ->execute([$row['amount'],$accountId,($row['type']==='senet'?'Senet':'Çek'),$date,$label]);
+        $fmId=(int)$pdo->lastInsertId();
+        finance_movement_apply_balance($pdo,'in',$accountId,$row['amount']);
+
+        $pdo->prepare("UPDATE checks_notes SET status='tahsil_edildi', settle_date=?, settle_account_id=?, settle_finance_movement_id=?, settle_notes=? WHERE id=?")
+            ->execute([$date,$accountId,$fmId,trim((string)$desc),$id]);
+        checks_notes_sync_task_status($pdo, $row['task_id'] ?? null, 'tahsil_edildi');
+        if(function_exists('audit_log')) audit_log($userId,'update','checks_notes',$id,['status'=>$row['status']],['status'=>'tahsil_edildi','settle_account_id'=>$accountId,'settle_finance_movement_id'=>$fmId]);
+        if($ownsTx) $pdo->commit();
+    }catch(Throwable $e){
+        if($ownsTx) $pdo->rollBack();
+        throw $e;
+    }
+}
+
+/**
+ * ÖDE — kendi verdiğimiz bir çeki/senedi fiilen kasadan/bankadan öder. Cariye DOKUNMAZ (zaten kapalı).
+ * @throws Exception geçersiz durum/yön, kayıt yok veya geçersiz hesap
+ */
+function checks_notes_pay($pdo, $userId, $id, $accountId, $date, $desc=''){
+    $id=(int)$id; $accountId=(int)$accountId;
+    $row=checks_notes_get($pdo,$id);
+    if(!$row) throw new Exception('Kayıt bulunamadı.');
+    if($row['direction']!=='verilen') throw new Exception('Bu işlem sadece verilen çek/senetler için geçerli.');
+    if($row['status']!=='portfoyde') throw new Exception('Bu kayıt bekleyen durumda değil, tekrar ödenemez.');
+    $acc=$pdo->prepare("SELECT * FROM finance_accounts WHERE id=? AND active=1"); $acc->execute([$accountId]); $account=$acc->fetch();
+    if(!$account) throw new Exception('Geçerli bir kasa/banka hesabı seçin.');
+    $date = trim((string)$date) ?: date('Y-m-d');
+
+    $ownsTx=!$pdo->inTransaction();
+    if($ownsTx) $pdo->beginTransaction();
+    try{
+        $label = ($row['type']==='senet'?'Senet':'Çek').' Ödemesi — '.($row['type']==='senet'?'Senet':'Çek').' No: '.($row['number']?:'—').($row['contact_name']?' — '.$row['contact_name']:'');
+        $pdo->prepare("INSERT INTO finance_movements(contact_id,direction,amount,account_id,payment_channel,status,movement_date,description,movement_type)
+            VALUES(NULL,'out',?,?,?,'Ödendi',?,?,'cek_senet_tahsil')")
+            ->execute([$row['amount'],$accountId,($row['type']==='senet'?'Senet':'Çek'),$date,$label]);
+        $fmId=(int)$pdo->lastInsertId();
+        finance_movement_apply_balance($pdo,'out',$accountId,$row['amount']);
+
+        $pdo->prepare("UPDATE checks_notes SET status='tahsil_edildi', settle_date=?, settle_account_id=?, settle_finance_movement_id=?, settle_notes=? WHERE id=?")
+            ->execute([$date,$accountId,$fmId,trim((string)$desc),$id]);
+        checks_notes_sync_task_status($pdo, $row['task_id'] ?? null, 'tahsil_edildi');
+        if(function_exists('audit_log')) audit_log($userId,'update','checks_notes',$id,['status'=>$row['status']],['status'=>'tahsil_edildi(ödendi)','settle_account_id'=>$accountId,'settle_finance_movement_id'=>$fmId]);
+        if($ownsTx) $pdo->commit();
+    }catch(Throwable $e){
+        if($ownsTx) $pdo->rollBack();
+        throw $e;
+    }
+}
+
+/**
+ * CİRO ET — portföydeki bir müşteri çekini bir tedarikçiye ödeme olarak devreder. Banka/kasa
+ * hareketi OLUŞMAZ; "Mevcut cari ödeme mantığını kullan" (checks_notes_create()'in orijinal kabul
+ * hareketiyle BİREBİR aynı yapı: contact_id dolu, account_id NULL) — ciro edilen tedarikçinin
+ * borcu kapanır. Hangi müşteriden alındığı (row.contact_id) DEĞİŞMEZ, ciro_contact_id AYRICA
+ * saklanır — zincir (kimden alındı → kime ciro edildi) her zaman izlenebilir.
+ * @throws Exception geçersiz durum/yön, kayıt yok veya geçersiz cari
+ */
+function checks_notes_endorse($pdo, $userId, $id, $ciroContactId, $date, $desc=''){
+    $id=(int)$id; $ciroContactId=(int)$ciroContactId;
+    $row=checks_notes_get($pdo,$id);
+    if(!$row) throw new Exception('Kayıt bulunamadı.');
+    if($row['direction']!=='alinan') throw new Exception('Bu işlem sadece alınan çek/senetler için geçerli.');
+    if($row['status']!=='portfoyde') throw new Exception('Bu kayıt portföyde değil, ciro edilemez.');
+    if(!$ciroContactId) throw new Exception('Ciro edilecek cari seçilmedi.');
+    $c=$pdo->prepare("SELECT id,name FROM contacts WHERE id=?"); $c->execute([$ciroContactId]); $ciroContact=$c->fetch();
+    if(!$ciroContact) throw new Exception('Geçerli bir cari seçin.');
+    $date = trim((string)$date) ?: date('Y-m-d');
+
+    $ownsTx=!$pdo->inTransaction();
+    if($ownsTx) $pdo->beginTransaction();
+    try{
+        $label = ($row['type']==='senet'?'Senet':'Çek').' Cirosu — '.($row['type']==='senet'?'Senet':'Çek').' No: '.($row['number']?:'—').($row['contact_name']?' — '.$row['contact_name'].' → '.$ciroContact['name']:'');
+        $pdo->prepare("INSERT INTO finance_movements(contact_id,direction,amount,account_id,payment_channel,status,movement_date,description,movement_type)
+            VALUES(?,'out',?,NULL,?,'Ödendi',?,?,'cek_senet_ciro')")
+            ->execute([$ciroContactId,$row['amount'],($row['type']==='senet'?'Senet':'Çek'),$date,$label]);
+        $fmId=(int)$pdo->lastInsertId();
+
+        $pdo->prepare("UPDATE checks_notes SET status='ciro_edildi', ciro_contact_id=?, ciro_finance_movement_id=?, settle_date=?, settle_notes=? WHERE id=?")
+            ->execute([$ciroContactId,$fmId,$date,trim((string)$desc),$id]);
+        checks_notes_sync_task_status($pdo, $row['task_id'] ?? null, 'ciro_edildi');
+        if(function_exists('audit_log')) audit_log($userId,'update','checks_notes',$id,['status'=>$row['status']],['status'=>'ciro_edildi','ciro_contact_id'=>$ciroContactId,'ciro_finance_movement_id'=>$fmId]);
+        if($ownsTx) $pdo->commit();
+    }catch(Throwable $e){
+        if($ownsTx) $pdo->rollBack();
+        throw $e;
+    }
+}
+
+/**
+ * KARŞILIKSIZ — alınan bir çek tahsil edilemedi. Kabul anında kapanmış olan müşteri borcu YENİDEN
+ * AÇILIR (orijinal kabul hareketi checks_notes_reverse_finance() ile geri alınır — silmedeki AYNI
+ * fonksiyon, çift kayıt/çift mantık ÜRETİLMEDİ).
+ * @throws Exception geçersiz durum/yön veya kayıt yok
+ */
+function checks_notes_bounce($pdo, $userId, $id, $reason=''){
+    $id=(int)$id;
+    $row=checks_notes_get($pdo,$id);
+    if(!$row) throw new Exception('Kayıt bulunamadı.');
+    if($row['direction']!=='alinan') throw new Exception('Bu işlem sadece alınan çek/senetler için geçerli.');
+    if($row['status']!=='portfoyde') throw new Exception('Bu kayıt portföyde değil.');
+
+    $ownsTx=!$pdo->inTransaction();
+    if($ownsTx) $pdo->beginTransaction();
+    try{
+        if(!empty($row['finance_movement_id'])) checks_notes_reverse_finance($pdo, $row['finance_movement_id']);
+        $pdo->prepare("UPDATE checks_notes SET status='karsiliksiz', finance_movement_id=NULL, settle_date=?, settle_notes=? WHERE id=?")
+            ->execute([date('Y-m-d'),trim((string)$reason),$id]);
+        checks_notes_sync_task_status($pdo, $row['task_id'] ?? null, 'iptal'); // task 'iptal'/'ciro_edildi'/'tahsil_edildi' terminal setinde — karşılıksız da görevi kapatır
+        if(function_exists('audit_log')) audit_log($userId,'update','checks_notes',$id,['status'=>$row['status']],['status'=>'karsiliksiz','reopened_contact_id'=>$row['contact_id']]);
+        if($ownsTx) $pdo->commit();
+    }catch(Throwable $e){
+        if($ownsTx) $pdo->rollBack();
+        throw $e;
+    }
+}
+
+/**
+ * İPTAL — portföydeki (henüz hiçbir finansal aksiyon almamış) bir çek/senet kaydı iptal edilir.
+ * Kabul anında oluşmuş cari kapama hareketi varsa (alınan/verilen fark etmez) geri alınır — cari
+ * bu kaydın hiç olmamış gibi kalır.
+ * @throws Exception geçersiz durum veya kayıt yok
+ */
+function checks_notes_cancel($pdo, $userId, $id, $reason=''){
+    $id=(int)$id;
+    $row=checks_notes_get($pdo,$id);
+    if(!$row) throw new Exception('Kayıt bulunamadı.');
+    if($row['status']!=='portfoyde') throw new Exception('Bu kayıt zaten sonuçlanmış, iptal edilemez.');
+
+    $ownsTx=!$pdo->inTransaction();
+    if($ownsTx) $pdo->beginTransaction();
+    try{
+        if(!empty($row['finance_movement_id'])) checks_notes_reverse_finance($pdo, $row['finance_movement_id']);
+        $pdo->prepare("UPDATE checks_notes SET status='iptal', finance_movement_id=NULL, settle_date=?, settle_notes=? WHERE id=?")
+            ->execute([date('Y-m-d'),trim((string)$reason),$id]);
+        checks_notes_sync_task_status($pdo, $row['task_id'] ?? null, 'iptal');
+        if(function_exists('audit_log')) audit_log($userId,'update','checks_notes',$id,['status'=>$row['status']],['status'=>'iptal']);
+        if($ownsTx) $pdo->commit();
+    }catch(Throwable $e){
+        if($ownsTx) $pdo->rollBack();
+        throw $e;
+    }
+}
+
+// Bir çek/senedin yaşam döngüsü zaman çizelgesi — check_note_view.php/mobile eşdeğeri render eder.
+// Yeni bir tablo İCAT EDİLMEDİ, checks_notes'un kendi kolonlarından + finance_movements
+// açıklamalarından türetilir. @return array [['date'=>string,'label'=>string,'amount'=>string|null]]
+function checks_notes_history($pdo, $row){
+    $steps=[];
+    $partyName = $row['contact_name'] ?? null;
+    $kind = $row['type']==='senet' ? 'Senet' : 'Çek';
+    $verb = $row['direction']==='verilen'
+        ? ($partyName ? $kind.' '.$partyName.'\'a verildi' : $kind.' verildi')
+        : ($partyName ? $kind.' '.$partyName.'\'dan alındı' : $kind.' alındı');
+    $steps[] = ['date'=>$row['created_at'], 'label'=>$verb, 'amount'=>money($row['amount']), 'tone'=>'neutral'];
+
+    if($row['status']==='tahsil_edildi'){
+        $accName='';
+        if(!empty($row['settle_account_id'])){
+            try{ $a=$pdo->prepare("SELECT name FROM finance_accounts WHERE id=?"); $a->execute([$row['settle_account_id']]); $accName=$a->fetch()['name']??''; }catch(Throwable $e){}
+        }
+        if($row['direction']==='verilen'){
+            $steps[] = ['date'=>$row['settle_date'], 'label'=>($accName?:'Hesaptan').' ödendi', 'amount'=>'-'.money($row['amount']), 'tone'=>'danger'];
+        }else{
+            $steps[] = ['date'=>$row['settle_date'], 'label'=>($accName?:'Hesaba').' tahsil edildi', 'amount'=>'+'.money($row['amount']), 'tone'=>'success'];
+        }
+    }elseif($row['status']==='ciro_edildi'){
+        $ciroName='';
+        if(!empty($row['ciro_contact_id'])){
+            try{ $c=$pdo->prepare("SELECT name FROM contacts WHERE id=?"); $c->execute([$row['ciro_contact_id']]); $ciroName=$c->fetch()['name']??''; }catch(Throwable $e){}
+        }
+        $steps[] = ['date'=>$row['settle_date'], 'label'=>($ciroName?:'Tedarikçiye').' ciro edildi', 'amount'=>money($row['amount']), 'tone'=>'info'];
+    }elseif($row['status']==='karsiliksiz'){
+        $steps[] = ['date'=>$row['settle_date'] ?: date('Y-m-d'), 'label'=>'Karşılıksız döndü — cari borç yeniden açıldı', 'amount'=>null, 'tone'=>'danger'];
+    }elseif($row['status']==='iptal'){
+        $steps[] = ['date'=>$row['settle_date'] ?: date('Y-m-d'), 'label'=>'İptal edildi', 'amount'=>null, 'tone'=>'neutral'];
+    }
+    return $steps;
 }

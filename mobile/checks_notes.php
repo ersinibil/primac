@@ -44,7 +44,7 @@ foreach($rows as $r){ if($r['status']==='portfoyde') $countPortfoyde++; }
 <details class="df-panel" style="margin-top:12px"><summary style="font-weight:900;cursor:pointer"><?=ds_icon('plus',14)?> Yeni Çek / Senet Kaydı</summary>
 <form method="post" style="margin-top:10px" enctype="multipart/form-data">
   <label>Yön <small class="muted">(bizim verdiğimiz mi, bize verilen mi)</small></label>
-  <select name="direction" id="cn-dir-new" onchange="updateCnStatusLabels(this)"><?php foreach($dirOpts as $dk=>$dl): ?><option value="<?=$dk?>"><?=h($dl)?></option><?php endforeach; ?></select>
+  <select name="direction" id="cn-dir-new"><?php foreach($dirOpts as $dk=>$dl): ?><option value="<?=$dk?>"><?=h($dl)?></option><?php endforeach; ?></select>
   <label>Tür</label>
   <select name="type"><?php foreach($typeOpts as $tk=>$tl): ?><option value="<?=$tk?>"><?=h($tl)?></option><?php endforeach; ?></select>
   <label>Numara</label>
@@ -64,8 +64,6 @@ foreach($rows as $r){ if($r['status']==='portfoyde') $countPortfoyde++; }
   </div>
   <label>Banka Adı <small class="muted">(çek ise)</small></label>
   <input name="bank_name">
-  <label>Durum</label>
-  <select name="status" id="cn-status-new"><?php foreach($statusOpts as $sk=>$sl): ?><option value="<?=$sk?>" <?=$sk==='portfoyde'?'selected':''?>><?=h($sl)?></option><?php endforeach; ?></select>
   <label>Not</label>
   <textarea name="notes" rows="2"></textarea>
   <label>Fotoğraf / Dosya <small class="muted">(opsiyonel, jpg/png/webp/gif/pdf, en fazla 15 MB)</small></label>
@@ -109,22 +107,6 @@ foreach($rows as $r){
 </div>
 
 <script>
-var CN_STATUS_LABELS = {
-  portfoyde: {alinan:'Portföyde', verilen:'Verildi (Bekliyor)'},
-  tahsil_edildi: {alinan:'Tahsil Edildi', verilen:'Ödendi'},
-  ciro_edildi: {alinan:'Ciro Edildi', verilen:'Ciro Edildi'},
-  karsiliksiz: {alinan:'Karşılıksız', verilen:'Karşılıksız Döndü'},
-  iptal: {alinan:'İptal', verilen:'İptal'}
-};
-function updateCnStatusLabels(dirSel){
-    var form = dirSel.closest('form');
-    var statusSel = form ? form.querySelector('select[name="status"]') : null;
-    if(!statusSel) return;
-    Array.prototype.forEach.call(statusSel.options, function(opt){
-        var lbl = CN_STATUS_LABELS[opt.value];
-        if(lbl) opt.textContent = lbl[dirSel.value] || lbl.alinan;
-    });
-}
 function onCnContactChange(){
     var sel=document.getElementById('contactSel');
     var box=document.getElementById('newContactBox');

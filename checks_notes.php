@@ -30,15 +30,6 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             $_SESSION['cn_err']=$e->getMessage();
             header('Location: checks_notes.php'); exit;
         }
-    }elseif(isset($_POST['edit_cn'])){
-        try{
-            if(!can_edit_delete()){
-                $error='Bu işlem için yetkiniz yok.';
-            }else{
-                checks_notes_update($pdo, (int)$_POST['id'], $_POST);
-                $ok='Kayıt güncellendi.';
-            }
-        }catch(Throwable $e){ $error=$e->getMessage(); }
     }elseif(isset($_POST['delete_cn'])){
         try{
             if(!can_edit_delete()){
@@ -77,7 +68,7 @@ ds_page_header('Çek / Senet Takibi', ds_icon('tag',24), '', $__cnActions, false
 <?php
 $__dirOptsHtml='';
 foreach($dirOpts as $dk=>$dl){ $__dirOptsHtml.='<option value="'.h($dk).'">'.h($dl).'</option>'; }
-ds_form_field('Yön', '<select name="direction" id="cn-dir-new" onchange="updateCnStatusLabels(this)">'.$__dirOptsHtml.'</select>', 'Bizim verdiğimiz mi, bize verilen mi');
+ds_form_field('Yön', '<select name="direction" id="cn-dir-new">'.$__dirOptsHtml.'</select>', 'Bizim verdiğimiz mi, bize verilen mi');
 
 $__typeOptsHtml='';
 foreach($typeOpts as $tk=>$tl){ $__typeOptsHtml.='<option value="'.h($tk).'">'.h($tl).'</option>'; }
@@ -105,10 +96,6 @@ ds_form_field('Cari', '<select name="contact_id" id="contactSel" onchange="onCnC
 
 <?php
 ds_form_field('Banka Adı', '<input name="bank_name">', 'Çek ise');
-
-$__statusOptsHtml='';
-foreach($statusOpts as $sk=>$sl){ $__statusOptsHtml.='<option value="'.h($sk).'" '.($sk==='portfoyde'?'selected':'').'>'.h($sl).'</option>'; }
-ds_form_field('Durum', '<select name="status" id="cn-status-new">'.$__statusOptsHtml.'</select>');
 ?>
 
 <div class="df-form-span-2"><?php ds_form_field('Not', '<textarea name="notes" rows="2"></textarea>'); ?></div>
@@ -168,8 +155,12 @@ foreach($rows as $r){
     if(!empty($r['attachment'])) echo "<a href='".h(base_url().$r['attachment'])."' target='_blank'>📎 Dosyayı Gör</a>"; else echo "<span style='color:var(--df-ink-500)'>-</span>";
     echo "</td>";
     echo "<td><div class='row-actions'>";
-    if(can_edit_delete()){
-        echo "<button type='button' class='df-btn df-btn--secondary df-btn--sm' onclick=\"document.getElementById('edit-cn-".$rid."').style.display=(document.getElementById('edit-cn-".$rid."').style.display==='none'?'table-row':'none')\">✏️ Düzenle</button>";
+    echo "<a class='df-btn df-btn--secondary df-btn--sm' href='check_note_view.php?id=".$rid."'>🔎 Detay</a>";
+    // P0 ÇEK/SENET YAŞAM DÖNGÜSÜ (2026-07-18): Tahsil Et/Ciro Et/Öde/Karşılıksız/İptal artık
+    // check_note_view.php'de (durum makinesi + gerçek kasa/banka hareketi ile) — bu liste satırı
+    // artık serbest bir "Durum" dropdown'ı İÇERMİYOR (kritik veri bütünlüğü açığıydı). Sil sadece
+    // henüz finansal aksiyon almamış kayıtlarda gösterilir (checks_notes_can_delete()).
+    if(can_edit_delete() && checks_notes_can_delete($r)){
         echo "<form method='post' style='display:inline' onsubmit=\"return confirm('Bu kaydı silmek istediğinize emin misiniz?')\">"
             ."<input type='hidden' name='id' value='".$rid."'>"
             ."<button class='df-btn df-btn--danger df-btn--sm' name='delete_cn' value='1'>🗑 Sil</button>"
@@ -177,37 +168,6 @@ foreach($rows as $r){
     }
     echo "</div></td>";
     echo "</tr>";
-
-    if(can_edit_delete()){
-    echo "<tr id='edit-cn-".$rid."' style='display:none;background:var(--df-surface-sunken)'><td colspan='10'>";
-    echo "<form method='post' class='df-form-grid-2' style='margin:10px 0;padding:var(--df-space-3) 0' enctype='multipart/form-data'>";
-    echo "<input type='hidden' name='id' value='".$rid."'>";
-    $__dirOptsHtmlE='';
-    foreach($dirOpts as $dk=>$dl){ $__dirOptsHtmlE.='<option value="'.h($dk).'" '.($rDir===$dk?'selected':'').'>'.h($dl).'</option>'; }
-    echo "<div class='df-form-group'><label class='df-form-label'>Yön</label><select name='direction' id='cn-dir-".$rid."' onchange='updateCnStatusLabels(this)'>".$__dirOptsHtmlE."</select></div>";
-    $__typeOptsHtmlE='';
-    foreach($typeOpts as $tk=>$tl){ $__typeOptsHtmlE.='<option value="'.h($tk).'" '.($r['type']===$tk?'selected':'').'>'.h($tl).'</option>'; }
-    echo "<div class='df-form-group'><label class='df-form-label'>Tür</label><select name='type'>".$__typeOptsHtmlE."</select></div>";
-    echo "<div class='df-form-group'><label class='df-form-label'>Numara</label><input name='number' value='".h($r['number'])."'></div>";
-    echo "<div class='df-form-group'><label class='df-form-label'>Tutar</label><input type='number' step='0.01' name='amount' value='".h($r['amount'])."' required></div>";
-    echo "<div class='df-form-group'><label class='df-form-label'>Vade Tarihi</label><input type='date' name='due_date' value='".h($r['due_date'])."'></div>";
-    $__contactOptsHtmlE="<option value=''>Cari seçilmedi</option>";
-    foreach($contacts as $c){ $__contactOptsHtmlE.='<option value="'.$c['id'].'" '.((int)$r['contact_id']===(int)$c['id']?'selected':'').'>'.h($c['name'].' / '.$c['type']).'</option>'; }
-    echo "<div class='df-form-group'><label class='df-form-label'>Cari</label><select name='contact_id'>".$__contactOptsHtmlE."</select></div>";
-    echo "<div class='df-form-group'><label class='df-form-label'>Banka Adı</label><input name='bank_name' value='".h($r['bank_name'])."'></div>";
-    $__statusOptsHtmlE='';
-    foreach($rStatusOpts as $sk=>$sl){ $__statusOptsHtmlE.='<option value="'.h($sk).'" '.($r['status']===$sk?'selected':'').'>'.h($sl).'</option>'; }
-    echo "<div class='df-form-group'><label class='df-form-label'>Durum</label><select name='status' id='cn-status-".$rid."'>".$__statusOptsHtmlE."</select></div>";
-    echo "<div class='df-form-span-2 df-form-group'><label class='df-form-label'>Not</label><textarea name='notes' rows='2'>".h($r['notes'])."</textarea></div>";
-    echo "<div class='df-form-span-2 df-form-group'><label class='df-form-label'>Fotoğraf / Dosya</label>";
-    echo "<input type='file' name='attachment' accept='.jpg,.jpeg,.png,.webp,.gif,.pdf'>";
-    echo "<div class='df-form-help'>Yeni dosya seçilirse eskisinin yerine geçer, boş bırakılırsa mevcut korunur";
-    if(!empty($r['attachment'])) echo " — <a href='".h(base_url().$r['attachment'])."' target='_blank'>Mevcut dosyayı gör</a>";
-    echo "</div></div>";
-    echo "<div class='df-form-span-2'><button class='df-btn df-btn--primary' name='edit_cn' value='1'>💾 Kaydet</button></div>";
-    echo "</form>";
-    echo "</td></tr>";
-    }
 }
 if(!$rows) echo "<tr><td colspan='10' style='color:var(--df-ink-500)'>Kayıt yok.</td></tr>";
 ?>
@@ -223,23 +183,6 @@ body.nav-compact .df-form-span-2{grid-column:1 / -1}
 <script>
 // Yön (Alınan/Verilen) değişince Durum seçeneklerinin ETİKETLERİ değişir (değerler aynı kalır) —
 // ör. verilen bir çek için "Portföyde" yerine "Verildi (Bekliyor)" gösterilir (2026-07-03).
-var CN_STATUS_LABELS = {
-  portfoyde: {alinan:'Portföyde', verilen:'Verildi (Bekliyor)'},
-  tahsil_edildi: {alinan:'Tahsil Edildi', verilen:'Ödendi'},
-  ciro_edildi: {alinan:'Ciro Edildi', verilen:'Ciro Edildi'},
-  karsiliksiz: {alinan:'Karşılıksız', verilen:'Karşılıksız Döndü'},
-  iptal: {alinan:'İptal', verilen:'İptal'}
-};
-function updateCnStatusLabels(dirSel){
-    var form = dirSel.closest('form');
-    var statusSel = form ? form.querySelector('select[name="status"]') : null;
-    if(!statusSel) return;
-    Array.prototype.forEach.call(statusSel.options, function(opt){
-        var lbl = CN_STATUS_LABELS[opt.value];
-        if(lbl) opt.textContent = lbl[dirSel.value] || lbl.alinan;
-    });
-}
-
 // Dropdown'da "Listede yok — Yeni Ekle" seçilince kutuyu aç (2026-07-03 kullanıcı isteği)
 function onCnContactChange(){
     var sel=document.getElementById('contactSel');
@@ -273,28 +216,5 @@ function quickAddContactCheck(name, type) {
         .catch(e => alert('Bağlantı hatası: ' + e));
 }
 </script>
-
-<?php
-// Görev detay ekranındaki "Finans Kaydına Git" linki buraya ?open=<checks_notes.id> ile gelir.
-// Küçük/additive: sadece ilgili satırı bulup açıyor/kaydırıyor/kısaca vurguluyor, listeyi
-// veya mevcut düzenleme akışını değiştirmiyor.
-$openId=(int)($_GET['open'] ?? 0);
-if($openId>0):
-?>
-<script>
-(function(){
-  var row=document.getElementById('cn-row-<?=$openId?>');
-  var editRow=document.getElementById('edit-cn-<?=$openId?>');
-  if(editRow) editRow.style.display='table-row';
-  if(row){
-    row.scrollIntoView({behavior:'smooth',block:'center'});
-    var orig=row.style.backgroundColor;
-    row.style.transition='background-color .3s';
-    row.style.backgroundColor='#fef08a';
-    setTimeout(function(){ row.style.backgroundColor=orig; },2000);
-  }
-})();
-</script>
-<?php endif; ?>
 
 <?php require_once __DIR__.'/layout_bottom.php'; ?>
