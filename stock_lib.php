@@ -159,9 +159,15 @@ function stock_create_purchase($pdo, $supplier, $ids, $qtys, $prices, $vatRates,
  * çoklu ürün sepetine geçişle birlikte, eski LIMIT 1 varsayımı kaldırıldı).
  * @param PDO $pdo
  * @param int $saleId finance_movements kaydının ID'si (movement_type='sale' veya 'mobile_sale')
+ * @param bool $viaDocument P0 BELGE DÜZENLE/SİL (2026-07-18): normalde document_id dolu bir satış
+ *   buradan REDDEDİLİR (hızlı-satış ekranı belge-bağlı kayda dokunmamalı) — trade_core.php'nin
+ *   belge iptal/düzenleme fonksiyonları BİLEREK bu kapıyı true ile açar, aynı avg_cost/CPA/finans
+ *   tersleme matematiğini TEKRARLAMADAN kullanır. Dış transaction desteği (Flow Unification 001
+ *   deseniyle aynı): çağıran zaten bir transaction açtıysa ($pdo->inTransaction()) burası kendi
+ *   transaction'ını AÇMAZ/kapatmaz — tek atomik işlemin parçası olur.
  * @return array ['ok'=>bool, 'message'=>string]
  */
-function stock_reverse_sale($pdo, $saleId){
+function stock_reverse_sale($pdo, $saleId, $viaDocument=false){
     require_once __DIR__.'/finance_lib.php';
     require_once __DIR__.'/cpa_allocation_lib.php';
 
@@ -174,7 +180,7 @@ function stock_reverse_sale($pdo, $saleId){
         $s->execute([$saleId]);
         $sale = $s->fetch();
         if(!$sale) return ['ok'=>false, 'message'=>'Satış kaydı bulunamadı.'];
-        if(!empty($sale['document_id'])) return ['ok'=>false, 'message'=>'Bu satış bir Alış/Satış Belgesine bağlı — buradan silinemez, belge görüntüleme ekranından kontrol edin.'];
+        if(!empty($sale['document_id']) && !$viaDocument) return ['ok'=>false, 'message'=>'Bu satış bir Alış/Satış Belgesine bağlı — buradan silinemez, belge görüntüleme ekranından kontrol edin.'];
 
         // İlişkili TÜM stok hareketlerini KESİN referansla (finance_movement_id) bul — sepette
         // birden fazla ürün satırı varsa hepsi aynı finance_movement_id'yi taşır.
@@ -186,7 +192,8 @@ function stock_reverse_sale($pdo, $saleId){
         // ekleme adımı KENDİ try/catch'i içinde sessizce yutuluyordu ve stock_movements satırı
         // bu geri ekleme başarısız olsa BİLE siliniyordu — teorik olarak sessiz stok kaybına yol
         // açabilirdi. Artık hata olursa TÜM işlem (stok + finans) rollback edilir.
-        $pdo->beginTransaction();
+        $ownsTransaction = !$pdo->inTransaction();
+        if($ownsTransaction) $pdo->beginTransaction();
         try{
             foreach($movements as $movement){
                 $pdo->prepare("UPDATE stock_items SET quantity=quantity+? WHERE id=?")->execute([$movement['quantity'], $movement['stock_item_id']]);
@@ -205,9 +212,9 @@ function stock_reverse_sale($pdo, $saleId){
             finance_movement_reverse_balance($pdo, $sale);
             $pdo->prepare("DELETE FROM finance_movements WHERE id=?")->execute([$saleId]);
 
-            $pdo->commit();
+            if($ownsTransaction) $pdo->commit();
         }catch(Throwable $e){
-            $pdo->rollBack();
+            if($ownsTransaction) $pdo->rollBack();
             throw $e;
         }
 
@@ -438,13 +445,13 @@ function stock_create_sale($pdo, $contact, $ids, $qtys, $prices, $vatRates, $not
  * @return array ['editable'=>bool, 'reason'=>string|null, 'sale'=>array|null, 'lines'=>array]
  *   lines: [['stock_item_id','name','unit','quantity','unit_price','vat_rate','derived'=>bool]]
  */
-function stock_can_edit_sale($pdo, $saleId){
+function stock_can_edit_sale($pdo, $saleId, $viaDocument=false){
     $saleId = (int)$saleId;
     $s = $pdo->prepare("SELECT * FROM finance_movements WHERE id=? AND (movement_type='sale' OR movement_type='mobile_sale')");
     $s->execute([$saleId]);
     $sale = $s->fetch();
     if(!$sale) return ['editable'=>false, 'reason'=>'Satış kaydı bulunamadı.', 'sale'=>null, 'lines'=>[]];
-    if(!empty($sale['document_id'])) return ['editable'=>false, 'reason'=>'Bu satış bir Alış/Satış Belgesine bağlı — buradan düzenlenemez, belge görüntüleme ekranından kontrol edin.', 'sale'=>$sale, 'lines'=>[]];
+    if(!empty($sale['document_id']) && !$viaDocument) return ['editable'=>false, 'reason'=>'Bu satış bir Alış/Satış Belgesine bağlı — buradan düzenlenemez, belge görüntüleme ekranından kontrol edin.', 'sale'=>$sale, 'lines'=>[]];
 
     $stk = $pdo->prepare("SELECT sm.*, si.name AS item_name, si.unit AS item_unit FROM stock_movements sm LEFT JOIN stock_items si ON si.id=sm.stock_item_id WHERE sm.finance_movement_id=? ORDER BY sm.id");
     $stk->execute([$saleId]);
@@ -505,7 +512,7 @@ function stock_can_edit_sale($pdo, $saleId){
  *   yakalamalı — genel Throwable catch'ine düşerse ['ok'=>false] içine gömülüp $shortages
  *   verisi kaybolur)
  */
-function stock_update_sale($pdo, $saleId, $contact, $ids, $qtys, $prices, $vatRates, $noteLabel='Satış', $confirmed=false){
+function stock_update_sale($pdo, $saleId, $contact, $ids, $qtys, $prices, $vatRates, $noteLabel='Satış', $confirmed=false, $viaDocument=false){
     require_once __DIR__.'/finance_lib.php';
     require_once __DIR__.'/cpa_allocation_lib.php';
     try{
@@ -521,7 +528,9 @@ function stock_update_sale($pdo, $saleId, $contact, $ids, $qtys, $prices, $vatRa
         // uyguluyor ve tüm mevcut çağıranlar önce onu kontrol ediyor — ama bu fonksiyon ileride
         // eligibility kontrolsüz doğrudan çağrılırsa belge-bağlı bir satış sessizce değiştirilmesin diye
         // kilit burada da tekrarlanıyor (stock_purchase_avg_cost_safe ile aynı "tek kapı" felsefesi).
-        if(!empty($oldSale['document_id'])) return ['ok'=>false, 'message'=>'Bu satış bir Alış/Satış Belgesine bağlı — buradan düzenlenemez, belge görüntüleme ekranından kontrol edin.'];
+        // $viaDocument=true (P0 BELGE DÜZENLE/SİL, 2026-07-18): trade_core.php'nin belge düzenleme
+        // fonksiyonu BİLEREK bu kapıyı açar — bkz. stock_reverse_sale() üstündeki AYNI not.
+        if(!empty($oldSale['document_id']) && !$viaDocument) return ['ok'=>false, 'message'=>'Bu satış bir Alış/Satış Belgesine bağlı — buradan düzenlenemez, belge görüntüleme ekranından kontrol edin.'];
 
         $oldStk = $pdo->prepare("SELECT * FROM stock_movements WHERE finance_movement_id=?");
         $oldStk->execute([$saleId]);
@@ -538,7 +547,8 @@ function stock_update_sale($pdo, $saleId, $contact, $ids, $qtys, $prices, $vatRa
         $built = stock_sale_build_lines($pdo, $ids, $qtys, $prices, $vatRates, $reserveMap, $confirmed);
         $lines = $built['lines'];
 
-        $pdo->beginTransaction();
+        $ownsTransaction = !$pdo->inTransaction();
+        if($ownsTransaction) $pdo->beginTransaction();
         try{
             // 0) P0 CPA VERİ BÜTÜNLÜĞÜ KAPANIŞI (2026-07-18): bu satışın ESKİ müşteri/ürün/miktar
             // üzerinden tükettiği CPA tahsislerini, YENİ değerleri uygulamadan ÖNCE geri al —
@@ -573,9 +583,9 @@ function stock_update_sale($pdo, $saleId, $contact, $ids, $qtys, $prices, $vatRa
                     $built['desc'], $saleId
                 ]);
 
-            $pdo->commit();
+            if($ownsTransaction) $pdo->commit();
         }catch(Throwable $e){
-            $pdo->rollBack();
+            if($ownsTransaction) $pdo->rollBack();
             throw $e;
         }
 
@@ -654,7 +664,7 @@ function stock_purchase_avg_cost_safe($pdo, $purchaseId){
  * terslenemeyecek bir alış sessizce silinip avg_cost'u bozmaz, açık mesajla reddedilir.
  * @return array ['ok'=>bool, 'message'=>string]
  */
-function stock_reverse_purchase($pdo, $purchaseId){
+function stock_reverse_purchase($pdo, $purchaseId, $viaDocument=false){
     require_once __DIR__.'/finance_lib.php';
     require_once __DIR__.'/cpa_allocation_lib.php';
     try{
@@ -665,7 +675,8 @@ function stock_reverse_purchase($pdo, $purchaseId){
         $s->execute([$purchaseId]);
         $purchase = $s->fetch();
         if(!$purchase) return ['ok'=>false, 'message'=>'Alış kaydı bulunamadı.'];
-        if(!empty($purchase['document_id'])) return ['ok'=>false, 'message'=>'Bu alış bir Alış/Satış Belgesine bağlı — buradan silinemez, belge görüntüleme ekranından kontrol edin.'];
+        // $viaDocument=true (P0 BELGE DÜZENLE/SİL, 2026-07-18) — bkz. stock_reverse_sale() üstündeki AYNI not.
+        if(!empty($purchase['document_id']) && !$viaDocument) return ['ok'=>false, 'message'=>'Bu alış bir Alış/Satış Belgesine bağlı — buradan silinemez, belge görüntüleme ekranından kontrol edin.'];
 
         // CPA VERİ BÜTÜNLÜĞÜ (2026-07-18, Product Owner kararı 8. madde): bu alıştan müşteriye
         // ayrılmış (tahsisli) aktif miktar varsa silme reddedilir — sessizce tahsis referansını
@@ -673,21 +684,22 @@ function stock_reverse_purchase($pdo, $purchaseId){
         // azaltmalı/iptal etmeli/aktarmalı.
         $__cpaRem = cpa_alloc_active_remaining_for_purchase($pdo, $purchaseId);
         if($__cpaRem > 0.0000001){
-            return ['ok'=>false, 'message'=>'Bu alıştan müşteriye ayrılmış '.stock_qty_fmt($__cpaRem).' adet var. Alış silinemez — önce "Tahsis Et" ekranından ilgili tahsisleri azaltın/iptal edin/aktarın.'];
+            return ['ok'=>false, 'message'=>'Bu alıştan müşteriye ayrılmış '.stock_qty_fmt($__cpaRem).' adet var. Alış silinemez — önce "Müşteriye Ayır" ekranından ilgili tahsisleri azaltın/iptal edin/aktarın.'];
         }
 
         if(!stock_purchase_avg_cost_safe($pdo, $purchaseId)){
             return ['ok'=>false, 'message'=>'Bu alıştaki bir veya daha fazla ürün için, bu alıştan SONRA başka bir stok hareketi (alış/satış) oluşmuş. Ortalama maliyet güvenle geri alınamayacağı için bu kayıt silinemez.'];
         }
 
-        $pdo->beginTransaction();
+        $ownsTransaction = !$pdo->inTransaction();
+        if($ownsTransaction) $pdo->beginTransaction();
         try{
             stock_purchase_reverse_lines($pdo, $purchaseId);
             finance_movement_reverse_balance($pdo, $purchase);
             $pdo->prepare("DELETE FROM finance_movements WHERE id=?")->execute([$purchaseId]);
-            $pdo->commit();
+            if($ownsTransaction) $pdo->commit();
         }catch(Throwable $e){
-            $pdo->rollBack();
+            if($ownsTransaction) $pdo->rollBack();
             throw $e;
         }
 
@@ -705,14 +717,15 @@ function stock_reverse_purchase($pdo, $purchaseId){
  * (tahmin YAPILMAZ — stock_can_edit_sale ile aynı "don't guess" felsefesi, 2026-07-10 kararı).
  * @return array ['editable'=>bool, 'reason'=>string|null, 'purchase'=>array|null, 'lines'=>array]
  */
-function stock_can_edit_purchase($pdo, $purchaseId){
+function stock_can_edit_purchase($pdo, $purchaseId, $viaDocument=false){
     require_once __DIR__.'/cpa_allocation_lib.php';
     $purchaseId = (int)$purchaseId;
     $s = $pdo->prepare("SELECT * FROM finance_movements WHERE id=? AND movement_type='purchase'");
     $s->execute([$purchaseId]);
     $purchase = $s->fetch();
     if(!$purchase) return ['editable'=>false, 'reason'=>'Alış kaydı bulunamadı.', 'purchase'=>null, 'lines'=>[]];
-    if(!empty($purchase['document_id'])) return ['editable'=>false, 'reason'=>'Bu alış bir Alış/Satış Belgesine bağlı — buradan düzenlenemez, belge görüntüleme ekranından kontrol edin.', 'purchase'=>$purchase, 'lines'=>[]];
+    // $viaDocument=true (P0 BELGE DÜZENLE/SİL, 2026-07-18) — bkz. stock_reverse_sale() üstündeki AYNI not.
+    if(!empty($purchase['document_id']) && !$viaDocument) return ['editable'=>false, 'reason'=>'Bu alış bir Alış/Satış Belgesine bağlı — buradan düzenlenemez, belge görüntüleme ekranından kontrol edin.', 'purchase'=>$purchase, 'lines'=>[]];
 
     // CPA VERİ BÜTÜNLÜĞÜ (2026-07-18, Product Owner kararı 8. madde): müşteriye ayrılmış aktif
     // tahsis varken satır miktarları/ürünleri sessizce değiştirilip tahsis referansı geçersiz
@@ -720,7 +733,7 @@ function stock_can_edit_purchase($pdo, $purchaseId){
     $__cpaRem = cpa_alloc_active_remaining_for_purchase($pdo, $purchaseId);
     if($__cpaRem > 0.0000001){
         return ['editable'=>false,
-            'reason'=>'Bu alıştan müşteriye ayrılmış '.stock_qty_fmt($__cpaRem).' adet var. Düzenlenemez — önce "Tahsis Et" ekranından ilgili tahsisleri azaltın/iptal edin/aktarın.',
+            'reason'=>'Bu alıştan müşteriye ayrılmış '.stock_qty_fmt($__cpaRem).' adet var. Düzenlenemez — önce "Müşteriye Ayır" ekranından ilgili tahsisleri azaltın/iptal edin/aktarın.',
             'purchase'=>$purchase, 'lines'=>[]];
     }
 
@@ -772,7 +785,7 @@ function stock_can_edit_purchase($pdo, $purchaseId){
  * account_id her zaman NULL, status her zaman 'Bekliyor' kalır.
  * @return array ['ok'=>bool, 'message'=>string]
  */
-function stock_update_purchase($pdo, $purchaseId, $supplier, $ids, $qtys, $prices, $vatRates, $noteLabel="Alış"){
+function stock_update_purchase($pdo, $purchaseId, $supplier, $ids, $qtys, $prices, $vatRates, $noteLabel="Alış", $viaDocument=false){
     require_once __DIR__.'/finance_lib.php';
     try{
         $purchaseId = (int)$purchaseId;
@@ -784,12 +797,14 @@ function stock_update_purchase($pdo, $purchaseId, $supplier, $ids, $qtys, $price
         $oldPurchase = $old->fetch();
         if(!$oldPurchase) return ['ok'=>false, 'message'=>'Alış kaydı bulunamadı.'];
         // Savunma derinliği (Selin/security-audit, 2026-07-11): bkz. stock_update_sale() aynı not.
-        if(!empty($oldPurchase['document_id'])) return ['ok'=>false, 'message'=>'Bu alış bir Alış/Satış Belgesine bağlı — buradan düzenlenemez, belge görüntüleme ekranından kontrol edin.'];
+        // $viaDocument=true (P0 BELGE DÜZENLE/SİL, 2026-07-18) — bkz. stock_reverse_sale() üstündeki AYNI not.
+        if(!empty($oldPurchase['document_id']) && !$viaDocument) return ['ok'=>false, 'message'=>'Bu alış bir Alış/Satış Belgesine bağlı — buradan düzenlenemez, belge görüntüleme ekranından kontrol edin.'];
 
         $built = stock_purchase_build_lines($pdo, $ids, $qtys, $prices, $vatRates);
         $lines = $built['lines'];
 
-        $pdo->beginTransaction();
+        $ownsTransaction = !$pdo->inTransaction();
+        if($ownsTransaction) $pdo->beginTransaction();
         try{
             // 1) Eski stok/ortalama-maliyet etkisini TAM geri al (ortak fonksiyon)
             stock_purchase_reverse_lines($pdo, $purchaseId);
@@ -809,9 +824,9 @@ function stock_update_purchase($pdo, $purchaseId, $supplier, $ids, $qtys, $price
                     $built['desc'], $purchaseId
                 ]);
 
-            $pdo->commit();
+            if($ownsTransaction) $pdo->commit();
         }catch(Throwable $e){
-            $pdo->rollBack();
+            if($ownsTransaction) $pdo->rollBack();
             throw $e;
         }
 

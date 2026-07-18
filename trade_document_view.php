@@ -1,9 +1,22 @@
 <?php
 require_once __DIR__.'/boot.php';
 require_login();
+require_once __DIR__.'/trade_core.php';
 
 $id=(int)($_GET['id'] ?? 0);
 $pdo=db();
+
+// P0 KAPANIŞ (2026-07-18, Product Owner kararı 3. madde) — belge iptali. PRG deseni (topx()/redirect
+// mobil kuralıyla AYNI ruh — POST ÖNCE işlenir, sonra redirect). İş mantığı trade_core.php::
+// trade_document_cancel()'de (stock_lib.php'nin $viaDocument=true tersleme primitives'i, kopya YOK).
+if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['cancel_document'])){
+    try{
+        if(!can_edit_delete()) throw new Exception('Bu işlem için yetkiniz yok.');
+        trade_document_cancel($pdo, $_SESSION['user']['id'] ?? 0, $id);
+        $_SESSION['tdoc_ok']='Belge iptal edildi, stok/cari etkisi geri alındı.';
+    }catch(Throwable $e){ $_SESSION['tdoc_er']=$e->getMessage(); }
+    header('Location: trade_document_view.php?id='.$id); exit;
+}
 
 $st=$pdo->prepare("SELECT d.*, c.name contact_name, a.name account_name FROM trade_documents d LEFT JOIN contacts c ON c.id=d.contact_id LEFT JOIN finance_accounts a ON a.id=d.account_id WHERE d.id=?");
 $st->execute([$id]);
@@ -16,6 +29,9 @@ if(!$d){
     require __DIR__.'/layout_bottom.php';
     exit;
 }
+
+if(!empty($_SESSION['tdoc_ok'])){ echo ds_alert('success',$_SESSION['tdoc_ok']); unset($_SESSION['tdoc_ok']); }
+if(!empty($_SESSION['tdoc_er'])){ echo ds_alert('danger',$_SESSION['tdoc_er']); unset($_SESSION['tdoc_er']); }
 
 $it=$pdo->prepare("SELECT * FROM trade_document_items WHERE document_id=?");
 $it->execute([$id]);
@@ -44,17 +60,41 @@ if($d['document_type']==='purchase'){
     $__purchaseMovementId = (int)($__pmq->fetch()['id'] ?? 0);
 }
 
+// P0 KAPANIŞ (2026-07-18, Product Owner kararı 3. madde) — Düzenle/İptal aksiyonları. Eligibility
+// stock_lib.php'nin AYNI avg_cost/CPA güvenlik kapılarından geçer (trade_document_can_edit() →
+// stock_can_edit_purchase()/stock_can_edit_sale() $viaDocument=true) — burada AYRI bir kural
+// tekrarlanmadı, sadece sonucuna göre buton gösterilip gösterilmeyeceğine karar verilir.
+$__canEdit = can_edit_delete() ? trade_document_can_edit($pdo, $id) : ['editable'=>false,'reason'=>null];
 $__actions = ds_button('Belgeler', 'trade_documents.php', 'secondary', '', '', true)
     . ds_button('Cari Profil', 'contact_view.php?id='.$d['contact_id'], 'secondary', '', '', true);
+if(can_edit_delete() && $d['status']!=='İptal'){
+    $__actions .= ds_button('✏️ Düzenle', 'trade_document_edit.php?id='.$id, 'secondary', '', '', true);
+}
 ds_page_header($d['document_no'], ds_icon('tag',24), '', $__actions, false, true);
 ?>
+
+<?php if($d['status']==='İptal'): ?>
+<?=ds_alert('danger','Bu belge iptal edildi — stok/cari etkisi geri alındı, düzenlenemez/satır tahsis edilemez.')?>
+<?php elseif(!$__canEdit['editable'] && $__canEdit['reason'] && can_edit_delete()): ?>
+<?=ds_alert('info', $__canEdit['reason'])?>
+<?php endif; ?>
 
 <div class="df-stat-row">
 <div class="df-stat"><span>Tip</span><strong><?=h($d['document_type']==='purchase'?'Alış':'Satış')?></strong></div>
 <div class="df-stat"><span>Cari</span><strong><?=h($d['contact_name'] ?: '-')?></strong></div>
 <div class="df-stat"><span>Genel Toplam</span><strong><?=money($d['grand_total'])?></strong></div>
 <div class="df-stat"><span>Cari Bakiyesi</span><strong><?=money($contactBalance)?></strong></div>
+<div class="df-stat"><span>Durum</span><strong><?=ds_badge($d['status'], $d['status']==='İptal'?'red':'green')?></strong></div>
 </div>
+
+<?php if(can_edit_delete() && $d['status']!=='İptal'): ?>
+<div class="df-card" style="margin-top:var(--df-space-4);display:flex;justify-content:flex-end">
+<form method="post" onsubmit="return confirm('Bu belge iptal edilecek: bağlı stok/cari/CPA etkisi tam olarak geri alınacak. Belgenin kendisi (satırları) kalıcı kayıt olarak durur, sadece finansal etkisi kalkar. Emin misiniz?')">
+<input type="hidden" name="cancel_document" value="1">
+<button class="df-btn df-btn--danger df-btn--sm" type="submit">✕ İptal Et / Sil</button>
+</form>
+</div>
+<?php endif; ?>
 
 <style>
 body.nav-compact .df-stat-row{display:flex;flex-wrap:wrap;gap:var(--df-space-3);margin:var(--df-space-4) 0}
