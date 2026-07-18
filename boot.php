@@ -22,7 +22,18 @@ if (session_status() === PHP_SESSION_NONE) {
 
 // Mobil cihaz → otomatik mobil arayüz (/mobile). Masaüstü görünümü için bir kez ?web=1.
 if (isset($_GET['web'])) $_SESSION['force_web'] = 1;
-$__mpub = ['public_file.php','quote_approve.php','cron.php','ics.php','icon.php','manifest.php','sw.php','kur.php','migrate.php','logout.php','wa_webhook.php'];
+// P0 MOBİL HOTFIX (2026-07-19) KÖK NEDEN — Product Owner'ın "tema kaydı hâlâ Bağlantı hatası
+// veriyor" FAIL'i: kökteki (/mobile/ DIŞI) ajax_nav_prefs.php/ajax_quick_add.php/
+// cpa_suggest_ajax.php/push_subscribe.php mobil sayfalardan fetch() ile çağrılıyor (relative
+// '../xxx.php') — bu dosyalar bu listede YOKTU, yani mobil User-Agent'ta bu isteğe JSON yerine
+// 302 Location:mobile/index.php dönüyordu. fetch() bu redirect'i SESSİZCE takip edip login/
+// index sayfasının HTML'ini "cevap" sanıyor, .then(r=>r.json()) bunu parse edemeyip jenerik
+// "Bağlantı hatası"na düşüyordu — önceki turdaki csrf_verify() JSON düzeltmesi DOĞRU ama YETERSİZ
+// bir kök neden teşhisiydi, istek csrf_verify()'a hiç ULAŞMIYORDU. Gerçek düzeltme: bu 4 fetch/JSON
+// uç noktası da (public_file.php vb. gibi "herkese açık" değil, ama "asla sayfa yönlendirmesi
+// GÖRMEMESİ gereken" anlamında) listeye eklendi — require_login() içeride hâlâ çalışıyor, sadece
+// mobil-kabuk yönlendirmesi bu 4 dosyayı artık atlıyor.
+$__mpub = ['public_file.php','quote_approve.php','cron.php','ics.php','icon.php','manifest.php','sw.php','kur.php','migrate.php','logout.php','wa_webhook.php','ajax_nav_prefs.php','ajax_quick_add.php','cpa_suggest_ajax.php','push_subscribe.php'];
 if (empty($_SESSION['force_web'])
     && !empty($_SESSION['user'])
     && strpos($_SERVER['SCRIPT_NAME'] ?? '', '/mobile/') === false
