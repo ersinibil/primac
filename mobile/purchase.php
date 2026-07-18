@@ -209,6 +209,7 @@ function addItemRow(prefill){
         + '<input type="text" class="np-name" placeholder="Ürün adı" style="margin-bottom:6px">'
         + '<button type="button" class="btn dark" style="width:100%" onclick="quickAddProductRow(this)">✓ Ekle ve Seç</button>'
         + '</div>'
+        + '<div class="cpa-hint" style="display:none;margin-bottom:6px;font-size:12px;background:rgba(37,99,235,.12);border-radius:8px;padding:6px 8px"></div>'
         + '<div style="display:flex;gap:8px">'
         + '<div style="flex:1"><small class="muted">Miktar</small><input type="number" step="0.01" min="0.01" name="quantity[]" class="row-qty" value="1" oninput="calcAll()"></div>'
         + '</div>'
@@ -227,6 +228,7 @@ function addItemRow(prefill){
         row.querySelector('.row-qty').value = prefill.qty;
         row.querySelector('.row-price').value = prefill.price;
         row.querySelector('.row-vat').value = prefill.vat;
+        loadCpaHintM(row, prefill.id);
     }
     calcAll();
 }
@@ -249,8 +251,10 @@ function removeRow(btn){
 function onRowProductChange(sel){
     var row = sel.closest('.panel');
     var box = row.querySelector('.new-prod-box');
+    var hint = row.querySelector('.cpa-hint');
     if(sel.value === '__new__'){
         box.style.display = 'block';
+        if(hint) hint.style.display = 'none';
         sel.value = '';
         row.querySelector('.np-name').focus();
         return;
@@ -261,7 +265,26 @@ function onRowProductChange(sel){
         if(!row.querySelector('.row-price').value) row.querySelector('.row-price').value = opt.dataset.price;
         row.querySelector('.row-vat').value = opt.dataset.vat || 20;
     }
+    loadCpaHintM(row, sel.value);
     calcAll();
+}
+
+// P1 — CPA (2026-07-18): web purchase.php ile aynı bilgilendirici öneri, hiçbir alanı otomatik
+// doldurmaz (bkz. web cpa_suggest_ajax.php ve oradaki gerekçe notu).
+function loadCpaHintM(row, stockItemId){
+    var hint = row.querySelector('.cpa-hint');
+    if(!hint || !stockItemId){ if(hint) hint.style.display='none'; return; }
+    fetch('../cpa_suggest_ajax.php?stock_item_id='+encodeURIComponent(stockItemId))
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+            if(!data.ok || !data.suggestions || !data.suggestions.length){ hint.style.display='none'; return; }
+            var txt = '💡 Tercih edilen tedarikçiler: ' + data.suggestions.map(function(s){
+                return escPurchM(s.customer_name) + ' → ' + escPurchM(s.supplier_name) + (s.is_default?' (varsayılan)':'');
+            }).join(' · ');
+            hint.innerHTML = txt;
+            hint.style.display = 'block';
+        })
+        .catch(function(){ hint.style.display='none'; });
 }
 
 function quickAddProductRow(btn){

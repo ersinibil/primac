@@ -1,5 +1,6 @@
 <?php
 require_once 'common.php';
+require_once dirname(__DIR__).'/cpa_lib.php';
 $pdo=db(); $me=(int)($_SESSION['user']['id']??0);
 $id=(int)($_GET['id']??0);
 
@@ -127,6 +128,24 @@ try{
     </div>
   </form>
 </div>
+
+<?php if(cpa_can_view()):
+  $__cpaUsageM = cpa_list_for_product($pdo, $id, true);
+?>
+<div class="df-panel" style="margin-top:12px">
+  <b><?=ds_icon('tag',16)?> CPA Kullanımı</b>
+  <p class="muted" style="font-size:12px;margin:4px 0 8px">Bu ürün hangi müşteriler için özel tedarikçi tercihi içeriyor.</p>
+  <?php if(!$__cpaUsageM): ?>
+  <p class="muted" style="margin:0">Tanımlı müşteri-tedarikçi tercihi yok.</p>
+  <?php else: foreach($__cpaUsageM as $cu): ?>
+  <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-top:1px solid rgba(255,255,255,.08)">
+    <div><a href="contact_view.php?id=<?=(int)$cu['customer_id']?>"><?=h($cu['customer_name']?:'#'.$cu['customer_id'])?></a> → <?=h($cu['supplier_name']?:'#'.$cu['supplier_id'])?>
+      <br><small class="muted">Öncelik <?=(int)$cu['priority']?><?=$cu['is_default']?' · Varsayılan':''?></small></div>
+    <?=ds_badge($cu['status'])?>
+  </div>
+  <?php endforeach; endif; ?>
+</div>
+<?php endif; ?>
 
 <div class="df-panel" style="margin-top:12px">
   <b><?=ds_icon('info',16)?> Hareket Geçmişi</b>
