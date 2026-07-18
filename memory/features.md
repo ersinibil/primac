@@ -2,6 +2,31 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
+## fix: P0 KAPANIŞ PAKETİ — 5 P0 engeli (2026-07-18, commit 275a95f..bf15fda)
+Master Kapanış Denetimi'nde doğrulanan 5 P0'ın nokta atışı kapatılması (pilot öncesi son toparlama,
+yeni özellik açılmadı):
+1. **Çek/senet cari işareti** — `contact_balance_case_sql()`'e `'cek_senet'`/`'cek_senet_ciro'`
+   movement_type'ları normal/mobile ile aynı ters-işaret dalına eklendi (kabul/ciro anındaki hareket
+   artık Tahsilat/Ödeme ile birebir aynı yönde sayılıyor). Formül canlı SUM() ile türetildiği için
+   geçmiş kayıtlar OTOMATİK doğru yansıyor — hiçbir satır toplu güncellenmedi.
+2. **Migration 048 güvenliği** — `checks_notes_lifecycle_ready()`/`checks_notes_require_lifecycle()`
+   (cpa_alloc_tables_ready() ile aynı desen) collect/pay/endorse/bounce/cancel'a eklendi.
+3. **Alış/Satış Belgesi düzenle/sil** — `trade_document_edit.php` (yeni) + `trade_document_view.php`
+   "✏️ Düzenle"/"✕ İptal Et / Sil" aksiyonları. İş mantığı `trade_core.php::trade_document_can_edit()/
+   update()/cancel()` — stock_lib.php'nin 6 fonksiyonuna (`stock_reverse_purchase/sale`,
+   `stock_can_edit_purchase/sale`, `stock_update_purchase/sale`) eklenen `$viaDocument=true`
+   parametresiyle aynı avg_cost/CPA/negatif-stok güvenlik kapılarından geçiyor — kopya matematik
+   yazılmadı. İptal fiziksel DELETE değil, `trade_documents.status='İptal'` (checks_notes'un durum
+   makinesiyle aynı felsefe) — trade_document_items kalıcı kayıt olarak duruyor.
+4. **Mobil "Belge" redirect-trap** — mobile/purchase.php, mobile/sales.php, mobile/contact_view.php,
+   mobile/account_view.php'deki "🧾 Belge" linklerine `web=1` eklendi (dashboard.php?web=1 ile aynı
+   mevcut desen) — boot.php'nin mobil-otomatik-yönlendirmesi bu linkleri artık mobile/index.php'ye
+   geri atmıyor.
+5. **6 "kırık" mobil menü linki** — DOĞRULANDI, kırık DEĞİL: nav_taxonomy()'deki TÜM 50 kalem kod
+   seviyesinde route-varlığı açısından tarandı (`nav_url_for_platform()` simülasyonu), sıfır eksik
+   mobil route bulundu. Master denetim raporundaki bulgu muhtemelen bu turun DS-migration
+   commit'lerinden (ac09e89/fc2fdfe) ÖNCEki bir duruma aitti — kod değişikliği yapılmadı.
+
 ## fix(ui): sekme çubuğu (df-tabs) overflow — aktif sekme otomatik görünür alana kayıyor (2026-07-18)
 personnel_edit.php'de ~9 sekme varken (en son "Hareket Geçmişi") sayfa her yenilendiğinde
 `.df-tabs`'ın kaydırma pozisyonu sıfırlanıyordu — aktif sekme listenin sonundaysa görünür alanın
