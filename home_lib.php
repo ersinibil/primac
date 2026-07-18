@@ -7,8 +7,10 @@
  *
  * Öncelik puanlaması (v1, kasıtlı basit — "gerçek kullanım eksikleri ortaya çıkaracak" prensibiyle
  * ilk sürüm sade tutuldu, karmaşık bir sıralama motoru KURULMADI):
- * gecikmiş iş (300+gün) > gecikmiş görev (250) > onay bekleyen dosya (150) > bugünkü görev (120)
- * > kritik stok (90). En yüksek puan hero olur, kalanı Sırada'ya sıralanır.
+ * gecikmiş iş (300+gün) > gecikmiş görev (250) > onay bekleyen dosya (150) > bugünkü görev (120).
+ * En yüksek puan hero olur, kalanı Sırada'ya sıralanır. Kritik stok BURADA yok — HOME FINAL
+ * (2026-07-18) kararıyla "Bugün" kompakt kartına taşındı (dashboard.php/mobile/index.php
+ * $__todayCards), aynı bilgiyi hem kompakt kartta hem hero'da göstermeme kuralı gereği.
  */
 
 function home_build_queue($pdo, $isAdmin, $canSee, $pid, $platform = 'web'){
@@ -52,16 +54,6 @@ function home_build_queue($pdo, $isAdmin, $canSee, $pid, $platform = 'web'){
                 $items[] = ['score'=>250, 'title'=>$stats['overdue'].' göreviniz gecikti', 'meta'=>'Görevlerim', 'pill'=>['label'=>'Gecikti','tone'=>'late'], 'url'=>'mytasks.php'];
             }elseif(!empty($stats['today'])){
                 $items[] = ['score'=>120, 'title'=>$stats['today'].' bugünkü göreviniz var', 'meta'=>'Görevlerim', 'pill'=>['label'=>'Bugün','tone'=>'progress'], 'url'=>'mytasks.php'];
-            }
-        }catch(Throwable $e){}
-    }
-
-    $canStock = $isAdmin || $canSee('stock');
-    if($canStock){
-        try{
-            $n = (int)($pdo->query("SELECT COUNT(*) c FROM stock_items WHERE quantity<=critical_level")->fetch()['c'] ?? 0);
-            if($n > 0){
-                $items[] = ['score'=>90, 'title'=>$n.' ürün kritik stokta', 'meta'=>'Stoğu gör', 'pill'=>['label'=>'Kritik','tone'=>'crit'], 'url'=>'stock.php?critical=1'];
             }
         }catch(Throwable $e){}
     }

@@ -2,6 +2,19 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
+## fix(home): mükerrer kritik stok gösterimi kaldırıldı (2026-07-18)
+HOME FINAL (2026-07-18) kararının niyeti ("aynı bilgiyi iki kez göstermeme") koddan eksik
+uygulanmıştı: `home_build_queue()` (`home_lib.php`), zaten "Bugün" kompakt kartında
+(`dashboard.php`/`mobile/index.php` `$__todayCards`, aynı `$__pulseCriticalStock` sayısıyla)
+gösterilen kritik stok sayısını AYRICA kuyruğa (score 90) ekliyordu — başka acil öğe yoksa bu
+"hero" (büyük kart) olarak, varsa "Bekleyenler" satırı olarak İKİNCİ KEZ görünüyordu. Kritik stok
+öğesi `home_build_queue()`'dan tamamen kaldırıldı (web+mobil ORTAK fonksiyon, tek noktadan düzeldi).
+Stok hesaplama sorgusu (`quantity<=critical_level`) ve yönlendirme (`stock.php?critical=1`) —
+kompakt karttaki hâliyle — DOKUNULMADI. Kompakt kart zaten tam kart `<a>` olarak render ediliyordu
+(`.df-home-today-card{display:inline-flex}`), ayrıca tıklanabilirlik değişikliği gerekmedi.
+`php -l` temiz, kod izi ile doğrulandı (hero-only ve hero+queue senaryoları) — gerçek ekran testi
+Product Owner'da. Dosya: `home_lib.php`.
+
 ## FAZ 2C-i — Mobile Shell Migration (2026-07-17, commit `22d50b2`, DEV PASS + USER TEST PASS — CLOSED)
 Product Owner kararı: R/2b geçici backlog'a alındı, web/mobil tasarım farkını kapatmak için FAZ 2C
 (Mobile Design System Migration) başladı. Kod öncesi **Mobile Design System Audit** kabul edildi
