@@ -242,7 +242,7 @@ input,select,textarea{font-size:16px}
         // sırayla (Ana Sayfa/İletişim Merkezi/İşler/Ticaret/Üretim & Stok/Finans/Yönetim) eklendi.
         // P0 (2026-07-18): "WhatsApp'ı İletişim Merkezi'nde al" — wa_conversations.php/
         // wa_conversation_view.php da bu grup içinde sayılır (ic_tabs()'e eklenen 5. sekmeyle aynı karar).
-        $__icPages = ['messages.php','notifications.php','taleplerim.php','duyurular.php','wa_conversations.php','wa_conversation_view.php'];
+        $__icPages = ['messages.php','notifications.php','taleplerim.php','duyurular.php','wa_conversations.php','wa_conversation_view.php','wa_send_now.php'];
         $__icBadge = (int)$unreadMsgCount + (int)$notifCount;
         ?>
         <a class="df-rail-link<?=(in_array($cur,$__icPages,true)?' is-active':'')?>" href="messages.php"><?=ds_icon('chat',18)?><span>İletişim Merkezi</span><?php if($__icBadge): ?><span class="df-count-badge" style="margin-left:auto"><?=$__icBadge>9?'9+':$__icBadge?></span><?php endif; ?></a>

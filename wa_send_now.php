@@ -46,6 +46,7 @@ $contacts=$pdo->query("SELECT name,phone FROM contacts WHERE phone<>'' ORDER BY 
 
 require_once __DIR__.'/layout_top.php';
 ds_page_header('WhatsApp — Toplu Gönderim', ds_icon('send',24), '', '', false, true);
+ic_tabs('whatsapp');
 ?>
 
 <section class="df-card" style="max-width:640px;margin-top:var(--df-space-4)">

@@ -48,7 +48,14 @@ function nav_taxonomy(){
         ['key'=>'requests','label'=>'Talepleri Gör','url'=>'requests.php','group'=>'iletisim','perm'=>null,'primary'=>false,'adminOnly'=>true,'category'=>'isler','categoryOrder'=>9,'isPrimaryAction'=>false,'searchKeywords'=>['talep onayı']],
         ['key'=>'request_new','label'=>'Yeni Talep Oluştur','url'=>'request_new.php','group'=>'iletisim','perm'=>null,'primary'=>false,'category'=>'isler','categoryOrder'=>8,'isPrimaryAction'=>false,'searchKeywords'=>['talep','izin','satın alma talebi']],
         ['key'=>'wa_conversations','label'=>'WhatsApp Konuşmalarını Gör','url'=>'wa_conversations.php','group'=>'iletisim','perm'=>'users','primary'=>false,'category'=>null,'categoryOrder'=>null,'isPrimaryAction'=>false,'searchKeywords'=>['whatsapp','konuşma','wp','wa','mesaj','sohbet','chat']],
-        ['key'=>'wa_send_now','label'=>'WhatsApp Toplu Mesaj Gönder','url'=>'wa_send_now.php','group'=>'iletisim','perm'=>'users','primary'=>false,'actionLabel'=>'WhatsApp Toplu Gönderim','category'=>'yonetim','categoryOrder'=>10,'isPrimaryAction'=>false,'searchKeywords'=>['toplu mesaj','whatsapp gönder']],
+        // P0 SON KAPANIŞ (2026-07-18): önceden category='yonetim' idi — web Rail'de "Yönetim"
+        // altında görünüyordu, ama bu bir iletişim eylemi (toplu WhatsApp gönderimi), teknik
+        // ayar değil. wa_conversations ile aynı desen: category=null (Rail kategori döngüsüne
+        // hiç girmez), sadece İletişim Merkezi zinciri üzerinden erişilir (messages.php →
+        // WhatsApp sekmesi → wa_conversations.php → "Toplu Gönderim" butonu). Mobilde group
+        // zaten 'iletisim' idi (doğruydu, dokunulmadı) — bu satır sadece web/mobil paritesini
+        // tamamlıyor. wa_settings.php (teknik bağlantı ayarı) category='yonetim' olarak KALDI.
+        ['key'=>'wa_send_now','label'=>'WhatsApp Toplu Mesaj Gönder','url'=>'wa_send_now.php','group'=>'iletisim','perm'=>'users','primary'=>false,'actionLabel'=>'WhatsApp Toplu Gönderim','category'=>null,'categoryOrder'=>null,'isPrimaryAction'=>false,'searchKeywords'=>['toplu mesaj','whatsapp gönder']],
 
         // ── SAT & TAHSİL ET ──────────────────────────────────────────────────
         ['key'=>'contacts','label'=>'Cari Bul / Görüntüle','url'=>'contacts.php','group'=>'sat_tahsil','perm'=>'contacts','primary'=>false,'actionLabel'=>'Cari Bul','category'=>'ticaret','categoryOrder'=>1,'isPrimaryAction'=>true,'searchKeywords'=>['cari','müşteri','tedarikçi','firma','şirket','borç']],

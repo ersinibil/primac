@@ -44,6 +44,7 @@ $personnel=$pdo->query("SELECT name,phone FROM personnel WHERE COALESCE(active,1
 $contacts=$pdo->query("SELECT name,phone FROM contacts WHERE phone<>'' ORDER BY name")->fetchAll();
 
 topx('WhatsApp Toplu Gönderim');
+ic_tabs('whatsapp');
 ?>
 <?php if($error): ?><?=ds_alert('danger',$error)?><?php endif; ?>
 <?php if($manualBulkLinks): ?>
