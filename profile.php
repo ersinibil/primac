@@ -50,48 +50,31 @@ $me=$st->fetch();
 require_once __DIR__.'/layout_top.php';
 ?>
 
-<div class="panel-head">
-<h1>Profilim</h1>
-<a class="btn secondary" href="dashboard.php">Ana Ekran</a>
-</div>
+<?php ds_page_header('Profilim', ds_icon('user',24), '', ds_button('Ana Ekran','dashboard.php','secondary','','',true), false, true); ?>
 
-<?php if($error): ?><div class="alert"><?=h($error)?></div><?php endif; ?>
-<?php if($ok): ?><div class="ok"><?=h($ok)?></div><?php endif; ?>
-<?php if(!empty($_GET['nav_ok'])): ?><div class="ok">Navigasyon tercihiniz kaydedildi.</div><?php endif; ?>
+<?php if($error): ?><?=ds_alert('danger',$error)?><?php endif; ?>
+<?php if($ok): ?><?=ds_alert('success',$ok)?><?php endif; ?>
+<?php if(!empty($_GET['nav_ok'])): ?><?=ds_alert('success','Navigasyon tercihiniz kaydedildi.')?><?php endif; ?>
 
-<section class="panel">
-<form method="post" class="form-grid">
+<section class="df-card">
+<form method="post" class="df-form-grid-2">
 
-<label>Ad Soyad
-<input name="full_name" value="<?=h($me['full_name'])?>">
-</label>
+<?php ds_form_field('Ad Soyad', '<input name="full_name" value="'.h($me['full_name']).'">'); ?>
+<?php ds_form_field('Kullanıcı Adı', '<input value="'.h($me['username']).'" disabled>'); ?>
+<?php ds_form_field('Telefon', '<input name="phone" value="'.h($me['phone']).'">'); ?>
+<?php ds_form_field('E-posta', '<input name="email" value="'.h($me['email']).'">'); ?>
+<?php ds_form_field('Mevcut Şifre', '<input type="password" name="current_password" required>'); ?>
+<?php ds_form_field('Yeni Şifre', '<input type="password" name="new_password" required>'); ?>
+<?php ds_form_field('Yeni Şifre Tekrar', '<input type="password" name="new_password2" required>'); ?>
 
-<label>Kullanıcı Adı
-<input value="<?=h($me['username'])?>" disabled>
-</label>
-
-<label>Telefon
-<input name="phone" value="<?=h($me['phone'])?>">
-</label>
-
-<label>E-posta
-<input name="email" value="<?=h($me['email'])?>">
-</label>
-
-<label>Mevcut Şifre
-<input type="password" name="current_password" required>
-</label>
-
-<label>Yeni Şifre
-<input type="password" name="new_password" required>
-</label>
-
-<label>Yeni Şifre Tekrar
-<input type="password" name="new_password2" required>
-</label>
-
-<button class="btn">Güncelle</button>
+<div class="df-form-span-2"><button class="df-btn df-btn--primary">Güncelle</button></div>
 </form>
 </section>
+
+<style>
+body.nav-compact .df-form-grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 var(--df-space-4)}
+body.nav-compact .df-form-span-2{grid-column:1 / -1}
+@media(max-width:640px){body.nav-compact .df-form-grid-2{grid-template-columns:1fr}}
+</style>
 
 <?php require_once __DIR__.'/layout_bottom.php'; ?>
