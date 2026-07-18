@@ -81,21 +81,27 @@ function nav_taxonomy(){
         ['key'=>'finance_accounts','label'=>'Banka / Kasa / Kart Hesaplarını Yönet','url'=>'finance_accounts.php','mobileHide'=>true,'group'=>'yonet','perm'=>'finance','primary'=>false,'actionLabel'=>'Hesapları Yönet','category'=>'finans','categoryOrder'=>5,'isPrimaryAction'=>false,'searchKeywords'=>['hesap','pos','kart']],
         ['key'=>'accounting','label'=>'Muhasebe Kayıtlarını Gör','url'=>'accounting.php','group'=>'yonet','perm'=>'muhasebe','primary'=>false,'category'=>'finans','categoryOrder'=>7,'isPrimaryAction'=>false,'searchKeywords'=>['muhasebe','gider gelir']],
         ['key'=>'accounting_categories','label'=>'Muhasebe Kategorilerini Düzenle','url'=>'accounting_categories.php','group'=>'yonet','perm'=>'muhasebe','primary'=>false,'adminOnly'=>true,'category'=>'finans','categoryOrder'=>8,'isPrimaryAction'=>false,'searchKeywords'=>['muhasebe kategori']],
-        ['key'=>'personnel','label'=>'Personeli Yönet','url'=>'personnel.php','group'=>'yonet','perm'=>'personnel','primary'=>false,'actionLabel'=>'Personelleri Yönet','category'=>'yonetim','categoryOrder'=>1,'isPrimaryAction'=>false,'searchKeywords'=>['personel','ekip','maaş','çalışan']],
-        ['key'=>'personnel_new','label'=>'Yeni Personel Ekle','url'=>'personnel_new.php','group'=>'yonet','perm'=>'personnel','primary'=>false,'category'=>'yonetim','categoryOrder'=>2,'isPrimaryAction'=>false,'searchKeywords'=>['yeni personel']],
+        // PERSONEL+KULLANICI+YETKİ TEKLEŞTİRME (2026-07-19, Product Owner kararı): "Personel" ANA
+        // varlık — Yönetim altında tek giriş "Personeller" (personnel.php), OTS hesabı/yetkileri
+        // personel detayının ("OTS Hesabı & Yetkiler" sekmesi) içinde yönetiliyor. "Yeni Personel
+        // Ekle" artık ayrı bir menü maddesi DEĞİL — personnel.php/mobile/personnel.php'nin kendi
+        // içindeki "+ Yeni Personel" butonundan erişiliyor (route personnel_new.php SİLİNMEDİ,
+        // sadece kategori listesinden çıktı — category=null, arama/doğrudan URL ile hâlâ erişilebilir).
+        ['key'=>'personnel','label'=>'Personeller','url'=>'personnel.php','group'=>'yonet','perm'=>'personnel','primary'=>false,'actionLabel'=>'Personeller','category'=>'yonetim','categoryOrder'=>1,'isPrimaryAction'=>false,'searchKeywords'=>['personel','ekip','maaş','çalışan','kullanıcı','yetki','hesap']],
+        ['key'=>'personnel_new','label'=>'Yeni Personel Ekle','url'=>'personnel_new.php','group'=>'yonet','perm'=>'personnel','primary'=>false,'category'=>null,'categoryOrder'=>null,'isPrimaryAction'=>false,'searchKeywords'=>['yeni personel']],
         ['key'=>'kpi','label'=>'Performans / KPI Gör','url'=>'kpi.php','group'=>'yonet','perm'=>'personnel','primary'=>false,'category'=>'yonetim','categoryOrder'=>3,'isPrimaryAction'=>false,'searchKeywords'=>['performans','kpi']],
         ['key'=>'report','label'=>'Rapor Al','url'=>'report.php','group'=>'yonet','perm'=>'report','primary'=>false,'actionLabel'=>'Raporları Gör','category'=>'yonetim','categoryOrder'=>5,'isPrimaryAction'=>false,'searchKeywords'=>['rapor','özet']],
         ['key'=>'gunluk_rapor','label'=>'Günlük İş Raporu Al','url'=>'gunluk_rapor.php','group'=>'yonet','perm'=>'report','primary'=>false,'category'=>'yonetim','categoryOrder'=>6,'isPrimaryAction'=>false,'searchKeywords'=>['günlük rapor']],
         ['key'=>'contacts_report','label'=>'Cari Ekstresi Al','url'=>'contacts_report.php','group'=>'yonet','perm'=>'contacts','primary'=>false,'category'=>'ticaret','categoryOrder'=>7,'isPrimaryAction'=>false,'searchKeywords'=>['cari ekstre','bakiye raporu']],
         ['key'=>'activity','label'=>'Son İşlemleri Gör','url'=>'activity.php','group'=>'yonet','perm'=>null,'primary'=>false,'adminOnly'=>true,'category'=>'yonetim','categoryOrder'=>7,'isPrimaryAction'=>false,'searchKeywords'=>['son işlemler','aktivite']],
-        // PERSONEL YÖNETİMİ — TEK MERKEZ/TEK KİŞİ/TEK AKIŞ (2026-07-18, Product Owner kararı):
-        // günlük personel/hesap/yetki akışı artık TAMAMEN personnel.php→personnel_edit.php'nin
-        // "OTS Hesabı & Yetkiler" sekmesinde — bu ekran artık günlük operasyon menüsüyle YARIŞMASIN
-        // diye adminOnly yapıldı, en düşük öncelikli sıraya (categoryOrder) çekildi ve "Sistem
-        // Kullanıcıları" olarak yeniden adlandırıldı (ikincil/ileri yönetim alanı — kullanıcı adı/
-        // hesap taşıma gibi personel akışının dışındaki nadir vakalar + toplu WhatsApp gönderimi
-        // için hâlâ gerekli, users.php SİLİNMEDİ). Backend/auth mantığı bozulmadı.
-        ['key'=>'users','label'=>'Sistem Kullanıcıları','url'=>'users.php','group'=>'yonet','perm'=>'users','primary'=>false,'adminOnly'=>true,'actionLabel'=>'Sistem Kullanıcılarını Yönet','category'=>'yonetim','categoryOrder'=>13,'isPrimaryAction'=>false,'searchKeywords'=>['sistem kullanıcıları','ileri yönetim']],
+        // PERSONEL+KULLANICI+YETKİ TEKLEŞTİRME (2026-07-19, Product Owner kararı — bir önceki
+        // "adminOnly + en düşük sıra" ara adımının SONRAKI turu): günlük personel/hesap/yetki akışı
+        // TAMAMEN personnel.php→personnel_edit.php'nin "OTS Hesabı & Yetkiler" sekmesinde olduğu
+        // için bu giriş artık Yönetim kategori listesinde HİÇ görünmüyor (category=null) — normal
+        // kullanıcı akışından tamamen çıktı. Route (users.php) ve backend/auth mantığı SİLİNMEDİ:
+        // toplu WhatsApp gönderimi + bağsız hesap temizliği gibi nadir/ileri senaryolar için admin
+        // hâlâ doğrudan URL ile erişebiliyor, arama sonuçlarında da (searchKeywords) bulunabiliyor.
+        ['key'=>'users','label'=>'Sistem Kullanıcıları','url'=>'users.php','group'=>'yonet','perm'=>'users','primary'=>false,'adminOnly'=>true,'actionLabel'=>'Sistem Kullanıcılarını Yönet','category'=>null,'categoryOrder'=>null,'isPrimaryAction'=>false,'searchKeywords'=>['sistem kullanıcıları','ileri yönetim']],
         ['key'=>'audit_log','label'=>'Denetim Günlüğünü Gör','url'=>'audit_log.php','group'=>'yonet','perm'=>'users','primary'=>false,'actionLabel'=>'Denetim Kayıtlarını Gör','category'=>'yonetim','categoryOrder'=>8,'isPrimaryAction'=>false,'searchKeywords'=>['denetim','log']],
         ['key'=>'wa_settings','label'=>'WhatsApp Ayarlarını Düzenle','url'=>'wa_settings.php','group'=>'yonet','perm'=>'users','primary'=>false,'category'=>'yonetim','categoryOrder'=>9,'isPrimaryAction'=>false,'searchKeywords'=>['whatsapp ayar']],
         ['key'=>'brand_settings','label'=>'Logo / Marka Düzenle','url'=>'brand_settings.php','group'=>'yonet','perm'=>'users','primary'=>false,'category'=>'yonetim','categoryOrder'=>11,'isPrimaryAction'=>false,'searchKeywords'=>['logo','marka']],

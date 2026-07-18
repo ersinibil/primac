@@ -13,9 +13,15 @@ ds_page_header('Personel', ds_icon('users',24), '', ds_button('Yeni Personel','p
 <div class="df-personnel-grid">
 <?php
 try{
-    // app_users LEFT JOIN — kart üzerindeki "Mesaj Gönder" butonu için bağlı kullanıcı hesabı var mı bakılıyor.
+    // PERSONEL + KULLANICI TEKLEŞTİRME (2026-07-19, Product Owner kararı): "Personel" tek ana varlık,
+    // OTS hesabı ayrı bir varlıkmış gibi gösterilmiyor — her kart kendi OTS hesap durumunu (Aktif/
+    // Pasif/Hesap Yok + rol) doğrudan burada gösteriyor, ayrı bir "Sistem Kullanıcıları" listesine
+    // bakmaya gerek kalmıyor. app_users LEFT JOIN — kart üzerindeki "Mesaj Gönder" butonu için de
+    // kullanılıyordu, şimdi aynı sorgudan rol/aktiflik de okunuyor (ikinci bir sorgu İCAT EDİLMEDİ).
     $rows=db()->query("SELECT p.*,
-                        (SELECT u.id FROM app_users u WHERE u.personnel_id=p.id ORDER BY u.id LIMIT 1) AS linked_user_id
+                        (SELECT u.id FROM app_users u WHERE u.personnel_id=p.id ORDER BY u.id LIMIT 1) AS linked_user_id,
+                        (SELECT u.role FROM app_users u WHERE u.personnel_id=p.id ORDER BY u.id LIMIT 1) AS linked_user_role,
+                        (SELECT u.active FROM app_users u WHERE u.personnel_id=p.id ORDER BY u.id LIMIT 1) AS linked_user_active
                         FROM personnel p
                         ORDER BY p.active DESC, p.name ASC")->fetchAll();
     foreach($rows as $r){
@@ -42,6 +48,15 @@ try{
                 </div>
                 <?=$r['active']?ds_badge('Aktif','green'):ds_badge('Pasif','red')?>
             </div>
+            <?php
+            // PERSONEL+KULLANICI TEKLEŞTİRME (2026-07-19): OTS hesap durumu artık listede — ayrı bir
+            // "Sistem Kullanıcıları" ekranına bakmadan "bu personelin girişi var mı, hangi rolde"
+            // burada görülüyor. $r['role'] (üstteki ünvan) personelin İŞ unvanı — app_users.role
+            // (sistem yetki rolü) İLE KARIŞTIRILMADI, ayrı okundu (linked_user_role).
+            $__rl=['admin'=>'Admin','yonetici'=>'Yönetici','personel'=>'Personel'];
+            $__otsLabel = empty($r['linked_user_id']) ? 'Hesap Yok' : (($r['linked_user_active']?'Aktif':'Pasif').' · '.($__rl[$r['linked_user_role']] ?? h($r['linked_user_role'] ?: 'Personel')));
+            ?>
+            <div class="df-personnel-ots<?=empty($r['linked_user_id'])?' df-personnel-ots--none':''?>"><?=ds_icon('settings',13)?> OTS: <?=h($__otsLabel)?></div>
             <div class="df-personnel-info">
                 <div><?=ds_icon('phone',14)?> <?=h($r['phone'] ?: '-')?></div>
                 <div>✉️ <?=h($r['email'] ?? '' ?: '-')?></div>
@@ -76,6 +91,8 @@ body.nav-compact .df-personnel-avatar{width:46px;height:46px;border-radius:var(-
 body.nav-compact .df-personnel-id{display:flex;flex-direction:column;flex:1;min-width:0}
 body.nav-compact .df-personnel-id strong{font-size:var(--df-type-subtitle-size);color:var(--df-ink-900)}
 body.nav-compact .df-personnel-role{color:var(--df-ink-500);font-size:var(--df-type-caption-size)}
+body.nav-compact .df-personnel-ots{display:flex;align-items:center;gap:5px;font-size:var(--df-type-caption-size);font-weight:700;color:var(--df-success-ink,#16a34a)}
+body.nav-compact .df-personnel-ots--none{color:var(--df-ink-500)}
 body.nav-compact .df-personnel-info{display:flex;flex-direction:column;gap:4px;font-size:var(--df-type-caption-size);color:var(--df-ink-600)}
 body.nav-compact .df-personnel-info .df-icon{vertical-align:-2px;margin-right:2px}
 body.nav-compact .df-personnel-stats{display:flex;gap:var(--df-space-2)}
