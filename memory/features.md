@@ -2,6 +2,22 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
+## fix: P0 MOBİL SHELL USER TEST REGRESYONU (2026-07-18, commit 74e797a)
+Gerçek iPhone testinde bulunan kök neden: `body.mob-compact.chat-mode .df-m-bottomnav{display:none}`
+— Sohbet/WhatsApp ekranına girildiğinde (chat-mode) global bottom nav TAMAMEN kayboluyordu,
+composer onun yerini alıyordu. Statik mockup (gerçek CSS/HTML kopyalanarak) headless Chrome'da
+390px iPhone viewport'ta render edilip önce/sonra screenshot ile doğrulandı (local DB'ye
+dokunulmadan). Düzeltme: composer artık nav'ı GİZLEMEZ, nav'ın ÜSTÜNE oturur —
+`common.php::botx()`'a eklenen `syncNavHeight()` JS'i nav'ın gerçek render yüksekliğini ölçüp
+`--acans-navh` custom property'sine yazıyor, composer `bottom:var(--acans-navh)` kullanıyor (sabit
+piksel yok). Ayrıca: geri butona bağlama uygun görünür etiket (`topx($title,$backUrl,$backLabel)`
+— "‹ Sohbetler"/"‹ WhatsApp"/"‹ Bildirimler"), ve YENİ bir mobil tema sistemi (Sistem/Açık/Koyu —
+önceden mobil HER ZAMAN sabit koyuydu, hiç açık tema yoktu; `ajax_nav_prefs.php`'ye `set_theme`
+action'ı, `<html data-theme>` + ds-foundation.css'in `body.mobile-shell` token'ları artık
+`prefers-color-scheme` + açık override'a bağlı, Menü > Genel'de varsayılan kapalı kontrol).
+WhatsApp mesaj silme/arşivleme backend'de YOK (API'nin desteklemediği bir yetenek) — sahte UI
+eklenmedi; "composer/gönder yok" şikayeti aynı nav-çakışma kök nedeninden kaynaklanıyordu.
+
 ## feat: P0 Tahsilat/Ödeme UX + çek/senet entegrasyonu (2026-07-18, commit 1aafe7d)
 finance_new.php + mobile/collection.php + mobile/payment.php: Yöntem=Çek/Senet seçilince artık
 kasa/banka hesabı sorulmuyor, kayıt checks_notes_lib.php'nin TEK kaynağına (checks_notes_create()/
