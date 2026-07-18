@@ -141,7 +141,9 @@ if ($with) {
     try { $pdo->prepare("UPDATE internal_messages SET is_read=1 WHERE receiver_user_id=? AND sender_user_id=?")->execute([$me,$with]); } catch(Throwable $e){}
 }
 
-topx($thread ? 'Grup' : ($with ? 'Sohbet' : 'İletişim Merkezi'));
+// P0 MOBİL SHELL KAPANIŞI (2026-07-18): Sohbet/Grup Detayı → İletişim Merkezi (messages.php)
+// listesine deterministik döner, history.back()'e güvenmez (bkz. common.php::topx() notu).
+topx($thread ? 'Grup' : ($with ? 'Sohbet' : 'İletişim Merkezi'), ($thread || $with) ? 'messages.php' : null);
 ?>
 <?php if(!$thread && !$with){ require_once __DIR__.'/../share_lib.php'; ic_tabs('sohbetler'); } ?>
 <style>
@@ -461,17 +463,6 @@ window.ACANS_ON_CONV=function(list){
 <script>
 document.body.classList.add('chat-mode');
 function scrollBottom(){ window.scrollTo(0,document.body.scrollHeight); }
-
-// Belirgin GERİ butonu (logo kalır, başına eklenir)
-(function(){
-  var top=document.querySelector('.top');
-  if(top && !document.getElementById('backbtn')){
-    var back=document.createElement('a');
-    back.href='index.php'; back.id='backbtn'; back.innerHTML='‹';
-    back.style.cssText='flex:0 0 auto;width:44px;height:44px;border-radius:14px;background:rgba(255,255,255,.14);color:#fff;display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:900;text-decoration:none;margin-right:6px';
-    top.insertBefore(back, top.firstChild);
-  }
-})();
 
 // ÇÖZÜM: composer fixed; JS ile GÖRÜNÜR ALANIN tam dibine (klavyenin üstüne) "top" ile pinle.
 // top kullanımı, iOS Safari'nin innerHeight tutarsızlığından etkilenmez.

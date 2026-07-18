@@ -109,7 +109,9 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     }catch(Throwable $e){ $er=$e->getMessage(); }
 }
 
-topx('Personel');
+// P0 MOBİL SHELL KAPANIŞI (2026-07-18): Personel Detayı → Personel listesine deterministik döner
+// (bkz. common.php::topx() notu).
+topx('Personel', 'personnel.php');
 if(!empty($_SESSION['pers_ok'])){ $ok=$_SESSION['pers_ok']; unset($_SESSION['pers_ok']); }
 if(!empty($_SESSION['pers_err'])){ $er=$_SESSION['pers_err']; unset($_SESSION['pers_err']); }
 try{

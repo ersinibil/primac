@@ -90,7 +90,9 @@ if($conv && (int)$conv['id']>0){
     $messages=$stm->fetchAll();
 }
 
-topx($conv['contact_name'] ?? 'Konuşma');
+// P0 MOBİL SHELL KAPANIŞI (2026-07-18): WhatsApp Konuşma Detayı → WhatsApp listesine deterministik
+// döner (bkz. common.php::topx() notu).
+topx($conv['contact_name'] ?? 'Konuşma', 'wa_conversations.php');
 if(!$conv){ echo ds_alert('danger','Konuşma bulunamadı.'); botx(); exit; }
 $lastMsgId = $messages ? (int)end($messages)['id'] : 0;
 ?>
