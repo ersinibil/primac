@@ -21,14 +21,18 @@ function dfAccordionToggle(headerEl){
  * linke erişimini kaybetmiyor, sadece tek-açık/akordeon güzelliğini kaybediyor (kabul edilebilir
  * bozulma, Product Owner kararı: "temel link erişimi tamamen kaybolmaz").
  *
- * sessionStorage: yalnızca whitelist edilmiş 5 kategori anahtarından biri saklanır, sekme
- * kapanınca silinir, DB'ye hiç yazılmaz. Sunucunun kendi seçtiği (geçerli sayfanın kategorisi)
- * her zaman öncelikli — sessionStorage yalnızca kategori-dışı (global) sayfalarda devreye girer.
+ * P0 ACCORDION STATE DÜZELTMESİ (2026-07-18, Product Owner kararı): önceden bir sessionStorage
+ * katmanı vardı — "kategori-dışı (global) bir sayfaya" (Ana Sayfa, İletişim Merkezi) gidilince,
+ * bir ÖNCEKİ sayfada açık bırakılmış kategoriyi sessionStorage'dan OKUYUP GERİ AÇIYORDU. Bu,
+ * BİLDİRİLEN hatanın kök nedeniydi: "İşler" açıkken Ana Sayfa'ya tıklanınca sunucu doğru şekilde
+ * hiçbir kategoriyi .is-open basmıyordu (server-side state zaten doğruydu) ama bu JS DOMContentLoaded
+ * anında sessionStorage'daki eski değeri okuyup "İşler"i client-side yeniden açıyordu. TEK MERKEZİ
+ * NAV STATE kuralı gereği (Product Owner: "her sayfaya ayrı JS hack ekleme") kalıcı istemci-taraflı
+ * hafıza TAMAMEN kaldırıldı — accordion durumu artık HER ZAMAN sunucunun $__catHasActive
+ * hesaplamasından (layout_top.php, geçerli route'a göre) gelir; dfRailToggle() SADECE aynı sayfa
+ * görünümü içindeki manuel aç/kapa tıklamasını yönetir (sayfa değişince zaten yeniden render olur).
  */
 (function(){
-    var STORAGE_KEY = 'dfRailOpenCat';
-    var VALID_CATS = ['isler','ticaret','uretim_stok','finans','yonetim'];
-    function isValidCat(v){ return VALID_CATS.indexOf(v) !== -1; }
     function closeAllCats(rail){
         rail.querySelectorAll('.df-rail-cat.is-open').forEach(function(el){
             el.classList.remove('is-open');
@@ -48,32 +52,7 @@ function dfAccordionToggle(headerEl){
         var rail = btn.closest('.df-rail');
         if(!el || !rail) return;
         var wasOpen = el.classList.contains('is-open');
-        if(wasOpen){
-            closeAllCats(rail);
-            try{ sessionStorage.removeItem(STORAGE_KEY); }catch(e){}
-        }else{
-            openCat(rail, el);
-            var cat = el.getAttribute('data-cat');
-            if(isValidCat(cat)){ try{ sessionStorage.setItem(STORAGE_KEY, cat); }catch(e){} }
-        }
+        if(wasOpen){ closeAllCats(rail); }
+        else{ openCat(rail, el); }
     };
-    document.addEventListener('DOMContentLoaded', function(){
-        var rail = document.querySelector('.df-rail');
-        if(!rail) return;
-        var serverOpen = rail.querySelector('.df-rail-cat.is-open');
-        if(serverOpen){
-            // Sunucu geçerli sayfanın kategorisini zaten açtı — sessionStorage'ı onunla senkron tut.
-            var cat = serverOpen.getAttribute('data-cat');
-            if(isValidCat(cat)){ try{ sessionStorage.setItem(STORAGE_KEY, cat); }catch(e){} }
-            return;
-        }
-        // Kategori-dışı (global) bir sayfadayız — son açık kategoriyi geri getir (varsa, geçerliyse,
-        // yetkiliyse — yetkisiz/boş kategori zaten DOM'da hiç yok, querySelector null döner).
-        var saved = null;
-        try{ saved = sessionStorage.getItem(STORAGE_KEY); }catch(e){}
-        if(saved && isValidCat(saved)){
-            var el = rail.querySelector('.df-rail-cat[data-cat="' + saved + '"]');
-            if(el) openCat(rail, el);
-        }
-    });
 })();
