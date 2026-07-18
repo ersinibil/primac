@@ -232,6 +232,13 @@ body.mobile-shell{
 .df-text-caption{font-size:var(--df-type-caption-size);font-weight:var(--df-type-caption-weight);line-height:var(--df-type-caption-lh);color:var(--df-ink-500)}
 .df-text-micro{font-size:var(--df-type-micro-size);font-weight:var(--df-type-micro-weight);line-height:var(--df-type-micro-lh);text-transform:uppercase;letter-spacing:.05em;color:var(--df-ink-500)}
 .df-text-tabular{font-variant-numeric:tabular-nums}
+/* P0 Legacy UI Temizliği (2026-07-18): DS migration'ı boyunca birçok dosya .df-muted'i kendi
+   sayfa-yerel <style> bloğunda ayrı ayrı tanımlamıştı (aynı tek satır tekrar tekrar) — TEK global
+   tanıma taşındı, hiçbir sayfa kendi kopyasını tanımlamak zorunda kalmasın diye. Bilinçli olarak
+   unscoped (body.nav-compact'e bağlı değil) — index.php gibi app shell'in hiç yüklenmediği
+   sayfalarda da (login ekranı) çalışsın diye.
+*/
+.df-muted{color:var(--df-ink-500)}
 
 /* Button — yeni namespace, PX-001A'dan itibaren ekran taşımaları burayı kullanacak */
 .df-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:0;cursor:pointer;font-family:inherit;font-weight:600;text-decoration:none;height:38px;padding:0 16px;border-radius:var(--df-radius-sm);font-size:13.5px;transition:background var(--df-dur-fast) var(--df-ease-standard),border-color var(--df-dur-fast) var(--df-ease-standard),transform var(--df-dur-instant) var(--df-ease-standard)}

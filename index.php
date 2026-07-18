@@ -87,33 +87,40 @@ $__faviconType = ['png'=>'image/png','jpg'=>'image/jpeg','jpeg'=>'image/jpeg','w
 ?>
 <link rel="icon" type="<?=$__faviconType?>" href="<?=h($__favicon)?>?v=<?=@filemtime(__DIR__.'/'.$__favicon)?>">
 <link rel="apple-touch-icon" href="<?=h($__favicon)?>?v=<?=@filemtime(__DIR__.'/'.$__favicon)?>">
+<?php ds_styles(); ?>
 <style>
-body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#071326,#10233f);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:#101828}
-.login{width:420px;max-width:92vw;background:white;border-radius:28px;padding:30px;box-shadow:0 30px 80px rgba(0,0,0,.25)}
-.logo{width:60px;height:60px;border-radius:20px;background:#071326;color:white;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:24px;margin-bottom:16px}
-h1{margin:0 0 8px;font-size:30px}.muted{color:#667085;margin-bottom:22px}
-label{display:block;font-weight:900;margin:14px 0 6px}
-input{width:100%;border:1px solid #d0d5dd;border-radius:14px;padding:13px;font-size:16px}
-button{width:100%;border:0;border-radius:14px;background:#111827;color:white;padding:14px;margin-top:18px;font-weight:900;font-size:16px}
-.alert{background:#fee2e2;color:#991b1b;padding:12px;border-radius:14px;margin:14px 0}
+/* Giriş ekranı — oturum yok, layout_top.php'nin Rail/Topbar'ı hiç yüklenmiyor, ama TÜM renkler
+   DS token'larından (var(--df-*)) geliyor (P0 Legacy UI Temizliği, 2026-07-18). */
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#071326,#10233f);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:var(--df-ink-900)}
+.login{width:420px;max-width:92vw;background:var(--df-surface);border-radius:var(--df-radius-lg);padding:30px;box-shadow:0 30px 80px rgba(0,0,0,.25)}
+.login .logo{width:60px;height:60px;border-radius:var(--df-radius-md);background:#fff;overflow:hidden;padding:6px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:24px;margin-bottom:16px}
+.login h1{margin:0 0 8px;font-size:30px}
+.login label{display:block;font-weight:700;margin:14px 0 6px;font-size:13px;color:var(--df-ink-900)}
+.login input{width:100%;border:1px solid var(--df-hairline);border-radius:var(--df-radius-md);padding:13px;font-size:16px;background:var(--df-surface);color:var(--df-ink-900);box-sizing:border-box}
+/* .df-alert/.df-muted'in yapısal CSS'i ds-foundation.css'te body.nav-compact/mob-compact scope'una
+   bağlı — bu sayfada (oturum yok, app shell hiç yüklenmiyor) o class hiç yok, o yüzden aynı görünüm
+   burada bağımsız tanımlanıyor (renk token'ları aynı, sadece scope farklı). */
+.login .df-alert{display:flex;padding:var(--df-space-3) var(--df-space-4);border-radius:var(--df-radius-md);font-size:14px;line-height:1.5;margin:14px 0}
+.login .df-alert--danger{background:var(--df-danger-soft);color:var(--df-danger-ink)}
+.login .df-muted{color:var(--df-ink-500)}
 </style>
 </head>
 <body>
 <div class="login">
-<div class="logo" style="background:#fff;overflow:hidden;padding:6px"><img src="<?=h(brand_logo())?>" alt="Logo" style="width:100%;height:100%;object-fit:contain" onerror="this.parentNode.textContent='A'"></div>
+<div class="logo"><img src="<?=h(brand_logo())?>" alt="Logo" style="width:100%;height:100%;object-fit:contain" onerror="this.parentNode.textContent='A'"></div>
 <h1><?=h(app_config()['app_name'] ?? 'OTS')?></h1>
-<div class="muted">Online Takip ve Yönetim Sistemi</div>
-<?php if($error): ?><div class="alert"><?=h($error)?></div><?php endif; ?>
+<div class="df-muted" style="margin-bottom:22px">Online Takip ve Yönetim Sistemi</div>
+<?php if($error): ?><?=ds_alert('danger',$error)?><?php endif; ?>
 <form method="post">
 <?=csrf_field()?>
 <label>Kullanıcı Adı</label>
 <input name="username" required autofocus placeholder="ersin">
 <label>Şifre</label>
 <input type="password" name="password" required placeholder="••••••">
-<button>Giriş Yap</button>
+<button class="df-btn df-btn--primary df-btn--lg" style="width:100%;margin-top:18px">Giriş Yap</button>
 </form>
 <div style="text-align:center;margin-top:16px">
-<a href="sifre_sifirla.php" style="color:#6b7280;font-size:13px;text-decoration:none">Şifremi Unuttum</a>
+<a href="sifre_sifirla.php" style="color:var(--df-ink-500);font-size:13px;text-decoration:none">Şifremi Unuttum</a>
 </div>
 </div>
 </body>
