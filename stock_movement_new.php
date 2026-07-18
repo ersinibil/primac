@@ -102,18 +102,42 @@ $contacts=$pdo->query("SELECT * FROM contacts ORDER BY name")->fetchAll();
 $suppliers=$pdo->query("SELECT * FROM contacts WHERE type IN ('Tedarikçi','Her İkisi') ORDER BY name")->fetchAll();
 $jobs=$pdo->query("SELECT id,job_no,title FROM jobs ORDER BY id DESC LIMIT 100")->fetchAll();
 ?>
-<div class="panel-head"><h1><?=$type==='in'?'Stok Giriş / Alış':'Stok Çıkış / Satış'?></h1><a class="btn secondary" href="stock.php">Stok Listesi</a></div>
-<?php if($error): ?><div class="alert"><?=h($error)?></div><?php endif; ?>
-<section class="panel"><form method="post" class="form-grid">
-<label>Hareket Tipi<select name="movement_type"><option value="in" <?=$type==='in'?'selected':''?>>Alış / Stok Giriş</option><option value="out" <?=$type==='out'?'selected':''?>>Satış / Stok Çıkış</option><option value="use" <?=$type==='use'?'selected':''?>>İşte Kullanım</option></select></label>
-<label>Ürün<select name="stock_item_id" required><option value="">Seçiniz</option><?php foreach($products as $p): ?><option value="<?=$p['id']?>" <?=$productId===$p['id']?'selected':''?>><?=h(($p['product_code']?$p['product_code'].' - ':'').$p['name'].' / Stok: '.$p['quantity'].' '.$p['unit'])?></option><?php endforeach; ?></select></label>
-<label>Miktar<input type="number" step="0.001" name="quantity" required></label>
-<label>Birim Maliyet / Alış<input type="number" step="0.01" name="unit_cost" value="0"></label>
-<label>Birim Satış<input type="number" step="0.01" name="unit_sale" value="0"></label>
-<label>Tarih<input type="date" name="movement_date" value="<?=date('Y-m-d')?>"></label>
-<label>Tedarikçi<select name="supplier_id"><option value="">Seçiniz</option><?php foreach($suppliers as $s): ?><option value="<?=$s['id']?>"><?=h($s['name'])?></option><?php endforeach; ?></select></label>
-<label>Müşteri / Cari<select name="contact_id"><option value="">Seçiniz</option><?php foreach($contacts as $c): ?><option value="<?=$c['id']?>"><?=h($c['name'].' / '.$c['type'])?></option><?php endforeach; ?></select></label>
-<label>İş Bağlantısı<select name="job_id"><option value="">Seçiniz</option><?php foreach($jobs as $j): ?><option value="<?=$j['id']?>"><?=h($j['job_no'].' - '.$j['title'])?></option><?php endforeach; ?></select></label>
-<label class="full">Açıklama<textarea name="description" rows="3"></textarea></label>
-<button class="btn">Hareketi Kaydet</button></form></section>
+<?php ds_page_header($type==='in'?'Stok Giriş / Alış':'Stok Çıkış / Satış', ds_icon('box',24), '', ds_button('Stok Listesi','stock.php','secondary','','',true), false, true); ?>
+<?php if($error): ?><?=ds_alert('danger',$error)?><?php endif; ?>
+<section class="df-card"><form method="post" class="df-form-grid-2">
+<?php
+$__mtOpts='<option value="in" '.($type==='in'?'selected':'').'>Alış / Stok Giriş</option><option value="out" '.($type==='out'?'selected':'').'>Satış / Stok Çıkış</option><option value="use" '.($type==='use'?'selected':'').'>İşte Kullanım</option>';
+ds_form_field('Hareket Tipi', '<select name="movement_type">'.$__mtOpts.'</select>');
+
+$__prodOpts='<option value="">Seçiniz</option>';
+foreach($products as $p){ $__prodOpts.='<option value="'.$p['id'].'" '.($productId===$p['id']?'selected':'').'>'.h(($p['product_code']?$p['product_code'].' - ':'').$p['name'].' / Stok: '.$p['quantity'].' '.$p['unit']).'</option>'; }
+ds_form_field('Ürün', '<select name="stock_item_id" required>'.$__prodOpts.'</select>');
+
+ds_form_field('Miktar', '<input type="number" step="0.001" name="quantity" required>');
+ds_form_field('Birim Maliyet / Alış', '<input type="number" step="0.01" name="unit_cost" value="0">');
+ds_form_field('Birim Satış', '<input type="number" step="0.01" name="unit_sale" value="0">');
+ds_form_field('Tarih', '<input type="date" name="movement_date" value="'.date('Y-m-d').'">');
+
+$__supOpts='<option value="">Seçiniz</option>';
+foreach($suppliers as $s){ $__supOpts.='<option value="'.$s['id'].'">'.h($s['name']).'</option>'; }
+ds_form_field('Tedarikçi', '<select name="supplier_id">'.$__supOpts.'</select>');
+
+$__contOpts='<option value="">Seçiniz</option>';
+foreach($contacts as $c){ $__contOpts.='<option value="'.$c['id'].'">'.h($c['name'].' / '.$c['type']).'</option>'; }
+ds_form_field('Müşteri / Cari', '<select name="contact_id">'.$__contOpts.'</select>');
+
+$__jobOpts='<option value="">Seçiniz</option>';
+foreach($jobs as $j){ $__jobOpts.='<option value="'.$j['id'].'">'.h($j['job_no'].' - '.$j['title']).'</option>'; }
+ds_form_field('İş Bağlantısı', '<select name="job_id">'.$__jobOpts.'</select>');
+?>
+<div class="df-form-span-2"><?php ds_form_field('Açıklama', '<textarea name="description" rows="3"></textarea>'); ?></div>
+<div class="df-form-span-2"><button class="df-btn df-btn--primary">Hareketi Kaydet</button></div>
+</form></section>
+
+<style>
+body.nav-compact .df-form-grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 var(--df-space-4)}
+body.nav-compact .df-form-span-2{grid-column:1 / -1}
+@media(max-width:640px){body.nav-compact .df-form-grid-2{grid-template-columns:1fr}}
+</style>
+
 <?php require_once __DIR__.'/layout_bottom.php'; ?>
