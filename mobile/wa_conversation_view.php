@@ -91,10 +91,14 @@ if($conv && (int)$conv['id']>0){
 }
 
 topx($conv['contact_name'] ?? 'Konuşma');
-if(!$conv){ echo '<div class="panel err">Konuşma bulunamadı.</div>'; botx(); exit; }
+if(!$conv){ echo ds_alert('danger','Konuşma bulunamadı.'); botx(); exit; }
 $lastMsgId = $messages ? (int)end($messages)['id'] : 0;
 ?>
 <style>
+/* NOT (DS migrasyonu 2026-07-18): bu blok BİLEREK dokunulmadı — canlı güncelleme (3sn polling)
+ * yapan JS aşağıda .bubble/.mine/.theirs/#waThread/p.muted seçicilerine bağlı. Risk yönetimi
+ * gereği (CLAUDE.md/PROJECT_RULES.md) sohbet balonu alanı legacy bırakıldı, sadece dış çerçeve
+ * (üst bilgi paneli + kısayol kartları) DS'e taşındı. */
 .wa-thread{display:flex;flex-direction:column;gap:8px;padding:4px 2px;max-height:52vh;overflow-y:auto}
 .bubble{max-width:80%;padding:10px 13px;border-radius:18px;font-size:15px;line-height:1.35;word-wrap:break-word;white-space:pre-wrap}
 .bubble small{display:block;font-size:10px;opacity:.6;margin-top:3px;text-align:right}
@@ -105,25 +109,25 @@ $lastMsgId = $messages ? (int)end($messages)['id'] : 0;
 .wa-compose button.icon{border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);color:#fff;border-radius:10px;width:40px;height:40px;font-size:16px;cursor:not-allowed;opacity:.5;flex:0 0 auto}
 </style>
 
-<div class="panel">
-<b><?=htmlspecialchars($conv['contact_name'] ?: $conv['phone'])?></b><br>
-<span class="muted"><?=htmlspecialchars($conv['phone'])?><?php if($conv['contact_type']): ?> · <?=htmlspecialchars($conv['contact_type'])?><?php endif; ?></span>
-<?php if(!empty($conv['authorized_person'])): ?><br><span class="muted">Yetkili: <?=htmlspecialchars($conv['authorized_person'])?></span><?php endif; ?>
+<div class="df-panel">
+<b><?=h($conv['contact_name'] ?: $conv['phone'])?></b><br>
+<span class="muted"><?=h($conv['phone'])?><?php if($conv['contact_type']): ?> · <?=h($conv['contact_type'])?><?php endif; ?></span>
+<?php if(!empty($conv['authorized_person'])): ?><br><span class="muted">Yetkili: <?=h($conv['authorized_person'])?></span><?php endif; ?>
 </div>
 
-<div class="grid">
-<?php if($conv['contact_real_id']): ?><a class="card blue" href="contact_view.php?id=<?=(int)$conv['contact_real_id']?>"><span>👥</span><b>Cari Kartı</b></a><?php endif; ?>
-<a class="card teal" href="wa_conversations.php"><span>💬</span><b>Tüm Konuşmalar</b></a>
+<div style="display:flex;gap:8px;margin-bottom:10px">
+<?php if($conv['contact_real_id']): ?><?=ds_button(ds_icon('users',15).' Cari Kartı','contact_view.php?id='.(int)$conv['contact_real_id'],'secondary','','style="flex:1;justify-content:center"',true)?><?php endif; ?>
+<?=ds_button(ds_icon('chat',15).' Tüm Konuşmalar','wa_conversations.php','secondary','','style="flex:1;justify-content:center"',true)?>
 </div>
 
-<div class="panel">
+<div class="df-panel">
 <div class="wa-thread" id="waThread">
 <?php if(!$messages): ?>
 <p class="muted">Bu konuşmada henüz mesaj yok.</p>
 <?php else: foreach($messages as $m): $mine=$m['direction']==='outbound'; ?>
 <div class="bubble <?=$mine?'mine':'theirs'?>" data-id="<?=(int)$m['id']?>">
-<?=htmlspecialchars($m['body'])?><?php if($m['media_url']): ?><br>📎 <a href="<?=htmlspecialchars($m['media_url'])?>" target="_blank" rel="noopener" style="color:inherit"><?=htmlspecialchars($m['media_type']?:'Medya')?></a><?php endif; ?>
-<small><?=htmlspecialchars(date('d.m.Y H:i',strtotime($m['created_at'])))?></small>
+<?=h($m['body'])?><?php if($m['media_url']): ?><br>📎 <a href="<?=h($m['media_url'])?>" target="_blank" rel="noopener" style="color:inherit"><?=h($m['media_type']?:'Medya')?></a><?php endif; ?>
+<small><?=h(date('d.m.Y H:i',strtotime($m['created_at'])))?></small>
 </div>
 <?php endforeach; endif; ?>
 </div>
@@ -131,7 +135,7 @@ $lastMsgId = $messages ? (int)end($messages)['id'] : 0;
   <button type="button" class="icon" title="Yakında" disabled>😀</button>
   <button type="button" class="icon" title="Yakında" disabled>📎</button>
   <textarea id="waComposeText" rows="1" placeholder="Mesajınızı yazın…"></textarea>
-  <button type="button" class="btn dark" id="waSendBtn">Gönder</button>
+  <button type="button" class="df-btn df-btn--primary" id="waSendBtn">Gönder</button>
 </div>
 </div>
 

@@ -29,8 +29,8 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['delete_cn'])){
 }
 
 topx('Çek / Senet');
-if(!empty($_GET['ok'])) echo '<div class="ok">Kayıt güncellendi.</div>';
-if(!empty($_SESSION['cn_err'])){ echo '<div class="err">'.htmlspecialchars($_SESSION['cn_err']).'</div>'; unset($_SESSION['cn_err']); }
+if(!empty($_GET['ok'])) echo ds_alert('success','Kayıt güncellendi.');
+if(!empty($_SESSION['cn_err'])){ echo ds_alert('danger',$_SESSION['cn_err']); unset($_SESSION['cn_err']); }
 
 $typeOpts=checks_notes_types();
 $dirOpts=checks_notes_directions();
@@ -45,14 +45,14 @@ try{
     $contacts=[];
     try{ $contacts=$pdo->query("SELECT id,name FROM contacts ORDER BY name")->fetchAll(); }catch(Throwable $e){}
 ?>
-<div class="panel">
-  <h2 style="margin:0 0 4px"><?=$ic?> <?=htmlspecialchars($typeOpts[$r['type']]??$r['type'])?> <?=htmlspecialchars($r['number']?:'')?></h2>
-  <div class="muted"><?=htmlspecialchars(($r['contact_name']?:'Cari seçilmedi').($r['bank_name']?' · '.$r['bank_name']:''))?></div>
+<div class="df-panel">
+  <h2 style="margin:0 0 4px"><?=$ic?> <?=h($typeOpts[$r['type']]??$r['type'])?> <?=h($r['number']?:'')?></h2>
+  <div class="muted"><?=h(($r['contact_name']?:'Cari seçilmedi').($r['bank_name']?' · '.$r['bank_name']:''))?></div>
   <div style="font-size:28px;font-weight:900;margin-top:10px"><?=mm($r['amount'])?></div>
   <div style="display:flex;gap:14px;margin-top:6px;flex-wrap:wrap">
-    <small class="muted">Yön: <?=htmlspecialchars($dirOpts[$rDir]??$rDir)?></small>
-    <small class="muted">Vade: <?=htmlspecialchars($r['due_date']?:'Vadesiz')?><?=$overdue?' ⚠️ Vadesi geçti':''?></small>
-    <small class="muted">Durum: <?=htmlspecialchars($statusOpts[$r['status']]??$r['status'])?></small>
+    <small class="muted">Yön: <?=h($dirOpts[$rDir]??$rDir)?></small>
+    <small class="muted">Vade: <?=h($r['due_date']?:'Vadesiz')?><?=$overdue?' ⚠️ Vadesi geçti':''?></small>
+    <small class="muted">Durum: <?=h($statusOpts[$r['status']]??$r['status'])?></small>
   </div>
   <?php if(!empty($r['contact_id'])): ?>
   <div style="margin-top:6px">
@@ -63,44 +63,44 @@ try{
     <?php endif; ?>
   </div>
   <?php endif; ?>
-  <?php if($r['notes']): ?><div style="margin-top:8px"><?=nl2br(htmlspecialchars($r['notes']))?></div><?php endif; ?>
-  <?php if(!empty($r['attachment'])): ?><div style="margin-top:8px"><a href="<?=htmlspecialchars(base_url().$r['attachment'])?>" target="_blank">📎 Dosyayı Gör</a></div><?php endif; ?>
+  <?php if($r['notes']): ?><div style="margin-top:8px"><?=nl2br(h($r['notes']))?></div><?php endif; ?>
+  <?php if(!empty($r['attachment'])): ?><div style="margin-top:8px"><a href="<?=h(base_url().$r['attachment'])?>" target="_blank"><?=ds_icon('box',14)?> Dosyayı Gör</a></div><?php endif; ?>
   <?php if(can_edit_delete()): ?>
   <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
     <form method="post" style="margin:0" onsubmit="return confirm('Bu kaydı silmek istediğinize emin misiniz?')">
       <input type="hidden" name="delete_cn" value="1">
-      <button class="btn" style="background:#dc2626;color:#fff;padding:9px 16px;font-size:14px">🗑 Sil</button>
+      <button class="df-btn df-btn--danger"><?=ds_icon('trash',16)?> Sil</button>
     </form>
   </div>
   <?php endif; ?>
 </div>
 
 <?php if(can_edit_delete()): ?>
-<details class="panel">
-  <summary style="font-weight:900;cursor:pointer">✏️ Kaydı Düzenle</summary>
+<details class="df-panel">
+  <summary style="font-weight:900;cursor:pointer"><?=ds_icon('edit',16)?> Kaydı Düzenle</summary>
   <form method="post" style="margin-top:10px" enctype="multipart/form-data">
     <label>Yön</label>
-    <select name="direction" id="cn-dir-edit" onchange="updateCnStatusLabels(this)"><?php foreach($dirOpts as $dk=>$dl): ?><option value="<?=$dk?>" <?=$rDir===$dk?'selected':''?>><?=htmlspecialchars($dl)?></option><?php endforeach; ?></select>
+    <select name="direction" id="cn-dir-edit" onchange="updateCnStatusLabels(this)"><?php foreach($dirOpts as $dk=>$dl): ?><option value="<?=$dk?>" <?=$rDir===$dk?'selected':''?>><?=h($dl)?></option><?php endforeach; ?></select>
     <label>Tür</label>
-    <select name="type"><?php foreach($typeOpts as $tk=>$tl): ?><option value="<?=$tk?>" <?=$r['type']===$tk?'selected':''?>><?=htmlspecialchars($tl)?></option><?php endforeach; ?></select>
+    <select name="type"><?php foreach($typeOpts as $tk=>$tl): ?><option value="<?=$tk?>" <?=$r['type']===$tk?'selected':''?>><?=h($tl)?></option><?php endforeach; ?></select>
     <label>Numara</label>
-    <input name="number" value="<?=htmlspecialchars($r['number']??'')?>">
+    <input name="number" value="<?=h($r['number']??'')?>">
     <label>Tutar</label>
-    <input type="number" step="0.01" name="amount" value="<?=htmlspecialchars($r['amount'])?>" required>
+    <input type="number" step="0.01" name="amount" value="<?=h($r['amount'])?>" required>
     <label>Vade Tarihi</label>
-    <input type="date" name="due_date" value="<?=htmlspecialchars($r['due_date']??'')?>">
+    <input type="date" name="due_date" value="<?=h($r['due_date']??'')?>">
     <label>Cari <small class="muted">(opsiyonel)</small></label>
     <select name="contact_id"><option value="">— Cari seçilmedi —</option>
-    <?php foreach($contacts as $c): ?><option value="<?=$c['id']?>" <?=(int)$r['contact_id']===(int)$c['id']?'selected':''?>><?=htmlspecialchars($c['name'])?></option><?php endforeach; ?></select>
+    <?php foreach($contacts as $c): ?><option value="<?=$c['id']?>" <?=(int)$r['contact_id']===(int)$c['id']?'selected':''?>><?=h($c['name'])?></option><?php endforeach; ?></select>
     <label>Banka Adı <small class="muted">(çek ise)</small></label>
-    <input name="bank_name" value="<?=htmlspecialchars($r['bank_name']??'')?>">
+    <input name="bank_name" value="<?=h($r['bank_name']??'')?>">
     <label>Durum</label>
-    <select name="status" id="cn-status-edit"><?php foreach($statusOpts as $sk=>$sl): ?><option value="<?=$sk?>" <?=$r['status']===$sk?'selected':''?>><?=htmlspecialchars($sl)?></option><?php endforeach; ?></select>
+    <select name="status" id="cn-status-edit"><?php foreach($statusOpts as $sk=>$sl): ?><option value="<?=$sk?>" <?=$r['status']===$sk?'selected':''?>><?=h($sl)?></option><?php endforeach; ?></select>
     <label>Not</label>
-    <textarea name="notes" rows="2"><?=htmlspecialchars($r['notes']??'')?></textarea>
+    <textarea name="notes" rows="2"><?=h($r['notes']??'')?></textarea>
     <label>Fotoğraf / Dosya <small class="muted">(yeni seçilirse eskisinin yerine geçer, boş bırakılırsa korunur)</small></label>
     <input type="file" name="attachment" accept=".jpg,.jpeg,.png,.webp,.gif,.pdf">
-    <button class="btn dark" name="edit_cn" value="1" style="width:100%;padding:13px;margin-top:8px">💾 Kaydet</button>
+    <button class="df-btn df-btn--primary df-btn--lg" name="edit_cn" value="1" style="width:100%;margin-top:8px"><?=ds_icon('check',16)?> Kaydet</button>
   </form>
 </details>
 <?php endif; ?>
@@ -123,5 +123,5 @@ function updateCnStatusLabels(dirSel){
 }
 </script>
 <?php
-}catch(Throwable $e){ echo '<div class="err">'.htmlspecialchars($e->getMessage()).'</div>'; }
+}catch(Throwable $e){ echo ds_alert('danger',$e->getMessage()); }
 botx();

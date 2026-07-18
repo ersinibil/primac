@@ -19,21 +19,21 @@ if($goFile!=='' && strpos($go,'../')!==0 && !file_exists(__DIR__.'/'.$goFile) &&
 
 topx('Bildirim Detayı');
 ?>
-<div class="panel">
+<div class="df-panel">
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:4px">
     <div class="notif-icon <?=$t['color']?>" style="width:48px;height:48px;font-size:24px"><?=$t['icon']?></div>
     <div style="min-width:0">
-      <div class="notif-type"><?=htmlspecialchars($t['label'])?></div>
-      <b style="font-size:17px"><?=htmlspecialchars($t['title'])?></b>
+      <div class="notif-type"><?=h($t['label'])?></div>
+      <b style="font-size:17px"><?=h($t['title'])?></b>
     </div>
   </div>
   <?php if(!empty($n['message'])): ?>
   <div style="margin-top:12px;line-height:1.55"><?=notif_linkify($n['message'])?></div>
   <?php endif; ?>
-  <div class="muted" style="margin-top:14px;font-size:13px">🕒 <?=htmlspecialchars(date('d.m.Y H:i', strtotime($n['created_at']??'now')))?></div>
+  <div class="muted" style="margin-top:14px;font-size:13px"><?=ds_icon('calendar',13)?> <?=h(date('d.m.Y H:i', strtotime($n['created_at']??'now')))?></div>
 </div>
-<div class="panel" style="display:flex;flex-direction:column;gap:8px">
-  <a class="btn dark" style="text-align:center" href="<?=htmlspecialchars($go)?>">İlgili Modüle Git</a>
-  <form method="post" action="notifications.php" onsubmit="return confirm('Bu bildirim silinsin mi?')"><?=csrf_field()?><input type="hidden" name="del" value="<?=(int)$n['id']?>"><button type="submit" class="btn" style="width:100%;text-align:center;background:#7f1d1d;color:#fff">Sil</button></form>
+<div class="df-panel" style="display:flex;flex-direction:column;gap:8px">
+  <a class="df-btn df-btn--primary df-btn--lg" style="width:100%" href="<?=h($go)?>">İlgili Modüle Git</a>
+  <form method="post" action="notifications.php" onsubmit="return confirm('Bu bildirim silinsin mi?')"><?=csrf_field()?><input type="hidden" name="del" value="<?=(int)$n['id']?>"><button type="submit" class="df-btn df-btn--danger" style="width:100%"><?=ds_icon('trash',16)?> Sil</button></form>
 </div>
 <?php botx(); ?>

@@ -11,7 +11,7 @@ $sqlWhere = $where ? 'WHERE '.implode(' AND ',$where) : '';
 
 topx('Cari Raporlar');
 ?>
-<div class="panel">
+<div class="df-panel">
   <form method="get" style="display:flex;gap:8px;flex-wrap:wrap">
     <div style="flex:1;min-width:130px"><label>Rapor Tipi</label>
       <select name="mode" style="margin:0">
@@ -29,7 +29,7 @@ topx('Cari Raporlar');
         <option <?=$type==='Her İkisi'?'selected':''?>>Her İkisi</option>
       </select>
     </div>
-    <button class="btn dark" style="padding:12px 16px;align-self:end">Filtrele</button>
+    <button class="df-btn df-btn--primary df-btn--lg" style="align-self:end">Filtrele</button>
   </form>
 </div>
 
@@ -59,36 +59,34 @@ try{
         $rows[]=$r;
     }
 }catch(Throwable $e){
-    echo '<div class="err">'.htmlspecialchars($e->getMessage()).'</div>';
+    echo ds_alert('danger',$e->getMessage());
 }
 
 $totalAlacak=0; $totalBorc=0;
 foreach($rows as $r){ if($r['balance']>0) $totalAlacak+=$r['balance']; else $totalBorc+=abs($r['balance']); }
 ?>
 
-<div class="panel" style="display:flex;gap:10px;text-align:center">
+<div class="df-panel" style="display:flex;gap:10px;text-align:center">
   <div style="flex:1"><small class="muted">Cari</small><br><b style="font-size:20px"><?=count($rows)?></b></div>
   <div style="flex:1"><small class="muted">Alacak</small><br><b style="font-size:16px;color:#4ade80"><?=mm($totalAlacak)?></b></div>
   <div style="flex:1"><small class="muted">Borç</small><br><b style="font-size:16px;color:#f87171"><?=mm($totalBorc)?></b></div>
 </div>
 
-<div class="panel">
-  <a class="btn dark" style="display:block;width:100%;text-align:center;padding:14px;font-size:15px"
+<div class="df-panel">
+  <a class="df-btn df-btn--primary df-btn--lg" style="width:100%"
      href="report.php?modul=cari_toplu&mode=<?=urlencode($mode)?>&type=<?=urlencode($type)?>&from=<?=date('Y-m-01')?>&to=<?=date('Y-m-t')?>">
-     📊 Toplu Ekstre Oluştur (PDF)
+     <?=ds_icon('info',16)?> Toplu Ekstre Oluştur (PDF)
   </a>
   <small class="muted" style="display:block;margin-top:8px">Bu filtreye uygun tüm carilerin ayrı ayrı hareket dökümünü tek raporda üretir.</small>
 </div>
 
+<div class="df-list">
 <?php foreach($rows as $r):
-  $balColor = $r['balance']>0?'#4ade80':($r['balance']<0?'#f87171':'#94a3b8');
-?>
-<a class="item" href="contact_view.php?id=<?=(int)$r['id']?>">
-  <b><?=htmlspecialchars($r['name'])?></b><br>
-  <small><?=htmlspecialchars($r['type'])?></small>
-  <div style="text-align:right;margin-top:-22px;font-weight:900;color:<?=$balColor?>"><?=mm($r['balance'])?></div>
-</a>
-<?php endforeach; ?>
-<?php if(!$rows): ?><div class="panel muted">Bu filtreye uygun kayıt yok.</div><?php endif; ?>
+  $balColor = $r['balance']>0?'success':($r['balance']<0?'danger':'info');
+  $__meta='<span class="df-badge df-badge--'.$balColor.' df-text-tabular">'.mm($r['balance']).'</span>';
+  ds_list_item(h($r['name']), 'contact_view.php?id='.(int)$r['id'], h($r['type']), $__meta);
+endforeach; ?>
+</div>
+<?php if(!$rows): ?><?php ds_empty_state('Bu filtreye uygun kayıt yok.'); ?><?php endif; ?>
 
 <?php botx(); ?>

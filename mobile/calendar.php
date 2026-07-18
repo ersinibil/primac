@@ -43,11 +43,11 @@ topx('Takvim');
 $today=(int)date('j'); $isThisMonth=($ym===date('Y-m'));
 $mn=['01'=>'Ocak','02'=>'Şubat','03'=>'Mart','04'=>'Nisan','05'=>'Mayıs','06'=>'Haziran','07'=>'Temmuz','08'=>'Ağustos','09'=>'Eylül','10'=>'Ekim','11'=>'Kasım','12'=>'Aralık'];
 ?>
-<div class="panel" style="padding:12px">
+<div class="df-panel" style="padding:12px">
   <div style="display:flex;justify-content:space-between;align-items:center">
-    <a href="calendar.php?ay=<?=$prev?>" class="btn" style="padding:8px 12px">‹</a>
+    <a href="calendar.php?ay=<?=$prev?>" class="df-btn df-btn--secondary df-btn--sm">‹</a>
     <b style="font-size:17px"><?=$mn[$first->format('m')].' '.$first->format('Y')?></b>
-    <a href="calendar.php?ay=<?=$next?>" class="btn" style="padding:8px 12px">›</a>
+    <a href="calendar.php?ay=<?=$next?>" class="df-btn df-btn--secondary df-btn--sm">›</a>
   </div>
   <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-top:10px;text-align:center">
     <?php foreach(['Pzt','Sal','Çar','Per','Cum','Cmt','Paz'] as $w): ?><div style="color:#94a3b8;font-size:11px;font-weight:700"><?=$w?></div><?php endforeach; ?>
@@ -69,13 +69,17 @@ $g=(int)($_GET['g']??0);
 $show = $g>0 ? ($byDay[$g]??[]) : $list;
 $baslik = $g>0 ? ($g.' '.$mn[$first->format('m')].' işleri/notları') : 'Bu ay tüm işler/notlar ('.count($list).')';
 ?>
-<div style="font-weight:900;margin:6px 4px"><?=htmlspecialchars($baslik)?></div>
-<?php if(!$show): ?><div class="panel muted" style="text-align:center"><?=$g>0?'Bu günde iş/not yok.':'Bu ay termini olan iş/not yok.'?></div><?php endif; ?>
+<div style="font-weight:900;margin:6px 4px"><?=h($baslik)?></div>
+<?php if(!$show): ?><?php ds_empty_state($g>0?'Bu günde iş/not yok.':'Bu ay termini olan iş/not yok.', null, ds_icon('calendar',28)); ?><?php endif; ?>
+<div class="df-list">
 <?php foreach($show as $j): $isNote=!empty($j['_note']); $isTask=!empty($j['_task']); $st=$j['status']; $sc=($isNote||$isTask)?'#eab308':(in_array($st,['Tamamlandı','Teslim Edildi'])?'#22c55e':($st==='İptal'?'#f87171':'#eab308')); $icon=$isNote?'📝 ':($isTask?'🎯 ':''); ?>
-  <?php /* REOPEN-001: not linki kendi gününe (?date=) filtrelenmiş mytasks.php'ye gidiyor. */ ?>
-  <a class="item" href="<?=$isNote?('mytasks.php?date='.($j['due_date']??'')):($isTask?'task_view.php?id='.(int)$j['id']:'job_view.php?id='.(int)$j['id'])?>">
-    <b><?=$icon.htmlspecialchars($j['title'])?></b> <span style="color:<?=$sc?>;font-weight:900;font-size:12px"><?=htmlspecialchars($st)?></span><br>
-    <small class="muted">📅 <?=htmlspecialchars(date('d.m.Y',strtotime($j['due_date'])))?><?=$j['job_no']?' · '.htmlspecialchars($j['job_no']):''?></small>
-  </a>
+  <?php /* REOPEN-001: not linki kendi gününe (?date=) filtrelenmiş mytasks.php'ye gidiyor. */
+  $__href = $isNote?('mytasks.php?date='.($j['due_date']??'')):($isTask?'task_view.php?id='.(int)$j['id']:'job_view.php?id='.(int)$j['id']);
+  $__title = h($icon.$j['title']);
+  $__desc = '📅 '.h(date('d.m.Y',strtotime($j['due_date']))).($j['job_no']?' · '.h($j['job_no']):'');
+  $__meta = '<span style="color:'.$sc.';font-weight:900;font-size:12px">'.h($st).'</span>';
+  ds_list_item($__title, $__href, $__desc, $__meta);
+  ?>
 <?php endforeach; ?>
+</div>
 <?php botx(); ?>

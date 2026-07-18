@@ -1,15 +1,15 @@
 <?php require_once 'common.php'; $isDev=user_can('users'); topx('Bildirim Kur'); ?>
-<div class="panel">
-  <b>🔔 Bildirimler</b>
+<div class="df-panel">
+  <b><?=ds_icon('bell',16)?> Bildirimler</b>
   <p class="small">Bu sayfayı <b>ana ekrandaki ikondan</b> açtığından emin ol, sonra aşağıdaki butona bas.</p>
 </div>
 <?php if($isDev): ?>
-<div class="panel" id="env" style="font-size:13px;line-height:1.8"></div>
+<div class="df-panel" id="env" style="font-size:13px;line-height:1.8"></div>
 <?php endif; ?>
-<button class="btn dark" style="width:100%;padding:15px;font-size:16px" onclick="enablePush()">🔔 Bildirimleri Aç</button>
-<div class="panel" style="margin-top:12px"><p id="simpleStatus" class="small" style="margin:0">Hazır. Butona bas.</p></div>
+<button class="df-btn df-btn--primary df-btn--lg" style="width:100%;font-size:16px" onclick="enablePush()"><?=ds_icon('bell',16)?> Bildirimleri Aç</button>
+<div class="df-panel" style="margin-top:12px"><p id="simpleStatus" class="small" style="margin:0">Hazır. Butona bas.</p></div>
 <?php if($isDev): ?>
-<div class="panel" style="margin-top:12px"><pre id="log" style="white-space:pre-wrap;word-break:break-word;color:#cbd5e1;font-size:12px;margin:0">Hazır. Butona bas.</pre></div>
+<div class="df-panel" style="margin-top:12px"><pre id="log" style="white-space:pre-wrap;word-break:break-word;color:#cbd5e1;font-size:12px;margin:0">Hazır. Butona bas.</pre></div>
 <?php endif; ?>
 <script>
 var IS_DEV = <?=$isDev?'true':'false'?>;

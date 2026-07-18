@@ -42,8 +42,8 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['delete_movement'])){
 }
 
 topx('Hareket');
-if(!empty($_GET['ok'])) echo '<div class="ok">Hareket güncellendi.</div>';
-if(!empty($_SESSION['mv_err'])){ echo '<div class="err">'.htmlspecialchars($_SESSION['mv_err']).'</div>'; unset($_SESSION['mv_err']); }
+if(!empty($_GET['ok'])) echo ds_alert('success','Hareket güncellendi.');
+if(!empty($_SESSION['mv_err'])){ echo ds_alert('danger',$_SESSION['mv_err']); unset($_SESSION['mv_err']); }
 
 try{
     $m=$pdo->prepare("SELECT f.*, c.name cari, ac.group_name cat_group, fa.account_type acc_type FROM finance_movements f
@@ -62,29 +62,29 @@ try{
     // adımını türet — DB'ye yeni bir "tür" kolonu eklemeden, eski kayıtlar da doğru adımla açılır.
     $initialStep = finance_record_type_info($mv, $mv['cat_group'] ?? null, $mv['acc_type'] ?? null);
 ?>
-<div class="panel">
+<div class="df-panel">
   <h2 style="margin:0 0 4px;color:<?=$in?'#4ade80':'#f87171'?>"><?=$in?'💰 Tahsilat':'💸 Ödeme'?></h2>
   <div style="font-size:28px;font-weight:900;margin-top:6px"><?=mm($mv['amount'])?></div>
-  <div class="muted" style="margin-top:6px"><?=htmlspecialchars(($mv['cari']?:'Cari seçilmedi').' · '.($mv['payment_channel']?:'').' · '.($mv['movement_date']??''))?></div>
-  <?php if($mv['description']): ?><div style="margin-top:8px"><?=nl2br(htmlspecialchars($mv['description']))?></div><?php endif; ?>
+  <div class="muted" style="margin-top:6px"><?=h(($mv['cari']?:'Cari seçilmedi').' · '.($mv['payment_channel']?:'').' · '.($mv['movement_date']??''))?></div>
+  <?php if($mv['description']): ?><div style="margin-top:8px"><?=nl2br(h($mv['description']))?></div><?php endif; ?>
   <?php if(!$editable): ?>
     <div class="muted" style="margin-top:10px">Bu hareket başka bir işlemden (satış/belge/transfer) otomatik oluşturulduğu için burada düzenlenip silinemez.</div>
   <?php elseif(can_edit_delete()): ?>
   <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
     <form method="post" style="margin:0" onsubmit="return confirm('Bu hareketi silmek istediğinize emin misiniz? Hesap bakiyesi geri alınacak.')">
       <input type="hidden" name="delete_movement" value="1">
-      <?php if($returnContext): ?><input type="hidden" name="return_context" value="<?=htmlspecialchars($returnContext)?>"><input type="hidden" name="return_ref" value="<?=(int)$returnRef?>"><?php endif; ?>
-      <button class="btn" style="background:#dc2626;color:#fff;padding:9px 16px;font-size:14px">🗑 Sil</button>
+      <?php if($returnContext): ?><input type="hidden" name="return_context" value="<?=h($returnContext)?>"><input type="hidden" name="return_ref" value="<?=(int)$returnRef?>"><?php endif; ?>
+      <button class="df-btn df-btn--danger"><?=ds_icon('trash',16)?> Sil</button>
     </form>
   </div>
   <?php endif; ?>
 </div>
 
 <?php if($editable && can_edit_delete()): ?>
-<details class="panel">
-  <summary style="font-weight:900;cursor:pointer">✏️ Hareketi Düzenle</summary>
+<details class="df-panel">
+  <summary style="font-weight:900;cursor:pointer"><?=ds_icon('edit',16)?> Hareketi Düzenle</summary>
   <form method="post" style="margin-top:10px">
-    <?php if($returnContext): ?><input type="hidden" name="return_context" value="<?=htmlspecialchars($returnContext)?>"><input type="hidden" name="return_ref" value="<?=(int)$returnRef?>"><?php endif; ?>
+    <?php if($returnContext): ?><input type="hidden" name="return_context" value="<?=h($returnContext)?>"><input type="hidden" name="return_ref" value="<?=(int)$returnRef?>"><?php endif; ?>
     <?php
     $cs=[]; $accounts=[]; $gelirCats=[]; $personnel=[];
     try{ $cs=$pdo->query("SELECT id,name FROM contacts ORDER BY name")->fetchAll(); }catch(Throwable $e){}
@@ -142,7 +142,7 @@ try{
     </select>
     <label>Tarih</label><input type="date" name="movement_date" value="<?=htmlspecialchars($mv['movement_date'])?>">
     <label>Açıklama</label><textarea name="description" id="mvDesc" rows="2"><?=htmlspecialchars($mv['description']??'')?></textarea>
-    <button class="btn dark" name="edit_movement" value="1" style="width:100%;padding:13px;margin-top:8px">💾 Kaydet</button>
+    <button class="df-btn df-btn--primary df-btn--lg" name="edit_movement" value="1" style="width:100%;margin-top:8px"><?=ds_icon('check',16)?> Kaydet</button>
   </form>
 </details>
 <script>
@@ -198,5 +198,5 @@ mvToggleWizard();
 </script>
 <?php endif; ?>
 <?php
-}catch(Throwable $e){ echo '<div class="err">'.htmlspecialchars($e->getMessage()).'</div>'; }
+}catch(Throwable $e){ echo ds_alert('danger',$e->getMessage()); }
 botx();

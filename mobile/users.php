@@ -144,13 +144,13 @@ if(!empty($_SESSION['wa_results'])){
 
 topx('Kullanıcılar & Yetkiler');
 ?>
-<?php if($ok): ?><div class="notice"><?=htmlspecialchars($ok)?></div><?php endif; ?>
-<?php if($er): ?><div class="err"><?=htmlspecialchars($er)?></div><?php endif; ?>
+<?php if($ok): ?><?=ds_alert('success',$ok)?><?php endif; ?>
+<?php if($er): ?><?=ds_alert('danger',$er)?><?php endif; ?>
 
 <?php if($wa_results && is_array($wa_results)):
     $res=$wa_results;
 ?>
-<div class="panel">
+<div class="df-panel">
 <h3 style="margin-top:0">WhatsApp Gönderim Özeti</h3>
 <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
     <div style="background:rgba(22,163,74,.2);border-radius:12px;padding:10px;text-align:center;border:1px solid rgba(22,163,74,.4)">
@@ -170,9 +170,9 @@ topx('Kullanıcılar & Yetkiler');
 <div style="font-size:12px;max-height:200px;overflow-y:auto">
 <?php foreach($res['details'] as $d): ?>
 <div style="display:flex;justify-content:space-between;align-items:center;padding:8px;border-bottom:1px solid rgba(255,255,255,.1)">
-    <div><?=htmlspecialchars($d['name'])?></div>
+    <div><?=h($d['name'])?></div>
     <div style="background:<?=$d['ok']?'rgba(22,163,74,.3)':'rgba(239,68,68,.3)'?>;color:<?=$d['ok']?'#86efac':'#fca5a5'?>;border-radius:6px;padding:3px 8px;font-size:11px">
-    <?=$d['ok']?'✓':'✗'?> <?=htmlspecialchars($d['status'])?>
+    <?=$d['ok']?'✓':'✗'?> <?=h($d['status'])?>
     </div>
 </div>
 <?php endforeach; ?>
@@ -181,8 +181,8 @@ topx('Kullanıcılar & Yetkiler');
 </div>
 <?php endif; ?>
 
-<details class="panel">
-  <summary style="font-weight:900;cursor:pointer">📲 Toplu WhatsApp Gönderimi</summary>
+<details class="df-panel">
+  <summary style="font-weight:900;cursor:pointer"><?=ds_icon('send',16)?> Toplu WhatsApp Gönderimi</summary>
   <form method="post" style="margin-top:10px">
     <input type="hidden" name="send_bulk_wa" value="1">
 
@@ -201,7 +201,7 @@ topx('Kullanıcılar & Yetkiler');
     <?php foreach($users as $u): if(!($u['active'] ?? true)) continue; ?>
     <label style="display:flex;align-items:center;gap:8px;padding:8px;margin:4px 0;background:rgba(255,255,255,.05);border-radius:10px;font-size:12px">
       <input type="checkbox" name="selected_users[]" value="<?=$u['id']?>" style="width:auto">
-      <span><?=htmlspecialchars($u['full_name'] ?: $u['username'])?></span>
+      <span><?=h($u['full_name'] ?: $u['username'])?></span>
       <?php if(!($u['phone'] ?? '')): ?><span style="color:#ef4444;font-size:10px;margin-left:auto">Telefon yok</span><?php endif; ?>
     </label>
     <?php endforeach; ?>
@@ -212,12 +212,12 @@ topx('Kullanıcılar & Yetkiler');
       <span>Yeni rastgele şifre üret</span>
     </label>
 
-    <button class="btn dark" style="width:100%;padding:12px;background:#16a34a;color:#fff">📲 WhatsApp ile Gönder</button>
+    <button class="df-btn df-btn--primary df-btn--lg" style="width:100%;background:var(--df-success)"><?=ds_icon('send',16)?> WhatsApp ile Gönder</button>
   </form>
 </details>
 
-<details class="panel">
-  <summary style="font-weight:900;cursor:pointer">➕ Yeni Kullanıcı</summary>
+<details class="df-panel">
+  <summary style="font-weight:900;cursor:pointer"><?=ds_icon('plus',16)?> Yeni Kullanıcı</summary>
   <form method="post" style="margin-top:10px">
     <label style="color:#94a3b8;font-size:12px">Kullanıcı Adı</label>
     <input name="username" required placeholder="kullanici_adi">
@@ -234,32 +234,32 @@ topx('Kullanıcılar & Yetkiler');
     <div style="margin:8px 0 4px;font-size:13px;color:#94a3b8">Yetkiler</div>
     <?php foreach($permLabels as $k=>$v): if($k==='users') continue; ?>
     <label style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.06);border-radius:10px;padding:8px;margin:4px 0">
-      <input type="checkbox" name="permissions[]" value="<?=htmlspecialchars($k)?>" style="width:auto">
-      <?=htmlspecialchars($v)?>
+      <input type="checkbox" name="permissions[]" value="<?=h($k)?>" style="width:auto">
+      <?=h($v)?>
     </label>
     <?php endforeach; ?>
-    <button class="btn dark" name="create_user" value="1" style="width:100%;padding:13px;margin-top:10px">➕ Oluştur</button>
+    <button class="df-btn df-btn--primary df-btn--lg" name="create_user" value="1" style="width:100%;margin-top:10px"><?=ds_icon('plus',16)?> Oluştur</button>
   </form>
 </details>
 
 <?php foreach($users as $u):
   $perms=json_decode($u['permissions'] ?? '[]',true);
   if(!is_array($perms)) $perms=[];
-  $roleColor=['admin'=>'#dc2626','yonetici'=>'#7c3aed','yönetici'=>'#7c3aed'][$u['role']] ?? '#2563eb';
+  $roleTone=['admin'=>'danger','yonetici'=>'info','yönetici'=>'info'][$u['role']] ?? 'info';
   $isMe=(int)$u['id']===$ME;
 ?>
-<div class="panel">
+<div class="df-panel">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
     <div>
-      <b><?=htmlspecialchars($u['full_name'] ?: $u['username'])?></b>
-      <?php if($isMe): ?><span style="font-size:11px;background:#2563eb;color:#fff;border-radius:8px;padding:2px 6px;margin-left:4px">Sen</span><?php endif; ?>
-      <div style="font-size:12px;color:#94a3b8"><?=htmlspecialchars($u['username'])?> · <?=htmlspecialchars($u['pname'] ?? 'Personel bağlı değil')?></div>
+      <b><?=h($u['full_name'] ?: $u['username'])?></b>
+      <?php if($isMe): ?><span class="df-badge df-badge--info" style="margin-left:4px">Sen</span><?php endif; ?>
+      <div style="font-size:12px;color:#94a3b8"><?=h($u['username'])?> · <?=h($u['pname'] ?? 'Personel bağlı değil')?></div>
     </div>
-    <span style="background:<?=$roleColor?>22;color:<?=$roleColor?>;border-radius:8px;padding:4px 8px;font-size:12px;font-weight:700"><?=htmlspecialchars($u['role'])?></span>
+    <span class="df-badge df-badge--<?=$roleTone?>"><?=h($u['role'])?></span>
   </div>
 
   <details>
-    <summary style="font-size:13px;color:#94a3b8;cursor:pointer">⚙️ Yetki & Rol Düzenle</summary>
+    <summary style="font-size:13px;color:#94a3b8;cursor:pointer"><?=ds_icon('settings',14)?> Yetki & Rol Düzenle</summary>
     <form method="post" style="margin-top:10px">
       <input type="hidden" name="uid" value="<?=(int)$u['id']?>">
       <label style="color:#94a3b8;font-size:12px">Rol</label>
@@ -274,32 +274,32 @@ topx('Kullanıcılar & Yetkiler');
       </label>
       <?php foreach($permLabels as $k=>$v): if($k==='users') continue; ?>
       <label style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.06);border-radius:10px;padding:8px;margin:4px 0;font-size:13px">
-        <input type="checkbox" name="permissions[]" value="<?=htmlspecialchars($k)?>" <?=in_array($k,$perms,true)?'checked':''?> style="width:auto">
-        <?=htmlspecialchars($v)?>
+        <input type="checkbox" name="permissions[]" value="<?=h($k)?>" <?=in_array($k,$perms,true)?'checked':''?> style="width:auto">
+        <?=h($v)?>
       </label>
       <?php endforeach; ?>
-      <button class="btn dark" name="save_perms" value="1" style="width:100%;padding:11px;margin-top:8px">💾 Kaydet</button>
+      <button class="df-btn df-btn--primary df-btn--lg" name="save_perms" value="1" style="width:100%;margin-top:8px"><?=ds_icon('check',16)?> Kaydet</button>
     </form>
   </details>
 
   <details style="margin-top:6px">
-    <summary style="font-size:13px;color:#f87171;cursor:pointer">🔑 Şifre Sıfırla</summary>
+    <summary style="font-size:13px;color:#f87171;cursor:pointer"><?=ds_icon('user',14)?> Şifre Sıfırla</summary>
     <form method="post" style="margin-top:8px;display:flex;gap:8px">
       <input type="hidden" name="uid" value="<?=(int)$u['id']?>">
       <input type="password" name="new_pass" minlength="6" required placeholder="Yeni şifre" style="flex:1;margin:0">
-      <button class="btn dark" name="reset_pass" value="1" style="padding:10px 14px;margin:0">Sıfırla</button>
+      <button class="df-btn df-btn--primary" name="reset_pass" value="1">Sıfırla</button>
     </form>
   </details>
 
   <?php if(($u['phone'] ?? '') && ($u['active'] ?? true)): ?>
   <details style="margin-top:6px">
-    <summary style="font-size:13px;color:#60a5fa;cursor:pointer">📲 WhatsApp ile Gönder</summary>
+    <summary style="font-size:13px;color:#60a5fa;cursor:pointer"><?=ds_icon('send',14)?> WhatsApp ile Gönder</summary>
     <form method="post" style="margin-top:8px">
       <input type="hidden" name="send_bulk_wa" value="1">
       <input type="hidden" name="wa_mode" value="selected">
       <input type="hidden" name="selected_users[]" value="<?=(int)$u['id']?>">
       <input type="hidden" name="gen_new_password" value="1">
-      <button class="btn dark" style="width:100%;padding:11px;background:#16a34a;color:#fff;margin-top:8px">📲 Şifre Sıfırla ve Gönder</button>
+      <button class="df-btn df-btn--primary df-btn--lg" style="width:100%;background:var(--df-success);margin-top:8px"><?=ds_icon('send',16)?> Şifre Sıfırla ve Gönder</button>
     </form>
   </details>
   <?php endif; ?>

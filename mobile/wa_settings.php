@@ -43,10 +43,10 @@ topx('WhatsApp Ayarları');
 ?>
 <p class="small">Günlük hatırlatıcılar ve bildirimler bu ayarlarla otomatik WhatsApp mesajı gönderir.</p>
 
-<?php if($msg): ?><div class="<?=htmlspecialchars($msg_type)?>"><?=htmlspecialchars($msg)?></div><?php endif; ?>
+<?php if($msg): ?><?=ds_alert($msg_type==='notice'?'success':'info',$msg)?><?php endif; ?>
 
-<div class="panel">
-  <b>Bağlantı Ayarları</b>
+<div class="df-panel">
+  <b><?=ds_icon('settings',16)?> Bağlantı Ayarları</b>
   <form method="post" style="margin-top:10px">
     <input type="hidden" name="action" value="save">
 
@@ -63,36 +63,36 @@ topx('WhatsApp Ayarları');
 
     <div id="row_instance">
       <label style="color:#94a3b8;font-size:12px">Instance ID</label>
-      <input type="text" name="wa_instance" value="<?=htmlspecialchars($s_instance)?>" placeholder="instance12345">
+      <input type="text" name="wa_instance" value="<?=h($s_instance)?>" placeholder="instance12345">
     </div>
 
     <label style="color:#94a3b8;font-size:12px">Token / API Anahtarı</label>
-    <input type="text" name="wa_token" value="<?=htmlspecialchars($s_token)?>" placeholder="UltraMsg veya gateway token'ı">
+    <input type="text" name="wa_token" value="<?=h($s_token)?>" placeholder="UltraMsg veya gateway token'ı">
 
     <div id="row_url" style="display:none">
       <label style="color:#94a3b8;font-size:12px">Özel Gateway URL</label>
-      <input type="url" name="wa_url" value="<?=htmlspecialchars($s_url)?>" placeholder="https://api.example.com/send">
+      <input type="url" name="wa_url" value="<?=h($s_url)?>" placeholder="https://api.example.com/send">
     </div>
 
     <p class="small" style="margin:10px 0">
       <b>UltraMsg kurulumu:</b> <a href="https://ultramsg.com" target="_blank" rel="noopener" style="color:#93c5fd">ultramsg.com</a>'dan hesap açın → Instance oluşturun → QR okutun → Instance ID ve Token'ı yukarıya yapıştırın.
     </p>
-    <button type="submit" class="btn dark" style="width:100%;padding:13px">💾 Kaydet</button>
+    <button type="submit" class="df-btn df-btn--primary df-btn--lg" style="width:100%"><?=ds_icon('check',16)?> Kaydet</button>
   </form>
 </div>
 
-<div class="panel">
-  <b>Test Mesajı Gönder</b>
+<div class="df-panel">
+  <b><?=ds_icon('send',16)?> Test Mesajı Gönder</b>
   <?php if($test_result): list($tr_type,$tr_msg)=explode(':',$test_result,2); ?>
-  <div class="<?=($tr_type==='ok'?'notice':'err')?>" style="margin-top:8px"><?=htmlspecialchars($tr_msg)?></div>
+  <div style="margin-top:8px"><?=ds_alert($tr_type==='ok'?'success':'danger',$tr_msg)?></div>
   <?php endif; ?>
   <form method="post" style="margin-top:10px">
     <input type="hidden" name="action" value="test">
     <label style="color:#94a3b8;font-size:12px">Telefon Numarası</label>
-    <input type="text" name="test_phone" placeholder="05321234567" value="<?=htmlspecialchars($_POST['test_phone']??'')?>">
+    <input type="text" name="test_phone" placeholder="05321234567" value="<?=h($_POST['test_phone']??'')?>">
     <label style="color:#94a3b8;font-size:12px">Mesaj</label>
-    <input type="text" name="test_text" value="<?=htmlspecialchars($_POST['test_text']??((app_config()['app_name']??'OTS').' — WhatsApp test mesajı.'))?>">
-    <button type="submit" class="btn" style="width:100%;padding:12px;margin-top:8px">📤 Gönder</button>
+    <input type="text" name="test_text" value="<?=h($_POST['test_text']??((app_config()['app_name']??'OTS').' — WhatsApp test mesajı.'))?>">
+    <button type="submit" class="df-btn df-btn--primary" style="width:100%;margin-top:8px"><?=ds_icon('send',16)?> Gönder</button>
   </form>
 </div>
 

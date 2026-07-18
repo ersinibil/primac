@@ -18,32 +18,33 @@ $contactsAll=$pdo->query("SELECT name,phone FROM contacts WHERE phone<>'' ORDER 
 
 topx('WhatsApp Konuşmaları');
 ?>
-<div class="panel">
+<div class="df-panel">
 <select onchange="if(this.value) window.location='wa_conversation_view.php?phone='+encodeURIComponent(this.value)">
     <option value="">➕ Yeni Konuşma — kişi seç…</option>
-    <?php if($personnel): ?><optgroup label="Personel"><?php foreach($personnel as $p): ?><option value="<?=htmlspecialchars($p['phone'])?>"><?=htmlspecialchars($p['name'])?> — <?=htmlspecialchars($p['phone'])?></option><?php endforeach; ?></optgroup><?php endif; ?>
-    <?php if($contactsAll): ?><optgroup label="Cari"><?php foreach($contactsAll as $c): ?><option value="<?=htmlspecialchars($c['phone'])?>"><?=htmlspecialchars($c['name'])?> — <?=htmlspecialchars($c['phone'])?></option><?php endforeach; ?></optgroup><?php endif; ?>
+    <?php if($personnel): ?><optgroup label="Personel"><?php foreach($personnel as $p): ?><option value="<?=h($p['phone'])?>"><?=h($p['name'])?> — <?=h($p['phone'])?></option><?php endforeach; ?></optgroup><?php endif; ?>
+    <?php if($contactsAll): ?><optgroup label="Cari"><?php foreach($contactsAll as $c): ?><option value="<?=h($c['phone'])?>"><?=h($c['name'])?> — <?=h($c['phone'])?></option><?php endforeach; ?></optgroup><?php endif; ?>
 </select>
 <form method="get" action="wa_conversation_view.php" style="display:flex;gap:6px;margin-top:8px">
 <input type="text" name="phone" placeholder="veya telefon yazın…" style="flex:1;margin:0">
-<button type="submit" class="btn" style="width:auto;padding:10px 14px">Git</button>
+<button type="submit" class="df-btn df-btn--secondary">Git</button>
 </form>
 </div>
 <form method="get" style="margin-bottom:10px">
-<input type="text" name="q" placeholder="İsim veya telefon ara…" value="<?=htmlspecialchars($q)?>" onchange="this.form.submit()">
+<input type="text" name="q" placeholder="İsim veya telefon ara…" value="<?=h($q)?>" onchange="this.form.submit()">
 </form>
 <?php if(!$rows): ?>
-<div class="panel muted">Henüz WhatsApp konuşması yok.</div>
-<?php else: foreach($rows as $r): $preview=mb_substr((string)($r['last_message_preview']??''),0,60); ?>
-<a class="item" href="wa_conversation_view.php?id=<?=(int)$r['id']?>" style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-<div style="min-width:0">
-<b><?=htmlspecialchars($r['contact_name'] ?: $r['phone'])?></b><br>
-<span class="muted" style="font-size:13px"><?=($r['last_direction']==='outbound'?'Siz: ':'')?><?=htmlspecialchars($preview)?></span>
+<?php ds_empty_state('Henüz WhatsApp konuşması yok.', null, ds_icon('chat',32)); ?>
+<?php else: ?>
+<div class="df-list">
+<?php foreach($rows as $r):
+  $preview=mb_substr((string)($r['last_message_preview']??''),0,60);
+  $__title=h($r['contact_name'] ?: $r['phone']);
+  $__desc=h(($r['last_direction']==='outbound'?'Siz: ':'').$preview);
+  $__meta='';
+  if((int)$r['unread_count']>0) $__meta.='<span class="df-badge df-badge--danger">'.(int)$r['unread_count'].'</span>';
+  $__meta.='<span class="df-list-row-due">'.h($r['last_message_at']?date('d.m H:i',strtotime($r['last_message_at'])):'').'</span>';
+  ds_list_item($__title, 'wa_conversation_view.php?id='.(int)$r['id'], $__desc, $__meta);
+endforeach; ?>
 </div>
-<div style="text-align:right;white-space:nowrap">
-<?php if((int)$r['unread_count']>0): ?><span style="background:#dc2626;color:#fff;border-radius:10px;padding:2px 7px;font-size:11px;font-weight:800"><?=(int)$r['unread_count']?></span><br><?php endif; ?>
-<small class="muted"><?=htmlspecialchars($r['last_message_at']?date('d.m H:i',strtotime($r['last_message_at'])):'')?></small>
-</div>
-</a>
-<?php endforeach; endif; ?>
+<?php endif; ?>
 <?php botx(); ?>

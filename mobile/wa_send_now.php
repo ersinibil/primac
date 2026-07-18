@@ -45,28 +45,28 @@ $contacts=$pdo->query("SELECT name,phone FROM contacts WHERE phone<>'' ORDER BY 
 
 topx('WhatsApp Toplu Gönderim');
 ?>
-<?php if($error): ?><div class="err"><?=htmlspecialchars($error)?></div><?php endif; ?>
+<?php if($error): ?><?=ds_alert('danger',$error)?><?php endif; ?>
 <?php if($manualBulkLinks): ?>
-<div class="panel" style="background:rgba(220,38,38,.12);margin-bottom:10px">
-    <p style="margin:0 0 8px"><?=htmlspecialchars($manualNote?:'API üzerinden gönderilemedi. Aşağıdaki kişileri tek tek elle açıp gönderebilirsiniz:')?></p>
+<div class="df-panel" style="background:var(--df-danger-soft, rgba(220,38,38,.12));margin-bottom:10px">
+    <p style="margin:0 0 8px"><?=h($manualNote?:'API üzerinden gönderilemedi. Aşağıdaki kişileri tek tek elle açıp gönderebilirsiniz:')?></p>
     <?php foreach($manualBulkLinks as $mb): ?>
-    <a href="<?=htmlspecialchars($mb['link'])?>" target="_blank" rel="noopener" class="btn" style="background:#16a34a;color:#fff;margin:0 6px 6px 0;display:inline-block">📲 <?=htmlspecialchars($mb['phone'])?></a>
+    <a href="<?=h($mb['link'])?>" target="_blank" rel="noopener" class="df-btn df-btn--primary" style="background:var(--df-success);margin:0 6px 6px 0"><?=ds_icon('send',14)?> <?=h($mb['phone'])?></a>
     <?php endforeach; ?>
 </div>
 <?php endif; ?>
-<?php if($ok): ?><div class="notice"><?=htmlspecialchars($ok)?></div><?php endif; ?>
+<?php if($ok): ?><?=ds_alert('success',$ok)?><?php endif; ?>
 
-<div class="panel">
+<div class="df-panel">
 <form method="post" enctype="multipart/form-data" onsubmit="return waConfirmSubmit()">
     <div style="display:flex;justify-content:space-between;align-items:center">
         <label style="color:#94a3b8;font-size:12px;margin:0">Personel</label>
-        <button type="button" class="btn" style="background:rgba(37,99,235,.15);padding:6px 10px" onclick="waToggleAll('wa-bp',this)">Tümünü Kaldır</button>
+        <button type="button" class="df-btn df-btn--secondary df-btn--sm" onclick="waToggleAll('wa-bp',this)">Tümünü Kaldır</button>
     </div>
     <div style="max-height:160px;overflow:auto;border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:8px;margin:6px 0 10px">
         <?php foreach($personnel as $p): ?>
         <label style="display:flex;align-items:center;gap:8px;padding:4px 0;margin:0">
-            <input type="checkbox" class="wa-bp" name="bulk_personnel[]" value="<?=htmlspecialchars($p['phone'])?>" checked style="width:auto">
-            <?=htmlspecialchars($p['name'])?> <span class="muted" style="font-size:12px"><?=htmlspecialchars($p['phone'])?></span>
+            <input type="checkbox" class="wa-bp" name="bulk_personnel[]" value="<?=h($p['phone'])?>" checked style="width:auto">
+            <?=h($p['name'])?> <span class="muted" style="font-size:12px"><?=h($p['phone'])?></span>
         </label>
         <?php endforeach; ?>
         <?php if(!$personnel): ?><p class="muted" style="margin:4px 0">Telefonlu personel yok.</p><?php endif; ?>
@@ -74,31 +74,31 @@ topx('WhatsApp Toplu Gönderim');
 
     <div style="display:flex;justify-content:space-between;align-items:center">
         <label style="color:#94a3b8;font-size:12px;margin:0">Cari</label>
-        <button type="button" class="btn" style="background:rgba(37,99,235,.15);padding:6px 10px" onclick="waToggleAll('wa-bc',this)">Tümünü Kaldır</button>
+        <button type="button" class="df-btn df-btn--secondary df-btn--sm" onclick="waToggleAll('wa-bc',this)">Tümünü Kaldır</button>
     </div>
     <div style="max-height:160px;overflow:auto;border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:8px;margin-top:6px">
         <?php foreach($contacts as $c): ?>
         <label style="display:flex;align-items:center;gap:8px;padding:4px 0;margin:0">
-            <input type="checkbox" class="wa-bc" name="bulk_contacts[]" value="<?=htmlspecialchars($c['phone'])?>" checked style="width:auto">
-            <?=htmlspecialchars($c['name'])?> <span class="muted" style="font-size:12px"><?=htmlspecialchars($c['phone'])?></span>
+            <input type="checkbox" class="wa-bc" name="bulk_contacts[]" value="<?=h($c['phone'])?>" checked style="width:auto">
+            <?=h($c['name'])?> <span class="muted" style="font-size:12px"><?=h($c['phone'])?></span>
         </label>
         <?php endforeach; ?>
         <?php if(!$contacts): ?><p class="muted" style="margin:4px 0">Telefonlu cari yok.</p><?php endif; ?>
     </div>
 
     <label style="color:#94a3b8;font-size:12px">Mesaj</label>
-    <textarea id="waMsg" name="message" rows="5" placeholder="Mesajınızı yazın…"><?=htmlspecialchars($_POST['message'] ?? '')?></textarea>
+    <textarea id="waMsg" name="message" rows="5" placeholder="Mesajınızı yazın…"><?=h($_POST['message'] ?? '')?></textarea>
 
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px">
         <?=emoji_picker_html('waMsg', true)?>
-        <label class="btn" style="margin:0;cursor:pointer;background:rgba(37,99,235,.15)">
-            📎 Ek
+        <label class="df-btn df-btn--secondary" style="cursor:pointer">
+            <?=ds_icon('box',14)?> Ek
             <input type="file" name="attach" accept="image/*,video/*,audio/*,application/pdf,.doc,.docx,.xls,.xlsx" style="display:none" onchange="document.getElementById('waFileName').textContent=this.files[0]?this.files[0].name:''">
         </label>
         <span id="waFileName" class="muted" style="font-size:12px"></span>
     </div>
 
-    <button type="submit" class="btn dark" style="width:100%;padding:13px;margin-top:10px">📤 Gönder</button>
+    <button type="submit" class="df-btn df-btn--primary df-btn--lg" style="width:100%;margin-top:10px"><?=ds_icon('send',16)?> Gönder</button>
 </form>
 </div>
 <script>
