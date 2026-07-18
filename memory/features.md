@@ -2,6 +2,20 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
+## fix: P0 MOBİL SHELL 2. REGRESYON — service worker stale cache kök nedeni (2026-07-18, commit 81de59a)
+İlk shell düzeltmesi (21f23d0: chat-mode artık .df-m-bottomnav'ı gizlemiyor) gerçek cihazda hâlâ
+FAIL verdi, route bazlı TUTARSIZ (İşler'de nav var, Menü/İletişim Merkezi/WhatsApp'ta yok) — bu
+desen SAF bir CSS mantık hatasıyla açıklanamaz (aynı ortak botx()/CSS tüm sayfalarda). Kod akışı
+(topx/botx/if-else nesting) satır satır yeniden izlendi, gerçek bir control-flow bugı BULUNAMADI.
+Asıl kök neden: `mobile/sw.js`'nin service worker'ı assets/css/*.css ve assets/js/*.js'i CACHE-FIRST
+alıyor, dosyanın kendi CACHE versiyon sabiti 2026-07-17'den (bu oturumun TÜM CSS/JS turlarından
+ÖNCE) beri hiç bump edilmemişti — kullanıcının cihazındaki eski service worker, sunucudaki kod
+doğru olsa bile eski CSS/JS'i sunmaya devam ediyor olabilirdi. CACHE='acans-os-v28'→'v29'.
+**Önemli:** bu, "düzelttim ama cihazda hâlâ bozuk" tekrarlayan raporların en olası ortak açıklaması
+— bundan sonra ds-foundation.css/js'e her dokunuşta sw.js'nin de bump edilmesi ZORUNLU (yorum
+olarak dosyada not edildi). Ayrıca primac.tr'ye guncelleme.zip'in gerçekten yüklenip guncelle.php
+çalıştırılıp çalıştırılmadığı Product Owner'a AÇIKÇA soruldu — kod tarafında başka fark bulunamadı.
+
 ## fix: P0 MOBİL SHELL USER TEST REGRESYONU (2026-07-18, commit 74e797a)
 Gerçek iPhone testinde bulunan kök neden: `body.mob-compact.chat-mode .df-m-bottomnav{display:none}`
 — Sohbet/WhatsApp ekranına girildiğinde (chat-mode) global bottom nav TAMAMEN kayboluyordu,
