@@ -179,6 +179,18 @@ body.mobile-shell .ds-table tr:hover td{background:rgba(255,255,255,.06)}
   /* Spacing — 4/8pt grid */
   --df-space-1:4px;--df-space-2:8px;--df-space-3:12px;--df-space-4:16px;
   --df-space-5:24px;--df-space-6:32px;--df-space-7:48px;--df-space-8:64px;
+  /* P0 MOBİL SHELL LAYOUT CONTRACT (2026-07-19, Product Owner kararı — "semptom değil contract'ı
+     düzelt") — mobil alt navigasyonun içerik yüksekliği (safe-area HARİÇ) TEK yerde tanımlı VE
+     aşağıda .df-m-bottomnav'a `height` (min-height DEĞİL) + `overflow:hidden` + etiket
+     nowrap/ellipsis ile SERT bir üst sınır olarak uygulanıyor — nav'ın GERÇEK render yüksekliği bu
+     değeri hiçbir koşulda (Dynamic Type, uzun çeviri metni, farklı font metrikleri) AŞAMAZ. Önceki
+     `min-height` sadece bir TABAN garantiliyordu — içerik ölçümü sınırın hemen üstündeyse (57-58px
+     ihtiyaç / 57px bütçe gibi) kutu sessizce büyüyüp composer'ın ÜSTÜNE binebiliyordu; gerçek
+     cihazda raporlanan "composer nav ikon/etiketlerini kesiyor" FAIL'inin kök nedeni budur. FAB'ın
+     bottom offset'i, chat composer'ın bottom offset'i, mesaj thread'inin padding-bottom'u ve
+     common.php'nin genel body padding-bottom'u HEPSİ bu TEK değişkeni okur — sayfa/dosya bazında
+     ayrı "NNpx" sabiti bir daha YAZILMAYACAK (yazılırsa bu token'dan sapma riski geri döner). */
+  --df-navh:76px;
   /* Radius */
   --df-radius-sm:8px;--df-radius-md:14px;--df-radius-lg:20px;--df-radius-pill:999px;
   /* Shadow — yalnızca gerçekten yükselen bileşenlerde */
@@ -844,9 +856,10 @@ body.mob-compact .df-m-search .df-icon{color:var(--df-ink-500);flex:0 0 auto}
 body.mob-compact .df-m-search input{border:0;background:transparent;outline:0;flex:1;font-size:var(--df-type-subtitle-size);color:var(--df-ink-900);min-width:0;font-family:inherit;padding:0;margin:0;height:100%}
 body.mob-compact .df-m-search input::placeholder{color:var(--df-ink-500)}
 body.mob-compact.chat-mode .df-m-search{display:none}
-body.mob-compact .df-m-bottomnav{position:fixed;left:0;right:0;bottom:0;min-height:calc(70px + env(safe-area-inset-bottom));box-sizing:border-box;background:var(--df-canvas);border-top:1px solid var(--df-hairline);padding:var(--df-space-1) var(--df-space-2) calc(var(--df-space-2) + env(safe-area-inset-bottom));z-index:1000}
-body.mob-compact .df-m-bottomnav-row{max-width:520px;margin:auto;display:flex;gap:4px}
-body.mob-compact .df-m-bottomnav-link{flex:1;min-width:0;position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center;color:var(--df-ink-500);text-decoration:none;font-size:var(--df-type-caption-size);font-weight:650;padding:var(--df-space-2) 2px;border-radius:var(--df-radius-sm)}
+body.mob-compact .df-m-bottomnav{position:fixed;left:0;right:0;bottom:0;height:calc(var(--df-navh) + env(safe-area-inset-bottom));box-sizing:border-box;overflow:hidden;background:var(--df-canvas);border-top:1px solid var(--df-hairline);padding:var(--df-space-1) var(--df-space-2) calc(var(--df-space-2) + env(safe-area-inset-bottom));z-index:1000}
+body.mob-compact .df-m-bottomnav-row{max-width:520px;height:100%;margin:auto;display:flex;gap:4px}
+body.mob-compact .df-m-bottomnav-link{flex:1;min-width:0;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;text-align:center;color:var(--df-ink-500);text-decoration:none;font-size:var(--df-type-caption-size);font-weight:650;padding:0 2px;border-radius:var(--df-radius-sm);overflow:hidden}
+body.mob-compact .df-m-bottomnav-link span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 body.mob-compact .df-m-bottomnav-link.is-active{color:var(--df-ink-900)}
 body.mob-compact .df-m-bottomnav-link .df-count-badge{position:absolute;top:0;right:14px}
 /* P0 MOBİL HOTFIX (2026-07-19, Product Owner FAIL raporu — ekran görüntülerinde composer ve nav
@@ -854,8 +867,8 @@ body.mob-compact .df-m-bottomnav-link .df-count-badge{position:absolute;top:0;ri
    sonraki ResizeObserver denemesi) composer'ın konumu RUNTIME'DA JS ile ölçülen nav yüksekliğine
    bağlanmıştı — ikisi de gerçek cihazda güvenilmez çıktı (aynı sınıf hata iki kez tekrarlandı).
    KESİN çözüm: JS ölçüm TAMAMEN kaldırıldı, nav'ın yüksekliği artık yukarıdaki min-height ile
-   CSS'te KİLİTLİ — composer (messages.php/wa_conversation_view.php) AYNI sabit sayıyı (70px+
-   safe-area) kullanıyor. İkisi de aynı sabit değerden türediği için runtime'da ASLA birbirinden
+   CSS'te KİLİTLİ — composer (messages.php/wa_conversation_view.php) AYNI --df-navh token'ını
+   okuyor. İkisi de aynı tek değişkenden türediği için runtime'da ASLA birbirinden
    sapamaz — ölçüme/zamanlamaya bağımlılık yok. "Composer görünse bile global bottom nav
    kaybolmamalı" (2026-07-18, Product Owner kararı) — chat-mode .df-m-bottomnav'ı GİZLEMEZ. Klavye
    açıkken (body.kb) nav'ı GİZLEMEYE devam ediyoruz — bu ayrı, kasıtlı bir davranış (ekran alanı

@@ -155,15 +155,15 @@ $lastMsgId = $messages ? (int)end($messages)['id'] : 0;
 .bubble.mine{align-self:flex-end;background:#2563eb;color:#fff;border-bottom-right-radius:5px}
 .bubble.theirs{align-self:flex-start;background:rgba(255,255,255,.12);border-bottom-left-radius:5px}
 .thread{display:flex;flex-direction:column;gap:8px;padding-bottom:8px}
-/* P0 MOBİL HOTFIX (2026-07-19, Product Owner FAIL raporu) KÖK NEDEN — bkz. messages.php'deki AYNI
-   not: composer'ın konumu JS ile ölçülen nav yüksekliğine bağlıydı, iki ayrı turda güvenilmez
-   çıktı. Artık JS ölçüm YOK — nav yüksekliği ds-foundation.css'te min-height ile KİLİTLİ, composer
-   AYNI sabit sayıyı kullanıyor, ikisi runtime'da ASLA sapamaz. */
-.composer{position:fixed;left:0;right:0;bottom:calc(70px + env(safe-area-inset-bottom));background:#071326;border-top:1px solid rgba(255,255,255,.12);padding:8px 8px 8px;z-index:1001}
+/* P0 MOBİL LAYOUT CONTRACT (2026-07-19, Product Owner FAIL raporu) — bkz. messages.php'deki AYNI
+   not: nav artık `height`+`overflow:hidden` ile SERT bir üst sınıra kilitli (önceki `min-height`
+   sadece taban garantiliyordu, içerik onu aşınca composer'ın üstüne biniyordu). --df-navh (TEK
+   kaynak) burada da okunuyor, ikisi runtime'da ASLA sapamaz. */
+.composer{position:fixed;left:0;right:0;bottom:calc(var(--df-navh, 76px) + env(safe-area-inset-bottom));background:#071326;border-top:1px solid rgba(255,255,255,.12);padding:8px 8px 8px;z-index:1001}
 .composer .wrap{max-width:520px;margin:auto;display:flex;gap:8px;align-items:flex-end}
 .composer textarea{flex:1;margin:0;resize:none;max-height:100px}
 .composer button.send{flex:0 0 auto;width:50px;height:46px;border-radius:14px;font-size:18px}
-body.chat-mode .thread{padding-bottom:calc(88px + 70px + env(safe-area-inset-bottom))}
+body.chat-mode .thread{padding-bottom:calc(88px + var(--df-navh, 76px) + env(safe-area-inset-bottom))}
 </style>
 
 <div class="df-panel">
@@ -229,7 +229,7 @@ body.chat-mode .thread{padding-bottom:calc(88px + 70px + env(safe-area-inset-bot
   }
   function unpinComposer(){
     if(!composer) return;
-    composer.style.top='auto'; composer.style.bottom='calc(70px + env(safe-area-inset-bottom))'; composer.style.paddingBottom='';
+    composer.style.top='auto'; composer.style.bottom='calc(var(--df-navh, 76px) + env(safe-area-inset-bottom))'; composer.style.paddingBottom='';
   }
   if(window.visualViewport){
     window.visualViewport.addEventListener('resize', function(){ pinComposer(); scrollBottom(); });

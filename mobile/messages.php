@@ -161,13 +161,13 @@ topx($thread ? 'Grup' : ($with ? 'Sohbet' : 'İletişim Merkezi'), ($thread || $
 .bubble small{display:block;font-size:10px;opacity:.6;margin-top:3px;text-align:right}
 .mine{align-self:flex-end;background:#2563eb;border-bottom-right-radius:5px}
 .theirs{align-self:flex-start;background:rgba(255,255,255,.12);border-bottom-left-radius:5px}
-/* P0 MOBİL HOTFIX (2026-07-19, Product Owner FAIL raporu) KÖK NEDEN: composer'ın konumu daha önce
-   İKİ AYRI turda JS ile ölçülen bir nav yüksekliğine bağlanmıştı (--acans-navh) — ikisi de gerçek
-   cihazda güvenilmez çıktı (composer/nav birbirini tamamen kapatıyordu). Artık JS ölçüm YOK: nav'ın
-   yüksekliği ds-foundation.css'te `.df-m-bottomnav{min-height:calc(70px + env(safe-area-inset-
-   bottom))}` ile KİLİTLİ, composer da AYNI sabit sayıyı kullanıyor — ikisi aynı sabit değerden
-   türediği için runtime'da ASLA sapamaz. */
-.composer{position:fixed;left:0;right:0;bottom:calc(70px + env(safe-area-inset-bottom));background:#071326;border-top:1px solid rgba(255,255,255,.12);padding:8px 8px 8px;z-index:1001}
+/* P0 MOBİL LAYOUT CONTRACT (2026-07-19, Product Owner FAIL raporu — "semptom değil contract'ı
+   düzelt") KÖK NEDEN: composer'ın konumu önce İKİ AYRI turda JS ölçümüne, sonra `min-height`
+   varsayımına bağlıydı — `min-height` sadece bir TABAN garantiliyordu, içerik (Dynamic Type/uzun
+   etiket) o tabanı aşınca kutu sessizce büyüyüp composer'ın ÜSTÜNE biniyordu. Artık nav
+   (ds-foundation.css .df-m-bottomnav) `height`+`overflow:hidden`+etiket nowrap/ellipsis ile SERT
+   bir üst sınıra kilitli — --df-navh (TEK kaynak) burada da okunuyor, ikisi runtime'da ASLA sapamaz. */
+.composer{position:fixed;left:0;right:0;bottom:calc(var(--df-navh, 76px) + env(safe-area-inset-bottom));background:#071326;border-top:1px solid rgba(255,255,255,.12);padding:8px 8px 8px;z-index:1001}
 .composer .wrap{max-width:520px;margin:auto;display:flex;gap:8px;align-items:flex-end}
 .composer textarea{flex:1;margin:0;resize:none;max-height:120px}
 .composer button{flex:0 0 auto;width:50px;height:46px;border-radius:14px;font-size:18px}
@@ -175,7 +175,7 @@ topx($thread ? 'Grup' : ($with ? 'Sohbet' : 'İletişim Merkezi'), ($thread || $
 /* CHAT MODU: composer + nav ikisi de fixed — thread'in alt boşluğu ikisinin sabit toplam
    yüksekliğini karşılamalı ki son mesaj balonu arkalarında kalmasın (88px composer'ın kendi
    yaklaşık yüksekliği — tek satır input+padding, çok satırlı yazımda içerik zaten scroll oluyor). */
-body.chat-mode .thread{padding-bottom:calc(88px + 70px + env(safe-area-inset-bottom))}
+body.chat-mode .thread{padding-bottom:calc(88px + var(--df-navh, 76px) + env(safe-area-inset-bottom))}
 </style>
 <?php
 function avatar_color($id){ $c=['#3b82f6','#22c55e','#f97316','#8b5cf6','#ef4444','#14b8a6','#eab308','#ec4899']; return $c[$id % count($c)]; }
@@ -328,7 +328,7 @@ document.getElementById('msgform').addEventListener('submit',function(e){ e.prev
 // klavye: composer'ı görünür alanın dibine pinle
 var composer=document.querySelector('.composer');
 function pinC(){ if(!composer||!window.visualViewport)return; var v=window.visualViewport; composer.style.top=(v.offsetTop+v.height-composer.offsetHeight)+'px'; composer.style.bottom='auto'; composer.style.paddingBottom='8px'; }
-function unpinC(){ if(!composer)return; composer.style.top='auto'; composer.style.bottom='calc(70px + env(safe-area-inset-bottom))'; composer.style.paddingBottom=''; }
+function unpinC(){ if(!composer)return; composer.style.top='auto'; composer.style.bottom='calc(var(--df-navh, 76px) + env(safe-area-inset-bottom))'; composer.style.paddingBottom=''; }
 if(window.visualViewport){ window.visualViewport.addEventListener('resize',function(){pinC();scrollBottom();}); window.visualViewport.addEventListener('scroll',pinC); }
 var ta2=document.querySelector('.composer textarea');
 if(ta2){ ta2.addEventListener('focus',function(){ setTimeout(function(){pinC();scrollBottom();},250); }); ta2.addEventListener('blur',function(){ setTimeout(unpinC,100); }); }
@@ -484,7 +484,7 @@ function pinComposer(){
 }
 function unpinComposer(){
   if(!composer) return;
-  composer.style.top='auto'; composer.style.bottom='calc(70px + env(safe-area-inset-bottom))';
+  composer.style.top='auto'; composer.style.bottom='calc(var(--df-navh, 76px) + env(safe-area-inset-bottom))';
   composer.style.paddingBottom='';
 }
 if(window.visualViewport){
