@@ -1,5 +1,11 @@
-<?php require_once 'common.php'; topx('Menü');
+<?php require_once 'common.php';
 $pdo=db();
+// P0 MOBİL SHELL KAPANIŞI (2026-07-18): kategori seviyesindeyken başlık + geri hedefi kategoriye
+// göre değişir (Menü'ye deterministik döner) — topx() bu yüzden $__openCat çözüldükten SONRA
+// çağrılıyor (nav_lib.php zaten common.php→boot.php zinciriyle yüklü).
+$__openCatTitle = $_GET['open'] ?? '';
+if(!in_array($__openCatTitle, nav_category_keys(), true)) $__openCatTitle='';
+topx($__openCatTitle!=='' ? nav_category_label($__openCatTitle) : 'Menü', $__openCatTitle!=='' ? 'more.php' : null);
 /* NAV-001B (2026-07-16) — Product Owner kararı: "Diğer kullanıcıların mevcut web VE MOBİL
  * deneyimi birebir korunacaktır" — bu dosya da $__navMode'a göre iki yola ayrılıyor.
  * legacy: ORİJİNAL renkli-kart menü listesi birebir korunur (aşağıda, değişmedi).
@@ -148,89 +154,81 @@ if($__navMode === 'legacy'):
 <?php endif; ?>
 
 <?php else: ?>
-<!-- ── COMPACT — NAV-001B Module Launcher (Product Owner kararı) ── -->
+<!-- ── COMPACT — KATEGORİ MENÜSÜ (P0 MOBİL SHELL KAPANIŞI, 2026-07-18, Product Owner kararı) ──
+ Eski "Launcher" (Sabitlenenler + her gruptan uzun düz liste + her satırda pin ➕/✕ + ikinci
+ "Modül ara" kutusu) kaldırıldı — web Rail'de 2026-07-17'de yapılan AYNI karar (Flag 1 —
+ Launcher/Pin Retirement, bkz. layout_top.php) burada da uygulandı: TEK ana arama (topx()'ün
+ üstteki arama kutusu) yeterli, iki büyük kategori-drill-down modeli (nav_category_keys() + AYNI
+ nav_items_for_category()/nav_category_label() — web ile TEK kaynak, ikinci bir taksonomi İCAT
+ EDİLMEDİ). nav_pinned_modules()/nav_grouped_for_launcher()/ajax_nav_prefs.php SİLİNMEDİ (Legacy
+ Mode dalı hâlâ kullanıyor), sadece buradan ÇAĞRILMIYOR. İletişim Merkezi ve Raporlar, messages.php/
+ report.php'nin kendi iç sekme/modül anahtarları olduğu için (aynı iş iki yerde tekrarlanmasın diye)
+ ayrı bir drill-down YAZILMADI — doğrudan o hub'a giden tek satırlık bağlantı. -->
 <?php
 $__canSee = function($perm){ return user_can($perm); };
-$__pinnedRaw = user_pref_get($pdo, $ME, 'nav_pinned_mobile', '');
-$__pinnedMods = nav_pinned_modules($__canSee, $isAdmin, $__pinnedRaw, 'mobile');
-$__groups = nav_grouped_for_launcher($__canSee, $isAdmin, $__pinnedRaw, 'mobile');
-$__pinnedKeys = array_filter(array_map('trim', explode(',', $__pinnedRaw)));
+$__catIconMapM = ['isler'=>'briefcase','ticaret'=>'tag','uretim_stok'=>'box','finans'=>'wallet','yonetim'=>'settings'];
+$__openCat = $__openCatTitle;
+$__icBadgeM = unread_msg() + unread_notif();
 ?>
-<div class="toolbar-search" style="margin-bottom:14px">
-  <span class="ts-icon"><?=ds_icon('search',18)?></span>
-  <input type="text" id="navLauncherSearch" placeholder="Modül ara..." autocomplete="off" oninput="navLauncherFilter(this.value)">
-</div>
 
-<div id="navLauncherBody">
-<?php if($__pinnedMods): ?>
-<div class="df-nav-launcher-group">
-  <div class="df-nav-launcher-group-title">Sabitlenenler</div>
-  <div class="df-panel" style="padding:6px">
-    <?php foreach($__pinnedMods as $__item): ?>
-    <div class="df-nav-row-wrap" style="display:flex;align-items:center" data-nav-label="<?=h(mb_strtolower($__item['label']))?>">
-      <a class="df-nav-row" style="flex:1" href="<?=h(nav_url_for_platform($__item,'mobile'))?>"><?=h($__item['label'])?></a>
-      <button type="button" class="df-nav-pin-btn is-pinned" aria-label="Sabitlemeyi kaldır" onclick="navTogglePin('<?=h($__item['key'])?>',true,this)"><?=ds_icon('close',15)?></button>
-    </div>
-    <?php endforeach; ?>
-  </div>
-</div>
+<?php if($__openCat===''): ?>
+<!-- SEVİYE 1: büyük kategori kutuları -->
+<a class="df-panel" href="messages.php" style="display:flex;align-items:center;gap:12px;margin-bottom:10px;text-decoration:none;color:inherit">
+  <span style="flex:0 0 auto;width:44px;height:44px;border-radius:var(--df-radius-md);background:var(--df-surface-sunken);display:flex;align-items:center;justify-content:center"><?=ds_icon('chat',22)?></span>
+  <div style="flex:1;min-width:0"><b>İletişim Merkezi</b><div class="small">Sohbetler · WhatsApp · Bildirimler · Talepler · Duyurular</div></div>
+  <?php if($__icBadgeM): ?><span class="df-count-badge" style="position:static"><?=$__icBadgeM>9?'9+':$__icBadgeM?></span><?php endif; ?>
+</a>
+<?php if($isAdmin || user_can('report')): ?>
+<a class="df-panel" href="report.php" style="display:flex;align-items:center;gap:12px;margin-bottom:10px;text-decoration:none;color:inherit">
+  <span style="flex:0 0 auto;width:44px;height:44px;border-radius:var(--df-radius-md);background:var(--df-surface-sunken);display:flex;align-items:center;justify-content:center;font-size:20px">📊</span>
+  <div style="flex:1;min-width:0"><b>Raporlar</b><div class="small">Genel özet · satış · alış · stok · finans</div></div>
+  <?=ds_icon('chevron-right',18)?>
+</a>
 <?php endif; ?>
 
-<?php foreach(['is_takip','sat_tahsil','stok','iletisim','yonet'] as $__g): if(empty($__groups[$__g])) continue; ?>
-<div class="df-nav-launcher-group df-nav-launcher-group--<?=h($__g)?>">
-  <div class="df-nav-launcher-group-title"><?=h(nav_group_label($__g))?></div>
-  <div class="df-panel" style="padding:6px">
-    <?php foreach($__groups[$__g] as $__item):
-        $__isPinned = in_array($__item['key'], $__pinnedKeys, true);
-    ?>
-    <div class="df-nav-row-wrap" style="display:flex;align-items:center" data-nav-label="<?=h(mb_strtolower($__item['label']))?>">
-      <a class="df-nav-row" style="flex:1" href="<?=h(nav_url_for_platform($__item,'mobile'))?>"><?=h($__item['label'])?></a>
-      <?php if(empty($__item['primary'])): ?>
-      <button type="button" class="df-nav-pin-btn<?=($__isPinned?' is-pinned':'')?>" aria-label="<?=($__isPinned?'Sabitlemeyi kaldır':'Sabitle')?>" onclick="navTogglePin('<?=h($__item['key'])?>',<?=$__isPinned?'true':'false'?>,this)"><?=ds_icon($__isPinned?'close':'plus',15)?></button>
-      <?php endif; ?>
-    </div>
-    <?php endforeach; ?>
-  </div>
-</div>
+<?php foreach(nav_category_keys() as $__cat):
+    $__catItems = nav_items_for_category($__canSee, $isAdmin, $__cat, 'mobile');
+    if(!$__catItems) continue;
+?>
+<a class="df-panel" href="more.php?open=<?=h($__cat)?>" style="display:flex;align-items:center;gap:12px;margin-bottom:10px;text-decoration:none;color:inherit">
+  <span style="flex:0 0 auto;width:44px;height:44px;border-radius:var(--df-radius-md);background:var(--df-surface-sunken);display:flex;align-items:center;justify-content:center"><?=ds_icon($__catIconMapM[$__cat] ?? 'menu', 22)?></span>
+  <div style="flex:1;min-width:0"><b><?=h(nav_category_label($__cat))?></b><div class="small"><?=count($__catItems)?> aksiyon</div></div>
+  <?=ds_icon('chevron-right',18)?>
+</a>
 <?php endforeach; ?>
 
-<div class="df-nav-launcher-group">
-  <div class="df-nav-launcher-group-title">Diğer</div>
-  <div class="df-panel" style="padding:6px">
-    <div class="df-nav-row-wrap" data-nav-label="web sürümü"><a class="df-nav-row" href="../dashboard.php?web=1">Web Sürümü (Masaüstü)</a></div>
-    <?php if(user_can('users')): ?>
-    <div class="df-nav-row-wrap" data-nav-label="bildirim kur"><a class="df-nav-row" href="push_enable.php">Bildirim Kur (Push)</a></div>
-    <?php endif; ?>
-    <div class="df-nav-row-wrap" data-nav-label="çıkış yap"><a class="df-nav-row" href="../logout.php">Çıkış Yap</a></div>
-  </div>
-</div>
+<div style="font-weight:900;margin:18px 4px 8px">Genel</div>
+<div class="df-panel" style="padding:6px">
+  <a class="df-nav-row" href="profile.php">Profil / Şifre</a>
+  <a class="df-nav-row" href="../dashboard.php?web=1">Web Sürümü (Masaüstü)</a>
+  <?php if(user_can('users')): ?><a class="df-nav-row" href="push_enable.php">Bildirim Kur (Push)</a><?php endif; ?>
+  <a class="df-nav-row" href="../logout.php">Çıkış Yap</a>
 </div>
 
+<?php else:
+    $__catItems = nav_items_for_category($__canSee, $isAdmin, $__openCat, 'mobile');
+?>
+<!-- SEVİYE 2: kategori içi aksiyonlar -->
+<a href="more.php" style="display:inline-flex;align-items:center;gap:4px;color:var(--df-ink-500);text-decoration:none;font-weight:700;margin-bottom:12px"><span style="display:inline-flex;transform:rotate(180deg)"><?=ds_icon('chevron-right',16)?></span> Menü</a>
+<h2 style="margin:0 0 12px;display:flex;align-items:center;gap:10px"><?=ds_icon($__catIconMapM[$__openCat] ?? 'menu', 22)?> <?=h(nav_category_label($__openCat))?></h2>
+<?php if(!$__catItems): ?>
+<?php ds_empty_state('Bu kategoride yetkili aksiyon yok.'); ?>
+<?php else: ?>
+<div class="df-panel" style="padding:6px">
+<?php foreach($__catItems as $__item): ?>
+<a class="df-nav-row" href="<?=h(nav_url_for_platform($__item,'mobile'))?>"><?=h($__item['actionLabel'] ?? $__item['label'])?></a>
+<?php endforeach; ?>
+</div>
+<?php endif; ?>
+<?php endif; ?>
+
 <?php if(user_can('users')): ?>
-<div class="df-panel" style="text-align:center">
+<div class="df-panel" style="text-align:center;margin-top:14px">
   <b>🔔 Bildirim & Ses (Test)</b>
   <p class="small" style="margin-top:4px">Sadece yöneticiler görür — geliştirme/teşhis amaçlıdır.</p>
   <button class="df-btn df-btn--primary" style="width:100%;margin-top:8px" onclick="var m=window.ACANS_TEST?ACANS_TEST():'hazır değil';document.getElementById('tres').textContent=m;">Bildirimleri Aç / Test Et</button>
   <p id="tres" class="small" style="margin-top:8px;color:#4ade80"></p>
 </div>
 <?php endif; ?>
-
-<script>
-function navTogglePin(key,isPinned,btn){
-    fetch('../ajax_nav_prefs.php',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded','X-CSRF-Token':window.CSRF_TOKEN},
-        body:'action='+(isPinned?'unpin':'pin')+'&platform=mobile&key='+encodeURIComponent(key)+'&csrf_token='+encodeURIComponent(window.CSRF_TOKEN)})
-      .then(function(r){return r.json();}).then(function(d){ if(d.ok) location.reload(); });
-}
-function navLauncherFilter(q){
-    q = q.toLowerCase().trim();
-    document.querySelectorAll('#navLauncherBody .df-nav-row-wrap').forEach(function(row){
-        row.style.display = (!q || row.getAttribute('data-nav-label').indexOf(q)!==-1) ? '' : 'none';
-    });
-    document.querySelectorAll('#navLauncherBody .df-nav-launcher-group').forEach(function(g){
-        var anyVisible = Array.prototype.some.call(g.querySelectorAll('.df-nav-row-wrap'), function(r){ return r.style.display!=='none'; });
-        g.style.display = anyVisible ? '' : 'none';
-    });
-}
-</script>
 <?php endif; ?>
 <?php botx(); ?>
