@@ -33,7 +33,7 @@ if (isset($_GET['web'])) $_SESSION['force_web'] = 1;
 // uç noktası da (public_file.php vb. gibi "herkese açık" değil, ama "asla sayfa yönlendirmesi
 // GÖRMEMESİ gereken" anlamında) listeye eklendi — require_login() içeride hâlâ çalışıyor, sadece
 // mobil-kabuk yönlendirmesi bu 4 dosyayı artık atlıyor.
-$__mpub = ['public_file.php','quote_approve.php','cron.php','ics.php','icon.php','manifest.php','sw.php','kur.php','migrate.php','logout.php','wa_webhook.php','ajax_nav_prefs.php','ajax_quick_add.php','cpa_suggest_ajax.php','push_subscribe.php'];
+$__mpub = ['public_file.php','quote_approve.php','cron.php','ics.php','icon.php','manifest.php','sw.php','kur.php','migrate.php','logout.php','wa_webhook.php','ajax_nav_prefs.php','ajax_quick_add.php','cpa_suggest_ajax.php','push_subscribe.php','contact_search_ajax.php'];
 if (empty($_SESSION['force_web'])
     && !empty($_SESSION['user'])
     && strpos($_SERVER['SCRIPT_NAME'] ?? '', '/mobile/') === false

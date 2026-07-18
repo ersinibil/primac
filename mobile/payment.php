@@ -85,8 +85,17 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 topx('Ödeme / Gider');
 if(!empty($_SESSION['payment_err'])){ echo ds_alert('danger',$_SESSION['payment_err']); unset($_SESSION['payment_err']); }
 
-$cs=[]; $accounts=[]; $personnel=[]; $cekPortfoy=[];
-try{ $cs=$pdo->query("SELECT id,name,type FROM contacts ORDER BY name")->fetchAll(); }catch(Throwable $e){}
+// FİNANS UX REGRESYON DÜZELTMESİ (2026-07-19) — TÜM contacts tablosunu DOM'a döken tam liste
+// sorgusu kaldırıldı; arama artık ../contact_search_ajax.php üzerinden AJAX ile yapılıyor.
+$accounts=[]; $personnel=[]; $cekPortfoy=[];
+$__contactInitial=null;
+if($cid){
+    try{
+        $__ciq=$pdo->prepare("SELECT id,name,type FROM contacts WHERE id=?");
+        $__ciq->execute([$cid]);
+        $__contactInitial=$__ciq->fetch() ?: null;
+    }catch(Throwable $e){}
+}
 try{ $accounts=$pdo->query("SELECT * FROM finance_accounts WHERE COALESCE(active,1)=1 ORDER BY account_type,name")->fetchAll(); }catch(Throwable $e){}
 try{ $personnel=$pdo->query("SELECT id,name FROM personnel WHERE COALESCE(active,1)=1 ORDER BY name")->fetchAll(); }catch(Throwable $e){}
 if(checks_notes_lifecycle_ready()) $cekPortfoy=checks_notes_list($pdo, null, 'portfoyde', 'alinan');
@@ -104,10 +113,14 @@ $stepOpts=finance_record_type_options();
 
   <div id="pmField_contact_id">
   <label>Cari</label>
-  <select name="contact_id" id="pmContactSel"><option value="">— Cari seçilmedi —</option>
-  <?php foreach($cs as $c): ?><option value="<?=$c['id']?>" data-ctype="<?=h($c['type'])?>" <?=$cid===(int)$c['id']?'selected':''?>><?=h($c['name'])?></option><?php endforeach; ?></select>
-  <!-- P0 FİNANS UX (2026-07-18, Product Owner kararı 1. madde): varsayılan Tedarikçiler. -->
-  <div class="df-tabs" id="pmScope" style="margin:0 0 12px">
+  <div class="df-contact-picker">
+    <input type="text" id="pmContactQuery" autocomplete="off" placeholder="İsim veya telefon ile ara…" value="<?=h($__contactInitial['name'] ?? '')?>">
+    <input type="hidden" name="contact_id" id="pmContactSel" value="<?=$cid ?: ''?>" data-selected-name="<?=h($__contactInitial['name'] ?? '')?>">
+    <div class="df-contact-picker-results" id="pmContactResults" hidden></div>
+  </div>
+  <!-- P0 FİNANS UX (2026-07-18, Product Owner kararı 1. madde): varsayılan Tedarikçiler.
+       FİNANS UX REGRESYON DÜZELTMESİ (2026-07-19): liste artık AJAX scope parametresiyle geliyor. -->
+  <div class="df-tabs" id="pmScope" style="margin:8px 0 12px">
     <button type="button" class="df-tab df-tab--active" data-scope="filtered" onclick="pmSetScope(this,'filtered')">Tedarikçiler</button>
     <button type="button" class="df-tab" data-scope="all" onclick="pmSetScope(this,'all')">Tüm Cariler</button>
   </div>
@@ -188,7 +201,7 @@ function pmApplyStep(){
   var step=document.getElementById('pmStep').value;
   var contactBox=document.getElementById('pmField_contact_id');
   contactBox.style.display = (step==='cari') ? '' : 'none';
-  contactBox.querySelector('select').required = (step==='cari');
+  document.getElementById('pmContactQuery').required = (step==='cari');
   var persBox=document.getElementById('pmField_personnel_id');
   persBox.style.display = (step==='personel') ? '' : 'none';
   persBox.querySelector('select').required = (step==='personel');
@@ -197,19 +210,14 @@ function pmApplyStep(){
   document.getElementById('pmDesc').required = (step==='diger');
 }
 
-// P0 FİNANS UX (2026-07-18, Product Owner kararı 1. madde) — cari modeli değişmedi, sadece liste
-// işlem niyetine göre (Ödeme→Tedarikçi) filtrelenir.
+// P0 FİNANS UX (2026-07-18, Product Owner kararı 1. madde) — cari modeli değişmedi, sadece arama
+// kapsamı işlem niyetine göre (Ödeme→Tedarikçi) filtrelenir. FİNANS UX REGRESYON DÜZELTMESİ
+// (2026-07-19): liste artık AJAX scope parametresiyle geliyor.
 var PM_SCOPE='filtered';
 function pmSetScope(btn,scope){
   document.querySelectorAll('#pmScope .df-tab').forEach(function(b){ b.classList.toggle('df-tab--active', b.dataset.scope===scope); });
-  PM_SCOPE=scope; pmApplyScope();
-}
-function pmApplyScope(){
-  var sel=document.getElementById('pmContactSel');
-  Array.prototype.forEach.call(sel.options, function(o){
-    if(!o.value){ o.style.display=''; return; }
-    o.style.display=(PM_SCOPE==='all' || o.dataset.ctype==='Tedarikçi' || o.dataset.ctype==='Her İkisi') ? '' : 'none';
-  });
+  PM_SCOPE=scope;
+  if(window.pmContactPicker) window.pmContactPicker.refresh();
 }
 
 // P0 FİNANS UX + ÇEK/SENET ENTEGRASYONU (2026-07-18, Product Owner kararı 2-4. madde) — Yöntem
@@ -225,18 +233,18 @@ function pmToggleCek(){
   var contactBox=document.getElementById('pmField_contact_id');
   if(isCek){
     contactBox.style.display='';
-    contactBox.querySelector('select').required=true;
+    document.getElementById('pmContactQuery').required=true;
     document.getElementById('pmField_personnel_id').style.display='none';
     document.getElementById('pmField_personnel_id').querySelector('select').required=false;
     document.getElementById('pmField_payment_type').style.display='none';
     document.getElementById('pmTurSel').required=false;
     document.getElementById('pmDesc').required=false;
   }else{
-    contactBox.querySelector('select').required=false;
+    document.getElementById('pmContactQuery').required=false;
     document.getElementById('pmField_payment_type').style.display='';
     pmApplyStep();
   }
-  pmApplyScope();
+  if(window.pmContactPicker) window.pmContactPicker.refresh();
 }
 function pmSetCekMode(btn,mode){
   document.getElementById('pmCnMode').value=mode;
@@ -244,6 +252,10 @@ function pmSetCekMode(btn,mode){
   document.getElementById('pmCekEndorseFields').style.display=(mode==='endorse')?'':'none';
   document.querySelectorAll('#pmCekMode .df-tab').forEach(function(b){ b.classList.toggle('df-tab--active', b.dataset.mode===mode); });
 }
+window.pmContactPicker = dfInitContactPicker({
+  inputId:'pmContactQuery', hiddenId:'pmContactSel', resultsId:'pmContactResults',
+  endpoint:'../contact_search_ajax.php', getScope: function(){ return PM_SCOPE==='all' ? 'all' : 'suppliers'; }
+});
 pmApplyStep();
 pmToggleCek();
 </script>

@@ -697,6 +697,20 @@ body.nav-compact .df-form-help{font-size:var(--df-type-caption-size);color:var(-
 body.nav-compact .df-form-error{font-size:var(--df-type-caption-size);color:var(--df-danger-ink);margin-top:4px;display:flex;align-items:center;gap:4px}
 body.nav-compact .df-form-group.has-error input,body.nav-compact .df-form-group.has-error select,body.nav-compact .df-form-group.has-error textarea{border-color:var(--df-danger)}
 
+/* DF-Contact-Picker — FİNANS UX REGRESYON DÜZELTMESİ (2026-07-19): Tahsilat/Ödeme'deki cari
+   <select>'i TÜM contacts tablosunu DOM'a dökmeden arayan aranabilir seçici. Girdi elemanının
+   kendisi ambient input stilinden gelir (web: body.nav-compact input, mobil: mobile/common.php'nin
+   input{} kuralı) — burada sadece sonuç açılır listesi tanımlanır, web+mobil TEK ortak stil
+   (dfInitContactPicker(), assets/js/ds-foundation.js). */
+.df-contact-picker{position:relative}
+.df-contact-picker-results{position:absolute;left:0;right:0;top:calc(100% - 2px);z-index:30;max-height:260px;overflow-y:auto;background:var(--df-surface);border:1px solid var(--df-hairline);border-radius:var(--df-radius-md);box-shadow:var(--df-shadow-lg);padding:4px}
+.df-contact-picker-item{display:flex;align-items:center;gap:8px;padding:10px;border-radius:var(--df-radius-sm);cursor:pointer}
+.df-contact-picker-item:hover,.df-contact-picker-item:active{background:var(--df-surface-sunken)}
+.df-contact-picker-name{flex:1 1 auto;min-width:0;font-size:14.5px;font-weight:600;color:var(--df-ink-900);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.df-contact-picker-badge{flex:0 0 auto;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:var(--df-radius-pill);background:var(--df-surface-sunken);color:var(--df-ink-600)}
+.df-contact-picker-phone{flex:0 0 auto;font-size:12px;color:var(--df-ink-500)}
+.df-contact-picker-empty{padding:12px 10px;font-size:13px;color:var(--df-ink-500);text-align:center}
+
 /* DF-Alert — .err/.notice/.card(kırmızı metin) yerine geçecek tek dil. role="alert" çağıran
    tarafta ds_alert() ile eklenir (aşağıda).
    FAZ 2C-ii EKİ (2026-07-17, HOTFIX sonrası Home A maddesi): bu bileşen artık mobil Home'un Nabız

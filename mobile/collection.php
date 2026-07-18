@@ -78,8 +78,17 @@ if(!empty($_SESSION['collection_err'])){ $er=$_SESSION['collection_err']; unset(
 $warning=''; $pre=[];
 if(!empty($_SESSION['collection_warning'])){ $warning=$_SESSION['collection_warning']; unset($_SESSION['collection_warning']); }
 if(!empty($_SESSION['collection_prefill'])){ $pre=$_SESSION['collection_prefill']; unset($_SESSION['collection_prefill']); }
-$cs=$pdo->query("SELECT id,name,type FROM contacts ORDER BY name")->fetchAll();
+// FİNANS UX REGRESYON DÜZELTMESİ (2026-07-19) — TÜM contacts tablosunu DOM'a döken tam liste
+// sorgusu kaldırıldı; arama artık ../contact_search_ajax.php üzerinden AJAX ile yapılıyor.
 $preContact=(int)($pre['contact_id'] ?? $cid);
+$__contactInitial=null;
+if($preContact){
+    try{
+        $__ciq=$pdo->prepare("SELECT id,name,type FROM contacts WHERE id=?");
+        $__ciq->execute([$preContact]);
+        $__contactInitial=$__ciq->fetch() ?: null;
+    }catch(Throwable $e){}
+}
 ?>
 <?php if($ok): ?><?=ds_alert('success',$ok)?><?php endif; ?>
 <?php if($er): ?><?=ds_alert('danger',$er)?><?php endif; ?>
@@ -87,11 +96,15 @@ $preContact=(int)($pre['contact_id'] ?? $cid);
 <div class="df-panel" style="margin-top:12px">
 <form method="post" enctype="multipart/form-data">
   <label>Cari</label>
-  <select name="contact_id" id="colContactSel" required><option value="">— Seç —</option>
-  <?php foreach($cs as $c): ?><option value="<?=$c['id']?>" data-ctype="<?=h($c['type'])?>" <?=$preContact===(int)$c['id']?'selected':''?>><?=h($c['name'])?></option><?php endforeach; ?></select>
+  <div class="df-contact-picker">
+    <input type="text" id="colContactQuery" autocomplete="off" required placeholder="İsim veya telefon ile ara…" value="<?=h($__contactInitial['name'] ?? '')?>">
+    <input type="hidden" name="contact_id" id="colContactSel" value="<?=$preContact ?: ''?>" data-selected-name="<?=h($__contactInitial['name'] ?? '')?>">
+    <div class="df-contact-picker-results" id="colContactResults" hidden></div>
+  </div>
   <!-- P0 FİNANS UX (2026-07-18, Product Owner kararı 1. madde): varsayılan Müşteriler, "Tüm
-       Cariler" bir tık uzakta — cari modeli değişmedi, sadece liste filtreleniyor. -->
-  <div class="df-tabs" id="colScope" style="margin:0 0 12px">
+       Cariler" bir tık uzakta — cari modeli değişmedi. FİNANS UX REGRESYON DÜZELTMESİ (2026-07-19):
+       liste artık istemci filtresi değil, contact_search_ajax.php scope parametresi. -->
+  <div class="df-tabs" id="colScope" style="margin:8px 0 12px">
     <button type="button" class="df-tab df-tab--active" data-scope="filtered" onclick="colSetScope(this,'filtered')">Müşteriler</button>
     <button type="button" class="df-tab" data-scope="all" onclick="colSetScope(this,'all')">Tüm Cariler</button>
   </div>
@@ -125,14 +138,8 @@ $preContact=(int)($pre['contact_id'] ?? $cid);
 var COL_SCOPE='filtered';
 function colSetScope(btn,scope){
   document.querySelectorAll('#colScope .df-tab').forEach(function(b){ b.classList.toggle('df-tab--active', b.dataset.scope===scope); });
-  COL_SCOPE=scope; colApplyScope();
-}
-function colApplyScope(){
-  var sel=document.getElementById('colContactSel');
-  Array.prototype.forEach.call(sel.options, function(o){
-    if(!o.value){ o.style.display=''; return; }
-    o.style.display=(COL_SCOPE==='all' || o.dataset.ctype==='Müşteri' || o.dataset.ctype==='Her İkisi') ? '' : 'none';
-  });
+  COL_SCOPE=scope;
+  if(window.colContactPicker) window.colContactPicker.refresh();
 }
 function colToggleCek(){
   var pm=document.getElementById('colChannel').value;
@@ -140,7 +147,10 @@ function colToggleCek(){
   document.getElementById('colCekBlock').style.display=isCek?'':'none';
   document.getElementById('colBankWrap').style.display=(pm==='Çek')?'':'none';
 }
-colApplyScope();
+window.colContactPicker = dfInitContactPicker({
+  inputId:'colContactQuery', hiddenId:'colContactSel', resultsId:'colContactResults',
+  endpoint:'../contact_search_ajax.php', getScope: function(){ return COL_SCOPE==='all' ? 'all' : 'customers'; }
+});
 colToggleCek();
 </script>
 <div class="df-panel" style="margin-top:12px"><b><?=ds_icon('box',16)?> Son Tahsilatlar</b>

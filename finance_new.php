@@ -197,7 +197,18 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 
 require_once __DIR__.'/layout_top.php';
 
-$contacts=$pdo->query("SELECT id,name,type FROM contacts ORDER BY name")->fetchAll();
+// FİNANS UX REGRESYON DÜZELTMESİ (2026-07-19) — TÜM contacts tablosunu DOM'a döken tam liste
+// sorgusu kaldırıldı; sadece formda ÖNCEDEN seçili olan (edit modu / uyarı sonrası yeniden
+// doldurma / cari bağlamıyla gelme) tek carinin adı, aranabilir seçicinin başlangıç değeri için
+// çekiliyor — arama artık contact_search_ajax.php üzerinden AJAX ile yapılıyor.
+$__contactInitial = null;
+if($contactId){
+    try{
+        $__ciq=$pdo->prepare("SELECT id,name,type FROM contacts WHERE id=?");
+        $__ciq->execute([$contactId]);
+        $__contactInitial = $__ciq->fetch() ?: null;
+    }catch(Throwable $e){}
+}
 $accounts=$pdo->query("SELECT * FROM finance_accounts WHERE active=1 ORDER BY account_type,name")->fetchAll();
 // P0 FİNANS UX + ÇEK/SENET ENTEGRASYONU (2026-07-18) — Ödeme+Çek/Senet'in B) seçeneği (portföydeki
 // müşteri çekini ciro et) için aday liste: sadece PORTFÖYDE + ALINAN kayıtlar cirolanabilir
@@ -263,11 +274,15 @@ ds_form_field('Ne kaydediyorsun?', '<select name="record_step" id="fnStep" oncha
 <div id="fnField_contact_id">
 <?php
 // P0 FİNANS UX (2026-07-18, Product Owner kararı 1. madde): Tahsilat'ta varsayılan sadece
-// Müşteri, Ödeme'de varsayılan sadece Tedarikçi — cari modeli DEĞİŞMEDİ, sadece seçim listesi
-// data-ctype ile JS'te (fnApplyContactScope()) işlem niyetine göre filtreleniyor.
-$__contactOpts='<option value="">Cari seçilmedi</option>';
-foreach($contacts as $c){ $__contactOpts.='<option value="'.$c['id'].'" data-ctype="'.h($c['type']).'" '.($contactId===$c['id']?'selected':'').'>'.h($c['name'].' / '.$c['type']).'</option>'; }
-ds_form_field('Cari', '<select name="contact_id" id="fnContactSel">'.$__contactOpts.'</select>');
+// Müşteri, Ödeme'de varsayılan sadece Tedarikçi. FİNANS UX REGRESYON DÜZELTMESİ (2026-07-19):
+// cari modeli/opening_balance/contact_balance_case_sql() DEĞİŞMEDİ, sadece TÜM cariyi DOM'a döken
+// <select> yerine contact_search_ajax.php'ye arayan aranabilir seçici (dfInitContactPicker()).
+ds_form_field('Cari', '
+<div class="df-contact-picker">
+  <input type="text" id="fnContactQuery" autocomplete="off" placeholder="İsim veya telefon ile ara…" value="'.h($__contactInitial['name'] ?? '').'">
+  <input type="hidden" name="contact_id" id="fnContactSel" value="'.($contactId ?: '').'" data-selected-name="'.h($__contactInitial['name'] ?? '').'">
+  <div class="df-contact-picker-results" id="fnContactResults" hidden></div>
+</div>');
 ?>
 <div class="df-tabs" id="fnContactScope" style="margin:-4px 0 10px">
   <button type="button" class="df-tab df-tab--active" data-scope="filtered" onclick="fnSetContactScope(this,'filtered')"><span id="fnScopeFilteredLabel">Müşteriler</span></button>
@@ -406,7 +421,7 @@ function fnToggleWizard(){
     document.getElementById('fnField_personnel_id').style.display='none';
     document.getElementById('fnField_personnel_id').querySelector('select').required=false;
     document.getElementById('fnField_contact_id').style.display='';
-    document.getElementById('fnField_contact_id').querySelector('select').required=false;
+    document.getElementById('fnContactQuery').required=false;
     document.getElementById('fnField_payment_type').style.display='none';
     document.getElementById('fnTurSel').required=false;
     document.getElementById('fnDesc').required=false;
@@ -424,7 +439,7 @@ function fnApplyStep(){
   var step=document.getElementById('fnStep').value;
   var contactBox=document.getElementById('fnField_contact_id');
   contactBox.style.display = (step==='cari') ? '' : 'none';
-  contactBox.querySelector('select').required = (step==='cari');
+  document.getElementById('fnContactQuery').required = (step==='cari');
   var persBox=document.getElementById('fnField_personnel_id');
   persBox.style.display = (step==='personel') ? '' : 'none';
   persBox.querySelector('select').required = (step==='personel');
@@ -434,24 +449,24 @@ function fnApplyStep(){
   document.getElementById('fnDesc').required = (step==='diger');
 }
 
-// P0 FİNANS UX (2026-07-18, Product Owner kararı 1. madde) — cari modeli DEĞİŞMEDİ, sadece seçim
-// listesi işlem niyetine göre (Tahsilat→Müşteri, Ödeme→Tedarikçi) filtrelenir. "Tüm Cariler"
-// istisnası her zaman bir tık uzakta.
+// P0 FİNANS UX (2026-07-18, Product Owner kararı 1. madde) — cari modeli DEĞİŞMEDİ, sadece arama
+// kapsamı işlem niyetine göre (Tahsilat→Müşteri, Ödeme→Tedarikçi) filtrelenir. "Tüm Cariler"
+// istisnası her zaman bir tık uzakta. FİNANS UX REGRESYON DÜZELTMESİ (2026-07-19): filtre artık
+// istemcide <option> gizleme değil, contact_search_ajax.php'ye giden scope parametresi.
 var FN_CONTACT_SCOPE = 'filtered';
 function fnSetContactScope(btn, scope){
   document.querySelectorAll('#fnContactScope .df-tab').forEach(function(b){ b.classList.toggle('df-tab--active', b.dataset.scope===scope); });
   FN_CONTACT_SCOPE = scope;
   fnApplyContactScope();
 }
+function fnContactAjaxScope(){
+  if(FN_CONTACT_SCOPE==='all') return 'all';
+  return document.getElementById('fnDirection').value==='out' ? 'suppliers' : 'customers';
+}
 function fnApplyContactScope(){
   var out=document.getElementById('fnDirection').value==='out';
   document.getElementById('fnScopeFilteredLabel').textContent = out ? 'Tedarikçiler' : 'Müşteriler';
-  var allowed = out ? ['Tedarikçi','Her İkisi'] : ['Müşteri','Her İkisi'];
-  var sel=document.getElementById('fnContactSel');
-  Array.prototype.forEach.call(sel.options, function(o){
-    if(!o.value){ o.style.display=''; return; }
-    o.style.display = (FN_CONTACT_SCOPE==='all' || allowed.indexOf(o.dataset.ctype)!==-1) ? '' : 'none';
-  });
+  if(window.fnContactPicker) window.fnContactPicker.refresh();
 }
 
 // P0 FİNANS UX + ÇEK/SENET ENTEGRASYONU (2026-07-18, Product Owner kararı 2-4. madde) — Yöntem
@@ -476,7 +491,7 @@ function fnToggleCek(){
   if(isCek){
     var contactBox=document.getElementById('fnField_contact_id');
     contactBox.style.display='';
-    contactBox.querySelector('select').required=true;
+    document.getElementById('fnContactQuery').required=true;
     if(out){
       document.getElementById('fnWizardLabel').style.display='none';
       document.getElementById('fnField_personnel_id').style.display='none';
@@ -497,6 +512,10 @@ function fnSetCekMode(btn, mode){
   document.querySelectorAll('#fnCekMode .df-tab').forEach(function(b){ b.classList.toggle('df-tab--active', b.dataset.mode===mode); });
 }
 
+window.fnContactPicker = dfInitContactPicker({
+  inputId:'fnContactQuery', hiddenId:'fnContactSel', resultsId:'fnContactResults',
+  endpoint:'contact_search_ajax.php', getScope: fnContactAjaxScope
+});
 fnToggleWizard();
 </script>
 

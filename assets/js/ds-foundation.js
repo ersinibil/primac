@@ -87,3 +87,78 @@ function dfAccordionToggle(headerEl){
         });
     });
 })();
+
+/* FİNANS UX REGRESYON DÜZELTMESİ (2026-07-19, Product Owner kararı) — Tahsilat/Ödeme
+ * ekranlarındaki cari <select> TÜM contacts tablosunu (potansiyel binlerce satır) DOM'a
+ * döküyordu. Bu, contact_search_ajax.php'ye arayan tek ortak arama/otomatik-tamamlama
+ * bileşeni — web (finance_new.php) ve mobil (collection.php/payment.php) BİREBİR aynı
+ * fonksiyonu çağırır, cari veri modeli/bakiye mantığı hiç değişmedi, sadece seçim arayüzü.
+ * cfg: {inputId, hiddenId, resultsId, endpoint, getScope(): 'customers'|'suppliers'|'all', onSelect?}
+ * Dönüş: {refresh, clear} — çağıran taraf yön/kapsam değiştiğinde refresh() çağırır. */
+function dfInitContactPicker(cfg){
+    var input = document.getElementById(cfg.inputId);
+    var hidden = document.getElementById(cfg.hiddenId);
+    var results = document.getElementById(cfg.resultsId);
+    if(!input || !hidden || !results) return null;
+    var timer = null;
+    var reqSeq = 0;
+
+    function escAttr(s){ return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+    function escText(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    function selectItem(c){
+        hidden.value = c.id;
+        hidden.dataset.selectedName = c.name;
+        input.value = c.name;
+        results.hidden = true;
+        if(cfg.onSelect) cfg.onSelect(c);
+    }
+    function render(list){
+        if(!list.length){
+            results.innerHTML = '<div class="df-contact-picker-empty">Sonuç yok</div>';
+            results.hidden = false;
+            return;
+        }
+        results.innerHTML = list.map(function(c, i){
+            return '<div class="df-contact-picker-item" data-i="'+i+'">'
+                + '<span class="df-contact-picker-name">'+escText(c.name)+'</span>'
+                + '<span class="df-contact-picker-badge">'+escText(c.type||'')+'</span>'
+                + (c.phone ? '<span class="df-contact-picker-phone">'+escText(c.phone)+'</span>' : '')
+                + '</div>';
+        }).join('');
+        results.hidden = false;
+        Array.prototype.forEach.call(results.querySelectorAll('.df-contact-picker-item'), function(el){
+            el.addEventListener('mousedown', function(ev){
+                ev.preventDefault();
+                selectItem(list[parseInt(el.dataset.i, 10)]);
+            });
+        });
+    }
+    function fetchResults(q){
+        var scope = cfg.getScope ? cfg.getScope() : 'all';
+        var seq = ++reqSeq;
+        fetch(cfg.endpoint + '?q=' + encodeURIComponent(q) + '&scope=' + encodeURIComponent(scope), {headers:{'Accept':'application/json'}})
+            .then(function(r){ return r.json(); })
+            .then(function(data){
+                if(seq !== reqSeq) return;
+                if(!data.ok){ results.hidden = true; return; }
+                render(data.contacts || []);
+            })
+            .catch(function(){ if(seq === reqSeq) results.hidden = true; });
+    }
+    input.addEventListener('input', function(){
+        if(input.value !== (hidden.dataset.selectedName || '')) hidden.value = '';
+        clearTimeout(timer);
+        var q = input.value.trim();
+        timer = setTimeout(function(){ fetchResults(q); }, 250);
+    });
+    input.addEventListener('focus', function(){ fetchResults(input.value.trim()); });
+    document.addEventListener('click', function(ev){
+        if(ev.target !== input && !results.contains(ev.target)) results.hidden = true;
+    });
+
+    return {
+        refresh: function(){ if(!results.hidden || document.activeElement === input) fetchResults(input.value.trim()); },
+        clear: function(){ hidden.value=''; hidden.dataset.selectedName=''; input.value=''; results.hidden=true; }
+    };
+}
