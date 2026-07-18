@@ -126,28 +126,6 @@ function botx(){
   if(isRootTab) b.style.display='none';
 })();
 
-/* P0 MOBİL HOTFIX (2026-07-19, Product Owner FAIL raporu) — composer/nav çakışması KÖK NEDENİ:
-   messages.php/wa_conversation_view.php composer'ın alt konumunu SABİT bir piksel tahminiyle
-   (70px) hesaplıyordu; gerçek cihazda bu tahmin nav'ın GERÇEK render edilen yüksekliğiyle (Dynamic
-   Type/yazı ölçeği, farklı iPhone safe-area değerleri) örtüşmüyordu → composer nav'ın ÜSTÜNE değil
-   ÜZERİNE biniyordu. ResizeObserver ile nav'ın gerçek yüksekliği ölçülüp --acans-navh custom
-   property'sine yazılıyor, composer/thread CSS'i bunu okuyor. Önceki (Round 2'de kaldırılan)
-   JS-ölçüm denemesinden farkı: DOMContentLoaded'da TEK SEFERLİK ölçüm yerine ResizeObserver
-   KALICI/asenkron gözlemliyor — CSS tam uygulanmadan/font yüklenmeden erken ölçüm riski yok, boyut
-   her değiştiğinde (klavye aç/kapa, orientation, Dynamic Type) otomatik güncelleniyor. Sabit CSS
-   calc() fallback'i (70px + safe-area) JS hiç çalışmasa/ResizeObserver desteklenmese bile korunur. */
-(function(){
-  var navEl = document.querySelector('.df-m-bottomnav') || document.querySelector('.bottom');
-  if(!navEl) return;
-  function setH(h){ if(h>0) document.documentElement.style.setProperty('--acans-navh', Math.round(h)+'px'); }
-  if('ResizeObserver' in window){
-    new ResizeObserver(function(){ setH(navEl.getBoundingClientRect().height); }).observe(navEl);
-  } else {
-    setH(navEl.getBoundingClientRect().height);
-    window.addEventListener('resize', function(){ setH(navEl.getBoundingClientRect().height); });
-  }
-})();
-
 /* Offline banner — sinyal durumunu göster */
 (function(){
   var banner=document.getElementById('offline-banner');
@@ -166,8 +144,22 @@ function botx(){
   updateOfflineStatus();
 })();
 
-/* Klavye açıkken alt menüyü gizle → sayfa zıplamasın, uygulama içinde yazılsın */
-(function(){function f(e){return e&&(e.tagName==='INPUT'||e.tagName==='TEXTAREA');}document.addEventListener('focusin',function(e){if(f(e.target)){document.body.classList.add('kb');setTimeout(function(){try{e.target.scrollIntoView({block:'center',behavior:'smooth'});}catch(_){}}, 280);}});document.addEventListener('focusout',function(e){if(f(e.target))setTimeout(function(){var a=document.activeElement;if(!f(a))document.body.classList.remove('kb');},150);});})();
+/* Klavye açıkken alt menüyü gizle → sayfa zıplamasın, uygulama içinde yazılsın.
+   P0 MOBİL HOTFIX (2026-07-19) EK GÜVENLİK AĞI: body.kb bir input/textarea odaklandığında eklenip
+   sadece focusout'ta kaldırılıyordu — confirm()/alert() gibi native diyalog açan bir aksiyon (ör.
+   mesaj sil onayı) odaklı bir textarea'dan çağrılırsa tarayıcı bazı senaryolarda temiz bir
+   focusout sinyali vermeyebilir, body.kb TAKILI kalıp global nav'ı (display:none!important)
+   kalıcı olarak gizli bırakabilir. pageshow/visibilitychange'te gerçek odak durumunu kontrol edip
+   tutarsızsa düzeltiyoruz — nav'ın "hiç geri gelmemesi" ihtimalini kapatan ek bir güvenlik ağı. */
+(function(){
+  function f(e){return e&&(e.tagName==='INPUT'||e.tagName==='TEXTAREA');}
+  document.addEventListener('focusin',function(e){if(f(e.target)){document.body.classList.add('kb');setTimeout(function(){try{e.target.scrollIntoView({block:'center',behavior:'smooth'});}catch(_){}}, 280);}});
+  document.addEventListener('focusout',function(e){if(f(e.target))setTimeout(function(){var a=document.activeElement;if(!f(a))document.body.classList.remove('kb');},150);});
+  function reconcileKb(){ if(document.body.classList.contains('kb') && !f(document.activeElement)) document.body.classList.remove('kb'); }
+  document.addEventListener('visibilitychange',reconcileKb);
+  window.addEventListener('pageshow',reconcileKb);
+  window.addEventListener('focus',reconcileKb);
+})();
 </script>
 <div id="acans-toast" style="position:fixed;top:-160px;left:50%;transform:translateX(-50%);width:92%;max-width:480px;background:#1e293b;border:1px solid rgba(255,255,255,.18);border-radius:16px;padding:12px 14px;box-shadow:0 16px 40px rgba(0,0,0,.5);z-index:9999;transition:top .35s ease;display:flex;gap:10px;align-items:center;cursor:pointer;pointer-events:none">
   <div style="font-size:26px">💬</div>

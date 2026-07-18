@@ -844,18 +844,20 @@ body.mob-compact .df-m-search .df-icon{color:var(--df-ink-500);flex:0 0 auto}
 body.mob-compact .df-m-search input{border:0;background:transparent;outline:0;flex:1;font-size:var(--df-type-subtitle-size);color:var(--df-ink-900);min-width:0;font-family:inherit;padding:0;margin:0;height:100%}
 body.mob-compact .df-m-search input::placeholder{color:var(--df-ink-500)}
 body.mob-compact.chat-mode .df-m-search{display:none}
-body.mob-compact .df-m-bottomnav{position:fixed;left:0;right:0;bottom:0;background:var(--df-canvas);border-top:1px solid var(--df-hairline);padding:var(--df-space-1) var(--df-space-2) calc(var(--df-space-2) + env(safe-area-inset-bottom));z-index:1000}
+body.mob-compact .df-m-bottomnav{position:fixed;left:0;right:0;bottom:0;min-height:calc(70px + env(safe-area-inset-bottom));box-sizing:border-box;background:var(--df-canvas);border-top:1px solid var(--df-hairline);padding:var(--df-space-1) var(--df-space-2) calc(var(--df-space-2) + env(safe-area-inset-bottom));z-index:1000}
 body.mob-compact .df-m-bottomnav-row{max-width:520px;margin:auto;display:flex;gap:4px}
 body.mob-compact .df-m-bottomnav-link{flex:1;min-width:0;position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center;color:var(--df-ink-500);text-decoration:none;font-size:var(--df-type-caption-size);font-weight:650;padding:var(--df-space-2) 2px;border-radius:var(--df-radius-sm)}
 body.mob-compact .df-m-bottomnav-link.is-active{color:var(--df-ink-900)}
 body.mob-compact .df-m-bottomnav-link .df-count-badge{position:absolute;top:0;right:14px}
-/* P0 MOBİL SHELL USER TEST REGRESYONU (2026-07-18, Product Owner kararı) — "Composer görünse
-   bile global bottom nav kaybolmamalı": chat-mode ARTIK .df-m-bottomnav'ı GİZLEMEZ (önceki turun
-   kararı tersine çevrildi — gerçek cihaz testinde composer'ın nav'ın YERİNİ ALMASI değil, nav'ın
-   ÜSTÜNE binmesi gerektiği doğrulandı). Composer'ın kendi konumu (messages.php/
-   wa_conversation_view.php'deki .composer{bottom:var(--acans-navh,64px)}) nav'ın YÜKSEKLİĞİ kadar
-   yukarı çekilir — common.php::botx() içindeki JS bu yüksekliği ölçüp --acans-navh'a yazar (sabit
-   piksel değeri İCAT EDİLMEDİ, gerçek render edilmiş yükseklik kullanılıyor, safe-area farkı olan
-   cihazlarda da doğru kalır). Klavye açıkken (body.kb) nav'ı GİZLEMEYE devam ediyoruz — bu ayrı,
-   kasıtlı bir davranış (ekran alanı klavyeye ayrılır), chat-mode'un KENDİSİ artık nav'ı gizlemiyor. */
+/* P0 MOBİL HOTFIX (2026-07-19, Product Owner FAIL raporu — ekran görüntülerinde composer ve nav
+   birbirini TAMAMEN kapatıyor/kayboluyordu) KÖK NEDEN: iki AYRI turda (ilk JS-ölçüm denemesi +
+   sonraki ResizeObserver denemesi) composer'ın konumu RUNTIME'DA JS ile ölçülen nav yüksekliğine
+   bağlanmıştı — ikisi de gerçek cihazda güvenilmez çıktı (aynı sınıf hata iki kez tekrarlandı).
+   KESİN çözüm: JS ölçüm TAMAMEN kaldırıldı, nav'ın yüksekliği artık yukarıdaki min-height ile
+   CSS'te KİLİTLİ — composer (messages.php/wa_conversation_view.php) AYNI sabit sayıyı (70px+
+   safe-area) kullanıyor. İkisi de aynı sabit değerden türediği için runtime'da ASLA birbirinden
+   sapamaz — ölçüme/zamanlamaya bağımlılık yok. "Composer görünse bile global bottom nav
+   kaybolmamalı" (2026-07-18, Product Owner kararı) — chat-mode .df-m-bottomnav'ı GİZLEMEZ. Klavye
+   açıkken (body.kb) nav'ı GİZLEMEYE devam ediyoruz — bu ayrı, kasıtlı bir davranış (ekran alanı
+   klavyeye ayrılır), chat-mode'un KENDİSİ nav'ı gizlemiyor. */
 body.mob-compact.kb .df-m-bottomnav{display:none!important}
