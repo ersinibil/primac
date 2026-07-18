@@ -22,6 +22,12 @@
 require_once __DIR__.'/cpa_lib.php';
 require_once __DIR__.'/stock_lib.php'; // stock_qty_fmt() için
 
+// cpa_lib.php'deki yetki kuralının aynısı (Madde 8 — "Satış ve Satın Alma yöneticileri
+// düzenleyebilsin, diğerleri sadece görüntüleyebilsin") — bu dosyanın kendi isim ailesiyle
+// tutarlı ince sarmalayıcılar, yeni bir yetki kavramı icat edilmedi.
+function cpa_alloc_can_edit(){ return cpa_can_edit(); }
+function cpa_alloc_can_view(){ return cpa_can_view(); }
+
 function cpa_alloc_install(){
     try{
         db()->exec("CREATE TABLE IF NOT EXISTS cpa_allocations (

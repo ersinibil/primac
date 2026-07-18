@@ -2,6 +2,7 @@
 require_once 'common.php';
 require_once dirname(__DIR__).'/finance_lib.php';
 require_once dirname(__DIR__).'/cpa_lib.php';
+require_once dirname(__DIR__).'/cpa_allocation_lib.php';
 $pdo=db();
 $id=(int)($_GET['id'] ?? 0);
 
@@ -79,6 +80,12 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['cpa_save'])){
 }
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['cpa_toggle'])){
     try{ cpa_set_status($pdo, $_SESSION['user']['id']??0, $_POST['cpa_id']??0, $_POST['cpa_toggle']==='activate'?'Aktif':'Pasif'); header('Location: contact_view.php?id='.$id.'&cpaok=1'); }
+    catch(Throwable $e){ header('Location: contact_view.php?id='.$id.'&cpaerr='.urlencode($e->getMessage())); }
+    exit;
+}
+// P0 SON KAPANIŞ (2026-07-18) — bu karttan hızlı iptal; miktar azaltma/aktarım cpa_allocation.php'de.
+if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['alloc_cancel'])){
+    try{ cpa_alloc_cancel($pdo, $_SESSION['user']['id']??0, $_POST['alloc_id']??0); header('Location: contact_view.php?id='.$id.'&cpaok=1'); }
     catch(Throwable $e){ header('Location: contact_view.php?id='.$id.'&cpaerr='.urlencode($e->getMessage())); }
     exit;
 }
@@ -305,6 +312,37 @@ try{
     </form>
   </details>
   <?php endif; ?>
+</div>
+<?php endif; ?>
+
+<?php if(cpa_alloc_can_view()):
+  $__allocRowsM = cpa_alloc_list_for_customer($pdo, $id, true);
+?>
+<div class="df-panel" style="margin-top:10px">
+  <b>📦 Tahsisli Stok</b>
+  <p class="df-text-caption" style="margin:4px 0 10px">Bu müşteri için satın almadan ayrılan miktarlar — fiziksel stoktan ayrı izlenir, satış yapıldığında otomatik düşer.</p>
+  <?php if(!$__allocRowsM): ?>
+  <p class="df-text-caption" style="margin:0">Henüz tahsis yapılmamış.</p>
+  <?php else: foreach($__allocRowsM as $ar): $__remM=(float)$ar['allocated_qty']-(float)$ar['consumed_qty']; ?>
+  <div style="margin-top:8px;border-top:1px solid var(--df-hairline);padding-top:8px">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+      <b><?=h($ar['product_name'] ?: '#'.$ar['stock_item_id'])?></b>
+      <?=ds_badge($ar['status'])?>
+    </div>
+    <small class="df-text-caption">Tahsis <?=stock_qty_fmt($ar['allocated_qty'])?> · Tüketilen <?=stock_qty_fmt($ar['consumed_qty'])?> · Kalan <b><?=stock_qty_fmt($__remM)?></b></small>
+    <?php if(cpa_alloc_can_edit()): ?>
+    <div style="display:flex;gap:6px;margin-top:6px">
+      <a class="df-btn df-btn--secondary df-btn--sm" href="cpa_allocation.php?purchase_id=<?=(int)$ar['purchase_movement_id']?>">Yönet</a>
+      <?php if($ar['status']!=='İptal'): ?>
+      <form method="post" style="margin:0" onsubmit="return confirm('Bu tahsis iptal edilecek. Emin misiniz?')">
+        <input type="hidden" name="alloc_id" value="<?=(int)$ar['id']?>">
+        <button type="submit" class="df-btn df-btn--danger df-btn--sm" name="alloc_cancel" value="1">İptal</button>
+      </form>
+      <?php endif; ?>
+    </div>
+    <?php endif; ?>
+  </div>
+  <?php endforeach; endif; ?>
 </div>
 <?php endif; ?>
 

@@ -1,6 +1,7 @@
 <?php
 require_once 'common.php';
 require_once dirname(__DIR__).'/cpa_lib.php';
+require_once dirname(__DIR__).'/cpa_allocation_lib.php';
 $pdo=db(); $me=(int)($_SESSION['user']['id']??0);
 $id=(int)($_GET['id']??0);
 
@@ -145,6 +146,36 @@ try{
   </div>
   <?php endforeach; endif; ?>
 </div>
+<?php endif; ?>
+
+<?php if(cpa_alloc_can_view()):
+  $__freeM = cpa_alloc_free_stock($pdo, $id);
+  $__allocUsageM = cpa_alloc_list_for_product($pdo, $id, true);
+?>
+<div class="df-panel" style="margin-top:12px">
+  <b>📦 Tahsisli Stok / Serbest Stok</b>
+  <p class="muted" style="font-size:12px;margin:4px 0 8px">Satın alınan miktarın müşterilere ayrılan kısmı fiziksel stoktan ayrı izlenir.</p>
+  <div class="df-stat-row" style="margin-bottom:8px">
+    <div class="df-stat"><span>Fiziksel</span><strong><?=stock_qty_fmt($__freeM['physical'])?></strong></div>
+    <div class="df-stat"><span>Tahsisli</span><strong style="color:var(--df-warning-ink,#f59e0b)"><?=stock_qty_fmt($__freeM['allocated'])?></strong></div>
+    <div class="df-stat"><span>Serbest</span><strong style="color:var(--df-success-ink,#22c55e)"><?=stock_qty_fmt($__freeM['free'])?></strong></div>
+  </div>
+  <?php if(!$__allocUsageM): ?>
+  <p class="muted" style="margin:0">Bu ürün için henüz tahsis yapılmamış.</p>
+  <?php else: foreach($__allocUsageM as $au): $__remU=(float)$au['allocated_qty']-(float)$au['consumed_qty']; ?>
+  <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-top:1px solid rgba(255,255,255,.08)">
+    <div><a href="contact_view.php?id=<?=(int)$au['customer_id']?>"><?=h($au['customer_name']?:'#'.$au['customer_id'])?></a>
+      <br><small class="muted">Tahsis <?=stock_qty_fmt($au['allocated_qty'])?> · Kalan <?=stock_qty_fmt($__remU)?></small></div>
+    <?=ds_badge($au['status'])?>
+  </div>
+  <?php endforeach; endif; ?>
+</div>
+<style>
+.df-stat-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.df-stat{background:var(--df-surface-sunken,rgba(255,255,255,.06));border-radius:var(--df-radius-md,14px);padding:10px;display:flex;flex-direction:column;gap:2px}
+.df-stat span{font-size:11px;color:var(--df-ink-500,#94a3b8)}
+.df-stat strong{font-size:15px;font-weight:900}
+</style>
 <?php endif; ?>
 
 <div class="df-panel" style="margin-top:12px">

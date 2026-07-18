@@ -1,6 +1,7 @@
 <?php
 require_once 'common.php';
 require_once __DIR__.'/../stock_lib.php';
+require_once __DIR__.'/../cpa_allocation_lib.php';
 $pdo=db();
 $cid=(int)($_GET['contact_id'] ?? 0);
 $ok=''; $er='';
@@ -98,6 +99,16 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 
             $kz = $profitTotal>=0 ? ('Kâr: '.mm($profitTotal)) : ('Zarar: '.mm(-$profitTotal));
             $ok=implode(', ',$descParts).' satıldı: '.mm($grandTotal).($grandVat>0?' (KDV: '.mm($grandVat).')':'').' — açık borç (Bekliyor) · '.$kz;
+
+            // P0 SON KAPANIŞ (2026-07-18) — web sales.php ile aynı otomatik tahsis tüketimi
+            // (bkz. ../sales.php içindeki not). stock/finans matematiğine hiç karışmaz.
+            $__cpaConsumedParts=[];
+            foreach($lines as $__l){
+                $__consumed=cpa_alloc_consume_for_sale($pdo, $u['id']??0, $contact, $__l['item']['id'], $__l['qty']);
+                if($__consumed>0) $__cpaConsumedParts[]=$__l['item']['name'].' x'.stock_qty_fmt($__consumed);
+            }
+            if($__cpaConsumedParts) $ok .= ' · 🎯 Tahsisten düşüldü: '.implode(', ',$__cpaConsumedParts);
+
             $cid=$contact;
             }
         }

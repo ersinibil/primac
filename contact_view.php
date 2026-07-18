@@ -2,6 +2,7 @@
 require_once __DIR__.'/boot.php';
 require_once __DIR__.'/finance_lib.php';
 require_once __DIR__.'/cpa_lib.php';
+require_once __DIR__.'/cpa_allocation_lib.php';
 require_login();
 
 $pdo=db();
@@ -102,6 +103,13 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['cpa_toggle'])){
     try{
         cpa_set_status($pdo, $_SESSION['user']['id']??0, $_POST['cpa_id']??0, $_POST['cpa_toggle']==='activate'?'Aktif':'Pasif');
         $ok='Tercih durumu güncellendi.';
+    }catch(Throwable $e){ $error=$e->getMessage(); }
+}
+// P0 SON KAPANIŞ (2026-07-18) — bu karttan hızlı iptal; miktar azaltma/aktarım cpa_allocation.php'de.
+if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['alloc_cancel'])){
+    try{
+        cpa_alloc_cancel($pdo, $_SESSION['user']['id']??0, $_POST['alloc_id']??0);
+        $ok='Tahsis iptal edildi.';
     }catch(Throwable $e){ $error=$e->getMessage(); }
 }
 
@@ -507,6 +515,44 @@ ds_form_field('Öncelik', '<input type="number" name="priority" value="1" min="1
 <div class="df-form-span-2"><button class="df-btn df-btn--primary">Tercihi Kaydet</button></div>
 </form>
 </details>
+<?php endif; ?>
+</section>
+<?php endif; ?>
+
+<?php if(cpa_alloc_can_view()):
+$__allocRows = cpa_alloc_list_for_customer($pdo, $id, true);
+?>
+<section class="df-card" style="margin-top:var(--df-space-4)">
+<h2 style="font-size:var(--df-type-section-size);margin:0 0 var(--df-space-2)">📦 Tahsisli Stok</h2>
+<p class="df-section-hint" style="margin:0 0 var(--df-space-3)">Bu müşteri için satın almadan ayrılan (tahsis edilen) miktarlar — fiziksel stoktan ayrı izlenir, satış yapıldığında otomatik düşer.</p>
+<?php if(!$__allocRows): ?>
+<?php ds_empty_state('Bu müşteri için henüz tahsis yapılmamış.'); ?>
+<?php else: ?>
+<div class="df-table-wrap"><table class="df-table">
+<thead><tr><th>Ürün</th><th style="text-align:right">Tahsis</th><th style="text-align:right">Tüketilen</th><th style="text-align:right">Kalan</th><th>Durum</th><?php if(cpa_alloc_can_edit()): ?><th></th><?php endif; ?></tr></thead>
+<tbody>
+<?php foreach($__allocRows as $ar): $__rem=(float)$ar['allocated_qty']-(float)$ar['consumed_qty']; ?>
+<tr>
+<td><?=h($ar['product_name'] ?: '#'.$ar['stock_item_id'])?><?php if($ar['purchase_date']): ?><div class="df-muted" style="font-size:11px">Alış: <?=h($ar['purchase_date'])?></div><?php endif; ?></td>
+<td style="text-align:right"><?=stock_qty_fmt($ar['allocated_qty'])?></td>
+<td style="text-align:right"><?=stock_qty_fmt($ar['consumed_qty'])?></td>
+<td style="text-align:right;font-weight:800"><?=stock_qty_fmt($__rem)?></td>
+<td><?=ds_badge($ar['status'])?></td>
+<?php if(cpa_alloc_can_edit()): ?>
+<td class="nowrap">
+<a class="df-btn df-btn--secondary df-btn--sm" href="cpa_allocation.php?purchase_id=<?=(int)$ar['purchase_movement_id']?>">Yönet</a>
+<?php if($ar['status']!=='İptal'): ?>
+<form method="post" style="display:inline-block;margin:0" onsubmit="return confirm('Bu tahsis iptal edilecek, kalan miktar serbest stoğa dönecek. Emin misiniz?')">
+<input type="hidden" name="alloc_id" value="<?=(int)$ar['id']?>">
+<button class="df-btn df-btn--danger df-btn--sm" type="submit" name="alloc_cancel" value="1">İptal</button>
+</form>
+<?php endif; ?>
+</td>
+<?php endif; ?>
+</tr>
+<?php endforeach; ?>
+</tbody>
+</table></div>
 <?php endif; ?>
 </section>
 <?php endif; ?>

@@ -65,7 +65,7 @@ $customers=[];
 try{ $customers=$pdo->query("SELECT id,name FROM contacts ORDER BY name")->fetchAll(); }catch(Throwable $e){}
 
 require_once __DIR__.'/layout_top.php';
-ds_page_header('🎯 Tahsis Yönetimi — '.h($purchase['supplier_name'] ?: 'Alış #'.$purchaseId), '', h($purchase['movement_date']).' · '.money($purchase['amount']), ds_button('Satın Almaya Dön','purchase.php','secondary','','',true), false, true);
+ds_page_header('🎯 Tahsis Yönetimi — '.($purchase['supplier_name'] ?: 'Alış #'.$purchaseId), '', $purchase['movement_date'].' · '.money($purchase['amount']), ds_button('Satın Almaya Dön','purchase.php','secondary','','',true), false, true);
 ?>
 
 <?php if($error): ?><?=ds_alert('danger',$error)?><?php endif; ?>
@@ -74,7 +74,7 @@ ds_page_header('🎯 Tahsis Yönetimi — '.h($purchase['supplier_name'] ?: 'Al�
 <section class="df-card">
 <h2 class="df-section-title">Alış Satırları — Tahsis Durumu</h2>
 <?php if(!$lineSummary): ?>
-<?=ds_empty_state('Bu alışa bağlı stok hareketi bulunamadı.')?>
+<?php ds_empty_state('Bu alışa bağlı stok hareketi bulunamadı.'); ?>
 <?php else: ?>
 <div class="df-table-wrap"><table class="df-table">
 <thead><tr><th>Ürün</th><th style="text-align:right">Satın Alınan</th><th style="text-align:right">Tahsisli</th><th style="text-align:right">Bu Alıştan Serbest</th></tr></thead>
@@ -115,7 +115,7 @@ ds_form_field('Miktar', '<input type="number" step="0.001" min="0.001" name="qty
 <section class="df-card" style="margin-top:var(--df-space-4)">
 <h2 class="df-section-title">Bu Alıştan Yapılan Tahsisler</h2>
 <?php if(!$allocations): ?>
-<?=ds_empty_state('Henüz tahsis yapılmamış.')?>
+<?php ds_empty_state('Henüz tahsis yapılmamış.'); ?>
 <?php else: foreach($allocations as $a):
     $remaining=(float)$a['allocated_qty']-(float)$a['consumed_qty'];
 ?>

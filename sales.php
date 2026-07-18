@@ -2,6 +2,7 @@
 require_once __DIR__.'/boot.php';
 require_login();
 require_once __DIR__.'/stock_lib.php';
+require_once __DIR__.'/cpa_allocation_lib.php';
 
 $pdo = db();
 $ok  = '';
@@ -81,6 +82,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 : 'Zarar: ' . money(-$profitTotal);
 
             $ok = h(implode(', ', $descParts)) . ' satıldı: <b>' . money($grandTotal) . '</b>' . ($grandVat > 0 ? ' (KDV dahil, KDV: ' . money($grandVat) . ')' : '') . ' — cariye açık borç olarak kaydedildi (Bekliyor) &mdash; ' . $kz;
+
+            // P0 SON KAPANIŞ (2026-07-18) — "Satış tamamlandığında ilgili tahsis tüketilsin":
+            // stock_create_sale() BAŞARIYLA döndükten SONRA, satılan her satır için bu müşterinin
+            // o üründeki aktif CPA tahsislerinden düşülür (FIFO). stock/finans matematiğine hiç
+            // karışmaz — sadece cpa_allocations muhasebesi güncellenir, hata asla fırlatmaz.
+            $__cpaConsumedParts = [];
+            foreach ($lines as $__l) {
+                $__consumed = cpa_alloc_consume_for_sale($pdo, $_SESSION['user']['id'] ?? 0, $contact, $__l['item']['id'], $__l['qty']);
+                if ($__consumed > 0) $__cpaConsumedParts[] = $__l['item']['name'] . ' x' . stock_qty_fmt($__consumed);
+            }
+            if ($__cpaConsumedParts) $ok .= ' &mdash; 🎯 Tahsisten düşüldü: ' . h(implode(', ', $__cpaConsumedParts));
             }
         }
     } catch (Throwable $e) {
