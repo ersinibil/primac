@@ -3,7 +3,17 @@
 // (STATIC_ASSETS), logo_primac.png içeriği değişince PWA eski (kırmızımsı/krem) logoyu sonsuza
 // dek göstermeye devam ediyordu. Versiyon adı değişince activate() eski cache'i siler, install()
 // icon.php'yi yeniden fetch eder — kullanıcı hiçbir şey yapmadan (uygulamayı kapat/aç yeter).
-const CACHE='acans-os-v28';
+// P0 MOBİL SHELL 2. REGRESYON KÖK NEDENİ (2026-07-18): v28→v29 — assets/css/ds-foundation.css ve
+// assets/js/ds-foundation.js "isTrulyStatic" olduğu için CACHE-FIRST önbelleğe alınıyor (fetch
+// handler'ın aşağıdaki yorumuna bakın). Bu dosya (sw.js) 2026-07-17'den beri HİÇ değişmemişti —
+// yani bu oturumda ds-foundation.css'e yapılan TÜM düzeltmeler (chat-mode/bottom-nav, tema
+// token'ları, sekme taşması vb.) kullanıcının telefonunda ESKİ CACHE'TEN sunulmaya devam ediyordu,
+// sunucudaki kod doğru olsa bile. Versiyon adı değişince activate() eski cache'i SİLER, yeni
+// service worker self.skipWaiting()+self.clients.claim() ile HEMEN devreye girer — kullanıcının
+// "Ana Ekrandaki uygulamayı kapatıp yeniden açması" yeterli olur, cache elle temizlenmesine gerek
+// kalmaz. Bundan sonra bu dosyanın HER ds-foundation.css/js değişikliğiyle BİRLİKTE bump
+// edilmesi gerekiyor — aksi halde aynı sınıf hata sessizce tekrarlanır.
+const CACHE='acans-os-v29';
 const STATIC_ASSETS=[
   './',
   './index.php',
