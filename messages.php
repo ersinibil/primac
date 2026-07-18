@@ -348,30 +348,34 @@ if ($with > 0) {
 require_once __DIR__.'/layout_top.php';
 ?>
 <style>
+/* Sohbetler (İletişim Merkezi) — özel sohbet arayüzü: df-card/df-table gibi genel bileşenlere
+   zorla oturtulmadı (chat baloncuğu/kompozisyon deseni doğası gereği özeldir), ama TÜM renkler
+   DS token'larından (var(--df-*)) geliyor — light/dark tema ile birlikte çalışır, ayrı bir
+   "ikinci tasarım dili" değil, sadece özel bir bileşen sınıfı (P0 Legacy UI Temizliği, 2026-07-18). */
 .msg-wrap{display:grid;grid-template-columns:320px 1fr;gap:16px;align-items:start}
-.msg-list{background:#fff;border-radius:20px;box-shadow:0 8px 28px rgba(16,24,40,.06);padding:12px;max-height:74vh;overflow:auto}
-.msg-list .lbl{font-size:11px;color:#7f95b2;letter-spacing:.06em;font-weight:900;margin:6px 8px;text-transform:uppercase}
-.msg-row{display:flex;align-items:center;gap:11px;padding:11px;border-radius:14px;text-decoration:none;color:#101828}
-.msg-row:hover{background:#f2f4f7}
-.msg-row.active{background:#eef2ff}
+.msg-list{background:var(--df-surface);border-radius:var(--df-radius-lg);box-shadow:var(--df-elevation-raised);padding:12px;max-height:74vh;overflow:auto}
+.msg-list .lbl{font-size:11px;color:var(--df-ink-500);letter-spacing:.06em;font-weight:900;margin:6px 8px;text-transform:uppercase}
+.msg-row{display:flex;align-items:center;gap:11px;padding:11px;border-radius:var(--df-radius-md);text-decoration:none;color:var(--df-ink-900)}
+.msg-row:hover{background:var(--df-surface-sunken)}
+.msg-row.active{background:var(--df-accent-soft)}
 .msg-row .av{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;color:#fff;flex:0 0 auto}
 .msg-row .meta{flex:1;min-width:0}
 .msg-row .meta b{display:block;font-size:14px}
-.msg-row .meta small{display:block;color:#667085;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.msg-row .badge.green{background:#22c55e;color:#06281a;min-width:22px;justify-content:center}
-.chat-panel{background:#fff;border-radius:20px;box-shadow:0 8px 28px rgba(16,24,40,.06);display:flex;flex-direction:column;min-height:74vh;max-height:74vh}
-.chat-head{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid #eef2f6}
+.msg-row .meta small{display:block;color:var(--df-ink-500);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msg-row .badge.green{background:var(--df-success);color:#06281a;min-width:22px;justify-content:center}
+.chat-panel{background:var(--df-surface);border-radius:var(--df-radius-lg);box-shadow:var(--df-elevation-raised);display:flex;flex-direction:column;min-height:74vh;max-height:74vh}
+.chat-head{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--df-hairline)}
 .chat-head .av{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;color:#fff;flex:0 0 auto}
-.chat-body{flex:1;overflow:auto;padding:18px;display:flex;flex-direction:column;gap:8px;background:#f8fafc}
+.chat-body{flex:1;overflow:auto;padding:18px;display:flex;flex-direction:column;gap:8px;background:var(--df-surface-sunken)}
 .bubble{max-width:72%;padding:10px 13px;border-radius:16px;font-size:14px;line-height:1.4;word-wrap:break-word;white-space:pre-wrap}
 .bubble small{display:block;font-size:10px;opacity:.65;margin-top:4px;text-align:right}
-.bubble.mine{align-self:flex-end;background:#2563eb;color:#fff;border-bottom-right-radius:5px}
-.bubble.theirs{align-self:flex-start;background:#fff;border:1px solid #eef2f6;color:#101828;border-bottom-left-radius:5px}
-.chat-empty{flex:1;display:flex;align-items:center;justify-content:center;color:#98a2b3;text-align:center;padding:24px}
-.composer{display:flex;gap:10px;padding:14px;border-top:1px solid #eef2f6}
-.composer textarea{flex:1;border:1px solid #d0d5dd;border-radius:14px;padding:11px;resize:none;font-family:inherit;font-size:14px;min-height:46px;max-height:140px}
+.bubble.mine{align-self:flex-end;background:var(--df-accent);color:var(--df-accent-ink);border-bottom-right-radius:5px}
+.bubble.theirs{align-self:flex-start;background:var(--df-surface);border:1px solid var(--df-hairline);color:var(--df-ink-900);border-bottom-left-radius:5px}
+.chat-empty{flex:1;display:flex;align-items:center;justify-content:center;color:var(--df-ink-500);text-align:center;padding:24px}
+.composer{display:flex;gap:10px;padding:14px;border-top:1px solid var(--df-hairline)}
+.composer textarea{flex:1;border:1px solid var(--df-hairline);border-radius:var(--df-radius-md);padding:11px;resize:none;font-family:inherit;font-size:14px;min-height:46px;max-height:140px;background:var(--df-surface);color:var(--df-ink-900)}
 .composer button{flex:0 0 auto}
-.no-peer{background:#fff;border-radius:20px;box-shadow:0 8px 28px rgba(16,24,40,.06);padding:40px;text-align:center;color:#667085}
+.no-peer{background:var(--df-surface);border-radius:var(--df-radius-lg);box-shadow:var(--df-elevation-raised);padding:40px;text-align:center;color:var(--df-ink-500)}
 @media(max-width:960px){ .msg-wrap{grid-template-columns:1fr} .chat-panel,.msg-list{max-height:none} }
 </style>
 <?php
@@ -380,14 +384,14 @@ function msg_av_color($id){
     return $c[((int)$id) % count($c)];
 }
 ?>
-<h1>İletişim Merkezi</h1>
+<?php ds_page_header('İletişim Merkezi', ds_icon('chat',24), '', '', false, true); ?>
 <?php ic_tabs('sohbetler'); ?>
 
 <div class="msg-wrap" style="margin-top:16px">
 
     <!-- SOL: gruplar + kişi listesi -->
     <div class="msg-list">
-        <a class="btn" href="messages.php?new=1" style="display:block;text-align:center;margin:4px 6px 10px;text-decoration:none">👥 Yeni Grup</a>
+        <a class="df-btn df-btn--primary" href="messages.php?new=1" style="display:flex;justify-content:center;margin:4px 6px 10px">👥 Yeni Grup</a>
 
         <?php if($threads): ?>
             <div class="lbl">Gruplar</div>
@@ -449,8 +453,8 @@ function msg_av_color($id){
                     <?php endforeach; endif; ?>
                 </div>
                 <div style="margin-top:16px;display:flex;gap:10px">
-                    <button class="btn" type="submit">👥 Grubu Oluştur</button>
-                    <a class="btn" href="messages.php" style="background:#eef2f6;color:#344054;text-decoration:none">Vazgeç</a>
+                    <button class="df-btn df-btn--primary" type="submit">👥 Grubu Oluştur</button>
+                    <a class="df-btn df-btn--secondary" href="messages.php">Vazgeç</a>
                 </div>
             </form>
         </div>
@@ -517,8 +521,8 @@ function msg_av_color($id){
                     <div style="font-weight:700;margin-bottom:10px;font-size:15px">Mesajı Düzenle</div>
                     <textarea id="editTextT" rows="4" style="width:100%;border:1px solid #d0d5dd;border-radius:10px;padding:10px;font-size:14px;resize:vertical"></textarea>
                     <div style="display:flex;gap:10px;margin-top:12px">
-                      <button onclick="saveEditT()" class="btn" style="flex:1">Kaydet</button>
-                      <button onclick="document.getElementById('editModalT').style.display='none'" class="btn" style="flex:1;background:#eef2f6;color:#344054">İptal</button>
+                      <button onclick="saveEditT()" class="df-btn df-btn--primary" style="flex:1">Kaydet</button>
+                      <button onclick="document.getElementById('editModalT').style.display='none'" class="df-btn df-btn--secondary" style="flex:1">İptal</button>
                     </div>
                   </div>
                 </div>
@@ -531,7 +535,7 @@ function msg_av_color($id){
                     <?=emoji_picker_html('msgComposerT')?>
                     <textarea id="msgComposerT" name="message" placeholder="Gruba yazın…"
                         onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();this.form.submit();}"></textarea>
-                    <button class="btn" type="submit">➤ Gönder</button>
+                    <button class="df-btn df-btn--primary" type="submit">➤ Gönder</button>
                 </form>
                 <script>
 var _THREAD=<?=(int)$thread?>;
@@ -626,8 +630,8 @@ function delMsgT(id){
                 <div style="font-weight:700;margin-bottom:10px;font-size:15px">Mesajı Düzenle</div>
                 <textarea id="editText" rows="4" style="width:100%;border:1px solid #d0d5dd;border-radius:10px;padding:10px;font-size:14px;resize:vertical"></textarea>
                 <div style="display:flex;gap:10px;margin-top:12px">
-                  <button onclick="saveEdit()" class="btn" style="flex:1">Kaydet</button>
-                  <button onclick="document.getElementById('editModal').style.display='none'" class="btn" style="flex:1;background:#eef2f6;color:#344054">İptal</button>
+                  <button onclick="saveEdit()" class="df-btn df-btn--primary" style="flex:1">Kaydet</button>
+                  <button onclick="document.getElementById('editModal').style.display='none'" class="df-btn df-btn--secondary" style="flex:1">İptal</button>
                 </div>
               </div>
             </div>
@@ -640,7 +644,7 @@ function delMsgT(id){
                 <?=emoji_picker_html('msgComposer')?>
                 <textarea id="msgComposer" name="message" placeholder="Mesaj yazın…"
                     onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();this.form.submit();}"></textarea>
-                <button class="btn" type="submit">➤ Gönder</button>
+                <button class="df-btn df-btn--primary" type="submit">➤ Gönder</button>
             </form>
         </div>
     <?php endif; ?>

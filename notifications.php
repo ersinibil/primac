@@ -58,18 +58,17 @@ try{
 }
 ?>
 
-<div class="panel-head">
-<h1>İletişim Merkezi</h1>
-<div style="display:flex;gap:8px;flex-wrap:wrap">
-<a class="btn secondary" href="notifications.php?all_read=1">Tümünü Okundu Yap</a>
-<form method="post" style="display:inline"><?=csrf_field()?><input type="hidden" name="clear" value="1"><button type="submit" class="btn secondary">Okunanları Sil</button></form>
-<form method="post" style="display:inline" onsubmit="return confirm('Tüm bildirimlerin görünümden kaldırılmasını istediğine emin misin?')"><?=csrf_field()?><input type="hidden" name="clearall" value="1"><button type="submit" class="btn secondary">Tümünü Sil</button></form>
-</div>
-</div>
-
+<?php
+$__notifActions = ds_button('Tümünü Okundu Yap','notifications.php?all_read=1','secondary','','',true);
+ob_start();
+?>
+<form method="post" style="display:inline"><input type="hidden" name="clear" value="1"><button type="submit" class="df-btn df-btn--secondary">Okunanları Sil</button></form>
+<form method="post" style="display:inline" onsubmit="return confirm('Tüm bildirimlerin görünümden kaldırılmasını istediğine emin misin?')"><input type="hidden" name="clearall" value="1"><button type="submit" class="df-btn df-btn--secondary">Tümünü Sil</button></form>
+<?php $__notifActions .= ob_get_clean(); ?>
+<?php ds_page_header('İletişim Merkezi', ds_icon('bell',24), '', $__notifActions, false, true); ?>
 <?php ic_tabs('bildirimler'); ?>
 
-<section class="panel" style="margin-top:16px">
+<section style="margin-top:var(--df-space-4)">
 <?php foreach($rows as $n):
 $go=$n['action_url'] ?: 'dashboard.php';
 // Bazı bildirimler mobil-sadece bir sayfaya link verebilir (mytasks.php artık web'de de var, ama
@@ -81,23 +80,23 @@ if($goFile!=='' && strpos($go,'mobile/')!==0 && !file_exists(__DIR__.'/'.$goFile
 }
 $readUrl='notifications.php?read='.$n['id'].'&go='.urlencode($go);
 ?>
-<div class="notice-card <?=$n['effective_is_read']?'':'unread'?>">
-    <div class="panel-head">
+<div class="df-card" style="margin-bottom:var(--df-space-3);background:<?=$n['effective_is_read']?'transparent':'var(--df-accent-soft)'?>">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:var(--df-space-3)">
         <div>
             <b><?=h($n['title'])?></b>
-            <?=$n['effective_is_read']?badge('Okundu','gray'):badge('Yeni','orange')?>
+            <?=$n['effective_is_read']?ds_badge('Okundu','gray'):ds_badge('Yeni','warning')?>
             <br>
-            <span class="muted"><?=h($n['created_at'])?></span>
+            <span class="df-muted" style="font-size:12px"><?=h($n['created_at'])?></span>
         </div>
-        <div style="display:flex;gap:6px">
-            <a class="btn small" href="<?=h($readUrl)?>">Aç</a>
-            <form method="post" style="display:inline"><?=csrf_field()?><input type="hidden" name="del" value="<?=(int)$n['id']?>"><button type="submit" class="btn small secondary" title="Sil">🗑️</button></form>
+        <div style="display:flex;gap:6px;flex:0 0 auto">
+            <a class="df-btn df-btn--secondary df-btn--sm" href="<?=h($readUrl)?>">Aç</a>
+            <form method="post" style="display:inline"><input type="hidden" name="del" value="<?=(int)$n['id']?>"><button type="submit" class="df-btn df-btn--secondary df-btn--sm" title="Sil"><?=ds_icon('trash',14)?></button></form>
         </div>
     </div>
-    <p><?=nl2br(h($n['message']))?></p>
+    <p style="margin:var(--df-space-2) 0 0"><?=nl2br(h($n['message']))?></p>
 </div>
 <?php endforeach; ?>
-<?php if(!$rows): ?><p class="muted">Henüz bildirim yok.</p><?php endif; ?>
+<?php if(!$rows): ?><?=ds_empty_state('Henüz bildirim yok.', null, ds_icon('bell',32))?><?php endif; ?>
 </section>
 
 <?php require_once __DIR__.'/layout_bottom.php'; ?>

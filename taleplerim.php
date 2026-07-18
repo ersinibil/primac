@@ -26,18 +26,15 @@ try{
 }catch(Throwable $e){}
 ?>
 
-<div class="panel-head">
-<h1>İletişim Merkezi</h1>
-<div style="display:flex;gap:8px;flex-wrap:wrap">
-<a class="btn" href="request_new.php">+ Yeni Talep</a>
-<?php if(is_admin()): ?><a class="btn secondary" href="requests.php">Tüm Talepler (Yönetim)</a><?php endif; ?>
-</div>
-</div>
-
+<?php
+$__talepActions = ds_button('+ Yeni Talep','request_new.php','primary','','',true);
+if(is_admin()) $__talepActions .= ds_button('Tüm Talepler (Yönetim)','requests.php','secondary','','',true);
+ds_page_header('İletişim Merkezi', ds_icon('inbox',24), '', $__talepActions, false, true);
+?>
 <?php ic_tabs('taleplerim'); ?>
 
-<section class="panel" style="margin-top:16px">
-<table>
+<section class="df-card" style="margin-top:var(--df-space-4)">
+<div class="df-table-wrap"><table class="df-table">
 <thead>
 <tr>
 <th>Talep No</th>
@@ -52,18 +49,18 @@ try{
 <tbody>
 <?php foreach($rows as $r): ?>
 <tr>
-<td><?=h($r['request_no'])?><br><span class="muted"><?=h($r['created_at'])?></span></td>
+<td><?=h($r['request_no'])?><br><span class="df-muted" style="font-size:12px"><?=h($r['created_at'])?></span></td>
 <td><?=h($r['category'])?></td>
 <td><b><?=h($r['title'])?></b><br><?=nl2br(h($r['description']))?></td>
 <td><?=h($r['job_no'] ? $r['job_no'].' - '.$r['job_title'] : '-')?></td>
-<td><?=badge($r['priority'], status_tone($r['priority']))?></td>
-<td><?=badge($r['status'], status_tone($r['status']))?></td>
+<td><?=ds_badge($r['priority'])?></td>
+<td><?=ds_badge($r['status'])?></td>
 <td><?=h($r['response_note'] ?: '-')?></td>
 </tr>
 <?php endforeach; ?>
-<?php if(!$rows): ?><tr><td colspan="7" class="muted">Henüz talep göndermediniz.</td></tr><?php endif; ?>
+<?php if(!$rows): ?><tr><td colspan="7" style="color:var(--df-ink-500)">Henüz talep göndermediniz.</td></tr><?php endif; ?>
 </tbody>
-</table>
+</table></div>
 </section>
 
 <?php require_once __DIR__.'/layout_bottom.php'; ?>
