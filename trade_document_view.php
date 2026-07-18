@@ -12,7 +12,7 @@ $d=$st->fetch();
 require_once __DIR__.'/layout_top.php';
 
 if(!$d){
-    echo "<h1>Belge bulunamadı</h1>";
+    echo ds_alert('danger','Belge bulunamadı');
     require __DIR__.'/layout_bottom.php';
     exit;
 }
@@ -35,12 +35,19 @@ $__actions = ds_button('Belgeler', 'trade_documents.php', 'secondary', '', '', t
 ds_page_header($d['document_no'], ds_icon('tag',24), '', $__actions, false, true);
 ?>
 
-<div class="cards">
-<div class="card"><small>Tip</small><strong><?=h($d['document_type']==='purchase'?'Alış':'Satış')?></strong></div>
-<div class="card"><small>Cari</small><strong><?=h($d['contact_name'] ?: '-')?></strong></div>
-<div class="card"><small>Genel Toplam</small><strong><?=money($d['grand_total'])?></strong></div>
-<div class="card"><small>Cari Bakiyesi</small><strong><?=money($contactBalance)?></strong></div>
+<div class="df-stat-row">
+<div class="df-stat"><span>Tip</span><strong><?=h($d['document_type']==='purchase'?'Alış':'Satış')?></strong></div>
+<div class="df-stat"><span>Cari</span><strong><?=h($d['contact_name'] ?: '-')?></strong></div>
+<div class="df-stat"><span>Genel Toplam</span><strong><?=money($d['grand_total'])?></strong></div>
+<div class="df-stat"><span>Cari Bakiyesi</span><strong><?=money($contactBalance)?></strong></div>
 </div>
+
+<style>
+body.nav-compact .df-stat-row{display:flex;flex-wrap:wrap;gap:var(--df-space-3);margin:var(--df-space-4) 0}
+body.nav-compact .df-stat{flex:1;min-width:120px;background:var(--df-surface);border:1px solid var(--df-hairline);border-radius:var(--df-radius-md);padding:var(--df-space-3);display:flex;flex-direction:column;gap:4px}
+body.nav-compact .df-stat span{font-size:var(--df-type-caption-size);color:var(--df-ink-500)}
+body.nav-compact .df-stat strong{font-size:var(--df-type-subtitle-size);color:var(--df-ink-900)}
+</style>
 
 <section class="df-card" style="margin-top:var(--df-space-4)">
 <h2 style="font-size:var(--df-type-section-size);font-weight:var(--df-type-section-weight);color:var(--df-ink-900);margin:0 0 var(--df-space-3)">Belge Satırları</h2>

@@ -30,64 +30,64 @@ $actionColor=['create'=>'#10b981','update'=>'#f59e0b','delete'=>'#ef4444'];
 
 topx('Denetim Günlüğü');
 ?>
-<p class="small">Kritik finansal işlemlerin (hesap/hareket güncelleme-silme) değişmez kaydı. Kim-ne zaman-ne değiştirdi.</p>
+<p class="muted" style="font-size:13px">Kritik finansal işlemlerin (hesap/hareket güncelleme-silme) değişmez kaydı. Kim-ne zaman-ne değiştirdi.</p>
 
 <?php if($stats): ?>
-<div class="panel">
-    <b>İstatistikler</b>
-    <div class="grid" style="margin-top:10px">
+<div class="df-panel">
+    <b><?=ds_icon('info',16)?> İstatistikler</b>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
         <?php foreach($stats as $table=>$count): ?>
-        <div class="card gray"><span>📊</span><b><?=(int)$count?></b><small><?=htmlspecialchars($table)?></small></div>
+        <span class="df-badge df-badge--info"><?=(int)$count?> · <?=htmlspecialchars($table)?></span>
         <?php endforeach; ?>
     </div>
 </div>
 <?php endif; ?>
 
-<details class="panel">
-  <summary style="font-weight:900;cursor:pointer">🔎 Filtrele</summary>
+<details class="df-panel" style="margin-top:10px">
+  <summary style="font-weight:900;cursor:pointer"><?=ds_icon('filter',16)?> Filtrele</summary>
   <form method="get" style="margin-top:10px">
-    <label style="color:#94a3b8;font-size:12px">Tablo</label>
+    <label>Tablo</label>
     <select name="table">
         <option value="">— Tüm Tablolar —</option>
         <?php foreach($tables as $t): ?>
         <option value="<?=htmlspecialchars($t)?>" <?=$tableFilter===$t?'selected':''?>><?=htmlspecialchars($t)?></option>
         <?php endforeach; ?>
     </select>
-    <label style="color:#94a3b8;font-size:12px">Kullanıcı</label>
+    <label>Kullanıcı</label>
     <select name="user">
         <option value="">— Tüm Kullanıcılar —</option>
         <?php foreach($users as $u): ?>
         <option value="<?=(int)$u['user_id']?>" <?=$userFilter==(int)$u['user_id']?'selected':''?>><?=htmlspecialchars($u['full_name'] ?? 'Bilinmiyor')?></option>
         <?php endforeach; ?>
     </select>
-    <label style="color:#94a3b8;font-size:12px">Başlangıç Tarihi</label>
+    <label>Başlangıç Tarihi</label>
     <input type="date" name="date_from" value="<?=htmlspecialchars($dateFrom)?>">
-    <label style="color:#94a3b8;font-size:12px">Bitiş Tarihi</label>
+    <label>Bitiş Tarihi</label>
     <input type="date" name="date_to" value="<?=htmlspecialchars($dateTo)?>">
     <div style="display:flex;gap:8px;margin-top:10px">
-        <button type="submit" class="btn dark" style="flex:1">Ara</button>
-        <a href="audit_log.php" class="btn" style="flex:1;text-align:center;background:rgba(255,255,255,.12);color:#fff">Sıfırla</a>
+        <button type="submit" class="df-btn df-btn--primary" style="flex:1;justify-content:center"><?=ds_icon('search',15)?> Ara</button>
+        <a href="audit_log.php" class="df-btn df-btn--secondary" style="flex:1;justify-content:center">Sıfırla</a>
     </div>
   </form>
 </details>
 
 <?php if($logs): ?>
-<div style="font-size:12px;color:#94a3b8;margin:10px 4px">Kayıtlar (son <?=count($logs)?>)</div>
+<div class="muted" style="font-size:12px;margin:14px 4px 6px;font-weight:700">Kayıtlar (son <?=count($logs)?>)</div>
 <?php foreach($logs as $log): $ac=$actionColor[$log['action']] ?? '#94a3b8'; ?>
-<div class="item" style="border-left:3px solid <?=$ac?>">
+<div class="df-panel" style="margin-top:10px;border-left:3px solid <?=$ac?>">
     <span style="background:<?=$ac?>22;color:<?=$ac?>;border-radius:8px;padding:3px 8px;font-size:11px;font-weight:900"><?=htmlspecialchars(strtoupper($log['action']))?></span>
-    <b><?=htmlspecialchars($log['table_name'])?>#<?=(int)$log['record_id']?></b>
-    <br><small>👤 <?=htmlspecialchars($log['user_id'] ? 'Kullanıcı ID:'.$log['user_id'] : 'Sistem')?> · 🌐 <?=htmlspecialchars($log['ip_address'] ?? '—')?> · 📅 <?=htmlspecialchars(date('d.m.Y H:i:s', strtotime($log['created_at'])))?></small>
+    <div class="df-list-row-title" style="margin-top:6px"><?=htmlspecialchars($log['table_name'])?>#<?=(int)$log['record_id']?></div>
+    <div class="df-list-row-meta" style="margin-top:4px"><?=ds_icon('user',13)?> <?=htmlspecialchars($log['user_id'] ? 'Kullanıcı ID:'.$log['user_id'] : 'Sistem')?><span>🌐 <?=htmlspecialchars($log['ip_address'] ?? '—')?></span><span><?=ds_icon('calendar',13)?> <?=htmlspecialchars(date('d.m.Y H:i:s', strtotime($log['created_at'])))?></span></div>
     <?php if($log['old_value'] || $log['new_value']): ?>
     <details style="margin-top:8px">
-        <summary style="font-size:12px;color:#60a5fa;cursor:pointer">Değerler</summary>
-        <?php if($log['old_value']): ?><div style="background:rgba(255,255,255,.06);border-radius:8px;padding:8px;margin-top:6px;font-size:11px;font-family:monospace;word-break:break-all"><b>Eski:</b><br><?=htmlspecialchars($log['old_value'])?></div><?php endif; ?>
-        <?php if($log['new_value']): ?><div style="background:rgba(255,255,255,.06);border-radius:8px;padding:8px;margin-top:6px;font-size:11px;font-family:monospace;word-break:break-all"><b>Yeni:</b><br><?=htmlspecialchars($log['new_value'])?></div><?php endif; ?>
+        <summary style="font-size:12px;color:var(--df-accent);cursor:pointer">Değerler</summary>
+        <?php if($log['old_value']): ?><div style="background:var(--df-surface-sunken);border-radius:8px;padding:8px;margin-top:6px;font-size:11px;font-family:monospace;word-break:break-all"><b>Eski:</b><br><?=htmlspecialchars($log['old_value'])?></div><?php endif; ?>
+        <?php if($log['new_value']): ?><div style="background:var(--df-surface-sunken);border-radius:8px;padding:8px;margin-top:6px;font-size:11px;font-family:monospace;word-break:break-all"><b>Yeni:</b><br><?=htmlspecialchars($log['new_value'])?></div><?php endif; ?>
     </details>
     <?php endif; ?>
 </div>
 <?php endforeach; ?>
 <?php else: ?>
-<div class="panel muted" style="text-align:center">Denetim kaydı bulunamadı.</div>
+<?php ds_empty_state('Denetim kaydı bulunamadı.', null, ds_icon('info',20)); ?>
 <?php endif; ?>
 <?php botx(); ?>

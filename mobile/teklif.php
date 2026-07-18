@@ -109,7 +109,7 @@ function teklif_items_js_mobile(){ ?>
 function fmt(n){ return n.toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2})+' ₺'; }
 function num(v){ return parseFloat(String(v||'').replace(/\./g,'').replace(',','.'))||0; }
 function addRow(nm,q,p){
-  var row=document.createElement('div'); row.className='panel qrow'; row.style.cssText='margin-bottom:10px;padding:10px';
+  var row=document.createElement('div'); row.className='df-panel qrow'; row.style.cssText='margin-bottom:10px;padding:10px';
   row.innerHTML='<input name="item_name[]" placeholder="Ürün/hizmet adı" style="margin-bottom:6px" value="'+(nm||'').replace(/"/g,'&quot;')+'">'
     +'<div style="display:flex;gap:8px">'
     +'<div style="flex:1"><small class="muted">Miktar</small><input name="item_qty[]" inputmode="decimal" value="'+(q!==undefined?q:'1')+'" oninput="calc()"></div>'
@@ -117,7 +117,7 @@ function addRow(nm,q,p){
     +'</div>'
     +'<div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">'
     +'<span class="row-sub" style="font-weight:800">0,00 ₺</span>'
-    +'<button type="button" class="btn" style="background:rgba(220,38,38,.2)" onclick="this.closest(\'.qrow\').remove();calc()">🗑 Sil</button>'
+    +'<button type="button" class="df-btn df-btn--danger" onclick="this.closest(\'.qrow\').remove();calc()">🗑 Sil</button>'
     +'</div>';
   document.getElementById('rows').appendChild(row);
   row.addEventListener('input',calc);

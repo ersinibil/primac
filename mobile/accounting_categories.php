@@ -32,35 +32,35 @@ catch(Throwable $e){ $cats=[]; }
 
 topx('Muhasebe Kategorileri');
 ?>
-<?php if($msg): ?><div class="notice"><?=htmlspecialchars($msg)?></div><?php endif; ?>
-<?php if($err): ?><div class="err"><?=htmlspecialchars($err)?></div><?php endif; ?>
+<?php if($msg): ?><?=ds_alert('success',$msg)?><?php endif; ?>
+<?php if($err): ?><?=ds_alert('danger',$err)?><?php endif; ?>
 
-<details class="panel" open>
-  <summary style="font-weight:900;cursor:pointer">➕ Yeni Kategori</summary>
+<details class="df-panel" open>
+  <summary style="font-weight:900;cursor:pointer"><?=ds_icon('plus',16)?> Yeni Kategori</summary>
   <form method="post" style="margin-top:10px">
     <input type="hidden" name="save_cat" value="1">
     <input type="hidden" name="id" value="0">
-    <label style="color:#94a3b8;font-size:12px">Ad</label>
+    <label>Ad</label>
     <input name="name" required placeholder="Kategori adı">
-    <label style="color:#94a3b8;font-size:12px">Tür</label>
+    <label>Tür</label>
     <select name="type"><option value="gider">Gider</option><option value="gelir">Gelir</option></select>
-    <label style="color:#94a3b8;font-size:12px">Grup</label>
+    <label>Grup</label>
     <input name="group_name" placeholder="Personel, Vergi, İşletme...">
-    <label style="color:#94a3b8;font-size:12px">Sıra</label>
+    <label>Sıra</label>
     <input type="number" name="sort_order" value="50">
     <label style="display:flex;align-items:center;gap:8px;margin:8px 0"><input type="checkbox" name="active" value="1" checked style="width:auto"> Aktif</label>
-    <button class="btn dark" style="width:100%;padding:12px">➕ Ekle</button>
+    <button class="df-btn df-btn--primary df-btn--lg" style="width:100%"><?=ds_icon('plus',16)?> Ekle</button>
   </form>
 </details>
 
 <?php $lastType=''; foreach($cats as $c):
-    if($c['type']!==$lastType){ echo '<div style="font-weight:900;color:'.($c['type']==='gelir'?'#4ade80':'#f87171').';margin:14px 4px 6px">'.($c['type']==='gelir'?'📈 Gelir':'📉 Gider').'</div>'; $lastType=$c['type']; }
+    if($c['type']!==$lastType){ echo '<div class="df-badge df-badge--'.($c['type']==='gelir'?'success':'danger').'" style="margin:14px 4px 6px">'.($c['type']==='gelir'?'📈 Gelir':'📉 Gider').'</div>'; $lastType=$c['type']; }
 ?>
-<div class="item" style="<?=!$c['active']?'opacity:.5':''?>">
+<div class="df-panel" style="margin-top:10px<?=!$c['active']?';opacity:.5':''?>">
   <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-    <span><?=htmlspecialchars($c['name'])?> <span class="small">[<?=htmlspecialchars($c['group_name'])?>]</span></span>
+    <span class="df-list-row-title"><?=htmlspecialchars($c['name'])?> <span class="muted" style="font-size:12px;font-weight:400">[<?=htmlspecialchars($c['group_name'])?>]</span></span>
   </div>
-  <div style="display:flex;gap:8px;margin-top:8px">
+  <div style="display:flex;gap:8px;margin-top:10px">
     <form method="post" style="flex:1">
       <input type="hidden" name="save_cat" value="1">
       <input type="hidden" name="id" value="<?=(int)$c['id']?>">
@@ -69,13 +69,13 @@ topx('Muhasebe Kategorileri');
       <input type="hidden" name="group_name" value="<?=htmlspecialchars($c['group_name'])?>">
       <input type="hidden" name="sort_order" value="<?=(int)$c['sort_order']?>">
       <input type="hidden" name="active" value="<?=$c['active']?0:1?>">
-      <button class="btn" style="width:100%;padding:8px;background:rgba(255,255,255,.12);color:#fff;font-size:12px"><?=$c['active']?'Pasif Yap':'Aktif Yap'?></button>
+      <button class="df-btn df-btn--secondary" style="width:100%"><?=$c['active']?'Pasif Yap':'Aktif Yap'?></button>
     </form>
     <form method="post" style="flex:1" onsubmit="return confirm('Silinsin mi?')">
-      <button name="del_cat" value="<?=(int)$c['id']?>" class="btn" style="width:100%;padding:8px;background:rgba(239,68,68,.2);color:#fca5a5;font-size:12px">Sil</button>
+      <button name="del_cat" value="<?=(int)$c['id']?>" class="df-btn df-btn--danger" style="width:100%"><?=ds_icon('trash',14)?> Sil</button>
     </form>
   </div>
 </div>
 <?php endforeach; ?>
-<?php if(!$cats): ?><div class="panel muted" style="text-align:center">Kategori yok.</div><?php endif; ?>
+<?php if(!$cats): ?><?php ds_empty_state('Kategori yok.', null, ds_icon('wallet',20)); ?><?php endif; ?>
 <?php botx(); ?>

@@ -119,10 +119,16 @@ topx('Muhasebe');
   <?=ds_button('›','?m='.$nextM.'&y='.$nextY,'ghost','','',true)?>
 </div>
 
-<div class="grid">
-  <div class="card green"><span>📈</span><b><?=mm($sum['gelir'])?></b><small>Gelir</small></div>
-  <div class="card red"><span>📉</span><b><?=mm($sum['gider'])?></b><small>Gider</small></div>
+<div class="df-stat-row">
+  <div class="df-stat"><span>📈 Gelir</span><strong><?=mm($sum['gelir'])?></strong></div>
+  <div class="df-stat"><span>📉 Gider</span><strong><?=mm($sum['gider'])?></strong></div>
 </div>
+<style>
+.df-stat-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.df-stat{background:var(--df-surface-sunken,rgba(255,255,255,.06));border-radius:var(--df-radius-md,14px);padding:12px;display:flex;flex-direction:column;gap:4px}
+.df-stat span{font-size:12px;color:var(--df-ink-500,#94a3b8)}
+.df-stat strong{font-size:18px;font-weight:900}
+</style>
 <div class="df-panel" style="text-align:center;margin-top:8px">
   <small class="muted">Net</small>
   <div style="font-size:22px;font-weight:900;color:<?=$net>=0?'var(--df-success-ink)':'var(--df-danger-ink)'?>"><?=$net>=0?'+':'-'?><?=mm(abs($net))?></div>

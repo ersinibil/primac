@@ -27,20 +27,20 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 topx('Yeni Grup');
 $users=$pdo->query("SELECT id,full_name,username FROM app_users WHERE id<>$me AND active=1 ORDER BY full_name,username")->fetchAll();
 ?>
-<?php if($er): ?><div class="err"><?=htmlspecialchars($er)?></div><?php endif; ?>
-<div class="panel">
+<?php if($er): ?><?=ds_alert('danger',$er)?><?php endif; ?>
+<div class="df-panel">
 <form method="post">
   <label>Grup Adı</label><input name="title" required placeholder="örn. Üretim Ekibi">
   <label>Üyeler</label>
   <div style="display:flex;flex-direction:column;gap:6px;margin-top:6px">
   <?php foreach($users as $u): $nm=$u['full_name']?:$u['username']; ?>
-    <label style="display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.06);border-radius:12px;padding:10px;margin:0">
+    <label style="display:flex;align-items:center;gap:10px;background:var(--df-surface-sunken);border-radius:12px;padding:10px;margin:0;width:auto">
       <input type="checkbox" name="members[]" value="<?=$u['id']?>" style="width:auto;margin:0">
       <span><?=htmlspecialchars($nm)?></span>
     </label>
   <?php endforeach; ?>
   </div>
-  <button class="btn dark" style="width:100%;padding:14px;margin-top:12px">👥 Grubu Oluştur</button>
+  <button class="df-btn df-btn--primary df-btn--lg" style="width:100%;margin-top:12px"><?=ds_icon('users',16)?> Grubu Oluştur</button>
 </form>
 </div>
 <?php botx(); ?>

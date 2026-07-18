@@ -101,17 +101,17 @@ $jobs=$pdo->query("SELECT id,job_no,title FROM jobs ORDER BY id DESC LIMIT 100")
 
 topx($type==='in'?'Stok Giriş / Alış':'Stok Çıkış / Satış');
 ?>
-<?php if($error): ?><div class="err"><?=htmlspecialchars($error)?></div><?php endif; ?>
-<div class="panel">
+<?php if($error): ?><?=ds_alert('danger',$error)?><?php endif; ?>
+<div class="df-panel">
 <form method="post">
-  <label style="color:#94a3b8;font-size:12px">Hareket Tipi</label>
+  <label>Hareket Tipi</label>
   <select name="movement_type">
     <option value="in" <?=$type==='in'?'selected':''?>>Alış / Stok Giriş</option>
     <option value="out" <?=$type==='out'?'selected':''?>>Satış / Stok Çıkış</option>
     <option value="use" <?=$type==='use'?'selected':''?>>İşte Kullanım</option>
   </select>
 
-  <label style="color:#94a3b8;font-size:12px">Ürün</label>
+  <label>Ürün</label>
   <select name="stock_item_id" required>
     <option value="">Seçiniz</option>
     <?php foreach($products as $p): ?>
@@ -119,40 +119,40 @@ topx($type==='in'?'Stok Giriş / Alış':'Stok Çıkış / Satış');
     <?php endforeach; ?>
   </select>
 
-  <label style="color:#94a3b8;font-size:12px">Miktar</label>
+  <label>Miktar</label>
   <input type="number" step="0.001" name="quantity" required>
 
-  <label style="color:#94a3b8;font-size:12px">Birim Maliyet / Alış</label>
+  <label>Birim Maliyet / Alış</label>
   <input type="number" step="0.01" name="unit_cost" value="0">
 
-  <label style="color:#94a3b8;font-size:12px">Birim Satış</label>
+  <label>Birim Satış</label>
   <input type="number" step="0.01" name="unit_sale" value="0">
 
-  <label style="color:#94a3b8;font-size:12px">Tarih</label>
+  <label>Tarih</label>
   <input type="date" name="movement_date" value="<?=date('Y-m-d')?>">
 
-  <label style="color:#94a3b8;font-size:12px">Tedarikçi</label>
+  <label>Tedarikçi</label>
   <select name="supplier_id">
     <option value="">Seçiniz</option>
     <?php foreach($suppliers as $s): ?><option value="<?=$s['id']?>"><?=htmlspecialchars($s['name'])?></option><?php endforeach; ?>
   </select>
 
-  <label style="color:#94a3b8;font-size:12px">Müşteri / Cari</label>
+  <label>Müşteri / Cari</label>
   <select name="contact_id">
     <option value="">Seçiniz</option>
     <?php foreach($contacts as $c): ?><option value="<?=$c['id']?>"><?=htmlspecialchars($c['name'].' / '.$c['type'])?></option><?php endforeach; ?>
   </select>
 
-  <label style="color:#94a3b8;font-size:12px">İş Bağlantısı</label>
+  <label>İş Bağlantısı</label>
   <select name="job_id">
     <option value="">Seçiniz</option>
     <?php foreach($jobs as $j): ?><option value="<?=$j['id']?>"><?=htmlspecialchars($j['job_no'].' - '.$j['title'])?></option><?php endforeach; ?>
   </select>
 
-  <label style="color:#94a3b8;font-size:12px">Açıklama</label>
+  <label>Açıklama</label>
   <textarea name="description" rows="3"></textarea>
 
-  <button class="btn dark" style="width:100%;padding:13px;margin-top:8px">Hareketi Kaydet</button>
+  <button class="df-btn df-btn--primary df-btn--lg" style="width:100%;margin-top:8px"><?=ds_icon('check',16)?> Hareketi Kaydet</button>
 </form>
 </div>
 <?php botx(); ?>

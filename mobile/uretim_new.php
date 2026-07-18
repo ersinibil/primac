@@ -48,21 +48,21 @@ $pers=$pdo->query("SELECT id,name FROM personnel WHERE COALESCE(active,1)=1 ORDE
 $urunler=$pdo->query("SELECT name FROM stock_items ORDER BY name LIMIT 200")->fetchAll(PDO::FETCH_COLUMN);
 $stokUrunler=$pdo->query("SELECT id,name,unit FROM stock_items ORDER BY name LIMIT 300")->fetchAll();
 ?>
-<?php if($er): ?><div class="err"><?=htmlspecialchars($er)?></div><?php endif; ?>
-<div class="panel">
+<?php if($er): ?><?=ds_alert('danger',$er)?><?php endif; ?>
+<div class="df-panel">
 <form method="post">
   <label>Üretilecek Ürün *</label>
   <input name="urun" list="urunlist" required placeholder="Ürün adı yaz veya seç (yoksa otomatik stok kartı açılır)">
   <datalist id="urunlist"><?php foreach($urunler as $u) echo '<option value="'.htmlspecialchars($u).'">'; ?></datalist>
   <div style="display:flex;gap:10px"><div style="flex:1"><label>Miktar (adet) *</label><input name="qty" inputmode="decimal" required placeholder="örn. 1000"></div>
   <div style="flex:1"><label>Üretim Tipi</label><select name="job_type"><option value="3d_imalat">3D İmalat</option><option value="uv_baski">UV Baskı</option><option value="lazer">Lazer</option><option value="montaj">Montaj</option><option value="dis_atolye">Dış Atölye</option><option value="karma">Karma</option></select></div></div>
-  <small class="muted" style="display:block;margin:2px 0 6px">📦 Üretim aşamaları tamamlanınca bu ürün, bu adet kadar otomatik stoğa girer.</small>
+  <small class="muted" style="display:block;margin:2px 0 6px"><?=ds_icon('box',13)?> Üretim aşamaları tamamlanınca bu ürün, bu adet kadar otomatik stoğa girer.</small>
   <label>Sorumlu Personel</label>
   <select name="responsible_personnel_id"><option value="">— Atanmadı —</option><?php foreach($pers as $p): ?><option value="<?=$p['id']?>"><?=htmlspecialchars($p['name'])?></option><?php endforeach; ?></select>
   <div style="display:flex;gap:10px"><div style="flex:1"><label>Öncelik</label><select name="priority"><option>Normal</option><option>Yüksek</option><option>Acil</option></select></div>
   <div style="flex:1"><label>Termin</label><input type="date" name="due_date"></div></div>
   <label>Açıklama / Talimat</label><textarea name="notes" rows="3" placeholder="Üretim talimatı, ölçü, renk vb."></textarea>
-  <button class="btn dark" style="width:100%;padding:14px;margin-top:8px">🏭 Üretim Emri Oluştur (aşamalı)</button>
+  <button class="df-btn df-btn--primary df-btn--lg" style="width:100%;margin-top:8px"><?=ds_icon('briefcase',16)?> Üretim Emri Oluştur (aşamalı)</button>
 </form>
 </div>
 <p class="muted" style="text-align:center;font-size:13px">Emir oluşunca iş tipine göre üretim aşamaları otomatik açılır.</p>

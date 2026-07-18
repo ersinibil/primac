@@ -36,36 +36,36 @@ $cats=$pdo->query("SELECT c.*, p.name parent_name FROM product_categories c LEFT
 
 topx('Ürün Kategorileri');
 ?>
-<?php if($error): ?><div class="err"><?=htmlspecialchars($error)?></div><?php endif; ?>
-<?php if($ok): ?><div class="notice"><?=htmlspecialchars($ok)?></div><?php endif; ?>
+<?php if($error): ?><?=ds_alert('danger',$error)?><?php endif; ?>
+<?php if($ok): ?><?=ds_alert('success',$ok)?><?php endif; ?>
 
-<details class="panel" open>
-  <summary style="font-weight:900;cursor:pointer">➕ Yeni Kategori / Alt Kategori</summary>
+<details class="df-panel" open>
+  <summary style="font-weight:900;cursor:pointer"><?=ds_icon('plus',16)?> Yeni Kategori / Alt Kategori</summary>
   <form method="post" style="margin-top:10px">
-    <label style="color:#94a3b8;font-size:12px">Kategori Adı</label>
+    <label>Kategori Adı</label>
     <input name="name" required placeholder="Örn: Filament, Kompozit, Dekota">
-    <label style="color:#94a3b8;font-size:12px">Üst Kategori</label>
+    <label>Üst Kategori</label>
     <select name="parent_id">
     <option value="">Ana kategori</option>
     <?php foreach($cats as $c): ?>
     <option value="<?=$c['id']?>"><?=htmlspecialchars(($c['parent_name'] ? $c['parent_name'].' / ' : '').$c['name'])?></option>
     <?php endforeach; ?>
     </select>
-    <label style="color:#94a3b8;font-size:12px">Sıra</label>
+    <label>Sıra</label>
     <input type="number" name="sort_order" value="0">
     <label style="display:flex;align-items:center;gap:8px;margin:8px 0"><input type="checkbox" name="active" checked style="width:auto"> Aktif</label>
-    <button class="btn dark" name="add" value="1" style="width:100%;padding:12px">Kategori Ekle</button>
+    <button class="df-btn df-btn--primary df-btn--lg" name="add" value="1" style="width:100%"><?=ds_icon('plus',16)?> Kategori Ekle</button>
   </form>
 </details>
 
-<div style="font-size:12px;color:#94a3b8;margin:12px 4px 6px">Kategori Ağacı</div>
+<div class="muted" style="font-size:12px;margin:12px 4px 6px;font-weight:700">Kategori Ağacı</div>
 <?php foreach($cats as $c): $productCount=(int)$pdo->query("SELECT COUNT(*) c FROM stock_items WHERE category_id=".(int)$c['id'])->fetch()['c']; ?>
-<div class="item">
+<div class="df-panel" style="margin-top:10px">
   <form method="post">
   <input type="hidden" name="id" value="<?=$c['id']?>">
-  <label style="color:#94a3b8;font-size:12px">Kategori Adı</label>
+  <label>Kategori Adı</label>
   <input name="name" value="<?=htmlspecialchars($c['name'])?>">
-  <label style="color:#94a3b8;font-size:12px">Üst Kategori</label>
+  <label>Üst Kategori</label>
   <select name="parent_id">
   <option value="">Ana kategori</option>
   <?php foreach($cats as $p): if($p['id']==$c['id']) continue; ?>
@@ -73,20 +73,20 @@ topx('Ürün Kategorileri');
   <?php endforeach; ?>
   </select>
   <div style="display:flex;gap:10px;align-items:center;margin:8px 0">
-    <label style="display:flex;align-items:center;gap:6px;font-size:13px"><input type="checkbox" name="active" <?=$c['active']?'checked':''?> style="width:auto"> Aktif</label>
-    <span class="small"><?=$productCount?> ürün</span>
+    <label style="display:flex;align-items:center;gap:6px;font-size:13px;width:auto"><input type="checkbox" name="active" <?=$c['active']?'checked':''?> style="width:auto"> Aktif</label>
+    <span class="df-badge df-badge--info"><?=$productCount?> ürün</span>
   </div>
-  <label style="color:#94a3b8;font-size:12px">Sıra</label>
+  <label>Sıra</label>
   <input type="number" name="sort_order" value="<?=htmlspecialchars($c['sort_order'] ?? 0)?>">
-  <button class="btn dark" name="update" value="1" style="width:100%;padding:10px;margin-top:8px">💾 Kaydet</button>
+  <button class="df-btn df-btn--primary" name="update" value="1" style="width:100%;margin-top:8px"><?=ds_icon('check',16)?> Kaydet</button>
   </form>
   <?php if(can_edit_delete()): ?>
   <form method="post" onsubmit="return confirm('<?=$productCount>0?$productCount.' ürünle bağlı — pasife alınacak, emin misin?':'Silinsin mi?'?>')" style="margin-top:6px">
     <input type="hidden" name="id" value="<?=$c['id']?>">
-    <button class="btn" name="delete" value="1" style="width:100%;background:rgba(239,68,68,.2);color:#fca5a5;padding:8px">🗑 Sil</button>
+    <button class="df-btn df-btn--danger" name="delete" value="1" style="width:100%"><?=ds_icon('trash',15)?> Sil</button>
   </form>
   <?php endif; ?>
 </div>
 <?php endforeach; ?>
-<?php if(!$cats): ?><div class="panel muted" style="text-align:center">Kategori yok.</div><?php endif; ?>
+<?php if(!$cats): ?><?php ds_empty_state('Kategori yok.', null, ds_icon('tag',20)); ?><?php endif; ?>
 <?php botx(); ?>

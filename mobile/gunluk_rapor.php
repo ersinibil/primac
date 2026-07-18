@@ -61,10 +61,10 @@ topx('Günlük İş Raporu');
 <div class="noprint" style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
     <form method="get" style="display:flex;gap:8px;flex:1">
         <input type="date" name="d" value="<?=htmlspecialchars($tarih)?>" style="flex:1;margin:0">
-        <button type="submit" class="btn dark" style="padding:10px 14px">Göster</button>
+        <button type="submit" class="df-btn df-btn--secondary"><?=ds_icon('search',15)?> Göster</button>
     </form>
 </div>
-<button class="noprint" onclick="shareReportPDF(this)" class="btn dark" style="width:100%;padding:12px;background:#16a34a;color:#fff;margin-bottom:12px">📄 PDF İndir / Paylaş</button>
+<button class="noprint df-btn df-btn--primary df-btn--lg" onclick="shareReportPDF(this)" style="width:100%;background:var(--df-success);margin-bottom:12px">📄 PDF İndir / Paylaş</button>
 
 <div id="repArea" style="max-width:100%;margin:0 auto;background:#fff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;color:#101828">
     <div style="background:#1b2431;color:#fff;padding:16px 18px;display:flex;justify-content:space-between;align-items:center">

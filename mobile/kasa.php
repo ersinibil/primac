@@ -29,12 +29,18 @@ $kasa=acc_sum($pdo,'Kasa'); $banka=acc_sum($pdo,'Banka'); $kart=acc_sum($pdo,'Kr
 $inToday=safe_sum("SELECT COALESCE(SUM(amount),0) s FROM finance_movements WHERE direction='in' AND account_id IS NOT NULL AND movement_date=CURDATE()");
 $outToday=safe_sum("SELECT COALESCE(SUM(amount),0) s FROM finance_movements WHERE direction='out' AND COALESCE(movement_type,'')<>'transfer' AND account_id IS NOT NULL AND movement_date=CURDATE()");
 ?>
-<div class="grid">
-  <div class="card green"><span>💵</span><b><?=mm($kasa)?></b><small>Kasa</small></div>
-  <div class="card blue"><span>🏦</span><b><?=mm($banka)?></b><small>Banka</small></div>
-  <div class="card red"><span>💳</span><b><?=mm($kart)?></b><small>Kredi Kartı</small></div>
-  <div class="card yellow"><span>🧾</span><b><?=mm($pos)?></b><small>POS</small></div>
+<div class="df-stat-row">
+  <div class="df-stat"><span>💵 Kasa</span><strong><?=mm($kasa)?></strong></div>
+  <div class="df-stat"><span>🏦 Banka</span><strong><?=mm($banka)?></strong></div>
+  <div class="df-stat"><span>💳 Kredi Kartı</span><strong><?=mm($kart)?></strong></div>
+  <div class="df-stat"><span>🧾 POS</span><strong><?=mm($pos)?></strong></div>
 </div>
+<style>
+.df-stat-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.df-stat{background:var(--df-surface-sunken,rgba(255,255,255,.06));border-radius:var(--df-radius-md,14px);padding:12px;display:flex;flex-direction:column;gap:4px}
+.df-stat span{font-size:12px;color:var(--df-ink-500,#94a3b8)}
+.df-stat strong{font-size:18px;font-weight:900}
+</style>
 <div class="df-panel" style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
   <div><small class="muted">Bugün Tahsilat</small><div style="font-size:20px;font-weight:900;color:var(--df-success-ink)"><?=mm($inToday)?></div></div>
   <div style="text-align:right"><small class="muted">Bugün Ödeme</small><div style="font-size:20px;font-weight:900;color:var(--df-danger-ink)"><?=mm($outToday)?></div></div>

@@ -32,30 +32,28 @@ require_once __DIR__.'/layout_top.php';
 ds_page_header('➕ Kendime İş Ekle', '', 'Bu iş sadece sana atanır ve Görevlerim listende görünür.', ds_button('← Görevlerim', 'mytasks.php', 'ghost'));
 ?>
 
-<?php if($error): ?><div class="alert"><?=h($error)?></div><?php endif; ?>
+<?php if($error): ?><?=ds_alert('danger',$error)?><?php endif; ?>
 
-<section class="panel">
-<form method="post" class="form-grid">
-<label class="full">İş Başlığı *
-<input type="text" name="title" value="<?=h($_POST['title']??'')?>" required>
-</label>
-<label class="full">Açıklama
-<textarea name="description" rows="3"><?=h($_POST['description']??'')?></textarea>
-</label>
-<label>Öncelik
-<select name="priority">
-<option<?=($_POST['priority']??'Normal')==='Normal'?' selected':''?>>Normal</option>
-<option<?=($_POST['priority']??'')==='Yüksek'?' selected':''?>>Yüksek</option>
-<option<?=($_POST['priority']??'')==='Acil'?' selected':''?>>Acil</option>
-</select>
-</label>
-<label>Termin Tarihi
-<input type="date" name="due_date" value="<?=h($_POST['due_date']??'')?>">
-</label>
-<div class="full">
-<button class="btn" type="submit" style="margin-top:6px">➕ İşi Ekle</button>
+<section class="df-card">
+<form method="post" class="df-form-grid-2">
+<div class="df-form-span-2"><?php ds_form_field('İş Başlığı *', '<input type="text" name="title" value="'.h($_POST['title']??'').'" required>'); ?></div>
+<div class="df-form-span-2"><?php ds_form_field('Açıklama', '<textarea name="description" rows="3">'.h($_POST['description']??'').'</textarea>'); ?></div>
+<?php
+$__prOpts='';
+foreach(['Normal','Yüksek','Acil'] as $__pr){ $__prOpts.='<option'.(($_POST['priority']??'Normal')===$__pr?' selected':'').'>'.$__pr.'</option>'; }
+ds_form_field('Öncelik', '<select name="priority">'.$__prOpts.'</select>');
+?>
+<?php ds_form_field('Termin Tarihi', '<input type="date" name="due_date" value="'.h($_POST['due_date']??'').'">'); ?>
+<div class="df-form-span-2">
+<button class="df-btn df-btn--primary" type="submit" style="margin-top:6px">➕ İşi Ekle</button>
 </div>
 </form>
 </section>
+
+<style>
+body.nav-compact .df-form-grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 var(--df-space-4)}
+body.nav-compact .df-form-span-2{grid-column:1 / -1}
+@media(max-width:640px){body.nav-compact .df-form-grid-2{grid-template-columns:1fr}}
+</style>
 
 <?php require_once __DIR__.'/layout_bottom.php'; ?>

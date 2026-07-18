@@ -263,7 +263,7 @@ function delete_button($type,$id,$label='🗑 Sil'){
         .' onsubmit="return confirm(\'Bu kayıt ve bağlı verileri KALICI olarak silinecek. Emin misiniz?\')">'
         .'<input type="hidden" name="t" value="'.h($type).'">'
         .'<input type="hidden" name="id" value="'.(int)$id.'">'
-        .'<button class="btn danger" type="submit">'.$label.'</button></form>';
+        .'<button class="df-btn df-btn--danger" type="submit">'.$label.'</button></form>';
 }
 
 function locked_link($label,$url,$permission){

@@ -41,49 +41,49 @@ $units=$pdo->query("SELECT * FROM product_units ORDER BY active DESC, name")->fe
 
 topx('Marka / Birim');
 ?>
-<?php if($error): ?><div class="err"><?=htmlspecialchars($error)?></div><?php endif; ?>
-<?php if($ok): ?><div class="notice"><?=htmlspecialchars($ok)?></div><?php endif; ?>
+<?php if($error): ?><?=ds_alert('danger',$error)?><?php endif; ?>
+<?php if($ok): ?><?=ds_alert('success',$ok)?><?php endif; ?>
 
-<div style="font-size:12px;color:#94a3b8;margin:4px 4px 6px">Markalar</div>
-<div class="panel">
+<div class="muted" style="font-size:12px;margin:4px 4px 6px;font-weight:700">Markalar</div>
+<div class="df-panel">
   <form method="post">
-    <label style="color:#94a3b8;font-size:12px">Yeni Marka</label>
+    <label>Yeni Marka</label>
     <input name="brand_name" placeholder="Örn: Elegoo, Sunlu, Primac">
-    <button class="btn dark" name="add_brand" value="1" style="width:100%;padding:11px;margin-top:6px">Marka Ekle</button>
+    <button class="df-btn df-btn--primary" name="add_brand" value="1" style="width:100%;margin-top:6px"><?=ds_icon('plus',15)?> Marka Ekle</button>
   </form>
 </div>
 <?php foreach($brands as $b): ?>
-<div class="item">
+<div class="df-panel" style="margin-top:10px">
   <form method="post" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
     <input type="hidden" name="id" value="<?=$b['id']?>">
     <input name="name" value="<?=htmlspecialchars($b['name'])?>" style="flex:1;min-width:120px;margin:0">
-    <label style="display:flex;align-items:center;gap:6px;font-size:13px"><input type="checkbox" name="active" <?=$b['active']?'checked':''?> style="width:auto"> Aktif</label>
-    <button class="btn dark" name="update_brand" value="1" style="padding:8px 12px">Kaydet</button>
+    <label style="display:flex;align-items:center;gap:6px;font-size:13px;width:auto"><input type="checkbox" name="active" <?=$b['active']?'checked':''?> style="width:auto"> Aktif</label>
+    <button class="df-btn df-btn--secondary" name="update_brand" value="1"><?=ds_icon('check',14)?> Kaydet</button>
   </form>
 </div>
 <?php endforeach; ?>
-<?php if(!$brands): ?><div class="panel muted" style="text-align:center">Marka yok.</div><?php endif; ?>
+<?php if(!$brands): ?><?php ds_empty_state('Marka yok.', null, ds_icon('tag',20)); ?><?php endif; ?>
 
-<div style="font-size:12px;color:#94a3b8;margin:16px 4px 6px">Birimler</div>
-<div class="panel">
+<div class="muted" style="font-size:12px;margin:16px 4px 6px;font-weight:700">Birimler</div>
+<div class="df-panel">
   <form method="post">
-    <label style="color:#94a3b8;font-size:12px">Birim Adı</label>
+    <label>Birim Adı</label>
     <input name="unit_name" placeholder="Örn: Kilogram">
-    <label style="color:#94a3b8;font-size:12px">Kısa Ad</label>
+    <label>Kısa Ad</label>
     <input name="short_name" placeholder="kg">
-    <button class="btn dark" name="add_unit" value="1" style="width:100%;padding:11px;margin-top:6px">Birim Ekle</button>
+    <button class="df-btn df-btn--primary" name="add_unit" value="1" style="width:100%;margin-top:6px"><?=ds_icon('plus',15)?> Birim Ekle</button>
   </form>
 </div>
 <?php foreach($units as $u): ?>
-<div class="item">
+<div class="df-panel" style="margin-top:10px">
   <form method="post" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
     <input type="hidden" name="id" value="<?=$u['id']?>">
     <input name="name" value="<?=htmlspecialchars($u['name'])?>" style="flex:1;min-width:100px;margin:0">
     <input name="short_name" value="<?=htmlspecialchars($u['short_name'])?>" style="width:60px;margin:0">
-    <label style="display:flex;align-items:center;gap:6px;font-size:13px"><input type="checkbox" name="active" <?=$u['active']?'checked':''?> style="width:auto"> Aktif</label>
-    <button class="btn dark" name="update_unit" value="1" style="padding:8px 12px">Kaydet</button>
+    <label style="display:flex;align-items:center;gap:6px;font-size:13px;width:auto"><input type="checkbox" name="active" <?=$u['active']?'checked':''?> style="width:auto"> Aktif</label>
+    <button class="df-btn df-btn--secondary" name="update_unit" value="1"><?=ds_icon('check',14)?> Kaydet</button>
   </form>
 </div>
 <?php endforeach; ?>
-<?php if(!$units): ?><div class="panel muted" style="text-align:center">Birim yok.</div><?php endif; ?>
+<?php if(!$units): ?><?php ds_empty_state('Birim yok.', null, ds_icon('tag',20)); ?><?php endif; ?>
 <?php botx(); ?>

@@ -351,7 +351,7 @@ function emoji_picker_html($targetId, $dark=false){
     $border = $dark ? '#1e3350' : '#e5e7eb';
     ob_start(); ?>
 <div style="position:relative;display:inline-block;flex:0 0 auto">
-  <button type="button" class="btn secondary small" style="white-space:nowrap;overflow:hidden;min-width:0" title="Emoji" onclick="var p=document.getElementById('<?=$panelId?>');p.style.display=p.style.display==='block'?'none':'block'">😀</button>
+  <button type="button" class="df-btn df-btn--secondary df-btn--sm" style="white-space:nowrap;overflow:hidden;min-width:0" title="Emoji" onclick="var p=document.getElementById('<?=$panelId?>');p.style.display=p.style.display==='block'?'none':'block'">😀</button>
   <div id="<?=$panelId?>" style="display:none;position:absolute;z-index:1002;bottom:100%;left:0;margin-bottom:6px;max-height:160px;overflow-y:auto;background:<?=$bg?>;border:1px solid <?=$border?>;border-radius:12px;padding:8px;box-shadow:0 -8px 20px rgba(0,0,0,.25);width:230px">
     <?php foreach($emojis as $e): ?><button type="button" style="font-size:19px;border:none;background:none;cursor:pointer;padding:4px" onclick="var t=document.getElementById('<?=$targetId?>');var s=t.selectionStart||t.value.length;t.value=t.value.slice(0,s)+'<?=$e?>'+t.value.slice(s);t.focus();var np=s+'<?=$e?>'.length;t.selectionStart=t.selectionEnd=np;document.getElementById('<?=$panelId?>').style.display='none'"><?=$e?></button><?php endforeach; ?>
   </div>
@@ -438,8 +438,8 @@ function share_buttons($text,$phone='',$subject=null){
     if($subject===null) $subject=function_exists('app_config')?(app_config()['app_name']??'OTS'):'OTS';
     $wa=wa_link($text,$phone); $ml=mail_link($subject,$text);
     return '<div style="display:flex;gap:8px;margin-top:8px">'
-        .'<a href="'.htmlspecialchars($wa).'" target="_blank" rel="noopener" class="btn" style="flex:1;text-align:center;background:#16a34a;color:#fff;padding:10px;text-decoration:none">📲 WhatsApp</a>'
-        .'<a href="'.htmlspecialchars($ml).'" class="btn" style="flex:1;text-align:center;background:#2563eb;color:#fff;padding:10px;text-decoration:none">✉️ Mail</a>'
+        .'<a href="'.htmlspecialchars($wa).'" target="_blank" rel="noopener" class="df-btn df-btn--primary" style="flex:1;justify-content:center;background:var(--df-success)">📲 WhatsApp</a>'
+        .'<a href="'.htmlspecialchars($ml).'" class="df-btn df-btn--primary" style="flex:1;justify-content:center">✉️ Mail</a>'
         .'</div>';
 }
 

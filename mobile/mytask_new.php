@@ -22,8 +22,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 }
 topx('Kendime İş Ekle');
 ?>
-<?php if($er): ?><div class="err"><?=htmlspecialchars($er)?></div><?php endif; ?>
-<div class="panel">
+<?php if($er): ?><?=ds_alert('danger',$er)?><?php endif; ?>
+<div class="df-panel">
 <form method="post">
   <label>İş Başlığı</label><input name="title" required>
   <label>Açıklama</label><textarea name="description" rows="3"></textarea>
@@ -31,7 +31,7 @@ topx('Kendime İş Ekle');
     <div style="flex:1"><label>Öncelik</label><select name="priority"><option>Normal</option><option>Yüksek</option><option>Acil</option></select></div>
     <div style="flex:1"><label>Termin</label><input type="date" name="due_date"></div>
   </div>
-  <button class="btn dark" style="width:100%;padding:14px;margin-top:8px">➕ İşi Ekle</button>
+  <button class="df-btn df-btn--primary df-btn--lg" style="width:100%;margin-top:8px"><?=ds_icon('plus',16)?> İşi Ekle</button>
 </form>
 </div>
 <?php botx(); ?>

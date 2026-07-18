@@ -31,9 +31,15 @@ $today=date('Y-m-d'); $soon=date('Y-m-d', strtotime('+7 days'));
 $countPortfoyde=0;
 foreach($rows as $r){ if($r['status']==='portfoyde') $countPortfoyde++; }
 ?>
-<div class="grid">
-  <div class="card blue"><span>🧾</span><b><?=$countPortfoyde?></b><small>Portföyde</small></div>
+<div class="df-stat-row">
+  <div class="df-stat"><span>🧾 Portföyde</span><strong><?=$countPortfoyde?></strong></div>
 </div>
+<style>
+.df-stat-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.df-stat{background:var(--df-surface-sunken,rgba(255,255,255,.06));border-radius:var(--df-radius-md,14px);padding:12px;display:flex;flex-direction:column;gap:4px}
+.df-stat span{font-size:12px;color:var(--df-ink-500,#94a3b8)}
+.df-stat strong{font-size:18px;font-weight:900}
+</style>
 
 <details class="df-panel" style="margin-top:12px"><summary style="font-weight:900;cursor:pointer"><?=ds_icon('plus',14)?> Yeni Çek / Senet Kaydı</summary>
 <form method="post" style="margin-top:10px" enctype="multipart/form-data">
