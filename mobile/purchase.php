@@ -200,14 +200,14 @@ function productOptionsHtmlPurchM(){
 function addItemRow(prefill){
     var idx = rowIndex++;
     var row = document.createElement('div');
-    row.className = 'panel';
+    row.className = 'df-panel';
     row.style.cssText = 'margin-bottom:10px;padding:10px';
     row.dataset.idx = idx;
     row.innerHTML =
         '<select name="stock_item_id[]" class="row-prod" style="margin-bottom:6px" onchange="onRowProductChange(this)">'+productOptionsHtmlPurchM()+'</select>'
         + '<div class="new-prod-box" style="display:none;background:rgba(37,99,235,.12);border-radius:10px;padding:8px;margin-bottom:6px">'
         + '<input type="text" class="np-name" placeholder="Ürün adı" style="margin-bottom:6px">'
-        + '<button type="button" class="btn dark" style="width:100%" onclick="quickAddProductRow(this)">✓ Ekle ve Seç</button>'
+        + '<button type="button" class="df-btn df-btn--primary" style="width:100%" onclick="quickAddProductRow(this)">✓ Ekle ve Seç</button>'
         + '</div>'
         + '<div class="cpa-hint" style="display:none;margin-bottom:6px;font-size:12px;background:rgba(37,99,235,.12);border-radius:8px;padding:6px 8px"></div>'
         + '<div style="display:flex;gap:8px">'
@@ -219,7 +219,7 @@ function addItemRow(prefill){
         + '</div>'
         + '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">'
         + '<span class="row-sub" style="font-weight:800">0,00 ₺</span>'
-        + '<button type="button" class="btn" style="background:rgba(220,38,38,.2)" onclick="removeRow(this)">🗑 Satırı Sil</button>'
+        + '<button type="button" class="df-btn df-btn--danger" onclick="removeRow(this)">🗑 Satırı Sil</button>'
         + '</div>';
     document.getElementById('itemsBody').appendChild(row);
     if(prefill){
@@ -234,8 +234,8 @@ function addItemRow(prefill){
 }
 
 function removeRow(btn){
-    var row = btn.closest('.panel');
-    var rows = document.querySelectorAll('#itemsBody > .panel');
+    var row = btn.closest('.df-panel');
+    var rows = document.querySelectorAll('#itemsBody > .df-panel');
     if(rows.length <= 1){
         row.querySelector('.row-prod').value = '';
         row.querySelector('.row-qty').value = 1;
@@ -249,7 +249,7 @@ function removeRow(btn){
 }
 
 function onRowProductChange(sel){
-    var row = sel.closest('.panel');
+    var row = sel.closest('.df-panel');
     var box = row.querySelector('.new-prod-box');
     var hint = row.querySelector('.cpa-hint');
     if(sel.value === '__new__'){
@@ -288,7 +288,7 @@ function loadCpaHintM(row, stockItemId){
 }
 
 function quickAddProductRow(btn){
-    var row = btn.closest('.panel');
+    var row = btn.closest('.df-panel');
     var name = row.querySelector('.np-name').value.trim();
     if(!name){ alert('Ürün adı girin'); return; }
     var fd = new FormData();
@@ -319,7 +319,7 @@ function quickAddProductRow(btn){
 
 function calcAll(){
     var subtotalAll = 0, vatAll = 0;
-    document.querySelectorAll('#itemsBody > .panel').forEach(function(row){
+    document.querySelectorAll('#itemsBody > .df-panel').forEach(function(row){
         var q = parseFloat(row.querySelector('.row-qty').value) || 0;
         var p = parseFloat(row.querySelector('.row-price').value) || 0;
         var v = parseFloat(row.querySelector('.row-vat').value) || 0;

@@ -223,7 +223,7 @@ if ($thread):
     <div style="font-weight:700;margin-bottom:10px">Mesajı Düzenle</div>
     <textarea id="editTextT" rows="4" style="width:100%;border-radius:10px;padding:9px;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2);resize:vertical;font-size:15px"></textarea>
     <div style="display:flex;gap:8px;margin-top:10px">
-      <button onclick="saveEditT()" class="btn dark" style="flex:1">Kaydet</button>
+      <button onclick="saveEditT()" class="df-btn df-btn--primary" style="flex:1">Kaydet</button>
       <button onclick="document.getElementById('editModalT').style.display='none'" style="flex:1;background:rgba(255,255,255,.1);color:#fff;border:0;border-radius:12px;padding:10px;font-size:14px">İptal</button>
     </div>
   </div>
@@ -237,7 +237,7 @@ if ($thread):
         <button type="button" class="vbtn" onclick="vrec(this)" style="flex:0 0 auto;width:44px;height:46px;background:rgba(255,255,255,.12);border:0;border-radius:14px;font-size:19px;color:#fff">🎤</button>
         <?=emoji_picker_html('msgTextT', true)?>
         <textarea id="msgTextT" name="message" rows="1" placeholder="Gruba yaz…" oninput="this.style.height='';this.style.height=this.scrollHeight+'px'"></textarea>
-        <button class="btn dark" type="submit" id="sendbtn" style="flex:0 0 auto">➤</button>
+        <button class="df-btn df-btn--primary" type="submit" id="sendbtn" style="flex:0 0 auto">➤</button>
     </div>
     <div id="attlbl" style="max-width:520px;margin:4px auto 0;color:#94a3b8;font-size:12px"></div>
 </form>
@@ -377,7 +377,7 @@ if ($with):
     <div style="font-weight:700;margin-bottom:10px">Mesajı Düzenle</div>
     <textarea id="editText" rows="4" style="width:100%;border-radius:10px;padding:9px;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2);resize:vertical;font-size:15px"></textarea>
     <div style="display:flex;gap:8px;margin-top:10px">
-      <button onclick="saveEdit()" class="btn dark" style="flex:1">Kaydet</button>
+      <button onclick="saveEdit()" class="df-btn df-btn--primary" style="flex:1">Kaydet</button>
       <button onclick="document.getElementById('editModal').style.display='none'" style="flex:1;background:rgba(255,255,255,.1);color:#fff;border:0;border-radius:12px;padding:10px;font-size:14px">İptal</button>
     </div>
   </div>
@@ -454,7 +454,7 @@ window.ACANS_ON_CONV=function(list){
         <button type="button" class="vbtn" onclick="vrec(this)" style="flex:0 0 auto;width:44px;height:46px;background:rgba(255,255,255,.12);border:0;border-radius:14px;font-size:19px;color:#fff">🎤</button>
         <?=emoji_picker_html('msgText', true)?>
         <textarea id="msgText" name="message" rows="1" placeholder="Mesaj yaz…" oninput="this.style.height='';this.style.height=this.scrollHeight+'px'"></textarea>
-        <button class="btn dark" type="submit" id="sendbtn" style="flex:0 0 auto">➤</button>
+        <button class="df-btn df-btn--primary" type="submit" id="sendbtn" style="flex:0 0 auto">➤</button>
     </div>
     <div id="attlbl" style="max-width:520px;margin:4px auto 0;color:#94a3b8;font-size:12px"></div>
 </form>
@@ -605,7 +605,7 @@ document.getElementById('msgform').addEventListener('submit',function(e){
         $thr->execute([$me]); $threads=$thr->fetchAll();
     }catch(Throwable $e){}
 ?>
-<div class="panel" style="padding:10px"><a class="btn dark" href="group_new.php" style="width:100%;text-align:center">👥 Yeni Grup</a></div>
+<div class="df-panel" style="padding:10px"><a class="df-btn df-btn--primary" href="group_new.php" style="width:100%;justify-content:center">👥 Yeni Grup</a></div>
 <?php if($threads): ?>
 <div style="font-weight:900;margin:6px 4px">Gruplar & İş Sohbetleri</div>
 <div class="chat-list">
