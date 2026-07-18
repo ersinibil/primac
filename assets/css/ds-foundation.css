@@ -357,6 +357,15 @@ body.mobile-shell{
 .df-tabs--fade-right{-webkit-mask-image:linear-gradient(to left,transparent,#000 22px);mask-image:linear-gradient(to left,transparent,#000 22px)}
 .df-tabs--fade-left.df-tabs--fade-right{-webkit-mask-image:linear-gradient(to right,transparent,#000 22px,#000 calc(100% - 22px),transparent);mask-image:linear-gradient(to right,transparent,#000 22px,#000 calc(100% - 22px),transparent)}
 .df-tab{border:0;background:transparent;color:var(--df-ink-600);font-size:12.5px;font-weight:600;padding:7px 16px;border-radius:6px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;transition:background var(--df-dur-fast) var(--df-ease-standard),color var(--df-dur-fast) var(--df-ease-standard);flex:0 0 auto;white-space:nowrap}
+
+/* P0 SEKME OVERFLOW DÜZELTMESİ — 2. TUR (2026-07-18): kenar soluklaştırma + scrollIntoView web
+   masaüstünde gerçek ekranda yeterince belirgin/kesin değildi (personnel_edit.php'de 9 sekmeyle
+   "Hareket Geçmişi" hâlâ kesik görüldü, kullanıcı ekran görüntüsüyle bildirdi). Web (nav-compact)
+   için KESİN çözüm: sekmeler tek satıra sığmıyorsa ikinci (gerekirse üçüncü) satıra SARAR — hiçbir
+   sekme kaydırmaya/JS zamanlamasına bağımlı kalmadan HER ZAMAN tam görünür. Mobil (mobile-shell)
+   BİLEREK değişmedi — dar ekranda çok satıra sarmak dikeyde çok yer kaplar, P0 MOBİL YATAY TAŞMA
+   DÜZELTMESİ'nin (yukarıdaki not) yatay-kaydırma çözümü orada daha uygun ve zaten doğrulanmış. */
+body.nav-compact .df-tabs{flex-wrap:wrap;overflow-x:visible;max-width:none}
 .df-tab--active{background:var(--df-surface);color:var(--df-ink-900);box-shadow:var(--df-shadow-sm)}
 body.mobile-shell .df-tab--active{background:var(--df-accent);color:#fff;box-shadow:none}
 
