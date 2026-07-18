@@ -12,10 +12,10 @@ $me=(int)($_SESSION['user']['id']??0);
 $pid=task_my_personnel_id($pdo,$me);
 $id=(int)($_GET['id']??0);
 
-if($id<1){ require_once __DIR__.'/layout_top.php'; echo '<div class="alert">Görev bulunamadı.</div>'; require_once __DIR__.'/layout_bottom.php'; exit; }
+if($id<1){ require_once __DIR__.'/layout_top.php'; echo ds_alert('danger','Görev bulunamadı.'); require_once __DIR__.'/layout_bottom.php'; exit; }
 
 $task=task_fetch($pdo,$id);
-if(!$task){ require_once __DIR__.'/layout_top.php'; echo '<div class="alert">Görev bulunamadı.</div>'; require_once __DIR__.'/layout_bottom.php'; exit; }
+if(!$task){ require_once __DIR__.'/layout_top.php'; echo ds_alert('danger','Görev bulunamadı.'); require_once __DIR__.'/layout_bottom.php'; exit; }
 
 $canEdit = task_can_edit($task,$me,$pid);
 $canDelete = task_can_delete($task,$me,$pid);
@@ -67,7 +67,7 @@ $__showComplete = $canEdit && $task['status']!=='Tamamlandı';
 $__actions = ds_button('← Görevlerim', 'mytasks.php', 'ghost', '', '', true);
 ds_page_header($task['title'], ds_icon('check',24), '', $__actions);
 ?>
-<?php if(!empty($_SESSION['task_err'])): ?><div class="alert"><?=h($_SESSION['task_err'])?></div><?php unset($_SESSION['task_err']); endif; ?>
+<?php if(!empty($_SESSION['task_err'])): ?><?=ds_alert('danger',$_SESSION['task_err'])?><?php unset($_SESSION['task_err']); endif; ?>
 
 <div class="df-task-stack">
 
@@ -122,39 +122,27 @@ ds_page_header($task['title'], ds_icon('check',24), '', $__actions);
 <section class="df-panel">
   <details>
     <summary style="cursor:pointer;font-weight:700">Düzenle</summary>
-    <form method="post" class="form-grid" style="margin-top:12px">
-      <label class="full">Başlık *<input type="text" name="title" value="<?=h($task['title'])?>" required></label>
-      <label class="full">Açıklama<textarea name="description" rows="3"><?=h($task['description']??'')?></textarea></label>
-      <label>Termin Tarihi<input type="date" name="due_date" value="<?=h($task['due_date']??'')?>"></label>
-      <label>Öncelik
-        <select name="priority">
-          <option<?=$task['priority']==='Normal'?' selected':''?>>Normal</option>
-          <option<?=$task['priority']==='Yüksek'?' selected':''?>>Yüksek</option>
-          <option<?=$task['priority']==='Acil'?' selected':''?>>Acil</option>
-        </select>
-      </label>
-      <label>Durum
-        <select name="status">
-          <option<?=$task['status']==='Atandı'?' selected':''?>>Atandı</option>
-          <option<?=$task['status']==='Devam Ediyor'?' selected':''?>>Devam Ediyor</option>
-          <option<?=$task['status']==='Tamamlandı'?' selected':''?>>Tamamlandı</option>
-          <option<?=$task['status']==='İptal'?' selected':''?>>İptal</option>
-        </select>
-      </label>
-      <?php if($canReassign): ?>
-      <label>Atanan Personel
-        <select name="personnel_id">
-          <option value="">— Personel —</option>
-          <?php
-          try{
-            $pl=$pdo->query("SELECT id,name FROM personnel WHERE COALESCE(active,1)=1 ORDER BY name")->fetchAll();
-            foreach($pl as $p) echo '<option value="'.(int)$p['id'].'"'.($task['personnel_id']==(int)$p['id']?' selected':'').'>'.h($p['name']).'</option>';
-          }catch(Throwable $e){}
-          ?>
-        </select>
-      </label>
-      <?php endif; ?>
-      <div class="full"><button type="submit" class="df-btn df-btn--primary" name="edit_task" style="width:100%">Kaydet</button></div>
+    <form method="post" class="df-form-grid-2" style="margin-top:12px">
+      <div class="df-form-span-2"><?php ds_form_field('Başlık *', '<input type="text" name="title" value="'.h($task['title']).'" required>'); ?></div>
+      <div class="df-form-span-2"><?php ds_form_field('Açıklama', '<textarea name="description" rows="3">'.h($task['description']??'').'</textarea>'); ?></div>
+      <?php ds_form_field('Termin Tarihi', '<input type="date" name="due_date" value="'.h($task['due_date']??'').'">'); ?>
+      <?php
+      $__prOpts='';
+      foreach(['Normal','Yüksek','Acil'] as $__pr){ $__prOpts.='<option'.($task['priority']===$__pr?' selected':'').'>'.$__pr.'</option>'; }
+      ds_form_field('Öncelik', '<select name="priority">'.$__prOpts.'</select>');
+      $__stOpts='';
+      foreach(['Atandı','Devam Ediyor','Tamamlandı','İptal'] as $__st){ $__stOpts.='<option'.($task['status']===$__st?' selected':'').'>'.$__st.'</option>'; }
+      ds_form_field('Durum', '<select name="status">'.$__stOpts.'</select>');
+      ?>
+      <?php if($canReassign):
+        $__persOpts='<option value="">— Personel —</option>';
+        try{
+          $pl=$pdo->query("SELECT id,name FROM personnel WHERE COALESCE(active,1)=1 ORDER BY name")->fetchAll();
+          foreach($pl as $p) $__persOpts.='<option value="'.(int)$p['id'].'"'.($task['personnel_id']==(int)$p['id']?' selected':'').'>'.h($p['name']).'</option>';
+        }catch(Throwable $e){}
+        ds_form_field('Atanan Personel', '<select name="personnel_id">'.$__persOpts.'</select>');
+      endif; ?>
+      <div class="df-form-span-2"><button type="submit" class="df-btn df-btn--primary" name="edit_task" style="width:100%">Kaydet</button></div>
     </form>
   </details>
 </section>
@@ -175,9 +163,9 @@ ds_page_header($task['title'], ds_icon('check',24), '', $__actions);
 <section class="df-panel">
   <h3 class="df-text-subtitle" style="margin:0 0 10px">Yorumlar</h3>
   <?php if($canEdit): ?>
-  <form method="post" class="form-grid">
-    <textarea class="full" name="comment" rows="2" placeholder="Yorum ekle..." required></textarea>
-    <div class="full"><button type="submit" class="df-btn df-btn--primary" name="comment_add">Ekle</button></div>
+  <form method="post">
+    <textarea name="comment" rows="2" placeholder="Yorum ekle..." required></textarea>
+    <button type="submit" class="df-btn df-btn--primary" name="comment_add" style="margin-top:8px">Ekle</button>
   </form>
   <?php endif; ?>
   <?php
@@ -195,9 +183,9 @@ ds_page_header($task['title'], ds_icon('check',24), '', $__actions);
 <section class="df-panel">
   <h3 class="df-text-subtitle" style="margin:0 0 10px">Dosyalar</h3>
   <?php if($canEdit): ?>
-  <form method="post" enctype="multipart/form-data" class="form-grid">
-    <input class="full" type="file" name="task_file" required>
-    <div class="full"><button type="submit" class="df-btn df-btn--primary" name="file_upload">Yükle</button></div>
+  <form method="post" enctype="multipart/form-data">
+    <input type="file" name="task_file" required>
+    <button type="submit" class="df-btn df-btn--primary" name="file_upload" style="margin-top:8px">Yükle</button>
   </form>
   <?php endif; ?>
   <?php
@@ -231,4 +219,10 @@ ds_page_header($task['title'], ds_icon('check',24), '', $__actions);
 </section>
 
 </div>
+<style>
+body.nav-compact .df-form-grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 var(--df-space-4)}
+body.nav-compact .df-form-span-2{grid-column:1 / -1}
+@media(max-width:640px){body.nav-compact .df-form-grid-2{grid-template-columns:1fr}}
+</style>
+
 <?php require_once __DIR__.'/layout_bottom.php'; ?>

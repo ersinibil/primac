@@ -139,10 +139,10 @@ if($__navMode === 'legacy'):
   ?>
 </div>
 <?php if(user_can('users')): ?>
-<div class="panel" style="text-align:center">
+<div class="df-panel" style="text-align:center">
   <b>🔔 Bildirim & Ses (Test)</b>
   <p class="small" style="margin-top:4px">Sadece yöneticiler görür — geliştirme/teşhis amaçlıdır.</p>
-  <button class="btn dark" style="width:100%;padding:13px;margin-top:8px" onclick="var m=window.ACANS_TEST?ACANS_TEST():'hazır değil';document.getElementById('tres').textContent=m;">Bildirimleri Aç / Test Et</button>
+  <button class="df-btn df-btn--primary" style="width:100%;margin-top:8px" onclick="var m=window.ACANS_TEST?ACANS_TEST():'hazır değil';document.getElementById('tres').textContent=m;">Bildirimleri Aç / Test Et</button>
   <p id="tres" class="small" style="margin-top:8px;color:#4ade80"></p>
 </div>
 <?php endif; ?>
@@ -207,10 +207,10 @@ $__pinnedKeys = array_filter(array_map('trim', explode(',', $__pinnedRaw)));
 </div>
 
 <?php if(user_can('users')): ?>
-<div class="panel" style="text-align:center">
+<div class="df-panel" style="text-align:center">
   <b>🔔 Bildirim & Ses (Test)</b>
   <p class="small" style="margin-top:4px">Sadece yöneticiler görür — geliştirme/teşhis amaçlıdır.</p>
-  <button class="btn dark" style="width:100%;padding:13px;margin-top:8px" onclick="var m=window.ACANS_TEST?ACANS_TEST():'hazır değil';document.getElementById('tres').textContent=m;">Bildirimleri Aç / Test Et</button>
+  <button class="df-btn df-btn--primary" style="width:100%;margin-top:8px" onclick="var m=window.ACANS_TEST?ACANS_TEST():'hazır değil';document.getElementById('tres').textContent=m;">Bildirimleri Aç / Test Et</button>
   <p id="tres" class="small" style="margin-top:8px;color:#4ade80"></p>
 </div>
 <?php endif; ?>
