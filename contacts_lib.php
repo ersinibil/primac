@@ -53,8 +53,22 @@ function contact_delete_or_deactivate($pdo, $id){
  * @return string ham SQL CASE ifadesi (SUM(...) içine gömülmek üzere)
  */
 function contact_balance_case_sql($alias='finance_movements'){
+    // P0 KAPANIŞ DÜZELTMESİ (2026-07-18, Product Owner onayı): 'cek_senet' (kabul anı — çek/senet
+    // ALINDIĞINDA/VERİLDİĞİNDE oluşan cari kapama hareketi, bkz. checks_notes_lib.php::
+    // checks_notes_sync_finance()) ve 'cek_senet_ciro' (Ciro Et — checks_notes_endorse()) bu
+    // formülün ELSE dalına (satış/alış "yeni borç" işareti) düşüyordu; oysa ikisi de niyet olarak
+    // Tahsilat/Ödeme'nin BİREBİR eşdeğeri (checks_notes_sync_finance()'in kendi yorumu: "Tahsilat/
+    // Ödeme ekranıyla BİREBİR aynı mantık") — yani normal/mobile ile AYNI ters-işaret dalına girmesi
+    // gerekiyordu. Somut örnek: müşteriden 1.000 TL çek ALINDIĞINDA (direction='in') önceden +1.000
+    // ekleniyordu (borcu artırıyormuş gibi), artık -1.000 ekleniyor (borç azalıyor) — normal bir
+    // Tahsilat ile aynı sonuç. 'cek_senet_tahsil' (Tahsil Et/Öde) BURAYA dahil EDİLMEDİ çünkü o
+    // hareketlerin contact_id'si HER ZAMAN NULL'dur (cariye ikinci kez dokunmaz, bkz.
+    // checks_notes_collect()/pay() docblock'u) — hiçbir cari sorgusuyla eşleşmez, işareti sonucu
+    // etkilemez. Bu formül HER ZAMAN canlı SUM() ile türetildiği (hiçbir yerde saklanmadığı) için bu
+    // düzeltme geçmiş kayıtları AYRICA toplu güncellemeye gerek kalmadan otomatik olarak doğru
+    // yansıtır — hiçbir finance_movements satırı değiştirilmedi, sadece yorumlama formülü düzeldi.
     return "CASE
-        WHEN $alias.movement_type IN ('normal','mobile') THEN (CASE WHEN $alias.direction='in' THEN -$alias.amount ELSE $alias.amount END)
+        WHEN $alias.movement_type IN ('normal','mobile','cek_senet','cek_senet_ciro') THEN (CASE WHEN $alias.direction='in' THEN -$alias.amount ELSE $alias.amount END)
         ELSE (CASE WHEN $alias.direction='in' THEN $alias.amount ELSE -$alias.amount END)
     END";
 }
