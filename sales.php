@@ -89,7 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // karışmaz — sadece cpa_allocations muhasebesi güncellenir, hata asla fırlatmaz.
             $__cpaConsumedParts = [];
             foreach ($lines as $__l) {
-                $__consumed = cpa_alloc_consume_for_sale($pdo, $_SESSION['user']['id'] ?? 0, $contact, $__l['item']['id'], $__l['qty']);
+                $__consumed = cpa_alloc_consume_for_sale($pdo, $_SESSION['user']['id'] ?? 0, $res['sale_id'], $contact, $__l['item']['id'], $__l['qty']);
                 if ($__consumed > 0) $__cpaConsumedParts[] = $__l['item']['name'] . ' x' . stock_qty_fmt($__consumed);
             }
             if ($__cpaConsumedParts) $ok .= ' &mdash; 🎯 Tahsisten düşüldü: ' . h(implode(', ', $__cpaConsumedParts));

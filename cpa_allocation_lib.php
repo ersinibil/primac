@@ -3,17 +3,28 @@
  * "tercih edilen tedarikçi" hafızası (045_cpa_preferences) yeterli değildi. Asıl talep: satın
  * alınan miktarın belirli bir kısmının belirli bir müşteriye/satışa AYRILMASI (tahsis), kalanının
  * "serbest stok" olarak görünmesi. Örnek: 2.500 adet satın alındı, 1.000'i Sakarya Üniversitesi'ne
- * tahsisli, 1.500'ü serbest. Şema: database/migrations/046_cpa_allocations.sql.
+ * tahsisli, 1.500'ü serbest. Şema: database/migrations/046_cpa_allocations.sql (tahsisler) +
+ * 047_cpa_allocation_consumptions.sql (satış-tüketim defteri).
  *
  * KURAL (Product Owner): "Tahsis fiziksel stoktan ayrı mantıkta izlenmeli, mevcut stok ve finans
  * matematiğini bozma." — bu dosya stock_items/stock_movements/finance_movements tablolarına TEK
- * BİR YAZMA işlemi yapmaz (sadece SELECT ile okur), stock_lib.php'ye hiç dokunulmadı. Tüm tahsis
- * muhasebesi cpa_allocations tablosunda ayrı yürür; "serbest stok" HER ZAMAN türetilir (saklanmaz):
+ * BİR YAZMA işlemi yapmaz (sadece SELECT ile okur). Tüm tahsis muhasebesi cpa_allocations/
+ * cpa_allocation_consumptions tablolarında ayrı yürür; "serbest stok" HER ZAMAN türetilir (saklanmaz):
  *   serbest = stock_items.quantity - SUM(aktif tahsislerin kalanı, tüm alışlar toplamı)
  * Bu formül satış sırasına bakmaksızın doğru sonuç verir: tahsisli müşteriye satış yapılıp tahsis
  * tüketildiğinde HEM fiziksel stok HEM tahsis-kalanı birlikte düşer (serbest değişmez); serbest
  * stoktan satış yapıldığında SADECE fiziksel stok düşer (serbest de aynı miktarda düşer, tahsis
  * dokunulmaz) — iki durumda da formül kendiliğinden doğru kalır.
+ *
+ * P0 CPA VERİ BÜTÜNLÜĞÜ KAPANIŞI (2026-07-18): satış düzenlenir/silinirse tüketim de geri
+ * alınmalı — bkz. cpa_alloc_consume_for_sale()/cpa_alloc_reverse_for_sale() üstündeki notlar.
+ * Bu ikisi stock_lib.php::stock_update_sale()/stock_reverse_sale() içinden (TEK ortak nokta,
+ * web+mobil+sil.php hepsi oradan geçer) çağrılır — kopya mantık YOK.
+ *
+ * MİGRASYON TEK ŞEMA OTORİTESİ (2026-07-18): bu dosya artık runtime'da CREATE TABLE YAPMAZ.
+ * cpa_alloc_tables_ready() sadece VARLIĞI kontrol eder; migrate.php çalıştırılmadıysa yazma
+ * fonksiyonları açık bir hata verir (sessizce "aktifmiş gibi" davranmaz), otomatik satış-tüketim
+ * kancaları (best-effort) sessizce no-op olur.
  *
  * Kayıtlar SİLİNMEZ — iptal status='İptal' ile yapılır (cpa_preferences ile aynı felsefe), her
  * değişiklik audit_log() ile 'cpa_allocations' tablosuna karşı loglanır. Web + mobil ortak.
@@ -28,26 +39,29 @@ require_once __DIR__.'/stock_lib.php'; // stock_qty_fmt() için
 function cpa_alloc_can_edit(){ return cpa_can_edit(); }
 function cpa_alloc_can_view(){ return cpa_can_view(); }
 
-function cpa_alloc_install(){
-    try{
-        db()->exec("CREATE TABLE IF NOT EXISTS cpa_allocations (
-          id INT AUTO_INCREMENT PRIMARY KEY,
-          purchase_movement_id INT NOT NULL,
-          stock_item_id INT NOT NULL,
-          customer_id INT NOT NULL,
-          allocated_qty DECIMAL(12,3) NOT NULL,
-          consumed_qty DECIMAL(12,3) NOT NULL DEFAULT 0,
-          status VARCHAR(20) NOT NULL DEFAULT 'Aktif',
-          notes TEXT NULL,
-          created_by INT NULL,
-          created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-          KEY idx_purchase (purchase_movement_id),
-          KEY idx_product (stock_item_id),
-          KEY idx_customer_product (customer_id, stock_item_id),
-          KEY idx_status (status)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
-    }catch(Throwable $e){}
+// MİGRASYON TEK ŞEMA OTORİTESİ (2026-07-18, Product Owner kararı): önceden bu fonksiyon runtime'da
+// "CREATE TABLE IF NOT EXISTS" ile kendi şemasını sessizce kurabiliyordu — migration dosyasıyla
+// (046/047) arasında sessiz sapma (drift) riski taşıyordu ve migrate.php koşulmadan özellik
+// "çalışıyormuş gibi" davranabiliyordu. Artık SADECE var olup olmadığını kontrol eder; tablo(lar)
+// yoksa yazma fonksiyonları (create/reduce/cancel/transfer) açık bir hata verir, okuma fonksiyonları
+// boş/sıfır döner (sayfa çökmez ama özellik de sessizce "kurulu" görünmez), otomatik satış-tüketim
+// kancaları (consume/reverse_for_sale) sessizce no-op olur (satışın kendisini asla bozmaz).
+function cpa_alloc_tables_ready(){
+    static $ready = null;
+    if($ready === null){
+        try{
+            $c1 = db()->query("SHOW TABLES LIKE 'cpa_allocations'")->fetch();
+            $c2 = db()->query("SHOW TABLES LIKE 'cpa_allocation_consumptions'")->fetch();
+            $ready = ((bool)$c1 && (bool)$c2);
+        }catch(Throwable $e){ $ready = false; }
+    }
+    return $ready;
+}
+
+function cpa_alloc_require_tables(){
+    if(!cpa_alloc_tables_ready()){
+        throw new Exception('CPA tahsis özelliği için migration henüz çalıştırılmamış (046/047) — migrate.php çalıştırılmalı.');
+    }
 }
 
 // Bir tahsisin allocated_qty/consumed_qty'sine göre doğru status'u türetir. İptal edilmiş bir
@@ -65,7 +79,6 @@ function cpa_alloc_status_for($allocatedQty, $consumedQty, $currentStatus){
  * @return array ['physical'=>float,'allocated'=>float,'free'=>float]
  */
 function cpa_alloc_free_stock($pdo, $stockItemId){
-    cpa_alloc_install();
     $stockItemId=(int)$stockItemId;
     $physical=0.0;
     try{
@@ -74,11 +87,13 @@ function cpa_alloc_free_stock($pdo, $stockItemId){
         $physical=(float)($s->fetch()['quantity'] ?? 0);
     }catch(Throwable $e){}
     $allocated=0.0;
-    try{
-        $a=$pdo->prepare("SELECT COALESCE(SUM(GREATEST(allocated_qty-consumed_qty,0)),0) t FROM cpa_allocations WHERE stock_item_id=? AND status<>'İptal'");
-        $a->execute([$stockItemId]);
-        $allocated=(float)($a->fetch()['t'] ?? 0);
-    }catch(Throwable $e){}
+    if(cpa_alloc_tables_ready()){
+        try{
+            $a=$pdo->prepare("SELECT COALESCE(SUM(GREATEST(allocated_qty-consumed_qty,0)),0) t FROM cpa_allocations WHERE stock_item_id=? AND status<>'İptal'");
+            $a->execute([$stockItemId]);
+            $allocated=(float)($a->fetch()['t'] ?? 0);
+        }catch(Throwable $e){}
+    }
     return ['physical'=>$physical, 'allocated'=>$allocated, 'free'=>$physical-$allocated];
 }
 
@@ -89,7 +104,6 @@ function cpa_alloc_free_stock($pdo, $stockItemId){
  * @return array [['stock_item_id','product_name','unit','purchased_qty','allocated_from_purchase','free_on_purchase']]
  */
 function cpa_alloc_purchase_line_summary($pdo, $purchaseMovementId){
-    cpa_alloc_install();
     $purchaseMovementId=(int)$purchaseMovementId;
     try{
         $lines=$pdo->prepare(
@@ -105,14 +119,17 @@ function cpa_alloc_purchase_line_summary($pdo, $purchaseMovementId){
         $rows=$lines->fetchAll();
     }catch(Throwable $e){ return []; }
 
+    $tablesReady = cpa_alloc_tables_ready();
     $out=[];
     foreach($rows as $r){
         $allocFromThis=0.0;
-        try{
-            $a=$pdo->prepare("SELECT COALESCE(SUM(GREATEST(allocated_qty-consumed_qty,0)),0) t FROM cpa_allocations WHERE purchase_movement_id=? AND stock_item_id=? AND status<>'İptal'");
-            $a->execute([$purchaseMovementId,(int)$r['stock_item_id']]);
-            $allocFromThis=(float)($a->fetch()['t'] ?? 0);
-        }catch(Throwable $e){}
+        if($tablesReady){
+            try{
+                $a=$pdo->prepare("SELECT COALESCE(SUM(GREATEST(allocated_qty-consumed_qty,0)),0) t FROM cpa_allocations WHERE purchase_movement_id=? AND stock_item_id=? AND status<>'İptal'");
+                $a->execute([$purchaseMovementId,(int)$r['stock_item_id']]);
+                $allocFromThis=(float)($a->fetch()['t'] ?? 0);
+            }catch(Throwable $e){}
+        }
         $out[]=[
             'stock_item_id'=>(int)$r['stock_item_id'],
             'product_name'=>$r['product_name'],
@@ -127,7 +144,7 @@ function cpa_alloc_purchase_line_summary($pdo, $purchaseMovementId){
 
 /** Bir alışa bağlı TÜM tahsisler (iptal dahil, geçmiş görünsün diye) — cpa_allocation.php listesi. */
 function cpa_alloc_list_for_purchase($pdo, $purchaseMovementId){
-    cpa_alloc_install();
+    if(!cpa_alloc_tables_ready()) return [];
     try{
         $st=$pdo->prepare(
             "SELECT ca.*, si.name AS product_name, si.unit, c.name AS customer_name
@@ -144,7 +161,7 @@ function cpa_alloc_list_for_purchase($pdo, $purchaseMovementId){
 
 /** Bir müşterinin tüm tahsisleri — contact_view.php "Tahsisli Stok" bölümü. */
 function cpa_alloc_list_for_customer($pdo, $customerId, $includeInactive=true){
-    cpa_alloc_install();
+    if(!cpa_alloc_tables_ready()) return [];
     try{
         $sql="SELECT ca.*, si.name AS product_name, si.unit,
                      fm.movement_date AS purchase_date
@@ -161,7 +178,7 @@ function cpa_alloc_list_for_customer($pdo, $customerId, $includeInactive=true){
 
 /** Bir ürünün tüm tahsisleri (hangi müşteriye ne kadar) — product_view.php "Tahsisli Stok" bölümü. */
 function cpa_alloc_list_for_product($pdo, $stockItemId, $includeInactive=true){
-    cpa_alloc_install();
+    if(!cpa_alloc_tables_ready()) return [];
     try{
         $sql="SELECT ca.*, c.name AS customer_name, fm.movement_date AS purchase_date
               FROM cpa_allocations ca
@@ -178,16 +195,16 @@ function cpa_alloc_list_for_product($pdo, $stockItemId, $includeInactive=true){
 /**
  * Yeni tahsis oluşturur. Miktar, bu ALIŞTAN kalan serbest miktarı (purchased_qty - bu alıştan
  * zaten tahsis edilenler) AŞAMAZ — satın alınmamış bir şey tahsis edilemez.
- * @throws Exception yetkisiz erişim, geçersiz miktar veya kapasite aşımı durumunda
+ * @throws Exception yetkisiz erişim, migration eksikliği, geçersiz miktar veya kapasite aşımı durumunda
  * @return int yeni cpa_allocations.id
  */
 function cpa_alloc_create($pdo, $userId, $purchaseMovementId, $stockItemId, $customerId, $qty, $notes=''){
     if(!cpa_can_edit()) throw new Exception('Bu işlem için yönetici yetkisi gerekir.');
+    cpa_alloc_require_tables();
     $purchaseMovementId=(int)$purchaseMovementId; $stockItemId=(int)$stockItemId; $customerId=(int)$customerId;
     $qty=(float)$qty;
     if(!$purchaseMovementId || !$stockItemId || !$customerId) throw new Exception('Alış, ürün ve müşteri seçimi zorunlu.');
     if($qty<=0) throw new Exception('Tahsis miktarı sıfırdan büyük olmalı.');
-    cpa_alloc_install();
 
     $pm=$pdo->prepare("SELECT id FROM finance_movements WHERE id=? AND movement_type='purchase'");
     $pm->execute([$purchaseMovementId]);
@@ -221,18 +238,17 @@ function cpa_alloc_create($pdo, $userId, $purchaseMovementId, $stockItemId, $cus
  * tüketilmiş kısmın (consumed_qty) altına düşürülemez — tüketilen bir şey geri alınamaz, önce o
  * kısım zaten satışla gerçekleşmiştir. Artırmak isterse çağıran taraf cpa_alloc_create()'in
  * kapasite kontrolünü BURADA da uygular (aynı alıştan fazlası tahsis edilemez).
- * @throws Exception yetkisiz erişim, kayıt yoksa veya geçersiz miktar
+ * @throws Exception yetkisiz erişim, migration eksikliği, kayıt yoksa veya geçersiz miktar
  */
 function cpa_alloc_reduce($pdo, $userId, $id, $newQty){
     if(!cpa_can_edit()) throw new Exception('Bu işlem için yönetici yetkisi gerekir.');
+    cpa_alloc_require_tables();
     $id=(int)$id; $newQty=(float)$newQty;
-    cpa_alloc_install();
     $cur=$pdo->prepare("SELECT * FROM cpa_allocations WHERE id=?"); $cur->execute([$id]); $old=$cur->fetch();
     if(!$old) throw new Exception('Tahsis kaydı bulunamadı.');
     if($old['status']==='İptal') throw new Exception('İptal edilmiş bir tahsis düzenlenemez.');
     if($newQty < (float)$old['consumed_qty'] - 0.0000001) throw new Exception('Yeni miktar, zaten tüketilen '.stock_qty_fmt($old['consumed_qty']).' adedin altına düşürülemez.');
     if($newQty > (float)$old['allocated_qty'] + 0.0000001){
-        $extra=$newQty-(float)$old['allocated_qty'];
         $aa=$pdo->prepare("SELECT COALESCE(SUM(GREATEST(allocated_qty-consumed_qty,0)),0) t FROM cpa_allocations WHERE purchase_movement_id=? AND stock_item_id=? AND status<>'İptal' AND id<>?");
         $aa->execute([$old['purchase_movement_id'],$old['stock_item_id'],$id]);
         $othersAlloc=(float)($aa->fetch()['t'] ?? 0);
@@ -250,11 +266,11 @@ function cpa_alloc_reduce($pdo, $userId, $id, $newQty){
 
 /** Tahsisi iptal eder (Product Owner: "iptal edilebilsin") — kalan miktar serbest stoğa döner,
  * kayıt SİLİNMEZ (geçmiş korunur, cpa_preferences ile aynı felsefe).
- * @throws Exception yetkisiz erişim veya kayıt yoksa */
+ * @throws Exception yetkisiz erişim, migration eksikliği veya kayıt yoksa */
 function cpa_alloc_cancel($pdo, $userId, $id){
     if(!cpa_can_edit()) throw new Exception('Bu işlem için yönetici yetkisi gerekir.');
+    cpa_alloc_require_tables();
     $id=(int)$id;
-    cpa_alloc_install();
     $cur=$pdo->prepare("SELECT * FROM cpa_allocations WHERE id=?"); $cur->execute([$id]); $old=$cur->fetch();
     if(!$old) throw new Exception('Tahsis kaydı bulunamadı.');
     if($old['status']==='İptal') return; // zaten iptal — no-op
@@ -267,15 +283,15 @@ function cpa_alloc_cancel($pdo, $userId, $id){
  * "başka satışa aktarım kontrollü olsun"). Kaynak tahsisten $qty kadar düşülür (tüketilen kısım
  * dokunulmaz), aynı miktarla YENİ bir tahsis satırı açılır (aynı alış/ürün, yeni müşteri) — geçmiş
  * bölünerek korunur, üzerine yazılmaz.
- * @throws Exception yetkisiz erişim, kayıt yoksa veya miktar kalanı aşıyorsa
+ * @throws Exception yetkisiz erişim, migration eksikliği, kayıt yoksa veya miktar kalanı aşıyorsa
  * @return int yeni tahsisin id'si
  */
 function cpa_alloc_transfer($pdo, $userId, $id, $newCustomerId, $qty){
     if(!cpa_can_edit()) throw new Exception('Bu işlem için yönetici yetkisi gerekir.');
+    cpa_alloc_require_tables();
     $id=(int)$id; $newCustomerId=(int)$newCustomerId; $qty=(float)$qty;
     if(!$newCustomerId) throw new Exception('Aktarılacak müşteri seçilmedi.');
     if($qty<=0) throw new Exception('Aktarım miktarı sıfırdan büyük olmalı.');
-    cpa_alloc_install();
     $cur=$pdo->prepare("SELECT * FROM cpa_allocations WHERE id=?"); $cur->execute([$id]); $old=$cur->fetch();
     if(!$old) throw new Exception('Tahsis kaydı bulunamadı.');
     if($old['status']==='İptal') throw new Exception('İptal edilmiş bir tahsis aktarılamaz.');
@@ -306,21 +322,28 @@ function cpa_alloc_transfer($pdo, $userId, $id, $newCustomerId, $qty){
 
 /**
  * Satış tamamlandığında ilgili tahsisi tüketir (Product Owner: "satış tamamlandığında ilgili
- * tahsis tüketilsin"). sales.php/mobile/sales.php'de stock_create_sale() BAŞARIYLA döndükten
- * SONRA, satılan her satır için çağrılır — stock_lib.php'nin kendi stok/finans matematiğine hiç
- * karışmaz, SADECE cpa_allocations muhasebesini günceller. FIFO: en eski tahsisten başlar. Satılan
- * miktar müşterinin o üründeki aktif tahsislerinden fazlaysa, fazlası tüketilmeden kalır (fazlası
- * zaten "serbest stoktan satış" anlamına gelir — hata DEĞİL).
+ * tahsis tüketilsin"). stock_lib.php::stock_create_sale() / stock_update_sale() (dolayısıyla
+ * web sales.php, mobil sales.php, trade_core.php::trade_apply_document() — HEPSİ aynı yerden)
+ * içinden çağrılır — SADECE cpa_allocations muhasebesini günceller, stock_lib.php'nin kendi stok/
+ * finans matematiğine hiç karışmaz. FIFO: en eski tahsisten başlar. Satılan miktar müşterinin o
+ * üründeki aktif tahsislerinden fazlaysa, fazlası tüketilmeden kalır (fazlası "serbest stoktan
+ * satış" anlamına gelir — hata DEĞİL).
+ *
+ * P0 CPA VERİ BÜTÜNLÜĞÜ (2026-07-18): her tüketim dilimi cpa_allocation_consumptions defterine
+ * $saleMovementId ile KAYDEDİLİR — bu kayıt olmadan cpa_alloc_reverse_for_sale() bu satışın HANGİ
+ * tahsis(ler)den ne kadar düştüğünü asla bilemez ve satış düzenlenince/silinince tüketim kalıcı
+ * olarak "asılı" kalırdı (bu P0'ın kök nedeni).
  *
  * Hata ASLA fırlatmaz (best-effort) — satış zaten gerçekleşmiş, bu sadece muhasebe kaydı;
- * çağıran taraf ekstra try/catch'e gerek duymadan çağırabilir.
+ * çağıran taraf ekstra try/catch'e gerek duymadan çağırabilir. Migration çalıştırılmamışsa
+ * (tablolar yoksa) sessizce 0 döner — "aktifmiş gibi" davranmaz ama satışı da bozmaz.
  * @return float bu satıştan gerçekten tahsisten düşülen toplam miktar (0 ise hiç aktif tahsis yoktu)
  */
-function cpa_alloc_consume_for_sale($pdo, $userId, $customerId, $stockItemId, $qty){
+function cpa_alloc_consume_for_sale($pdo, $userId, $saleMovementId, $customerId, $stockItemId, $qty){
     try{
-        cpa_alloc_install();
-        $customerId=(int)$customerId; $stockItemId=(int)$stockItemId; $remaining=(float)$qty;
-        if(!$customerId || !$stockItemId || $remaining<=0) return 0.0;
+        if(!cpa_alloc_tables_ready()) return 0.0;
+        $saleMovementId=(int)$saleMovementId; $customerId=(int)$customerId; $stockItemId=(int)$stockItemId; $remaining=(float)$qty;
+        if(!$saleMovementId || !$customerId || !$stockItemId || $remaining<=0) return 0.0;
 
         $st=$pdo->prepare("SELECT * FROM cpa_allocations WHERE customer_id=? AND stock_item_id=? AND status='Aktif' ORDER BY created_at ASC, id ASC");
         $st->execute([$customerId,$stockItemId]);
@@ -335,11 +358,66 @@ function cpa_alloc_consume_for_sale($pdo, $userId, $customerId, $stockItemId, $q
             $newConsumed=(float)$row['consumed_qty']+$take;
             $newStatus=cpa_alloc_status_for($row['allocated_qty'],$newConsumed,$row['status']);
             $pdo->prepare("UPDATE cpa_allocations SET consumed_qty=?, status=? WHERE id=?")->execute([$newConsumed,$newStatus,$row['id']]);
-            if(function_exists('audit_log')) audit_log($userId,'update','cpa_allocations',$row['id'],['consumed_qty'=>$row['consumed_qty']],['consumed_qty'=>$newConsumed,'consumed_by_sale'=>true]);
+            $pdo->prepare("INSERT INTO cpa_allocation_consumptions(allocation_id,sale_movement_id,consumed_qty) VALUES(?,?,?)")
+                ->execute([(int)$row['id'],$saleMovementId,$take]);
+            if(function_exists('audit_log')) audit_log($userId,'update','cpa_allocations',$row['id'],['consumed_qty'=>$row['consumed_qty']],['consumed_qty'=>$newConsumed,'consumed_by_sale'=>$saleMovementId]);
             $remaining-=$take;
             $totalConsumed+=$take;
         }
         return $totalConsumed;
+    }catch(Throwable $e){
+        return 0.0;
+    }
+}
+
+/**
+ * Bir satışın (finance_movements.id, movement_type IN 'sale'/'mobile_sale') tükettiği TÜM CPA
+ * tahsislerini geri alır — P0 CPA VERİ BÜTÜNLÜĞÜ KAPANIŞI (2026-07-18): satış DÜZENLENİRKEN
+ * (yeni değerlerle tekrar tüketmeden ÖNCE, stock_lib.php::stock_update_sale() içinde) veya
+ * SİLİNİRKEN (stock_lib.php::stock_reverse_sale() içinde) çağrılır.
+ *
+ * cpa_allocation_consumptions defterindeki bu sale_movement_id'ye ait TÜM satırları okur, her
+ * birinin bağlı olduğu tahsisin consumed_qty'sini o kadar AZALTIR (durumu yeniden hesaplar —
+ * İptal edilmiş bir tahsis "Aktif"e GERİ DÖNMEZ, sadece consumed_qty'si düşer, bkz.
+ * cpa_alloc_status_for()), sonra defter satırlarını SİLER.
+ *
+ * İDEMPOTENT: defter satırları geri alındıktan sonra SİLİNDİĞİ için bu fonksiyon aynı
+ * sale_movement_id için ikinci kez çağrılırsa artık geri alınacak bir şey bulamaz (ledger boş),
+ * no-op olur — ÇİFT İADE oluşmaz. stock_update_sale() bu fonksiyonu HER ZAMAN yeniden-tüketimden
+ * ÖNCE çağırır (reverse-then-reapply deseni, stock_lib.php'nin kendi stok tersleme mantığıyla
+ * aynı felsefe) — bu da ÇİFT TÜKETİM'i engeller (eski tüketim her zaman önce temizlenir).
+ *
+ * Hata ASLA fırlatmaz (best-effort, cpa_alloc_consume_for_sale() ile aynı felsefe) — satış
+ * düzenleme/silme işlemi zaten kendi transaction'ı içinde yürür, bir CPA hatası satışın kendisini
+ * asla bozmamalı. Migration çalıştırılmamışsa sessizce 0 döner.
+ * @return float geri alınan toplam miktar
+ */
+function cpa_alloc_reverse_for_sale($pdo, $userId, $saleMovementId){
+    try{
+        if(!cpa_alloc_tables_ready()) return 0.0;
+        $saleMovementId=(int)$saleMovementId;
+        if(!$saleMovementId) return 0.0;
+
+        $st=$pdo->prepare("SELECT * FROM cpa_allocation_consumptions WHERE sale_movement_id=?");
+        $st->execute([$saleMovementId]);
+        $ledgerRows=$st->fetchAll();
+        if(!$ledgerRows) return 0.0;
+
+        $totalReversed=0.0;
+        foreach($ledgerRows as $lr){
+            $ar=$pdo->prepare("SELECT * FROM cpa_allocations WHERE id=?");
+            $ar->execute([(int)$lr['allocation_id']]);
+            $alloc=$ar->fetch();
+            if($alloc){
+                $newConsumed=max(0.0, (float)$alloc['consumed_qty']-(float)$lr['consumed_qty']);
+                $newStatus=cpa_alloc_status_for($alloc['allocated_qty'],$newConsumed,$alloc['status']);
+                $pdo->prepare("UPDATE cpa_allocations SET consumed_qty=?, status=? WHERE id=?")->execute([$newConsumed,$newStatus,$alloc['id']]);
+                if(function_exists('audit_log')) audit_log($userId,'update','cpa_allocations',$alloc['id'],['consumed_qty'=>$alloc['consumed_qty']],['consumed_qty'=>$newConsumed,'reversed_from_sale'=>$saleMovementId]);
+            }
+            $totalReversed += (float)$lr['consumed_qty'];
+        }
+        $pdo->prepare("DELETE FROM cpa_allocation_consumptions WHERE sale_movement_id=?")->execute([$saleMovementId]);
+        return $totalReversed;
     }catch(Throwable $e){
         return 0.0;
     }

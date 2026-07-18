@@ -104,7 +104,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             // (bkz. ../sales.php içindeki not). stock/finans matematiğine hiç karışmaz.
             $__cpaConsumedParts=[];
             foreach($lines as $__l){
-                $__consumed=cpa_alloc_consume_for_sale($pdo, $u['id']??0, $contact, $__l['item']['id'], $__l['qty']);
+                $__consumed=cpa_alloc_consume_for_sale($pdo, $u['id']??0, $financeMovementId, $contact, $__l['item']['id'], $__l['qty']);
                 if($__consumed>0) $__cpaConsumedParts[]=$__l['item']['name'].' x'.stock_qty_fmt($__consumed);
             }
             if($__cpaConsumedParts) $ok .= ' · 🎯 Tahsisten düşüldü: '.implode(', ',$__cpaConsumedParts);

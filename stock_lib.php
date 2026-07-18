@@ -163,6 +163,7 @@ function stock_create_purchase($pdo, $supplier, $ids, $qtys, $prices, $vatRates,
  */
 function stock_reverse_sale($pdo, $saleId){
     require_once __DIR__.'/finance_lib.php';
+    require_once __DIR__.'/cpa_allocation_lib.php';
 
     try{
         $saleId = (int)$saleId;
@@ -191,6 +192,12 @@ function stock_reverse_sale($pdo, $saleId){
                 $pdo->prepare("UPDATE stock_items SET quantity=quantity+? WHERE id=?")->execute([$movement['quantity'], $movement['stock_item_id']]);
                 $pdo->prepare("DELETE FROM stock_movements WHERE id=?")->execute([$movement['id']]);
             }
+
+            // P0 CPA VERİ BÜTÜNLÜĞÜ KAPANIŞI (2026-07-18): satış silinince tükettiği CPA
+            // tahsislerini de geri aç (bkz. cpa_allocation_lib.php::cpa_alloc_reverse_for_sale()
+            // üstündeki not) — aynı transaction içinde, best-effort/idempotent, stok/finans
+            // matematiğine karışmaz.
+            cpa_alloc_reverse_for_sale($pdo, $_SESSION['user']['id'] ?? 0, $saleId);
 
             // Finans hareketini geri al — finance_movement_delete() 'sale'/'mobile_sale' tipini kasıtlı
             // olarak reddediyor (normal finans düzenleme ekranından dokunulmasın diye), bu yüzden burada
@@ -500,6 +507,7 @@ function stock_can_edit_sale($pdo, $saleId){
  */
 function stock_update_sale($pdo, $saleId, $contact, $ids, $qtys, $prices, $vatRates, $noteLabel='Satış', $confirmed=false){
     require_once __DIR__.'/finance_lib.php';
+    require_once __DIR__.'/cpa_allocation_lib.php';
     try{
         $saleId = (int)$saleId;
         if($saleId < 1) return ['ok'=>false, 'message'=>'Geçersiz satış kaydı.'];
@@ -532,6 +540,13 @@ function stock_update_sale($pdo, $saleId, $contact, $ids, $qtys, $prices, $vatRa
 
         $pdo->beginTransaction();
         try{
+            // 0) P0 CPA VERİ BÜTÜNLÜĞÜ KAPANIŞI (2026-07-18): bu satışın ESKİ müşteri/ürün/miktar
+            // üzerinden tükettiği CPA tahsislerini, YENİ değerleri uygulamadan ÖNCE geri al —
+            // aksi halde eski tüketim kalıcı olarak "asılı" kalır (bu P0'ın kök nedeni). Best-effort
+            // (hata fırlatmaz) ve idempotent (bkz. cpa_alloc_reverse_for_sale() üstündeki not) —
+            // stok/finans matematiğine hiç karışmaz.
+            cpa_alloc_reverse_for_sale($pdo, $_SESSION['user']['id'] ?? 0, $saleId);
+
             // 1) Eski stok etkisini geri al, eski stok hareketlerini sil
             foreach($oldMovements as $m){
                 $pdo->prepare("UPDATE stock_items SET quantity=quantity+? WHERE id=?")->execute([$m['quantity'], $m['stock_item_id']]);
@@ -541,10 +556,13 @@ function stock_update_sale($pdo, $saleId, $contact, $ids, $qtys, $prices, $vatRa
             // 2) Eski bakiye etkisini geri al (varsa — legacy Peşin satış olabilir; finance_lib.php ortak fonksiyonu)
             finance_movement_reverse_balance($pdo, $oldSale);
 
-            // 3) Yeni satırları uygula — stok düş + satır bazlı fiyat/KDV ile kaydet
+            // 3) Yeni satırları uygula — stok düş + satır bazlı fiyat/KDV ile kaydet + YENİ müşteri/
+            // ürün/miktar üzerinden CPA tahsisini yeniden tüket (adım 0'da geri alınan aynı defter
+            // mekanizması — bkz. cpa_alloc_consume_for_sale()).
             foreach($lines as $l){
                 $pdo->prepare("UPDATE stock_items SET quantity=quantity-? WHERE id=?")->execute([$l['qty'], $l['item']['id']]);
                 stock_insert_sale_movement($pdo, $l['item']['id'], $saleId, $l['qty'], $l['price'], $l['vat_rate'], 'Satış', $noteLabel.' (düzenlendi)');
+                cpa_alloc_consume_for_sale($pdo, $_SESSION['user']['id'] ?? 0, $saleId, $contact, $l['item']['id'], $l['qty']);
             }
 
             // 4) finance_movements'ı GÜNCELLE (aynı id) — kural: satış kasa/banka etkilemez,

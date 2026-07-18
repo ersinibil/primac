@@ -13,7 +13,7 @@ uygulanır ama **veri** paylaşılmaz. Bir ortamda çalışan bir sorgu diğerin
 patlayabilir eğer migration sırası atlanmışsa — bkz. aşağıdaki "Şema Sapması (Drift) Riski".
 
 ## Migration Mekanizması
-- Dosyalar: `database/migrations/NNN_aciklama.sql`, sıra numarasıyla (şu an 001–038).
+- Dosyalar: `database/migrations/NNN_aciklama.sql`, sıra numarasıyla (şu an 001–047).
 - Lokal/CLI erişimi olan ortamda `migrate.php` çalıştırır.
 - Prod'da gerçek deploy aracı `guncelle.php` (repo dışı, `~/Desktop/ACANS-GUNCELLEME/` ve
   `~/Desktop/PRIMAC-GUNCELLEME/` klasörlerinde) — kendi `schema_migrations` tablosuyla hangi
@@ -65,6 +65,30 @@ yazıldığında veya "tablo/kolon bulunamadı" hatası bildirildiğinde proakti
 ### Ticari Belgeler (006, 014, 015, 017)
 - `trade_documents`, `trade_document_items` — teklif/sipariş/fatura
 - `quotes`, `quote_items` — teklif modülü (firm → 015, intro_note → 017, approval_token → 029)
+
+### CPA — Müşteriye Özel Tedarik Takibi (045, 046, 047)
+- `cpa_preferences` (045) — müşteri+ürün bazında tercih edilen tedarikçi hafızası (öncelik sırası,
+  varsayılan bayrağı, Aktif/Pasif — SİLİNMEZ, kaldırma status değişimiyle olur). `cpa_lib.php`
+  runtime'da kendi şemasını `CREATE TABLE IF NOT EXISTS` ile kurar (proje geneli 6. kural — bkz.
+  `CLAUDE.md`), migration bağımsız çalışabilir.
+- `cpa_allocations` (046) — satın alınan miktarın belirli bir kısmının belirli bir müşteriye
+  TAHSİS edilmesi (`purchase_movement_id`+`stock_item_id`+`customer_id`, `allocated_qty`/
+  `consumed_qty`, status Aktif/Tüketildi/İptal). `purchase_movement_id` bilerek
+  `finance_movements.id`'ye bağlanır (`stock_movements.id`'ye DEĞİL — bir alış düzenlendiğinde
+  stock_movements satırları silinip yeniden oluşturuluyor, o id'ye bağlansaydı tahsisler öksüz
+  kalırdı). "Serbest stok" hiçbir yerde saklanmaz, her zaman `stock_items.quantity - SUM(aktif
+  tahsis kalanı)` formülüyle türetilir.
+- `cpa_allocation_consumptions` (047) — bir satışın hangi tahsis(ler)den ne kadar tükettiğinin
+  defteri (`allocation_id`+`sale_movement_id`+`consumed_qty`). Satış düzenlenince/silinince
+  `cpa_alloc_reverse_for_sale()` bu defterden okuyup geri alır ve satırları SİLER (idempotent —
+  aynı satış için ikinci "reverse" çağrısı no-op olur, çift iade oluşmaz).
+- **Şema otoritesi farkı (bilerek)**: `cpa_allocations`/`cpa_allocation_consumptions`
+  (`cpa_allocation_lib.php`) runtime'da CREATE TABLE YAPMAZ — 046/047 migration'ları TEK otoritedir,
+  migrate.php çalıştırılmadan yazma fonksiyonları (create/reduce/cancel/transfer) açık hata verir,
+  otomatik satış-tüketim kancaları sessizce no-op olur. Bu, proje geneli "IF NOT EXISTS ile
+  dayanıklı ol" kuralının BİLİNÇLİ bir istisnasıdır (P0 CPA Veri Bütünlüğü Kapanışı, 2026-07-18,
+  Product Owner kararı: "migrate.php uygulanmadan özellik aktifmiş gibi davranmasın") — `cpa_preferences`
+  (045) bu istisnanın DIŞINDA, eski davranışını korur.
 
 ### Mesajlaşma / Bildirim / Push (007, 009, 010)
 - `internal_messages` — 1-1 ve grup mesajları (thread_id → 010, `sender_user_id` NULL olabilir ama

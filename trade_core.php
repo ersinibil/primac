@@ -108,12 +108,12 @@ function trade_apply_document($documentId, $confirmed=false){
         if($doc['document_type']==='purchase'){
             stock_create_purchase($pdo, $doc['contact_id'], $ids, $qtys, $prices, $vats, $noteLabel, $documentId);
         }else{
-            stock_create_sale($pdo, $doc['contact_id'], $ids, $qtys, $prices, $vats, $noteLabel, $confirmed, $documentId);
+            $__saleRes = stock_create_sale($pdo, $doc['contact_id'], $ids, $qtys, $prices, $vats, $noteLabel, $confirmed, $documentId);
             // P0 SON KAPANIŞ (2026-07-18) — sales.php'nin "Hızlı Satış" yoluyla aynı otomatik CPA
             // tahsis tüketimi; Satış Belgesi (trade_document_new.php) da bu TEK ortak fonksiyonu
             // kullandığı için buraya eklendi (iki ayrı yerde tekrarlamak yerine). Hata fırlatmaz.
             foreach($ids as $__i=>$__pid){
-                cpa_alloc_consume_for_sale($pdo, $_SESSION['user']['id'] ?? 0, $doc['contact_id'], (int)$__pid, (float)($qtys[$__i] ?? 0));
+                cpa_alloc_consume_for_sale($pdo, $_SESSION['user']['id'] ?? 0, $__saleRes['sale_id'], $doc['contact_id'], (int)$__pid, (float)($qtys[$__i] ?? 0));
             }
         }
     }
