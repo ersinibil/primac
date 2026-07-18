@@ -2,6 +2,21 @@
 
 <!-- Açık geliştirme görevleri. Kapanan madde buradan silinip memory/features.md'ye taşınır. -->
 
+## 🔴 EN GÜNCEL CONTEXT HANDOFF — bkz. `memory/NEXT_CHAT_CONTEXT.md` (2026-07-18, HEAD `524b591`)
+
+Bu dosyanın altındaki bloklar (aşağıdaki "DEVAM — ikinci tur" ve "CONTEXT HANDOFF — ÖNCEKİ TUR")
+TARİHSEL referans olarak duruyor, silinmedi — ama **güncel/aktif checkpoint artık
+`memory/NEXT_CHAT_CONTEXT.md`'dir.** Yeni oturum ÖNCE o dosyayı okumalı (12 bölüm: proje temeli,
+çalışma kuralı, P0 durumu, çek/senet, CPA, personel, mobil shell — 3 round FAIL/fix geçmişiyle,
+mobil tema/ayarlar, **Mobile UX/IA Reference Pass — şu anki en öncelikli aktif iş**, açık backlog
+öncelik sırası, son commit tablosu, yeni chat başlatma komutu).
+
+Özet: mobil shell/navigasyon 3 kez "tamamlandı" denip 3 kez gerçek iPhone testinde FAIL aldı —
+Round 3 (commit `f2eff0d`) şu an en son durum, USER TEST sonucu henüz gelmedi. Finans UX'te
+"Çek/Senet Düzenle/İptal" maddesi (cari filtresi zaten yapıldı) henüz uygulanmadı. Şu an aktif/
+en öncelikli iş: Product Owner'ın istediği "Mobile UX/IA Reference Pass" — 7 referans ekran
+(Ana/Menü/İş/Cari/İletişim/1 Liste/1 Detay), görsel onay almadan kalan ekranlara YAYILMAYACAK.
+
 ## 🟡 DEVAM — 2026-07-18 ikinci tur (guncelleme.zip tazelendi, primac.tr durumu HÂLÂ TEYİT EDİLEMEDİ)
 
 **Son commit:** `15959a2` (main, origin ile senkron, working tree TEMİZ — bu tur repo'ya commit
