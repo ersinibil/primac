@@ -173,6 +173,11 @@ $ps=$pdo->query("SELECT id,name,unit,purchase_price,vat_rate FROM stock_items WH
       </form>
     </div>
     <?php endif; ?>
+    <?php if(can_edit_delete()): ?>
+    <div style="display:flex;gap:6px;margin-top:6px">
+      <a class="df-btn df-btn--secondary df-btn--sm" href="cpa_allocation.php?purchase_id=<?=(int)$row['id']?>">🎯 Tahsis Et</a>
+    </div>
+    <?php endif; ?>
   </div>
   <?php endforeach; ?>
 </div>

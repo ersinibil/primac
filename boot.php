@@ -201,6 +201,9 @@ function page_module_map(){
         'stock.php'=>'stock','product_new.php'=>'stock','product_view.php'=>'stock','stock_movement_new.php'=>'stock',
         'product_categories.php'=>'stock','product_taxonomy.php'=>'stock','purchase.php'=>'stock',
         'sales.php'=>'stock','kpi.php'=>'personnel',
+        // P0 SON KAPANIŞ (2026-07-18) — CPA miktarsal tahsis ekranı: purchase.php ile aynı yetki
+        // (basename eşleşmesi mobile/cpa_allocation.php'yi de otomatik kapsar).
+        'cpa_allocation.php'=>'stock',
         'report.php'=>'report','gunluk_rapor.php'=>'report',
         'accounting.php'=>'muhasebe','accounting_categories.php'=>'muhasebe',
         'personnel.php'=>'personnel','personnel_new.php'=>'personnel','personnel_view.php'=>'personnel','personnel_edit.php'=>'personnel',

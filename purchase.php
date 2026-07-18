@@ -208,6 +208,7 @@ if($recent): ?>
       <td><?=ds_badge($row['status'])?></td>
       <?php if(can_edit_delete()): ?>
       <td class="nowrap"><div class="row-actions">
+        <a class="df-btn df-btn--secondary df-btn--sm" href="cpa_allocation.php?purchase_id=<?=(int)$row['id']?>">🎯 Tahsis Et</a>
         <?php if($isDoc): ?>
         <a class="df-btn df-btn--secondary df-btn--sm" href="trade_document_view.php?id=<?=(int)$row['document_id']?>">🧾 Belgeyi Aç</a>
         <?php else: ?>
