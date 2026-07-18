@@ -244,7 +244,10 @@ try{
     $actions=finance_movement_actions($m);
     $canEdit=$actions['editable'] && can_edit_delete();
     $srcUrl=$actions['source_url'];
-    if($srcUrl && in_array($actions['source_type'],['document','settlement'],true)) $srcUrl='../'.$srcUrl; // trade_document_view.php/finance.php sadece kökte var
+    // P0 KAPANIŞ (2026-07-18): trade_document_view.php/finance.php sadece kökte var (/mobile/
+    // dışı) — web=1 olmadan boot.php'nin mobil-otomatik-yönlendirmesi bu linke sessizce takılıp
+    // mobile/index.php'ye geri atardı (redirect-trap).
+    if($srcUrl && in_array($actions['source_type'],['document','settlement'],true)) $srcUrl='../'.$srcUrl.(strpos($srcUrl,'?')===false?'?':'&').'web=1';
   ?>
   <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:10px;border-top:1px solid var(--df-hairline);padding-top:10px">
     <div style="flex:1;min-width:0">

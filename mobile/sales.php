@@ -284,7 +284,9 @@ if(!$stockShortage && !$editMode && !empty($_GET['stock_item_id'])){
     <?php endif; ?>
     <?php if($isDoc): ?>
     <div style="display:flex;gap:6px;margin-top:10px">
-      <a class="df-btn df-btn--secondary df-btn--sm" href="../trade_document_view.php?id=<?=(int)$row['document_id']?>"><?=ds_icon('box',14)?> Belge</a>
+      <!-- P0 KAPANIŞ (2026-07-18): web=1 olmadan boot.php'nin mobil-otomatik-yönlendirmesi bu
+           /mobile/ dışı sayfaya sessizce takılıp mobile/index.php'ye geri atardı. -->
+      <a class="df-btn df-btn--secondary df-btn--sm" href="../trade_document_view.php?id=<?=(int)$row['document_id']?>&web=1"><?=ds_icon('box',14)?> Belge</a>
     </div>
     <?php elseif(can_edit_delete()): ?>
     <div style="display:flex;gap:6px;margin-top:10px">

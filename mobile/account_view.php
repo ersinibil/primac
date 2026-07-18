@@ -102,7 +102,10 @@ try{
     $actions=finance_movement_actions($m);
     $canEdit=$actions['editable'] && can_edit_delete();
     $srcUrl=$actions['source_url'];
-    if($srcUrl && in_array($actions['source_type'],['document','settlement'],true)) $srcUrl='../'.$srcUrl; // trade_document_view.php/finance.php sadece kökte var
+    // P0 KAPANIŞ (2026-07-18): trade_document_view.php/finance.php sadece kökte var (/mobile/
+    // dışı) — web=1 olmadan boot.php'nin mobil-otomatik-yönlendirmesi bu linke sessizce takılıp
+    // mobile/index.php'ye geri atardı (redirect-trap).
+    if($srcUrl && in_array($actions['source_type'],['document','settlement'],true)) $srcUrl='../'.$srcUrl.(strpos($srcUrl,'?')===false?'?':'&').'web=1';
     $__title='<span style="color:'.($in?'#4ade80':'#f87171').'">'.h(finance_movement_type_label($m)).'</span> '.mm($m['amount']);
     $__desc=h(($m['cari']?:'-').' · '.($m['description']??''));
     $__meta='<span class="df-list-row-due">'.h($m['movement_date']??'').'</span>';
