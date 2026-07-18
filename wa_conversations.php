@@ -27,7 +27,7 @@ require_once __DIR__.'/layout_top.php';
    çıkarılmadı çünkü DS'in kendi ilkesi de "genel bileşenlere zorla oturtma" değil "aynı görsel
    dil" istiyor). WhatsApp gönderim/iş mantığına HİÇ dokunulmadı, sadece render katmanı. */
 .msg-wrap{display:grid;grid-template-columns:320px 1fr;gap:16px;align-items:start}
-.msg-list{background:var(--df-surface);border-radius:var(--df-radius-lg);box-shadow:var(--df-elevation-raised);padding:12px;max-height:74vh;overflow:auto}
+.msg-list{background:var(--df-surface);border-radius:var(--df-radius-lg);box-shadow:var(--df-elevation-raised);padding:12px;max-height:74vh;overflow:auto;min-width:0}
 .msg-list .lbl{font-size:11px;color:var(--df-ink-500);letter-spacing:.06em;font-weight:900;margin:6px 8px;text-transform:uppercase}
 .msg-row{display:flex;align-items:center;gap:11px;padding:11px;border-radius:var(--df-radius-md);text-decoration:none;color:var(--df-ink-900)}
 .msg-row:hover{background:var(--df-surface-sunken)}
@@ -37,7 +37,7 @@ require_once __DIR__.'/layout_top.php';
 .msg-row .meta b{display:block;font-size:14px}
 .msg-row .meta small{display:block;color:var(--df-ink-500);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .msg-row .badge.green{background:var(--df-success);color:#06281a;min-width:22px;justify-content:center}
-.chat-panel{background:var(--df-surface);border-radius:var(--df-radius-lg);box-shadow:var(--df-elevation-raised);display:flex;flex-direction:column;min-height:74vh;max-height:74vh}
+.chat-panel{background:var(--df-surface);border-radius:var(--df-radius-lg);box-shadow:var(--df-elevation-raised);display:flex;flex-direction:column;min-height:74vh;max-height:74vh;min-width:0}
 .chat-head{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--df-hairline)}
 .chat-head .av{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;color:#fff;flex:0 0 auto}
 .chat-body{flex:1;overflow:auto;padding:18px;display:flex;flex-direction:column;gap:8px;background:var(--df-surface-sunken)}
@@ -49,7 +49,7 @@ require_once __DIR__.'/layout_top.php';
 .composer{display:flex;gap:10px;padding:14px;border-top:1px solid var(--df-hairline)}
 .composer textarea{flex:1;border:1px solid var(--df-hairline);border-radius:var(--df-radius-md);padding:11px;resize:none;font-family:inherit;font-size:14px;min-height:46px;max-height:140px;background:var(--df-surface);color:var(--df-ink-900)}
 .composer button{flex:0 0 auto}
-.no-peer{background:var(--df-surface);border-radius:var(--df-radius-lg);box-shadow:var(--df-elevation-raised);padding:40px;text-align:center;color:var(--df-ink-500)}
+.no-peer{background:var(--df-surface);border-radius:var(--df-radius-lg);box-shadow:var(--df-elevation-raised);padding:40px;text-align:center;color:var(--df-ink-500);min-width:0}
 @media(max-width:960px){ .msg-wrap{grid-template-columns:1fr} .chat-panel,.msg-list{max-height:none} }
 </style>
 
