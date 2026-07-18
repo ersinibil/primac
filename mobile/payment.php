@@ -2,12 +2,13 @@
 require_once 'common.php';
 require_once __DIR__.'/../accounting_lib.php';
 require_once __DIR__.'/../finance_lib.php';
+require_once __DIR__.'/../checks_notes_lib.php';
 $pdo=db();
 $cid=(int)($_GET['contact_id'] ?? 0);
 
 // payment_channel → account_type eşlemesi (collection.php ile aynı mantık)
 function pay_acc_for_pm($pdo,$pm){
-    $map=['Nakit'=>'Kasa','Banka'=>'Banka','Kredi Kartı'=>'Kredi Kartı','POS'=>'POS','Çek'=>'Diğer','Senet'=>'Diğer'];
+    $map=['Nakit'=>'Kasa','Banka'=>'Banka','Kredi Kartı'=>'Kredi Kartı','POS'=>'POS'];
     $type=$map[$pm] ?? 'Kasa';
     try{ $s=$pdo->prepare("SELECT id FROM finance_accounts WHERE account_type=? AND COALESCE(active,1)=1 ORDER BY id LIMIT 1"); $s->execute([$type]); $r=$s->fetch(); return $r?(int)$r['id']:null; }catch(Throwable $e){ return null; }
 }
@@ -16,16 +17,42 @@ function pay_acc_for_pm($pdo,$pm){
 if($_SERVER['REQUEST_METHOD']==='POST'){
     $err='';
     try{
-        $contact=(int)($_POST['contact_id']??0); // opsiyonel
-        // FINANCE UX REFACTOR (2026-07-04): "Ne kaydediyorsun?" sihirbazının "Personel Ödemesi"
-        // adımı için — kolon zaten var (migration 035), bu ekrana ilk kez ekleniyor.
+        $contact=(int)($_POST['contact_id']??0); // opsiyonel (çek/senet HARİÇ — orada zorunlu)
         $personnelId=(int)($_POST['personnel_id']??0) ?: null;
-        // GİDER TÜRÜ CONTEXT-AWARE (2026-07-04): "Gider Türü" artık adıma özel bir katalogdan
-        // (finance_expense_type_options()) geliyor, mevcut payment_type kolonuna yazılıyor.
         $paymentType=trim($_POST['payment_type']??'') ?: null;
         $amount=(float)str_replace(',','.',$_POST['amount']??'0');
         $pm=$_POST['payment_channel'] ?? 'Nakit';
         if($amount<=0) throw new Exception('Tutar geçersiz.');
+
+        // P0 FİNANS UX + ÇEK/SENET ENTEGRASYONU (2026-07-18, Product Owner kararı) — Yöntem=Çek/
+        // Senet artık burada da (web finance_new.php ile AYNI mantık) checks_notes_lib.php'nin TEK
+        // kaynağına gider — "kendi çekimizi ver" (verilen, Bekliyor) veya "portföydeki çeki ciro
+        // et" (checks_notes_endorse()). Kasa/banka hareketi OLUŞMAZ; önceden burada "Diğer"
+        // hesabına sessizce yazılan YANLIŞ davranış kaldırıldı.
+        if(in_array($pm, ['Çek','Senet'], true)){
+            if(!$contact) throw new Exception('Cari seçilmelidir.');
+            $cnDate=date('Y-m-d'); $cnDesc=trim($_POST['description'] ?? '');
+            if(($_POST['cn_mode'] ?? 'own')==='endorse'){
+                $cnId=(int)($_POST['cn_endorse_id'] ?? 0);
+                if(!$cnId) throw new Exception('Ciro edilecek çek/senet seçilmelidir.');
+                checks_notes_endorse($pdo, $ME, $cnId, $contact, $cnDate, $cnDesc);
+                $cnTitle='Çek/senet ciro edildi';
+            }else{
+                checks_notes_create($pdo, [
+                    'type'=>($pm==='Senet'?'senet':'cek'), 'direction'=>'verilen', 'amount'=>$amount,
+                    'due_date'=>trim($_POST['cn_due_date'] ?? ''), 'contact_id'=>$contact,
+                    'bank_name'=>trim($_POST['cn_bank_name'] ?? ''), 'number'=>trim($_POST['cn_number'] ?? ''),
+                    'notes'=>$cnDesc,
+                ], $ME);
+                $cnTitle='Çek/senet verildi (portföyde)';
+            }
+            $cn=$pdo->prepare("SELECT name FROM contacts WHERE id=?"); $cn->execute([$contact]); $cname=$cn->fetch()['name']??'';
+            try{ if(function_exists('activity_log')) activity_log('Finans','Ödeme',$cnTitle,$cname.' · '.mm($amount),'finance',$contact,base_url().'checks_notes.php','🧾'); }catch(Throwable $e){}
+            header('Location: kasa.php?ok=payment'); exit;
+        }
+
+        // FINANCE UX REFACTOR (2026-07-04): "Ne kaydediyorsun?" sihirbazının "Personel Ödemesi"
+        // adımı için — kolon zaten var (migration 035), bu ekrana ilk kez ekleniyor.
         $step=$_POST['record_step'] ?? 'diger';
         $stepOpts=finance_record_type_options();
         if($step==='cari' && !$contact) throw new Exception('Cari Ödemesi için cari seçilmelidir.');
@@ -58,24 +85,32 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 topx('Ödeme / Gider');
 if(!empty($_SESSION['payment_err'])){ echo ds_alert('danger',$_SESSION['payment_err']); unset($_SESSION['payment_err']); }
 
-$cs=[]; $accounts=[]; $personnel=[];
-try{ $cs=$pdo->query("SELECT id,name FROM contacts ORDER BY name")->fetchAll(); }catch(Throwable $e){}
+$cs=[]; $accounts=[]; $personnel=[]; $cekPortfoy=[];
+try{ $cs=$pdo->query("SELECT id,name,type FROM contacts ORDER BY name")->fetchAll(); }catch(Throwable $e){}
 try{ $accounts=$pdo->query("SELECT * FROM finance_accounts WHERE COALESCE(active,1)=1 ORDER BY account_type,name")->fetchAll(); }catch(Throwable $e){}
 try{ $personnel=$pdo->query("SELECT id,name FROM personnel WHERE COALESCE(active,1)=1 ORDER BY name")->fetchAll(); }catch(Throwable $e){}
+if(checks_notes_lifecycle_ready()) $cekPortfoy=checks_notes_list($pdo, null, 'portfoyde', 'alinan');
 $stepOpts=finance_record_type_options();
 ?>
 <div class="df-panel" style="display:flex;gap:8px"><a class="df-btn df-btn--primary" href="kasa.php" style="flex:1;justify-content:center"><?=ds_icon('wallet',14)?> Kasa Durumu</a></div>
 <div class="df-panel" style="margin-top:12px">
-<form method="post" id="paymentForm">
+<form method="post" id="paymentForm" enctype="multipart/form-data">
+  <div id="pmWizardWrap">
   <label>Ne kaydediyorsun?</label>
   <select name="record_step" id="pmStep" onchange="pmApplyStep()">
     <?php foreach($stepOpts as $key=>$o): ?><option value="<?=$key?>" <?=$cid&&$key==='cari'?'selected':''?>><?=$o['icon']?> <?=h($o['label'])?></option><?php endforeach; ?>
   </select>
+  </div>
 
   <div id="pmField_contact_id">
   <label>Cari</label>
-  <select name="contact_id"><option value="">— Cari seçilmedi —</option>
-  <?php foreach($cs as $c): ?><option value="<?=$c['id']?>" <?=$cid===(int)$c['id']?'selected':''?>><?=h($c['name'])?></option><?php endforeach; ?></select>
+  <select name="contact_id" id="pmContactSel"><option value="">— Cari seçilmedi —</option>
+  <?php foreach($cs as $c): ?><option value="<?=$c['id']?>" data-ctype="<?=h($c['type'])?>" <?=$cid===(int)$c['id']?'selected':''?>><?=h($c['name'])?></option><?php endforeach; ?></select>
+  <!-- P0 FİNANS UX (2026-07-18, Product Owner kararı 1. madde): varsayılan Tedarikçiler. -->
+  <div class="df-tabs" id="pmScope" style="margin:0 0 12px">
+    <button type="button" class="df-tab df-tab--active" data-scope="filtered" onclick="pmSetScope(this,'filtered')">Tedarikçiler</button>
+    <button type="button" class="df-tab" data-scope="all" onclick="pmSetScope(this,'all')">Tüm Cariler</button>
+  </div>
   </div>
 
   <div id="pmField_personnel_id" style="display:none">
@@ -91,13 +126,42 @@ $stepOpts=finance_record_type_options();
   <select name="payment_type" id="pmTurSel"><option value="">— Seç —</option></select>
   </div>
 
+  <div id="pmField_account_id">
   <label>Hesap / Kasa / Kart</label>
   <select name="account_id"><option value="">Yönteme göre otomatik</option>
   <?php foreach($accounts as $a): ?><option value="<?=$a['id']?>"><?=h($a['account_type'].' - '.$a['name'].' / '.mm($a['current_balance']??0))?></option><?php endforeach; ?></select>
+  </div>
 
   <label>Tutar</label><input type="number" step="0.01" name="amount" required>
   <label>Ödeme Yöntemi</label>
-  <select name="payment_channel"><option>Nakit</option><option>Banka</option><option>Kredi Kartı</option><option>POS</option><option>Çek</option><option>Senet</option></select>
+  <select name="payment_channel" id="pmChannel" onchange="pmToggleCek()"><option>Nakit</option><option>Banka</option><option>Kredi Kartı</option><option>POS</option><option>Çek</option><option>Senet</option></select>
+
+  <!-- P0 FİNANS UX + ÇEK/SENET ENTEGRASYONU (2026-07-18, Product Owner kararı 4. madde) — Çek/
+       Senet seçilince iki gerçek seçenek: A) kendi çekimizi/senedimizi ver, B) portföydeki müşteri
+       çekini ciro et. Hesap alanı ikisinde de HİÇ sorulmaz (kasa/banka hareketi yok). -->
+  <div id="pmCekBlock" style="display:none">
+    <div class="df-tabs" id="pmCekMode" style="margin:10px 0">
+      <button type="button" class="df-tab df-tab--active" data-mode="own" onclick="pmSetCekMode(this,'own')">Kendi Çekimizi Ver</button>
+      <button type="button" class="df-tab" data-mode="endorse" onclick="pmSetCekMode(this,'endorse')">Portföydeki Çeki Ciro Et</button>
+    </div>
+    <input type="hidden" name="cn_mode" id="pmCnMode" value="own">
+    <div id="pmCekOwnFields">
+      <label>Numara</label><input name="cn_number" placeholder="Çek/senet no">
+      <label>Vade Tarihi</label><input type="date" name="cn_due_date">
+      <div id="pmBankWrap"><label>Banka Adı</label><input name="cn_bank_name" placeholder="Sadece çek için"></div>
+      <label>Dosya / Fotoğraf <small class="muted">(opsiyonel)</small></label><input type="file" name="attachment" accept="image/*,application/pdf">
+    </div>
+    <div id="pmCekEndorseFields" style="display:none">
+      <label>Ciro Edilecek Çek/Senet (Portföyde)</label>
+      <select name="cn_endorse_id"><option value="">— Seç —</option>
+      <?php foreach($cekPortfoy as $cn): ?>
+      <option value="<?=(int)$cn['id']?>"><?=h(($cn['type']==='senet'?'Senet':'Çek').' · '.($cn['number']?:'no yok').' · '.($cn['contact_name']?:'—').' · '.number_format((float)$cn['amount'],2,',','.').' ₺'.($cn['due_date']?' · vade '.$cn['due_date']:''))?></option>
+      <?php endforeach; ?>
+      </select>
+      <?php if(!$cekPortfoy): ?><p class="muted" style="font-size:12px">Portföyde ciro edilebilecek alınan çek/senet yok.</p><?php endif; ?>
+    </div>
+  </div>
+
   <label>Açıklama</label><textarea name="description" id="pmDesc" rows="2" placeholder="Gider / ödeme açıklaması"></textarea>
   <button class="df-btn df-btn--primary df-btn--lg" style="width:100%;margin-top:8px"><?=ds_icon('check',16)?> Ödemeyi Kaydet</button>
 </form>
@@ -120,6 +184,7 @@ function pmBuildTurOptions(step){
 // Her adım sadece kendi ilgili alanını gösterir (yanlış kayıt ihtimalini azaltma amacı) — Cari
 // alanı SADECE "Cari Ödemesi" adımında, Personel SADECE "Personel Ödemesi" adımında görünür.
 function pmApplyStep(){
+  if(document.getElementById('pmChannel').value==='Çek'||document.getElementById('pmChannel').value==='Senet') return;
   var step=document.getElementById('pmStep').value;
   var contactBox=document.getElementById('pmField_contact_id');
   contactBox.style.display = (step==='cari') ? '' : 'none';
@@ -131,7 +196,56 @@ function pmApplyStep(){
   document.getElementById('pmTurSel').required = (PM_TUR_REQUIRED.indexOf(step)!==-1);
   document.getElementById('pmDesc').required = (step==='diger');
 }
+
+// P0 FİNANS UX (2026-07-18, Product Owner kararı 1. madde) — cari modeli değişmedi, sadece liste
+// işlem niyetine göre (Ödeme→Tedarikçi) filtrelenir.
+var PM_SCOPE='filtered';
+function pmSetScope(btn,scope){
+  document.querySelectorAll('#pmScope .df-tab').forEach(function(b){ b.classList.toggle('df-tab--active', b.dataset.scope===scope); });
+  PM_SCOPE=scope; pmApplyScope();
+}
+function pmApplyScope(){
+  var sel=document.getElementById('pmContactSel');
+  Array.prototype.forEach.call(sel.options, function(o){
+    if(!o.value){ o.style.display=''; return; }
+    o.style.display=(PM_SCOPE==='all' || o.dataset.ctype==='Tedarikçi' || o.dataset.ctype==='Her İkisi') ? '' : 'none';
+  });
+}
+
+// P0 FİNANS UX + ÇEK/SENET ENTEGRASYONU (2026-07-18, Product Owner kararı 2-4. madde) — Yöntem
+// Çek/Senet olunca: sihirbaz/Gider Türü/Personel/Hesap alanları gizlenir, cari HER ZAMAN
+// görünür/zorunlu olur, "Kendi Çekimizi Ver / Portföydeki Çeki Ciro Et" alt-seçimi belirir.
+function pmToggleCek(){
+  var pm=document.getElementById('pmChannel').value;
+  var isCek=(pm==='Çek'||pm==='Senet');
+  document.getElementById('pmCekBlock').style.display=isCek?'':'none';
+  document.getElementById('pmBankWrap').style.display=(pm==='Çek')?'':'none';
+  document.getElementById('pmField_account_id').style.display=isCek?'none':'';
+  document.getElementById('pmWizardWrap').style.display=isCek?'none':'';
+  var contactBox=document.getElementById('pmField_contact_id');
+  if(isCek){
+    contactBox.style.display='';
+    contactBox.querySelector('select').required=true;
+    document.getElementById('pmField_personnel_id').style.display='none';
+    document.getElementById('pmField_personnel_id').querySelector('select').required=false;
+    document.getElementById('pmField_payment_type').style.display='none';
+    document.getElementById('pmTurSel').required=false;
+    document.getElementById('pmDesc').required=false;
+  }else{
+    contactBox.querySelector('select').required=false;
+    document.getElementById('pmField_payment_type').style.display='';
+    pmApplyStep();
+  }
+  pmApplyScope();
+}
+function pmSetCekMode(btn,mode){
+  document.getElementById('pmCnMode').value=mode;
+  document.getElementById('pmCekOwnFields').style.display=(mode==='own')?'':'none';
+  document.getElementById('pmCekEndorseFields').style.display=(mode==='endorse')?'':'none';
+  document.querySelectorAll('#pmCekMode .df-tab').forEach(function(b){ b.classList.toggle('df-tab--active', b.dataset.mode===mode); });
+}
 pmApplyStep();
+pmToggleCek();
 </script>
 <div class="df-panel" style="margin-top:12px"><b><?=ds_icon('box',16)?> Son Ödemeler</b>
 <?php

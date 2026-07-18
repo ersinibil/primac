@@ -4,6 +4,7 @@ require_login();
 require_once __DIR__.'/activity_lib.php';
 require_once __DIR__.'/accounting_lib.php';
 require_once __DIR__.'/finance_lib.php';
+require_once __DIR__.'/checks_notes_lib.php';
 
 $pdo=db();
 $error='';
@@ -38,8 +39,54 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         // GİDER TÜRÜ CONTEXT-AWARE (2026-07-04): "Gider Türü" artık adıma özel bir katalogdan
         // (finance_expense_type_options()) geliyor, mevcut payment_type kolonuna yazılıyor.
         $paymentType=trim($_POST['payment_type']??'') ?: null;
+        // P0 FİNANS UX + ÇEK/SENET ENTEGRASYONU (2026-07-18, Product Owner kararı) — Yöntem=Çek/
+        // Senet seçildiğinde bu ekran artık kasa/banka hareketi OLUŞTURMAZ (çek alındığı/verildiği
+        // anda fiziken kasada/bankada değildir) — checks_notes_lib.php'nin TEK kaynağına yönlendirir.
+        $paymentChannel = $_POST['payment_channel'] ?? '';
+        $isCekSenet = in_array($paymentChannel, ['Çek','Senet'], true);
         if($amount<=0) throw new Exception('Tutar sıfırdan büyük olmalı.');
-        if(!$accountId) throw new Exception('Hesap seçilmelidir.');
+        if(!$accountId && !$isCekSenet) throw new Exception('Hesap seçilmelidir.');
+
+        if(!$editId && $isCekSenet){
+            $cnType = $paymentChannel==='Senet' ? 'senet' : 'cek';
+            $cnContactId = (int)($_POST['contact_id'] ?? 0);
+            if(!$cnContactId) throw new Exception('Cari seçilmelidir.');
+            $cnDate = $_POST['movement_date'] ?: date('Y-m-d');
+            $cnDesc = trim($_POST['description'] ?? '');
+
+            if($direction==='out' && ($_POST['cn_mode'] ?? 'own')==='endorse'){
+                // B) Portföydeki (alınan) bir müşteri çekini/senedini hedef tedarikçiye ciro et —
+                // mevcut checks_notes_endorse() TEK akışı: kasa/banka hareketi yok, ciro edilen
+                // tarafın borcu Ödeme mantığıyla kapanır, kaynak müşteri İKİNCİ KEZ etkilenmez.
+                $cnId=(int)($_POST['cn_endorse_id'] ?? 0);
+                if(!$cnId) throw new Exception('Ciro edilecek çek/senet seçilmelidir.');
+                checks_notes_endorse($pdo, $_SESSION['user']['id'] ?? 0, $cnId, $cnContactId, $cnDate, $cnDesc);
+                $cnTitle='Çek/senet ciro edildi';
+            }else{
+                // Tahsilat+Çek/Senet (HER ZAMAN "alınan") veya Ödeme+Çek/Senet A) kendi çekimizi/
+                // senedimizi ver ("verilen") — checks_notes_create() TEK oluşturma akışı: kayıt
+                // 'portfoyde' statüsünde açılır, cari checks_notes_sync_finance() ile TEK SEFER
+                // etkilenir (contact_balance_case_sql() P0 düzeltmesiyle Tahsilat/Ödeme ile AYNI
+                // yönde), kasa/banka hareketi OLUŞMAZ.
+                $cnDirection = $direction==='in' ? 'alinan' : 'verilen';
+                checks_notes_create($pdo, [
+                    'type'=>$cnType, 'direction'=>$cnDirection, 'amount'=>$amount,
+                    'due_date'=>trim($_POST['cn_due_date'] ?? ''), 'contact_id'=>$cnContactId,
+                    'bank_name'=>trim($_POST['cn_bank_name'] ?? ''), 'number'=>trim($_POST['cn_number'] ?? ''),
+                    'notes'=>$cnDesc,
+                ], $_SESSION['user']['id'] ?? 0);
+                $cnTitle = $direction==='in' ? 'Çek/senet alındı (portföyde)' : 'Çek/senet verildi (portföyde)';
+            }
+
+            try{
+                $cs=$pdo->prepare("SELECT name FROM contacts WHERE id=?"); $cs->execute([$cnContactId]);
+                $contactName=$cs->fetch()['name'] ?? '';
+                activity_log('Finans',$direction==='in'?'Tahsilat':'Ödeme',$cnTitle,$contactName.' · '.number_format($amount,2,',','.').' ₺','finance',0,base_url().'checks_notes.php','🧾');
+            }catch(Throwable $e){}
+
+            header("Location: ".finance_return_url($returnContext,$returnRef));
+            exit;
+        }
 
         // FINANCE UX REFACTOR (2026-07-04): "Ne kaydediyorsun?" sihirbazı sadece Ödeme (out)
         // tarafında aktif — Tahsilat (in) hiç etkilenmiyor. Sunucu tarafı doğrulama (JS'e ek,
@@ -152,6 +199,10 @@ require_once __DIR__.'/layout_top.php';
 
 $contacts=$pdo->query("SELECT id,name,type FROM contacts ORDER BY name")->fetchAll();
 $accounts=$pdo->query("SELECT * FROM finance_accounts WHERE active=1 ORDER BY account_type,name")->fetchAll();
+// P0 FİNANS UX + ÇEK/SENET ENTEGRASYONU (2026-07-18) — Ödeme+Çek/Senet'in B) seçeneği (portföydeki
+// müşteri çekini ciro et) için aday liste: sadece PORTFÖYDE + ALINAN kayıtlar cirolanabilir
+// (checks_notes_endorse() zaten aynı kuralı sunucu tarafında da uyguluyor — burası sadece UI listesi).
+$__cekPortfoy = checks_notes_lifecycle_ready() ? checks_notes_list($pdo, null, 'portfoyde', 'alinan') : [];
 $personnelList=[];
 try{ $personnelList=$pdo->query("SELECT id,name FROM personnel WHERE COALESCE(active,1)=1 ORDER BY name")->fetchAll(); }catch(Throwable $e){}
 $gelirCats=acc_categories($pdo,'gelir');
@@ -195,7 +246,7 @@ $fPaymentType=$src['payment_type'] ?? '';
 $channelOpts=['Nakit','Banka / EFT','Kredi Kartı','POS','Çek','Senet','Diğer'];
 ?>
 <section class="df-card">
-<form method="post" class="df-form-grid-2">
+<form method="post" class="df-form-grid-2" enctype="multipart/form-data">
 <?php if($editId): ?><input type="hidden" name="id" value="<?=$editId?>"><?php endif; ?>
 <?php if($returnContext): ?><input type="hidden" name="return_context" value="<?=h($returnContext)?>"><input type="hidden" name="return_ref" value="<?=h($returnRef)?>"><?php endif; ?>
 
@@ -211,10 +262,17 @@ ds_form_field('Ne kaydediyorsun?', '<select name="record_step" id="fnStep" oncha
 
 <div id="fnField_contact_id">
 <?php
+// P0 FİNANS UX (2026-07-18, Product Owner kararı 1. madde): Tahsilat'ta varsayılan sadece
+// Müşteri, Ödeme'de varsayılan sadece Tedarikçi — cari modeli DEĞİŞMEDİ, sadece seçim listesi
+// data-ctype ile JS'te (fnApplyContactScope()) işlem niyetine göre filtreleniyor.
 $__contactOpts='<option value="">Cari seçilmedi</option>';
-foreach($contacts as $c){ $__contactOpts.='<option value="'.$c['id'].'" '.($contactId===$c['id']?'selected':'').'>'.h($c['name'].' / '.$c['type']).'</option>'; }
-ds_form_field('Cari', '<select name="contact_id">'.$__contactOpts.'</select>');
+foreach($contacts as $c){ $__contactOpts.='<option value="'.$c['id'].'" data-ctype="'.h($c['type']).'" '.($contactId===$c['id']?'selected':'').'>'.h($c['name'].' / '.$c['type']).'</option>'; }
+ds_form_field('Cari', '<select name="contact_id" id="fnContactSel">'.$__contactOpts.'</select>');
 ?>
+<div class="df-tabs" id="fnContactScope" style="margin:-4px 0 10px">
+  <button type="button" class="df-tab df-tab--active" data-scope="filtered" onclick="fnSetContactScope(this,'filtered')"><span id="fnScopeFilteredLabel">Müşteriler</span></button>
+  <button type="button" class="df-tab" data-scope="all" onclick="fnSetContactScope(this,'all')">Tüm Cariler</button>
+</div>
 </div>
 
 <div id="fnField_personnel_id" style="display:none">
@@ -239,22 +297,56 @@ ds_form_field('Kategori', '<select name="category_id" id="fnCatSel">'.$__catOpts
 ?>
 </div>
 
+<div id="fnField_account_id">
 <?php
 $__accOpts='<option value="">Seçiniz</option>';
 foreach($accounts as $a){ $__accOpts.='<option value="'.$a['id'].'" '.($fAccId===(int)$a['id']?'selected':'').'>'.h($a['account_type'].' - '.$a['name'].' / '.money($a['current_balance'])).'</option>'; }
-ds_form_field('Hesap / Banka / Kasa / Kart', '<select name="account_id" required>'.$__accOpts.'</select>');
+ds_form_field('Hesap / Banka / Kasa / Kart', '<select name="account_id" id="fnAccSel" required>'.$__accOpts.'</select>');
 ?>
+</div>
 
 <?php
 $__chOpts='';
 foreach($channelOpts as $co){ $__chOpts.='<option '.($fChannel===$co?'selected':'').'>'.h($co).'</option>'; }
-ds_form_field('Yöntem', '<select name="payment_channel">'.$__chOpts.'</select>');
+ds_form_field('Yöntem', '<select name="payment_channel" id="fnChannel" onchange="fnToggleCek()">'.$__chOpts.'</select>');
 ?>
 
 <?php ds_form_field('Tutar', '<input type="number" step="0.01" name="amount" value="'.h($fAmount).'" required>'); ?>
 <?php ds_form_field('Tarih', '<input type="date" name="movement_date" value="'.h($fDate).'">'); ?>
-<?php ds_form_field('Referans No', '<input name="reference_no" placeholder="Dekont, fiş, işlem no" value="'.h($fRef).'">'); ?>
+<div id="fnField_reference_no"><?php ds_form_field('Referans No', '<input name="reference_no" placeholder="Dekont, fiş, işlem no" value="'.h($fRef).'">'); ?></div>
 <div class="df-form-span-2"><?php ds_form_field('Açıklama', '<textarea name="description" id="fnDesc" rows="3">'.h($fDesc).'</textarea>'); ?></div>
+
+<!-- P0 FİNANS UX + ÇEK/SENET ENTEGRASYONU (2026-07-18, Product Owner kararı 2-4. madde) — Yöntem
+     Çek/Senet olunca Hesap alanı GİZLENİR (kasa/banka hareketi oluşmaz), bunun yerine bu blok
+     görünür. fnToggleCek() ile açılır/kapanır — kopya mantık YOK, kayıt checks_notes_lib.php'nin
+     TEK kaynağına (checks_notes_create()/checks_notes_endorse()) gider. -->
+<div id="fnCekBlock" class="df-form-span-2" style="display:none">
+  <div class="df-form-span-2" id="fnCekModeWrap" style="display:none;margin-bottom:var(--df-space-3)">
+    <div class="df-tabs" id="fnCekMode">
+      <button type="button" class="df-tab df-tab--active" data-mode="own" onclick="fnSetCekMode(this,'own')">Kendi Çekimizi/Senedimizi Ver</button>
+      <button type="button" class="df-tab" data-mode="endorse" onclick="fnSetCekMode(this,'endorse')">Portföydeki Çeki Ciro Et</button>
+    </div>
+  </div>
+  <input type="hidden" name="cn_mode" id="fnCnMode" value="own">
+
+  <div class="df-form-grid-2" id="fnCekOwnFields">
+    <?php ds_form_field('Numara', '<input name="cn_number" placeholder="Çek/senet no">'); ?>
+    <?php ds_form_field('Vade Tarihi', '<input type="date" name="cn_due_date">'); ?>
+    <div id="fnCekBankWrap"><?php ds_form_field('Banka Adı', '<input name="cn_bank_name" placeholder="Sadece çek için">'); ?></div>
+    <?php ds_form_field('Dosya / Fotoğraf', '<input type="file" name="attachment" accept="image/*,application/pdf">'); ?>
+  </div>
+
+  <div id="fnCekEndorseFields" style="display:none">
+    <?php
+    $__cekOpts='<option value="">— Seç —</option>';
+    foreach($__cekPortfoy as $__cn){
+        $__cekOpts.='<option value="'.(int)$__cn['id'].'">'.h(($__cn['type']==='senet'?'Senet':'Çek').' · '.($__cn['number']?:'no yok').' · '.($__cn['contact_name']?:'—').' · '.number_format((float)$__cn['amount'],2,',','.').' ₺'.($__cn['due_date']?' · vade '.$__cn['due_date']:'')).'</option>';
+    }
+    ds_form_field('Ciro Edilecek Çek/Senet (Portföyde)', '<select name="cn_endorse_id">'.$__cekOpts.'</select>');
+    if(!$__cekPortfoy) echo '<p class="df-muted" style="margin-top:4px;font-size:12px">Portföyde ciro edilebilecek alınan çek/senet yok.</p>';
+    ?>
+  </div>
+</div>
 
 <?php if($warning): ?>
 <div class="df-form-span-2" style="background:var(--df-warning-soft);border-radius:var(--df-radius-md);padding:10px 12px">
@@ -319,6 +411,11 @@ function fnToggleWizard(){
     document.getElementById('fnTurSel').required=false;
     document.getElementById('fnDesc').required=false;
   } else { fnApplyStep(); }
+  // P0 FİNANS UX + ÇEK/SENET ENTEGRASYONU (2026-07-18): cari-kapsam etiketi (Müşteriler/
+  // Tedarikçiler) ve Çek/Senet modu yön değişince YENİDEN uygulanır — fnToggleCek() bu ikisinin
+  // "son sözü" (çek/senet seçiliyken wizard/kategori görünürlüğünü ezer).
+  fnApplyContactScope();
+  fnToggleCek();
 }
 // Her adım sadece kendi ilgili alanını gösterir (yanlış kayıt ihtimalini azaltma amacı) — Cari
 // alanı SADECE "Cari Ödemesi" adımında görünür/zorunlu, Personel SADECE "Personel Ödemesi"nde.
@@ -336,6 +433,70 @@ function fnApplyStep(){
   document.getElementById('fnTurSel').required = (FN_TUR_REQUIRED.indexOf(step)!==-1);
   document.getElementById('fnDesc').required = (step==='diger');
 }
+
+// P0 FİNANS UX (2026-07-18, Product Owner kararı 1. madde) — cari modeli DEĞİŞMEDİ, sadece seçim
+// listesi işlem niyetine göre (Tahsilat→Müşteri, Ödeme→Tedarikçi) filtrelenir. "Tüm Cariler"
+// istisnası her zaman bir tık uzakta.
+var FN_CONTACT_SCOPE = 'filtered';
+function fnSetContactScope(btn, scope){
+  document.querySelectorAll('#fnContactScope .df-tab').forEach(function(b){ b.classList.toggle('df-tab--active', b.dataset.scope===scope); });
+  FN_CONTACT_SCOPE = scope;
+  fnApplyContactScope();
+}
+function fnApplyContactScope(){
+  var out=document.getElementById('fnDirection').value==='out';
+  document.getElementById('fnScopeFilteredLabel').textContent = out ? 'Tedarikçiler' : 'Müşteriler';
+  var allowed = out ? ['Tedarikçi','Her İkisi'] : ['Müşteri','Her İkisi'];
+  var sel=document.getElementById('fnContactSel');
+  Array.prototype.forEach.call(sel.options, function(o){
+    if(!o.value){ o.style.display=''; return; }
+    o.style.display = (FN_CONTACT_SCOPE==='all' || allowed.indexOf(o.dataset.ctype)!==-1) ? '' : 'none';
+  });
+}
+
+// P0 FİNANS UX + ÇEK/SENET ENTEGRASYONU (2026-07-18, Product Owner kararı 2-4. madde) — Yöntem
+// Çek/Senet olunca: Hesap alanı GİZLENİR+zorunlu olmaktan çıkar (kasa/banka hareketi oluşmaz),
+// cari HER ZAMAN görünür/zorunlu olur (checks_notes_create()/endorse() her zaman contact_id ister,
+// wizard adımından bağımsız), Ödeme tarafında "Kendi Çekimizi Ver / Portföydeki Çeki Ciro Et"
+// alt-seçimi belirir.
+function fnToggleCek(){
+  var channel=document.getElementById('fnChannel').value;
+  var isCek=(channel==='Çek'||channel==='Senet');
+  var out=document.getElementById('fnDirection').value==='out';
+
+  document.getElementById('fnCekBlock').style.display = isCek?'':'none';
+  document.getElementById('fnField_account_id').style.display = isCek?'none':'';
+  document.getElementById('fnAccSel').required = !isCek;
+  document.getElementById('fnField_reference_no').style.display = isCek?'none':'';
+  document.getElementById('fnCekModeWrap').style.display = (isCek&&out)?'':'none';
+  document.getElementById('fnCekBankWrap').style.display = (channel==='Çek')?'':'none';
+
+  if(!isCek || !out) fnSetCekMode(null,'own');
+
+  if(isCek){
+    var contactBox=document.getElementById('fnField_contact_id');
+    contactBox.style.display='';
+    contactBox.querySelector('select').required=true;
+    if(out){
+      document.getElementById('fnWizardLabel').style.display='none';
+      document.getElementById('fnField_personnel_id').style.display='none';
+      document.getElementById('fnField_personnel_id').querySelector('select').required=false;
+      document.getElementById('fnField_payment_type').style.display='none';
+      document.getElementById('fnTurSel').required=false;
+      document.getElementById('fnDesc').required=false;
+    }
+  } else if(out){
+    document.getElementById('fnWizardLabel').style.display='';
+    fnApplyStep();
+  }
+}
+function fnSetCekMode(btn, mode){
+  document.getElementById('fnCnMode').value=mode;
+  document.getElementById('fnCekOwnFields').style.display=(mode==='own')?'':'none';
+  document.getElementById('fnCekEndorseFields').style.display=(mode==='endorse')?'':'none';
+  document.querySelectorAll('#fnCekMode .df-tab').forEach(function(b){ b.classList.toggle('df-tab--active', b.dataset.mode===mode); });
+}
+
 fnToggleWizard();
 </script>
 
