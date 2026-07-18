@@ -369,6 +369,27 @@ function checks_notes_overdue_count($pdo){
  * davranışla tutarlı yeni fonksiyonlar eklendi. Kesin karar Product Owner'a bırakıldı.
  */
 
+// MİGRASYON TEK ŞEMA OTORİTESİ (2026-07-18) — cpa_allocation_lib.php::cpa_alloc_tables_ready() ile
+// AYNI desen. 048_checks_notes_lifecycle.sql, checks_notes'a settle_*/ciro_* kolonlarını ekliyor;
+// migrate.php çalıştırılmadan collect/pay/endorse/bounce/cancel çağrılırsa ham PDO "Unknown column"
+// hatası fırlatmak yerine burada açık, anlaşılır bir hata verilir. Runtime'da ALTER TABLE ile
+// paralel/sessiz bir şema İCAT EDİLMEZ — 048 tek otorite olarak kalır.
+function checks_notes_lifecycle_ready(){
+    static $ready = null;
+    if($ready === null){
+        try{
+            $c = db()->query("SHOW COLUMNS FROM checks_notes LIKE 'settle_account_id'")->fetch();
+            $ready = (bool)$c;
+        }catch(Throwable $e){ $ready = false; }
+    }
+    return $ready;
+}
+function checks_notes_require_lifecycle(){
+    if(!checks_notes_lifecycle_ready()){
+        throw new Exception('Çek/Senet yaşam döngüsü özelliği için migration henüz çalıştırılmamış (048) — migrate.php çalıştırılmalı.');
+    }
+}
+
 // Durum makinesi: hangi aksiyon butonları gösterilsin. Terminal durumlarda (tahsil_edildi/
 // ciro_edildi/karsiliksiz/iptal) HİÇBİR finansal aksiyon yok — sadece rozet + geçmiş.
 function checks_notes_available_actions($row){
@@ -388,6 +409,7 @@ function checks_notes_can_delete($row){
  * @throws Exception geçersiz durum/yön, kayıt yok veya geçersiz hesap
  */
 function checks_notes_collect($pdo, $userId, $id, $accountId, $date, $desc=''){
+    checks_notes_require_lifecycle();
     $id=(int)$id; $accountId=(int)$accountId;
     $row=checks_notes_get($pdo,$id);
     if(!$row) throw new Exception('Kayıt bulunamadı.');
@@ -423,6 +445,7 @@ function checks_notes_collect($pdo, $userId, $id, $accountId, $date, $desc=''){
  * @throws Exception geçersiz durum/yön, kayıt yok veya geçersiz hesap
  */
 function checks_notes_pay($pdo, $userId, $id, $accountId, $date, $desc=''){
+    checks_notes_require_lifecycle();
     $id=(int)$id; $accountId=(int)$accountId;
     $row=checks_notes_get($pdo,$id);
     if(!$row) throw new Exception('Kayıt bulunamadı.');
@@ -462,6 +485,7 @@ function checks_notes_pay($pdo, $userId, $id, $accountId, $date, $desc=''){
  * @throws Exception geçersiz durum/yön, kayıt yok veya geçersiz cari
  */
 function checks_notes_endorse($pdo, $userId, $id, $ciroContactId, $date, $desc=''){
+    checks_notes_require_lifecycle();
     $id=(int)$id; $ciroContactId=(int)$ciroContactId;
     $row=checks_notes_get($pdo,$id);
     if(!$row) throw new Exception('Kayıt bulunamadı.');
@@ -499,6 +523,7 @@ function checks_notes_endorse($pdo, $userId, $id, $ciroContactId, $date, $desc='
  * @throws Exception geçersiz durum/yön veya kayıt yok
  */
 function checks_notes_bounce($pdo, $userId, $id, $reason=''){
+    checks_notes_require_lifecycle();
     $id=(int)$id;
     $row=checks_notes_get($pdo,$id);
     if(!$row) throw new Exception('Kayıt bulunamadı.');
@@ -527,6 +552,7 @@ function checks_notes_bounce($pdo, $userId, $id, $reason=''){
  * @throws Exception geçersiz durum veya kayıt yok
  */
 function checks_notes_cancel($pdo, $userId, $id, $reason=''){
+    checks_notes_require_lifecycle();
     $id=(int)$id;
     $row=checks_notes_get($pdo,$id);
     if(!$row) throw new Exception('Kayıt bulunamadı.');
