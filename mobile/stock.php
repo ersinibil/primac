@@ -6,15 +6,17 @@ $pasifDahil=isset($_GET['pasif_dahil']);
 // gerçekten filtreliyor (daha önce mobil "Dikkat" panelinden kritik stoğa giden hiçbir yol yoktu).
 $criticalOnly=isset($_GET['critical']);
 topx('Stok');
-echo '<div class="panel" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">';
-echo '<a class="btn dark" href="product_new.php">+ Yeni Ürün</a>';
-echo '<a class="btn" href="report.php?modul=stok" style="background:#334155;color:#fff">📊 Rapor</a>';
-echo '<button class="btn" id="barcodeBtn" onclick="ACANS_BARCODE_TOGGLE()" style="background:#8b5cf6;color:#fff;display:none">📷 Barkod Okut</button>';
-echo '<form method="get" style="margin:0;display:flex;align-items:center;gap:10px;flex-wrap:wrap">';
-echo '<label style="font-size:13px;color:#94a3b8;display:flex;align-items:center;gap:4px"><input type="checkbox" name="pasif_dahil" value="1"'.($pasifDahil?' checked':'').' onchange="this.form.submit()" style="width:auto"> Pasif Dahil</label>';
-echo '<label style="font-size:13px;color:#94a3b8;display:flex;align-items:center;gap:4px"><input type="checkbox" name="critical" value="1"'.($criticalOnly?' checked':'').' onchange="this.form.submit()" style="width:auto"> Sadece Kritik</label>';
-echo '</form>';
-echo '</div>';
+?>
+<div class="df-panel" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+  <a class="df-btn df-btn--primary" href="product_new.php"><?=ds_icon('plus',14)?> Yeni Ürün</a>
+  <a class="df-btn df-btn--secondary" href="report.php?modul=stok"><?=ds_icon('info',14)?> Rapor</a>
+  <button class="df-btn df-btn--secondary" id="barcodeBtn" onclick="ACANS_BARCODE_TOGGLE()" style="display:none">📷 Barkod Okut</button>
+  <form method="get" style="margin:0;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+    <label style="font-size:13px;color:var(--df-ink-500,#94a3b8);display:flex;align-items:center;gap:4px"><input type="checkbox" name="pasif_dahil" value="1"<?=$pasifDahil?' checked':''?> onchange="this.form.submit()" style="width:auto"> Pasif Dahil</label>
+    <label style="font-size:13px;color:var(--df-ink-500,#94a3b8);display:flex;align-items:center;gap:4px"><input type="checkbox" name="critical" value="1"<?=$criticalOnly?' checked':''?> onchange="this.form.submit()" style="width:auto"> Sadece Kritik</label>
+  </form>
+</div>
+<?php
 try{
     $sql="SELECT id,name,quantity,unit,sale_price,critical_level,active FROM stock_items";
     $conditions=[];
@@ -23,18 +25,22 @@ try{
     if($conditions) $sql.=" WHERE ".implode(' AND ',$conditions);
     $sql.=" ORDER BY name LIMIT 200";
     $rows=$pdo->query($sql)->fetchAll();
-    foreach($rows as $r){
-        $kr=($r['quantity']<=($r['critical_level']??0));
-        $isPasif=isset($r['active']) && !$r['active'];
-        $style=$isPasif?' style="opacity:.45"':'';
-        echo '<a class="item" href="product_view.php?id='.(int)$r['id'].'"'.$style.'>';
-        echo '<b>'.htmlspecialchars($r['name']).'</b>';
-        if($isPasif) echo ' <span style="font-size:11px;background:#ef4444;color:#fff;border-radius:6px;padding:1px 6px">Pasif</span>';
-        if($kr) echo ' <span style="color:#f87171;font-size:12px;font-weight:900">⚠️ kritik</span>';
-        echo '<br><small>Stok: '.htmlspecialchars($r['quantity'].' '.$r['unit']).' · Satış: '.mm($r['sale_price']??0).'</small>';
-        echo '</a>';
+    if(!$rows){
+        ds_empty_state('Kayıt bulunamadı.', null, ds_icon('box',20));
+    }else{
+        echo '<div class="df-list" style="margin-top:12px">';
+        foreach($rows as $r){
+            $kr=($r['quantity']<=($r['critical_level']??0));
+            $isPasif=isset($r['active']) && !$r['active'];
+            $titleHtml = '<b>'.h($r['name']).'</b>';
+            if($isPasif) $titleHtml .= ' '.ds_badge('Pasif','red');
+            if($kr) $titleHtml .= ' '.ds_badge('Kritik','red');
+            $metaHtml = '<span>Stok: '.h($r['quantity'].' '.$r['unit']).'</span><span>Satış: '.mm($r['sale_price']??0).'</span>';
+            ds_list_item($titleHtml, 'product_view.php?id='.(int)$r['id'], null, $metaHtml);
+        }
+        echo '</div>';
     }
-}catch(Throwable $e){ echo '<div class="err">'.htmlspecialchars($e->getMessage()).'</div>'; }
+}catch(Throwable $e){ echo ds_alert('danger',$e->getMessage()); }
 botx();
 ?>
 <!-- Barkod Modal -->

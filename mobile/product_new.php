@@ -17,9 +17,9 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 }
 topx('Yeni Ürün');
 ?>
-<?php if($ok): ?><div class="notice"><?=htmlspecialchars($ok)?></div><?php endif; ?>
-<?php if($er): ?><div class="err"><?=htmlspecialchars($er)?></div><?php endif; ?>
-<div class="panel">
+<?php if($ok): ?><?=ds_alert('success',$ok)?><?php endif; ?>
+<?php if($er): ?><?=ds_alert('danger',$er)?><?php endif; ?>
+<div class="df-panel">
 <form method="post">
   <label>Ürün Adı</label><input name="name" required>
   <label>Ürün Kodu (boş = otomatik)</label><input name="product_code">
@@ -32,7 +32,7 @@ topx('Yeni Ürün');
     <div style="flex:1"><label>Satış Fiyatı</label><input type="number" step="0.01" name="sale_price" value="0"></div>
   </div>
   <label>Kritik Seviye</label><input type="number" step="0.01" name="critical_level" value="0">
-  <button class="btn dark" style="width:100%;padding:14px;margin-top:8px">➕ Ürünü Kaydet</button>
+  <button class="df-btn df-btn--primary df-btn--lg" style="width:100%;margin-top:8px"><?=ds_icon('plus',16)?> Ürünü Kaydet</button>
 </form>
 </div>
 <?php botx(); ?>

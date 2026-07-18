@@ -75,24 +75,28 @@ $cs=$pdo->query("SELECT id,name FROM contacts WHERE type IN ('Tedarikçi','Her �
 if(!$cs) $cs=$pdo->query("SELECT id,name FROM contacts ORDER BY name")->fetchAll();
 $ps=$pdo->query("SELECT id,name,unit,purchase_price,vat_rate FROM stock_items WHERE COALESCE(active,1)=1 ORDER BY name")->fetchAll();
 ?>
-<?php if($ok): ?><div class="notice"><?=htmlspecialchars($ok)?></div><?php endif; ?>
-<?php if($er): ?><div class="err"><?=htmlspecialchars($er)?></div><?php endif; ?>
-<div class="panel">
-<div class="notice" style="background:rgba(37,99,235,.15)">Bu ekran ödeme yapmaz — alış tedarikçiye açık borç (Bekliyor) olarak kaydedilir. Ödeme "Ödeme" ekranından ayrıca girilir.</div>
+<?php if($ok): ?><?=ds_alert('success',$ok)?><?php endif; ?>
+<?php if($er): ?><?=ds_alert('danger',$er)?><?php endif; ?>
+
+<!-- JS ile dinamik satır eklenen kritik akış — #itemsBody/.row-prod/.row-qty/.row-price/.row-vat/
+     .row-sub/.new-prod-box/.np-name class'ları JS'e SIKI bağlı (aşağıdaki <script> bloğu hiç
+     değişmedi) — sadece görsel katman (df-panel/df-btn) taşındı, JS selector'larına dokunulmadı. -->
+<div class="df-panel">
+<?=ds_alert('info','Bu ekran ödeme yapmaz — alış tedarikçiye açık borç (Bekliyor) olarak kaydedilir. Ödeme "Ödeme" ekranından ayrıca girilir.')?>
 <?php if($editMode): ?>
-<div class="notice">Bu alışı düzenliyorsunuz. Kaydettiğinizde stok otomatik yeniden hesaplanır.</div>
+<div style="margin-top:10px"><?=ds_alert('info','Bu alışı düzenliyorsunuz. Kaydettiğinizde stok otomatik yeniden hesaplanır.')?></div>
 <?php endif; ?>
-<form method="post" id="purchForm">
+<form method="post" id="purchForm" style="margin-top:10px">
   <?php if($editMode): ?><input type="hidden" name="edit_id" value="<?=(int)$editMode['id']?>"><?php endif; ?>
   <label>Tedarikçi</label>
   <select name="contact_id" id="contactSel" required onchange="onSupplierChange()">
     <option value="">— Seç —</option>
-    <?php foreach($cs as $c): ?><option value="<?=$c['id']?>" <?=$editMode && (int)$editMode['purchase']['contact_id']===(int)$c['id']?'selected':''?>><?=htmlspecialchars($c['name'])?></option><?php endforeach; ?>
+    <?php foreach($cs as $c): ?><option value="<?=$c['id']?>" <?=$editMode && (int)$editMode['purchase']['contact_id']===(int)$c['id']?'selected':''?>><?=h($c['name'])?></option><?php endforeach; ?>
     <option value="__new__">➕ Listede yok — Yeni Tedarikçi Ekle…</option>
   </select>
-  <div id="newContactBox" style="display:none;background:rgba(37,99,235,.12);border-radius:12px;padding:10px;margin:6px 0 12px">
+  <div id="newContactBox" class="df-panel" style="display:none;background:rgba(37,99,235,.12);margin:6px 0 12px">
     <input type="text" id="qcName" placeholder="Tedarikçi adı">
-    <button type="button" class="btn dark" style="width:100%" onclick="quickContactMob(document.getElementById('qcName').value, 'Tedarikçi')">✓ Ekle ve Seç</button>
+    <button type="button" class="df-btn df-btn--primary" style="width:100%" onclick="quickContactMob(document.getElementById('qcName').value, 'Tedarikçi')"><?=ds_icon('check',14)?> Ekle ve Seç</button>
   </div>
 
   <datalist id="vatPresets">
@@ -105,9 +109,9 @@ $ps=$pdo->query("SELECT id,name,unit,purchase_price,vat_rate FROM stock_items WH
 
   <label style="margin-top:10px;font-weight:800">Ürünler <small class="muted">(listede yoksa "Yeni Ürün Ekle" seçeneğini kullanın)</small></label>
   <div id="itemsBody"></div>
-  <button type="button" class="btn" style="width:100%;margin:8px 0;background:rgba(37,99,235,.15)" onclick="addItemRow()">➕ Satır Ekle</button>
+  <button type="button" class="df-btn df-btn--secondary" style="width:100%;margin:8px 0" onclick="addItemRow()"><?=ds_icon('plus',14)?> Satır Ekle</button>
 
-  <div class="panel" style="background:rgba(37,99,235,.18);margin:14px 0;padding:12px 14px">
+  <div class="df-panel" style="background:rgba(37,99,235,.18);margin:14px 0">
     <div style="display:flex;justify-content:space-between;padding:2px 0"><small class="muted">Ara Toplam</small><b id="purchSubtotal">0,00 ₺</b></div>
     <div style="display:flex;justify-content:space-between;padding:2px 0"><small class="muted">KDV</small><b id="purchVat">0,00 ₺</b></div>
     <div style="display:flex;justify-content:space-between;padding:6px 0 0;border-top:1px solid rgba(255,255,255,.15);margin-top:4px">
@@ -115,13 +119,13 @@ $ps=$pdo->query("SELECT id,name,unit,purchase_price,vat_rate FROM stock_items WH
     </div>
   </div>
 
-  <button class="btn dark" style="width:100%;padding:14px"><?=$editMode?'💾 Değişiklikleri Kaydet':'🛒 Alışı Kaydet (Açık Borç)'?></button>
-  <?php if($editMode): ?><a href="purchase.php" class="btn" style="width:100%;padding:12px;margin-top:8px;text-align:center;display:block">✕ Vazgeç</a><?php endif; ?>
+  <button class="df-btn df-btn--primary df-btn--lg" style="width:100%"><?=$editMode?'💾 Değişiklikleri Kaydet':'🛒 Alışı Kaydet (Açık Borç)'?></button>
+  <?php if($editMode): ?><a href="purchase.php" class="df-btn df-btn--secondary" style="width:100%;margin-top:8px;justify-content:center">✕ Vazgeç</a><?php endif; ?>
 </form>
 </div>
 
-<div class="panel">
-  <b>Son Alışlar</b>
+<div class="df-panel" style="margin-top:14px">
+  <b><?=ds_icon('box',16)?> Son Alışlar</b>
   <?php
   try{
       $recentP = $pdo->query(
@@ -133,33 +137,39 @@ $ps=$pdo->query("SELECT id,name,unit,purchase_price,vat_rate FROM stock_items WH
            ORDER BY fm.id DESC LIMIT 10"
       )->fetchAll();
   }catch(Throwable $e){ $recentP=[]; }
-  if(!$recentP) echo '<p class="muted" style="margin:10px 0 0">Henüz kayıt yok.</p>';
+  if(!$recentP) ds_empty_state('Henüz kayıt yok.');
   foreach($recentP as $row):
       $isDoc = !empty($row['document_id']);
       $rowEditable = !$isDoc && can_edit_delete() && stock_can_edit_purchase($pdo,(int)$row['id'])['editable'];
   ?>
-  <div class="item" style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-    <div style="flex:1;min-width:0">
-      <b style="color:#f87171"><?=mm($row['amount'])?></b> <?=badge($row['status'],status_tone($row['status']))?><br>
-      <small class="muted"><?=htmlspecialchars($row['movement_date'] ?? '')?> · <?=htmlspecialchars($row['cname'] ?: '—')?></small><br>
-      <small class="muted">
-        <?php if($isDoc): ?><b><?=htmlspecialchars($row['document_no'] ?: 'Belge')?></b> · <?php endif; ?>
-        <?=htmlspecialchars($row['description'] ?? '')?>
-      </small>
+  <div class="df-panel" style="margin-top:10px">
+    <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start">
+      <div class="df-list-row-title" style="color:var(--df-danger-ink)"><?=mm($row['amount'])?></div>
+      <?=ds_badge($row['status'])?>
     </div>
+    <div class="df-list-row-meta" style="margin-top:6px">
+      <span><?=h($row['movement_date'] ?? '')?></span>
+      <span><?=h($row['cname'] ?: '—')?></span>
+    </div>
+    <?php if($isDoc || $row['description']): ?>
+    <div class="df-list-row-desc" style="margin-top:4px">
+      <?php if($isDoc): ?><b><?=h($row['document_no'] ?: 'Belge')?></b> · <?php endif; ?>
+      <?=h($row['description'] ?? '')?>
+    </div>
+    <?php endif; ?>
     <?php if($isDoc): ?>
-    <div style="display:flex;gap:6px">
-      <a class="btn" style="background:rgba(37,99,235,.18);padding:8px 10px" href="../trade_document_view.php?id=<?=(int)$row['document_id']?>">🧾</a>
+    <div style="display:flex;gap:6px;margin-top:10px">
+      <a class="df-btn df-btn--secondary df-btn--sm" href="../trade_document_view.php?id=<?=(int)$row['document_id']?>"><?=ds_icon('box',14)?> Belge</a>
     </div>
     <?php elseif(can_edit_delete()): ?>
-    <div style="display:flex;gap:6px">
+    <div style="display:flex;gap:6px;margin-top:10px">
       <?php if($rowEditable): ?>
-      <a class="btn" style="background:rgba(37,99,235,.18);padding:8px 10px" href="purchase.php?edit_id=<?=(int)$row['id']?>">✏️</a>
+      <a class="df-btn df-btn--secondary df-btn--sm" href="purchase.php?edit_id=<?=(int)$row['id']?>"><?=ds_icon('edit',14)?> Düzenle</a>
       <?php endif; ?>
       <form method="post" onsubmit="return confirm('Bu alış kaydı ve bağlı verileri KALICI olarak silinecek. Emin misiniz?')" style="margin:0">
         <input type="hidden" name="delete_purchase" value="1">
         <input type="hidden" name="id" value="<?=(int)$row['id']?>">
-        <button class="btn" style="background:rgba(220,38,38,.2);padding:8px 10px" type="submit">🗑</button>
+        <button class="df-btn df-btn--danger df-btn--sm" type="submit"><?=ds_icon('trash',14)?></button>
       </form>
     </div>
     <?php endif; ?>

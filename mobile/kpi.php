@@ -4,7 +4,7 @@ block_personel('personnel'); // 2026-07-03: kullanıcı onayı verildi — 'pers
 $pdo=db();
 topx('Performans');
 ?>
-<div class="panel" style="padding:12px"><b>👷 Personel Performans</b><p class="small" style="margin:4px 0 0">İş teslim oranı, görev tamamlama ve geciken işlerden hesaplanır.</p></div>
+<div class="df-panel"><b><?=ds_icon('users',16)?> Personel Performans</b><p class="small" style="margin:4px 0 0">İş teslim oranı, görev tamamlama ve geciken işlerden hesaplanır.</p></div>
 <?php
 try{
   $rows=$pdo->query("SELECT p.id,p.name,p.role,
@@ -28,28 +28,29 @@ try{
   unset($r);
   usort($rows,function($a,$b){ return $b['score']<=>$a['score']; });
 
+  if(!$rows) ds_empty_state('Personel yok.', null, ds_icon('users',20));
+
   $rank=0;
   foreach($rows as $r){
     $rank++;
     $sc=$r['score'];
-    $col = $sc>=75?'#22c55e':($sc>=50?'#eab308':($r['aktif']?'#f87171':'#475569'));
+    $col = $sc>=75?'var(--df-success-ink)':($sc>=50?'var(--df-warning-ink)':($r['aktif']?'var(--df-danger-ink)':'var(--df-ink-500)'));
     $medal = $rank===1?'🥇':($rank===2?'🥈':($rank===3?'🥉':''));
-    echo '<div class="panel" style="padding:13px">';
+    echo '<div class="df-panel" style="margin-top:10px">';
     echo '<div style="display:flex;align-items:center;gap:10px">';
-    echo '<div class="av" style="width:42px;height:42px;border-radius:50%;background:'.$col.';display:flex;align-items:center;justify-content:center;font-weight:900;color:#06281a">'.($r['aktif']?$sc:'–').'</div>';
-    echo '<div style="flex:1;min-width:0"><b>'.$medal.' '.htmlspecialchars($r['name']).'</b><br><small class="muted">'.htmlspecialchars($r['role']?:'Personel').'</small></div>';
+    echo '<div style="width:42px;height:42px;border-radius:50%;background:'.$col.';display:flex;align-items:center;justify-content:center;font-weight:900;color:#06281a;flex:0 0 auto">'.($r['aktif']?$sc:'–').'</div>';
+    echo '<div style="flex:1;min-width:0"><b>'.$medal.' '.h($r['name']).'</b><br><small class="muted">'.h($r['role']?:'Personel').'</small></div>';
     echo '</div>';
     // puan barı
     echo '<div style="height:8px;background:rgba(255,255,255,.1);border-radius:6px;margin:10px 0;overflow:hidden"><div style="height:100%;width:'.$sc.'%;background:'.$col.'"></div></div>';
-    echo '<div style="display:flex;gap:6px;flex-wrap:wrap;font-size:12px">';
-    echo '<span style="background:rgba(255,255,255,.08);border-radius:8px;padding:4px 8px">📋 İş: <b>'.$r['is_top'].'</b></span>';
-    echo '<span style="background:rgba(34,197,94,.15);color:#86efac;border-radius:8px;padding:4px 8px">✓ Tamam: <b>'.$r['is_tamam'].'</b></span>';
-    echo '<span style="background:rgba(255,255,255,.08);border-radius:8px;padding:4px 8px">▶ Açık: <b>'.$r['is_acik'].'</b></span>';
-    if($r['is_geciken']>0) echo '<span style="background:rgba(248,113,113,.2);color:#fca5a5;border-radius:8px;padding:4px 8px">⏰ Geciken: <b>'.$r['is_geciken'].'</b></span>';
-    echo '<span style="background:rgba(255,255,255,.08);border-radius:8px;padding:4px 8px">🎯 Görev: <b>'.$r['gv_tamam'].'/'.$r['gv_top'].'</b></span>';
-    echo '<span style="background:rgba(255,255,255,.08);border-radius:8px;padding:4px 8px">Teslim: <b>%'.$r['isOran'].'</b></span>';
+    echo '<div class="df-list-row-meta">';
+    echo '<span class="df-badge df-badge--info">'.ds_icon('briefcase',12).' İş: <b>'.$r['is_top'].'</b></span>';
+    echo '<span class="df-badge df-badge--success">'.ds_icon('check',12).' Tamam: <b>'.$r['is_tamam'].'</b></span>';
+    echo '<span class="df-badge df-badge--info">▶ Açık: <b>'.$r['is_acik'].'</b></span>';
+    if($r['is_geciken']>0) echo '<span class="df-badge df-badge--danger">⏰ Geciken: <b>'.$r['is_geciken'].'</b></span>';
+    echo '<span class="df-badge df-badge--info">🎯 Görev: <b>'.$r['gv_tamam'].'/'.$r['gv_top'].'</b></span>';
+    echo '<span class="df-badge df-badge--info">Teslim: <b>%'.$r['isOran'].'</b></span>';
     echo '</div></div>';
   }
-  if(!$rows) echo '<div class="panel muted" style="text-align:center">Personel yok.</div>';
-}catch(Throwable $e){ echo '<div class="err">'.htmlspecialchars($e->getMessage()).'</div>'; }
+}catch(Throwable $e){ echo ds_alert('danger',$e->getMessage()); }
 botx();

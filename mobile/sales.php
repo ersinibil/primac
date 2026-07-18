@@ -153,30 +153,35 @@ if($stockShortage){
 
 topx($isEditView ? 'Satışı Düzenle' : 'Satış Yap');
 ?>
-<?php if($ok): ?><div class="notice"><?=htmlspecialchars($ok)?></div><?php endif; ?>
-<?php if($er): ?><div class="err"><?=htmlspecialchars($er)?></div><?php endif; ?>
+<?php if($ok): ?><?=ds_alert('success',$ok)?><?php endif; ?>
+<?php if($er): ?><?=ds_alert('danger',$er)?><?php endif; ?>
 
 <?php
 $cs=$pdo->query("SELECT id,name FROM contacts ORDER BY name")->fetchAll();
 $ps=$pdo->query("SELECT id,name,quantity,unit,sale_price,vat_rate FROM stock_items WHERE COALESCE(active,1)=1 ORDER BY name")->fetchAll();
 ?>
 
-<div class="panel">
-<div class="notice" style="background:rgba(37,99,235,.15)">Bu ekran tahsilat yapmaz — satış cariye açık borç (Bekliyor) olarak kaydedilir. Tahsilat "Tahsilat" ekranından ayrıca girilir.</div>
+<!-- JS ile dinamik satır eklenen kritik akış — #itemsBody/.row-prod/.row-qty/.row-price/.row-vat/
+     .row-sub/.new-prod-box/.np-name/.np-unit class'ları JS'e SIKI bağlı (aşağıdaki <script> bloğu
+     hiç değişmedi) — sadece görsel katman (df-panel/df-btn) taşındı, JS selector'larına dokunulmadı. -->
+<div class="df-panel">
+<?=ds_alert('info','Bu ekran tahsilat yapmaz — satış cariye açık borç (Bekliyor) olarak kaydedilir. Tahsilat "Tahsilat" ekranından ayrıca girilir.')?>
 <?php if($isEditView && !$stockShortage): ?>
-<div class="notice">Bu satışı düzenliyorsunuz. Kaydettiğinizde stok otomatik yeniden hesaplanır.</div>
+<div style="margin-top:10px"><?=ds_alert('info','Bu satışı düzenliyorsunuz. Kaydettiğinizde stok otomatik yeniden hesaplanır.')?></div>
 <?php endif; ?>
-<form method="post">
+<form method="post" style="margin-top:10px">
   <?php if($viewEditId): ?><input type="hidden" name="edit_id" value="<?=(int)$viewEditId?>"><?php endif; ?>
   <?php if($stockShortage): ?>
-  <div class="notice" style="background:rgba(234,179,8,.18);color:#fde68a">
-    <b>⚠️ Mevcut stok bu satış için yetersiz.</b><br>
+  <div class="df-alert df-alert--warning" style="display:block;margin-bottom:12px">
+    <b><?=ds_icon('info',14)?> Mevcut stok bu satış için yetersiz.</b><br>
     İşlem tamamlanırsa aşağıdaki ürün(ler)de stok negatife düşecek:
+    <ul style="margin:8px 0 8px 20px;padding:0">
     <?php foreach($stockShortage as $s): ?>
-      <br>• <b><?=htmlspecialchars($s['name'])?></b> — mevcut <?=htmlspecialchars(stock_qty_fmt($s['available_stock']))?> <?=htmlspecialchars($s['unit'])?>,
-      satış <?=htmlspecialchars(stock_qty_fmt($s['requested_qty']))?> <?=htmlspecialchars($s['unit'])?>,
-      sonuç <?=htmlspecialchars(stock_qty_fmt($s['resulting_stock']))?> <?=htmlspecialchars($s['unit'])?>
+      <li><b><?=h($s['name'])?></b> — mevcut <?=h(stock_qty_fmt($s['available_stock']))?> <?=h($s['unit'])?>,
+      satış <?=h(stock_qty_fmt($s['requested_qty']))?> <?=h($s['unit'])?>,
+      sonuç <?=h(stock_qty_fmt($s['resulting_stock']))?> <?=h($s['unit'])?></li>
     <?php endforeach; ?>
+    </ul>
     <label style="display:block;background:rgba(234,179,8,.12);border-radius:10px;padding:10px;margin-top:8px">
       <input type="checkbox" name="allow_negative_stock" value="1" style="width:auto;display:inline-block;margin-right:6px">
       Stok yetersiz olsa da devam etmek istiyorum.
@@ -186,12 +191,12 @@ $ps=$pdo->query("SELECT id,name,quantity,unit,sale_price,vat_rate FROM stock_ite
   <label>Cari (Müşteri)</label>
   <select name="contact_id" id="contactSel" required onchange="onContactChange()">
     <option value="">— Seç —</option>
-    <?php foreach($cs as $c): ?><option value="<?=$c['id']?>" <?=$cid===(int)$c['id']?'selected':''?>><?=htmlspecialchars($c['name'])?></option><?php endforeach; ?>
+    <?php foreach($cs as $c): ?><option value="<?=$c['id']?>" <?=$cid===(int)$c['id']?'selected':''?>><?=h($c['name'])?></option><?php endforeach; ?>
     <option value="__new__">➕ Listede yok — Yeni Cari Ekle…</option>
   </select>
-  <div id="newContactBox" style="display:none;background:rgba(37,99,235,.12);border-radius:12px;padding:10px;margin:6px 0 12px">
+  <div id="newContactBox" class="df-panel" style="display:none;background:rgba(37,99,235,.12);margin:6px 0 12px">
     <input type="text" id="qsContactName" placeholder="Müşteri adı">
-    <button type="button" class="btn dark" style="width:100%" onclick="quickContactSales(document.getElementById('qsContactName').value, 'Müşteri')">✓ Ekle ve Seç</button>
+    <button type="button" class="df-btn df-btn--primary" style="width:100%" onclick="quickContactSales(document.getElementById('qsContactName').value, 'Müşteri')"><?=ds_icon('check',14)?> Ekle ve Seç</button>
   </div>
 
   <label style="margin-top:10px;font-weight:800">Ürünler</label>
@@ -203,9 +208,9 @@ $ps=$pdo->query("SELECT id,name,quantity,unit,sale_price,vat_rate FROM stock_ite
     <option value="10"></option>
     <option value="20"></option>
   </datalist>
-  <button type="button" class="btn" style="width:100%;margin:8px 0;background:rgba(37,99,235,.15)" onclick="addItemRow()">➕ Satır Ekle</button>
+  <button type="button" class="df-btn df-btn--secondary" style="width:100%;margin:8px 0" onclick="addItemRow()"><?=ds_icon('plus',14)?> Satır Ekle</button>
 
-  <div class="panel" style="background:rgba(37,99,235,.18);margin:14px 0;padding:12px 14px">
+  <div class="df-panel" style="background:rgba(37,99,235,.18);margin:14px 0">
     <div style="display:flex;justify-content:space-between;padding:2px 0"><small class="muted">Ara Toplam</small><b id="salesSubtotal">0,00 ₺</b></div>
     <div style="display:flex;justify-content:space-between;padding:2px 0"><small class="muted">KDV</small><b id="salesVat">0,00 ₺</b></div>
     <div style="display:flex;justify-content:space-between;padding:6px 0 0;border-top:1px solid rgba(255,255,255,.15);margin-top:4px">
@@ -213,13 +218,13 @@ $ps=$pdo->query("SELECT id,name,quantity,unit,sale_price,vat_rate FROM stock_ite
     </div>
   </div>
 
-  <button class="btn dark" style="width:100%;padding:15px" type="submit"><?php if($stockShortage): ?>⚠️ Onaylıyorum, Devam Et<?php elseif($isEditView): ?>💾 Değişiklikleri Kaydet<?php else: ?>🧾 Satışı Tamamla (Açık Borç)<?php endif; ?></button>
-  <?php if($isEditView && !$stockShortage): ?><a href="sales.php" class="btn" style="width:100%;padding:12px;margin-top:8px;text-align:center;display:block">✕ Vazgeç</a><?php endif; ?>
+  <button class="df-btn df-btn--primary df-btn--lg" style="width:100%" type="submit"><?php if($stockShortage): ?>⚠️ Onaylıyorum, Devam Et<?php elseif($isEditView): ?><?=ds_icon('check',16)?> Değişiklikleri Kaydet<?php else: ?>🧾 Satışı Tamamla (Açık Borç)<?php endif; ?></button>
+  <?php if($isEditView && !$stockShortage): ?><a href="sales.php" class="df-btn df-btn--secondary" style="width:100%;margin-top:8px;justify-content:center">✕ Vazgeç</a><?php endif; ?>
 </form>
 </div>
 
-<div class="panel">
-  <b>Son Satışlar</b>
+<div class="df-panel" style="margin-top:14px">
+  <b><?=ds_icon('box',16)?> Son Satışlar</b>
   <?php
   try{
       $recentM = $pdo->query(
@@ -231,33 +236,39 @@ $ps=$pdo->query("SELECT id,name,quantity,unit,sale_price,vat_rate FROM stock_ite
            ORDER BY fm.id DESC LIMIT 10"
       )->fetchAll();
   }catch(Throwable $e){ $recentM=[]; }
-  if(!$recentM) echo '<p class="muted" style="margin:10px 0 0">Henüz kayıt yok.</p>';
+  if(!$recentM) ds_empty_state('Henüz kayıt yok.');
   foreach($recentM as $row):
       $isDoc = !empty($row['document_id']);
       $rowEditable = !$isDoc && can_edit_delete() && stock_can_edit_sale($pdo,(int)$row['id'])['editable'];
   ?>
-  <div class="item" style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-    <div style="flex:1;min-width:0">
-      <b style="color:#22c55e"><?=mm($row['amount'])?></b> <?=badge($row['status'],status_tone($row['status']))?><br>
-      <small class="muted"><?=htmlspecialchars($row['movement_date'] ?? '')?> · <?=htmlspecialchars($row['cname'] ?: '—')?></small><br>
-      <small class="muted">
-        <?php if($isDoc): ?><b><?=htmlspecialchars($row['document_no'] ?: 'Belge')?></b> · <?php endif; ?>
-        <?=htmlspecialchars($row['description'] ?? '')?>
-      </small>
+  <div class="df-panel" style="margin-top:10px">
+    <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start">
+      <div class="df-list-row-title" style="color:var(--df-success-ink)"><?=mm($row['amount'])?></div>
+      <?=ds_badge($row['status'])?>
     </div>
+    <div class="df-list-row-meta" style="margin-top:6px">
+      <span><?=h($row['movement_date'] ?? '')?></span>
+      <span><?=h($row['cname'] ?: '—')?></span>
+    </div>
+    <?php if($isDoc || $row['description']): ?>
+    <div class="df-list-row-desc" style="margin-top:4px">
+      <?php if($isDoc): ?><b><?=h($row['document_no'] ?: 'Belge')?></b> · <?php endif; ?>
+      <?=h($row['description'] ?? '')?>
+    </div>
+    <?php endif; ?>
     <?php if($isDoc): ?>
-    <div style="display:flex;gap:6px">
-      <a class="btn" style="background:rgba(37,99,235,.18);padding:8px 10px" href="../trade_document_view.php?id=<?=(int)$row['document_id']?>">🧾</a>
+    <div style="display:flex;gap:6px;margin-top:10px">
+      <a class="df-btn df-btn--secondary df-btn--sm" href="../trade_document_view.php?id=<?=(int)$row['document_id']?>"><?=ds_icon('box',14)?> Belge</a>
     </div>
     <?php elseif(can_edit_delete()): ?>
-    <div style="display:flex;gap:6px">
+    <div style="display:flex;gap:6px;margin-top:10px">
       <?php if($rowEditable): ?>
-      <a class="btn" style="background:rgba(37,99,235,.18);padding:8px 10px" href="sales.php?edit_id=<?=(int)$row['id']?>">✏️</a>
+      <a class="df-btn df-btn--secondary df-btn--sm" href="sales.php?edit_id=<?=(int)$row['id']?>"><?=ds_icon('edit',14)?> Düzenle</a>
       <?php endif; ?>
       <form method="post" onsubmit="return confirm('Bu satış kaydı ve bağlı verileri KALICI olarak silinecek. Emin misiniz?')" style="margin:0">
         <input type="hidden" name="delete_sale" value="1">
         <input type="hidden" name="id" value="<?=(int)$row['id']?>">
-        <button class="btn" style="background:rgba(220,38,38,.2);padding:8px 10px" type="submit">🗑</button>
+        <button class="df-btn df-btn--danger df-btn--sm" type="submit"><?=ds_icon('trash',14)?></button>
       </form>
     </div>
     <?php endif; ?>

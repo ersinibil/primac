@@ -109,26 +109,27 @@ $nextM=$month===12?1:$month+1; $nextY=$month===12?$year+1:$year;
 
 topx('Muhasebe');
 ?>
-<?php if($ok): ?><div class="notice"><?=htmlspecialchars($ok)?></div><?php endif; ?>
-<?php if($er): ?><div class="err"><?=htmlspecialchars($er)?></div><?php endif; ?>
+<?php if($ok): ?><?=ds_alert('success',$ok)?><?php endif; ?>
+<?php if($er): ?><?=ds_alert('danger',$er)?><?php endif; ?>
 
-<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-  <a href="?m=<?=$prevM?>&y=<?=$prevY?>" style="background:rgba(255,255,255,.12);border-radius:10px;padding:8px 14px;color:#fff;text-decoration:none;font-weight:900">‹</a>
-  <span style="font-weight:900;font-size:16px"><?=date('F Y',mktime(0,0,0,$month,1,$year))?></span>
-  <a href="?m=<?=$nextM?>&y=<?=$nextY?>" style="background:rgba(255,255,255,.12);border-radius:10px;padding:8px 14px;color:#fff;text-decoration:none;font-weight:900">›</a>
+<!-- Ay gezinme — web accounting.php (RELEASE 0.9, 2026-07-17) ile aynı desen: ds_button(...,true) df-btn ghost -->
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:6px">
+  <?=ds_button('‹','?m='.$prevM.'&y='.$prevY,'ghost','','',true)?>
+  <span style="font-weight:900;font-size:15px"><?=date('F Y',mktime(0,0,0,$month,1,$year))?></span>
+  <?=ds_button('›','?m='.$nextM.'&y='.$nextY,'ghost','','',true)?>
 </div>
 
 <div class="grid">
   <div class="card green"><span>📈</span><b><?=mm($sum['gelir'])?></b><small>Gelir</small></div>
   <div class="card red"><span>📉</span><b><?=mm($sum['gider'])?></b><small>Gider</small></div>
 </div>
-<div class="panel" style="text-align:center;margin-top:-4px;padding:12px">
+<div class="df-panel" style="text-align:center;margin-top:8px">
   <small class="muted">Net</small>
-  <div style="font-size:22px;font-weight:900;color:<?=$net>=0?'#22c55e':'#f87171'?>"><?=$net>=0?'+':'-'?><?=mm(abs($net))?></div>
+  <div style="font-size:22px;font-weight:900;color:<?=$net>=0?'var(--df-success-ink)':'var(--df-danger-ink)'?>"><?=$net>=0?'+':'-'?><?=mm(abs($net))?></div>
 </div>
 
-<details class="panel">
-  <summary style="font-weight:900;cursor:pointer">➕ Yeni Kayıt</summary>
+<details class="df-panel" style="margin-top:12px">
+  <summary style="font-weight:900;cursor:pointer"><?=ds_icon('plus',14)?> Yeni Kayıt</summary>
   <form method="post" style="margin-top:10px">
     <label style="color:#94a3b8;font-size:12px">Tür</label>
     <select name="type" id="mtype" onchange="mToggleWizard()">
@@ -138,7 +139,7 @@ topx('Muhasebe');
     <div id="mWizardBox">
     <label style="color:#94a3b8;font-size:12px">Ne kaydediyorsun?</label>
     <select name="record_step" id="mStep" onchange="mApplyStep()">
-      <?php foreach(finance_record_type_options() as $key=>$o): ?><option value="<?=$key?>"><?=$o['icon']?> <?=htmlspecialchars($o['label'])?></option><?php endforeach; ?>
+      <?php foreach(finance_record_type_options() as $key=>$o): ?><option value="<?=$key?>"><?=$o['icon']?> <?=h($o['label'])?></option><?php endforeach; ?>
     </select>
     </div>
     <label style="color:#94a3b8;font-size:12px">Tarih</label>
@@ -148,7 +149,7 @@ topx('Muhasebe');
     <select name="category_id" id="mcats">
       <option value="">— Seç —</option>
       <?php foreach($gelirCats as $c): ?>
-      <option value="<?=(int)$c['id']?>"><?=htmlspecialchars($c['group_name'])?> — <?=htmlspecialchars($c['name'])?></option>
+      <option value="<?=(int)$c['id']?>"><?=h($c['group_name'])?> — <?=h($c['name'])?></option>
       <?php endforeach; ?>
     </select>
     </div>
@@ -174,20 +175,20 @@ topx('Muhasebe');
     <label style="color:#94a3b8;font-size:12px">Hesap</label>
     <select name="account_id">
       <option value="">— Seçme —</option>
-      <?php foreach($accounts as $a): ?><option value="<?=(int)$a['id']?>"><?=htmlspecialchars($a['name'])?></option><?php endforeach; ?>
+      <?php foreach($accounts as $a): ?><option value="<?=(int)$a['id']?>"><?=h($a['name'])?></option><?php endforeach; ?>
     </select>
     <div id="mContactBox" style="display:none">
     <label style="color:#94a3b8;font-size:12px">Cari</label>
     <select name="contact_id">
       <option value="">— Cari seçilmedi —</option>
-      <?php foreach($contacts as $c): ?><option value="<?=(int)$c['id']?>"><?=htmlspecialchars($c['name'])?></option><?php endforeach; ?>
+      <?php foreach($contacts as $c): ?><option value="<?=(int)$c['id']?>"><?=h($c['name'])?></option><?php endforeach; ?>
     </select>
     </div>
     <div id="mPersBox" style="display:none">
     <label style="color:#94a3b8;font-size:12px">Personel</label>
     <select name="personnel_id">
       <option value="">— Yok —</option>
-      <?php foreach($personnel as $p): ?><option value="<?=(int)$p['id']?>"><?=htmlspecialchars($p['name'])?></option><?php endforeach; ?>
+      <?php foreach($personnel as $p): ?><option value="<?=(int)$p['id']?>"><?=h($p['name'])?></option><?php endforeach; ?>
     </select>
     </div>
     <!-- GİDER TÜRÜ CONTEXT-AWARE (2026-07-04): önceden sadece sabit bir liste sunan bu alan artık
@@ -198,7 +199,7 @@ topx('Muhasebe');
       <option value="">— Seç —</option>
     </select>
     </div>
-    <button class="btn dark" name="save_entry" value="1" style="width:100%;padding:13px;margin-top:8px">💾 Kaydet</button>
+    <button class="df-btn df-btn--primary df-btn--lg" name="save_entry" value="1" style="width:100%;margin-top:8px"><?=ds_icon('check',16)?> Kaydet</button>
   </form>
 </details>
 
@@ -302,20 +303,20 @@ function mApplyStepEdit(id){
 }
 </script>
 
-<div class="panel">
-  <b>📋 <?=date('F Y',mktime(0,0,0,$month,1,$year))?> Kayıtları</b>
-  <?php if(!$entries): ?><p class="muted" style="margin:10px 0 0">Bu ay kayıt yok.</p><?php endif; ?>
+<div class="df-panel" style="margin-top:12px">
+  <b><?=ds_icon('info',16)?> <?=date('F Y',mktime(0,0,0,$month,1,$year))?> Kayıtları</b>
+  <?php if(!$entries): ?><div style="margin-top:8px"><?php ds_empty_state('Bu ay kayıt yok.'); ?></div><?php endif; ?>
   <?php foreach($entries as $e):
-    $ig=$e['type']==='gider'; $tc=$ig?'#f87171':'#4ade80';
+    $ig=$e['type']==='gider'; $tc=$ig?'var(--df-danger-ink)':'var(--df-success-ink)';
   ?>
-  <details class="panel" style="margin:10px 0;padding:0">
+  <details class="df-panel" style="margin:10px 0;padding:0">
     <summary style="padding:10px;cursor:pointer;font-weight:900;display:flex;justify-content:space-between;align-items:center">
       <div>
-        <b style="font-size:14px"><?=htmlspecialchars($e['cat_name'] ?: 'Kategorisiz')?></b>
+        <b style="font-size:14px"><?=h($e['cat_name'] ?: 'Kategorisiz')?></b>
         <div style="font-size:11px;color:#94a3b8;margin-top:2px">
-          <?=htmlspecialchars(date('d.m.Y',strtotime($e['entry_date'])))?>
-          <?php if($e['contact_name']): ?> · 🤝 <?=htmlspecialchars($e['contact_name'])?><?php endif; ?>
-          <?php if($e['pers_name']): ?> · <?=htmlspecialchars($e['pers_name'])?><?php endif; ?>
+          <?=h(date('d.m.Y',strtotime($e['entry_date'])))?>
+          <?php if($e['contact_name']): ?> · 🤝 <?=h($e['contact_name'])?><?php endif; ?>
+          <?php if($e['pers_name']): ?> · <?=h($e['pers_name'])?><?php endif; ?>
         </div>
       </div>
       <div style="text-align:right;flex:0 0 auto;margin-left:8px">
@@ -325,10 +326,10 @@ function mApplyStepEdit(id){
         <?php endif; ?>
       </div>
     </summary>
-    <?php if($e['description']): ?><div style="font-size:12px;color:#cbd5e1;padding:0 10px;margin-bottom:6px"><?=htmlspecialchars($e['description'])?></div><?php endif; ?>
+    <?php if($e['description']): ?><div style="font-size:12px;color:#cbd5e1;padding:0 10px;margin-bottom:6px"><?=h($e['description'])?></div><?php endif; ?>
     <?php if(can_edit_delete()): ?>
     <details style="margin:8px 10px 0;padding:8px 0;border-top:1px solid rgba(255,255,255,.08)">
-      <summary style="cursor:pointer;font-weight:900;color:#22c55e">✏️ Düzenle</summary>
+      <summary style="cursor:pointer;font-weight:900;color:var(--df-success-ink)"><?=ds_icon('edit',14)?> Düzenle</summary>
       <form method="post" style="margin-top:10px">
         <input type="hidden" name="id" value="<?=(int)$e['id']?>">
         <label style="color:#94a3b8;font-size:12px">Tür</label>
@@ -340,22 +341,22 @@ function mApplyStepEdit(id){
         <div id="meditWizardBox<?=(int)$e['id']?>" style="<?=$ig?'':'display:none'?>">
         <label style="color:#94a3b8;font-size:12px">Ne kaydediyorsun?</label>
         <select name="record_step" id="meditStep<?=(int)$e['id']?>" onchange="mApplyStepEdit(<?=(int)$e['id']?>)">
-          <?php foreach(finance_record_type_options() as $key=>$o): ?><option value="<?=$key?>" <?=$eStep===$key?'selected':''?>><?=$o['icon']?> <?=htmlspecialchars($o['label'])?></option><?php endforeach; ?>
+          <?php foreach(finance_record_type_options() as $key=>$o): ?><option value="<?=$key?>" <?=$eStep===$key?'selected':''?>><?=$o['icon']?> <?=h($o['label'])?></option><?php endforeach; ?>
         </select>
         </div>
         <label style="color:#94a3b8;font-size:12px">Tarih</label>
-        <input type="date" name="entry_date" value="<?=htmlspecialchars($e['entry_date'])?>">
+        <input type="date" name="entry_date" value="<?=h($e['entry_date'])?>">
         <div id="meditCatBox<?=(int)$e['id']?>" style="<?=$ig?'display:none':''?>">
         <label style="color:#94a3b8;font-size:12px">Kategori</label>
         <select name="category_id" id="meditcats<?=(int)$e['id']?>">
           <option value="">— Seç —</option>
           <?php foreach($gelirCats as $c): ?>
-          <option value="<?=(int)$c['id']?>" <?=$e['category_id']==$c['id']?'selected':''?>><?=htmlspecialchars($c['group_name'])?> — <?=htmlspecialchars($c['name'])?></option>
+          <option value="<?=(int)$c['id']?>" <?=$e['category_id']==$c['id']?'selected':''?>><?=h($c['group_name'])?> — <?=h($c['name'])?></option>
           <?php endforeach; ?>
         </select>
         </div>
         <label style="color:#94a3b8;font-size:12px">Tutar (₺)</label>
-        <input type="number" step="0.01" min="0.01" name="amount" required value="<?=htmlspecialchars(str_replace('.',',',$e['amount']))?>">
+        <input type="number" step="0.01" min="0.01" name="amount" required value="<?=h(str_replace('.',',',$e['amount']))?>">
         <label style="color:#94a3b8;font-size:12px">KDV Durumu</label>
         <select name="vat_mode" id="meditVatMode<?=(int)$e['id']?>" onchange="mToggleVatEdit(<?=(int)$e['id']?>)">
           <option value="yok" <?=($e['vat_mode']??'yok')==='yok'?'selected':''?>>KDV Yok / Belirtilmedi</option>
@@ -371,40 +372,40 @@ function mApplyStepEdit(id){
           </select>
         </div>
         <label style="color:#94a3b8;font-size:12px">Açıklama</label>
-        <input name="description" id="meditDesc<?=(int)$e['id']?>" value="<?=htmlspecialchars($e['description'] ?? '')?>">
+        <input name="description" id="meditDesc<?=(int)$e['id']?>" value="<?=h($e['description'] ?? '')?>">
         <label style="color:#94a3b8;font-size:12px">Hesap</label>
         <select name="account_id">
           <option value="">— Seçme —</option>
-          <?php foreach($accounts as $a): ?><option value="<?=(int)$a['id']?>" <?=$e['account_id']==$a['id']?'selected':''?>><?=htmlspecialchars($a['name'])?></option><?php endforeach; ?>
+          <?php foreach($accounts as $a): ?><option value="<?=(int)$a['id']?>" <?=$e['account_id']==$a['id']?'selected':''?>><?=h($a['name'])?></option><?php endforeach; ?>
         </select>
         <div id="meditContactBox<?=(int)$e['id']?>" style="<?=($ig && $eStep!=='cari')?'display:none':''?>">
         <label style="color:#94a3b8;font-size:12px">Cari</label>
         <select name="contact_id">
           <option value="">— Cari seçilmedi —</option>
-          <?php foreach($contacts as $c): ?><option value="<?=(int)$c['id']?>" <?=$e['contact_id']==$c['id']?'selected':''?>><?=htmlspecialchars($c['name'])?></option><?php endforeach; ?>
+          <?php foreach($contacts as $c): ?><option value="<?=(int)$c['id']?>" <?=$e['contact_id']==$c['id']?'selected':''?>><?=h($c['name'])?></option><?php endforeach; ?>
         </select>
         </div>
         <div id="meditPersBox<?=(int)$e['id']?>" style="<?=($ig && $eStep!=='personel')?'display:none':''?>">
         <label style="color:#94a3b8;font-size:12px">Personel</label>
         <select name="personnel_id">
           <option value="">— Yok —</option>
-          <?php foreach($personnel as $p): ?><option value="<?=(int)$p['id']?>" <?=$e['personnel_id']==$p['id']?'selected':''?>><?=htmlspecialchars($p['name'])?></option><?php endforeach; ?>
+          <?php foreach($personnel as $p): ?><option value="<?=(int)$p['id']?>" <?=$e['personnel_id']==$p['id']?'selected':''?>><?=h($p['name'])?></option><?php endforeach; ?>
         </select>
         </div>
         <!-- GİDER TÜRÜ CONTEXT-AWARE (2026-07-04): payment_type-bağlı "Gider Türü" — seçenekleri
              mApplyStepEdit() ile adıma özel yeniden oluşturulur. -->
         <div id="meditTurBox<?=(int)$e['id']?>" style="<?=$ig?'':'display:none'?>">
         <label style="color:#94a3b8;font-size:12px">Gider Türü</label>
-        <select name="payment_type" id="meditTurSel<?=(int)$e['id']?>" data-current="<?=htmlspecialchars($e['payment_type'] ?? '')?>">
+        <select name="payment_type" id="meditTurSel<?=(int)$e['id']?>" data-current="<?=h($e['payment_type'] ?? '')?>">
           <option value="">— Seç —</option>
         </select>
         </div>
-        <button class="btn dark" name="edit_entry" value="1" style="width:100%;padding:13px;margin-top:8px">💾 Kaydet</button>
+        <button class="df-btn df-btn--primary df-btn--lg" name="edit_entry" value="1" style="width:100%;margin-top:8px"><?=ds_icon('check',16)?> Kaydet</button>
       </form>
     </details>
     <script>mToggleWizardEdit(<?=(int)$e['id']?>);</script>
     <form method="post" style="margin:8px 10px 0 0">
-      <button name="del_entry" value="<?=(int)$e['id']?>" class="btn" style="background:rgba(220,38,38,.3);color:#fca5a5;width:100%;padding:10px;margin-top:8px" onclick="return confirm('Silinsin mi?')">🗑 Sil</button>
+      <button name="del_entry" value="<?=(int)$e['id']?>" class="df-btn df-btn--danger" style="width:100%;margin-top:8px" onclick="return confirm('Silinsin mi?')"><?=ds_icon('trash',14)?> Sil</button>
     </form>
     <?php endif; ?>
   </details>

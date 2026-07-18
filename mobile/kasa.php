@@ -17,9 +17,9 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['add_account'])){
     $_SESSION['kasa_err']=$err;
 }
 topx('Kasa Durumu');
-if(isset($_GET['ok'])) echo '<div class="ok">Hesap eklendi.</div>';
-if(isset($_GET['deleted'])) echo '<div class="ok">Hesap silindi.</div>';
-if(!empty($_SESSION['kasa_err'])){ echo '<div class="err">'.htmlspecialchars($_SESSION['kasa_err']).'</div>'; unset($_SESSION['kasa_err']); }
+if(isset($_GET['ok'])) echo ds_alert('success','Hesap eklendi.');
+if(isset($_GET['deleted'])) echo ds_alert('success','Hesap silindi.');
+if(!empty($_SESSION['kasa_err'])){ echo ds_alert('danger',$_SESSION['kasa_err']); unset($_SESSION['kasa_err']); }
 
 function acc_sum($pdo,$type){ try{ $s=$pdo->prepare("SELECT COALESCE(SUM(current_balance),0) s FROM finance_accounts WHERE active=1 AND account_type=?"); $s->execute([$type]); return (float)$s->fetch()['s']; }catch(Throwable $e){ return 0; } }
 $kasa=acc_sum($pdo,'Kasa'); $banka=acc_sum($pdo,'Banka'); $kart=acc_sum($pdo,'Kredi Kartı'); $pos=acc_sum($pdo,'POS');
@@ -35,20 +35,20 @@ $outToday=safe_sum("SELECT COALESCE(SUM(amount),0) s FROM finance_movements WHER
   <div class="card red"><span>💳</span><b><?=mm($kart)?></b><small>Kredi Kartı</small></div>
   <div class="card yellow"><span>🧾</span><b><?=mm($pos)?></b><small>POS</small></div>
 </div>
-<div class="panel" style="display:flex;justify-content:space-between;align-items:center">
-  <div><small class="muted">Bugün Tahsilat</small><div style="font-size:20px;font-weight:900;color:#4ade80"><?=mm($inToday)?></div></div>
-  <div style="text-align:right"><small class="muted">Bugün Ödeme</small><div style="font-size:20px;font-weight:900;color:#f87171"><?=mm($outToday)?></div></div>
+<div class="df-panel" style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
+  <div><small class="muted">Bugün Tahsilat</small><div style="font-size:20px;font-weight:900;color:var(--df-success-ink)"><?=mm($inToday)?></div></div>
+  <div style="text-align:right"><small class="muted">Bugün Ödeme</small><div style="font-size:20px;font-weight:900;color:var(--df-danger-ink)"><?=mm($outToday)?></div></div>
 </div>
 
-<div class="panel" style="display:flex;gap:8px"><a class="btn dark" href="report.php?modul=tahsilat" style="flex:1;text-align:center">📊 Finans Raporu</a></div>
+<div class="df-panel" style="display:flex;gap:8px;margin-top:12px"><a class="df-btn df-btn--primary" href="report.php?modul=tahsilat" style="flex:1;justify-content:center"><?=ds_icon('info',14)?> Finans Raporu</a></div>
 
-<details class="panel"><summary style="font-weight:900;cursor:pointer">➕ Yeni Hesap Ekle (Banka / Kasa / Kart / POS)</summary>
+<details class="df-panel" style="margin-top:12px"><summary style="font-weight:900;cursor:pointer"><?=ds_icon('plus',14)?> Yeni Hesap Ekle (Banka / Kasa / Kart / POS)</summary>
 <form method="post" style="margin-top:10px">
   <select name="account_type"><option>Kasa</option><option>Banka</option><option>Kredi Kartı</option><option>POS</option></select>
   <input name="name" placeholder="Hesap adı (örn. Ziraat Vadesiz / Ana Kasa)" required>
   <input name="bank_name" placeholder="Banka adı (kredi kartı/banka için)">
   <input name="opening_balance" type="number" step="0.01" placeholder="Açılış bakiyesi" value="0">
-  <button class="btn dark" name="add_account" value="1" style="width:100%">💾 Hesap Ekle</button>
+  <button class="df-btn df-btn--primary df-btn--lg" name="add_account" value="1" style="width:100%"><?=ds_icon('check',16)?> Hesap Ekle</button>
 </form>
 </details>
 
@@ -73,18 +73,18 @@ function kasa_tab_url($typeVal,$status,$bank,$q){
     return 'kasa.php'.($qs ? '?'.http_build_query($qs) : '');
 }
 ?>
-<div style="display:flex;gap:6px;overflow:auto;margin:12px 0 8px;-webkit-overflow-scrolling:touch">
+<div class="df-tabs" style="overflow:auto;max-width:100%;-webkit-overflow-scrolling:touch;margin:14px 0 8px">
 <?php
 $mTabs=['' => '💰 Tümü ('.$mTypeCounts['all'].')', 'Kasa'=>'💵 Kasalar ('.$mTypeCounts['Kasa'].')', 'Banka'=>'🏦 Banka Hesapları ('.$mTypeCounts['Banka'].')', 'Kredi Kartı'=>'💳 Kredi Kartları ('.$mTypeCounts['Kredi Kartı'].')', 'Diger'=>'➕ Diğer ('.$mTypeCounts['Diger'].')'];
 foreach($mTabs as $tv=>$label):
 ?>
-  <a class="btn" style="white-space:nowrap;padding:8px 13px;<?=$mtype===$tv?'background:#2563eb;color:#fff':'background:#334155;color:#cbd5e1'?>" href="<?=htmlspecialchars(kasa_tab_url($tv,$mstatus,$mbank,$mq))?>"><?=htmlspecialchars($label)?></a>
+  <a class="df-tab<?=$mtype===$tv?' df-tab--active':''?>" href="<?=h(kasa_tab_url($tv,$mstatus,$mbank,$mq))?>"><?=h($label)?></a>
 <?php endforeach; ?>
 </div>
 
-<details class="panel"<?=$mHasFilter?' open':''?>><summary style="font-weight:900;cursor:pointer">🔎 Filtrele<?=$mHasFilter?' (aktif)':''?></summary>
+<details class="df-panel"<?=$mHasFilter?' open':''?>><summary style="font-weight:900;cursor:pointer"><?=ds_icon('search',14)?> Filtrele<?=$mHasFilter?' (aktif)':''?></summary>
 <form method="get" style="margin-top:10px">
-  <?php if($mtype!==''): ?><input type="hidden" name="type" value="<?=htmlspecialchars($mtype)?>"><?php endif; ?>
+  <?php if($mtype!==''): ?><input type="hidden" name="type" value="<?=h($mtype)?>"><?php endif; ?>
   <select name="status">
     <option value="active" <?=$mstatus==='active'?'selected':''?>>Aktif</option>
     <option value="passive" <?=$mstatus==='passive'?'selected':''?>>Pasif</option>
@@ -92,15 +92,15 @@ foreach($mTabs as $tv=>$label):
   </select>
   <select name="bank">
     <option value="">Tüm Bankalar</option>
-    <?php foreach($mBankOptions as $b): ?><option value="<?=htmlspecialchars($b)?>" <?=$mbank===$b?'selected':''?>><?=htmlspecialchars($b)?></option><?php endforeach; ?>
+    <?php foreach($mBankOptions as $b): ?><option value="<?=h($b)?>" <?=$mbank===$b?'selected':''?>><?=h($b)?></option><?php endforeach; ?>
   </select>
-  <input type="text" name="q" value="<?=htmlspecialchars($mq)?>" placeholder="Hesap, banka, IBAN veya kart ara...">
-  <button class="btn dark" type="submit" style="width:100%">Uygula</button>
-  <?php if($mHasFilter): ?><a href="kasa.php" class="btn" style="width:100%;text-align:center;display:block;margin-top:8px;background:#334155;color:#fff">✕ Filtreyi Temizle</a><?php endif; ?>
+  <input type="text" name="q" value="<?=h($mq)?>" placeholder="Hesap, banka, IBAN veya kart ara...">
+  <button class="df-btn df-btn--primary df-btn--lg" type="submit" style="width:100%">Uygula</button>
+  <?php if($mHasFilter): ?><a href="kasa.php" class="df-btn df-btn--secondary" style="width:100%;margin-top:8px;justify-content:center">✕ Filtreyi Temizle</a><?php endif; ?>
 </form>
 </details>
 
-<div class="panel"><b>🏦 Hesaplar</b>
+<div class="df-panel" style="margin-top:12px"><b><?=ds_icon('wallet',16)?> Hesaplar</b>
 <?php
 try{
   list($mWhere,$mParams)=finance_account_filter_where($mtype,$mstatus,$mbank,$mq);
@@ -108,28 +108,31 @@ try{
   $accs->execute($mParams);
   $accs=$accs->fetchAll();
   if(!$accs){
-    if($mHasFilter) echo '<p class="muted" style="margin:10px 0 0">Seçili filtrelere uygun hesap bulunamadı.<br><a href="kasa.php" style="color:#93c5fd">Filtreleri Temizle</a></p>';
-    else echo '<p class="muted" style="margin:10px 0 0">Henüz hesap yok — yukarıdan ekleyin.</p>';
+    if($mHasFilter) ds_empty_state('Seçili filtrelere uygun hesap bulunamadı.','Filtreleri temizlemek için üstteki "Filtreyi Temizle" bağlantısını kullanın.');
+    else ds_empty_state('Henüz hesap yok — yukarıdan ekleyin.');
   }
   foreach($accs as $a){ $ic=$a['account_type']==='Banka'?'🏦':($a['account_type']==='Kredi Kartı'?'💳':($a['account_type']==='POS'?'🧾':'💵'));
-    echo '<a class="item" href="account_view.php?id='.(int)$a['id'].'" style="display:flex;justify-content:space-between;align-items:center">'
-       .'<span>'.$ic.' <b>'.htmlspecialchars($a['name']).'</b><br><small class="muted">'.htmlspecialchars($a['account_type'].($a['bank_name']?' · '.$a['bank_name']:'').(!$a['active']?' · Pasif':'')).'</small></span>'
-       .'<b style="color:'.((float)$a['current_balance']<0?'#f87171':'#4ade80').'">'.mm($a['current_balance']??0).'</b></a>';
+    $titleHtml=$ic.' <b>'.h($a['name']).'</b>';
+    $descHtml=h($a['account_type'].($a['bank_name']?' · '.$a['bank_name']:'').(!$a['active']?' · Pasif':''));
+    $metaHtml='<b style="color:'.((float)$a['current_balance']<0?'var(--df-danger-ink)':'var(--df-success-ink)').'">'.mm($a['current_balance']??0).'</b>';
+    ds_list_item($titleHtml,'account_view.php?id='.(int)$a['id'],$descHtml,$metaHtml);
   }
-}catch(Throwable $e){ echo '<div class="err">'.htmlspecialchars($e->getMessage()).'</div>'; }
+}catch(Throwable $e){ echo ds_alert('danger',$e->getMessage()); }
 ?>
 </div>
 
-<div class="panel"><b>Son Hareketler</b>
+<div class="df-panel" style="margin-top:12px"><b><?=ds_icon('info',16)?> Son Hareketler</b>
 <?php
 try{
   $rows=$pdo->query("SELECT f.*, c.name cari, ac.name kat FROM finance_movements f LEFT JOIN contacts c ON c.id=f.contact_id LEFT JOIN accounting_categories ac ON ac.id=f.category_id ORDER BY f.id DESC LIMIT 30")->fetchAll();
-  if(!$rows) echo '<p class="muted" style="margin:10px 0 0">Hareket yok.</p>';
+  if(!$rows) ds_empty_state('Hareket yok.');
   foreach($rows as $m){ $in=$m['direction']==='in';
     $tag=$m['cari'] ?: ($m['kat'] ?: '-');
-    echo '<a class="item" href="movement_view.php?id='.(int)$m['id'].'" style="display:block"><b style="color:'.($in?'#4ade80':'#f87171').'">'.htmlspecialchars(finance_movement_type_label($m)).': '.mm($m['amount']).'</b><br><small>'.htmlspecialchars($tag.' · '.($m['payment_channel']?:'').' · '.($m['movement_date']??'')).'</small></a>';
+    $titleHtml='<b style="color:'.($in?'var(--df-success-ink)':'var(--df-danger-ink)').'">'.h(finance_movement_type_label($m)).': '.mm($m['amount']).'</b>';
+    $descHtml=h($tag.' · '.($m['payment_channel']?:'').' · '.($m['movement_date']??''));
+    ds_list_item($titleHtml,'movement_view.php?id='.(int)$m['id'],$descHtml);
   }
-}catch(Throwable $e){ echo '<div class="err">'.htmlspecialchars($e->getMessage()).'</div>'; }
+}catch(Throwable $e){ echo ds_alert('danger',$e->getMessage()); }
 ?>
 </div>
 <?php botx(); ?>

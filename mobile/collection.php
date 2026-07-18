@@ -63,42 +63,46 @@ if(!empty($_SESSION['collection_prefill'])){ $pre=$_SESSION['collection_prefill'
 $cs=$pdo->query("SELECT id,name FROM contacts ORDER BY name")->fetchAll();
 $preContact=(int)($pre['contact_id'] ?? $cid);
 ?>
-<?php if($ok): ?><div class="notice"><?=htmlspecialchars($ok)?></div><?php endif; ?>
-<?php if($er): ?><div class="err"><?=htmlspecialchars($er)?></div><?php endif; ?>
-<?php if($warning): ?><div class="notice" style="background:rgba(234,179,8,.18);color:#fde68a"><b>⚠️ Dikkat:</b> <?=$warning?></div><?php endif; ?>
-<div class="panel">
+<?php if($ok): ?><?=ds_alert('success',$ok)?><?php endif; ?>
+<?php if($er): ?><?=ds_alert('danger',$er)?><?php endif; ?>
+<?php if($warning): ?><div class="df-alert df-alert--warning" style="display:block"><b><?=ds_icon('info',14)?> Dikkat:</b> <?=$warning?></div><?php endif; ?>
+<div class="df-panel" style="margin-top:12px">
 <form method="post">
   <label>Cari</label>
   <select name="contact_id" required><option value="">— Seç —</option>
-  <?php foreach($cs as $c): ?><option value="<?=$c['id']?>" <?=$preContact===(int)$c['id']?'selected':''?>><?=htmlspecialchars($c['name'])?></option><?php endforeach; ?></select>
-  <label>Tutar</label><input type="number" step="0.01" name="amount" value="<?=htmlspecialchars($pre['amount'] ?? '')?>" required>
+  <?php foreach($cs as $c): ?><option value="<?=$c['id']?>" <?=$preContact===(int)$c['id']?'selected':''?>><?=h($c['name'])?></option><?php endforeach; ?></select>
+  <label>Tutar</label><input type="number" step="0.01" name="amount" value="<?=h($pre['amount'] ?? '')?>" required>
   <label>Tahsilat Yöntemi</label>
   <select name="payment_channel">
   <?php foreach(['Nakit','Banka','Kredi Kartı','POS','Çek','Senet'] as $pm): ?>
   <option <?=($pre['payment_channel'] ?? '')===$pm?'selected':''?>><?=$pm?></option>
   <?php endforeach; ?>
   </select>
-  <label>Açıklama</label><textarea name="description" rows="2"><?=htmlspecialchars($pre['description'] ?? '')?></textarea>
+  <label>Açıklama</label><textarea name="description" rows="2"><?=h($pre['description'] ?? '')?></textarea>
   <?php if($warning): ?>
   <label style="background:rgba(234,179,8,.12);border-radius:10px;padding:10px;display:block;margin-top:8px">
     <input type="checkbox" name="confirm_duplicate" value="1" style="width:auto;display:inline-block;margin-right:6px">
     Bunun ayrı/yeni bir işlem olduğundan eminim, yine de kaydet.
   </label>
   <?php endif; ?>
-  <button class="btn dark" style="width:100%;padding:14px;margin-top:8px"><?=$warning?'Yine de Kaydet':'💰 Tahsilatı Kaydet'?></button>
+  <button class="df-btn df-btn--primary df-btn--lg" style="width:100%;margin-top:8px"><?=$warning?'Yine de Kaydet':ds_icon('check',16).' Tahsilatı Kaydet'?></button>
 </form>
 </div>
-<div class="panel"><b>Son Tahsilatlar</b>
+<div class="df-panel" style="margin-top:12px"><b><?=ds_icon('box',16)?> Son Tahsilatlar</b>
 <?php
 try{
   $recent=$pdo->prepare("SELECT f.*, c.name cari FROM finance_movements f LEFT JOIN contacts c ON c.id=f.contact_id WHERE f.direction='in' AND f.movement_type IN ('normal','mobile') ORDER BY f.id DESC LIMIT 10");
   $recent->execute();
   $rrows=$recent->fetchAll();
-  if(!$rrows) echo '<p class="muted" style="margin:10px 0 0">Henüz tahsilat yok.</p>';
+  if(!$rrows) ds_empty_state('Henüz tahsilat yok.');
   foreach($rrows as $m){
-    echo '<a class="item" href="movement_view.php?id='.(int)$m['id'].'" style="display:block"><b style="color:#4ade80">'.mm($m['amount']).'</b><br><small>'.htmlspecialchars(($m['cari']?:'-').' · '.($m['payment_channel']?:'').' · '.($m['movement_date']??'')).'</small></a>';
+    ds_list_item(
+      '<b style="color:var(--df-success-ink)">'.mm($m['amount']).'</b>',
+      'movement_view.php?id='.(int)$m['id'],
+      h(($m['cari']?:'-').' · '.($m['payment_channel']?:'').' · '.($m['movement_date']??''))
+    );
   }
-}catch(Throwable $e){ echo '<div class="err">'.htmlspecialchars($e->getMessage()).'</div>'; }
+}catch(Throwable $e){ echo ds_alert('danger',$e->getMessage()); }
 ?>
 </div>
 <?php botx(); ?>

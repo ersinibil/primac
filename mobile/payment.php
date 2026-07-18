@@ -56,7 +56,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 }
 
 topx('Ödeme / Gider');
-if(!empty($_SESSION['payment_err'])){ echo '<div class="err">'.htmlspecialchars($_SESSION['payment_err']).'</div>'; unset($_SESSION['payment_err']); }
+if(!empty($_SESSION['payment_err'])){ echo ds_alert('danger',$_SESSION['payment_err']); unset($_SESSION['payment_err']); }
 
 $cs=[]; $accounts=[]; $personnel=[];
 try{ $cs=$pdo->query("SELECT id,name FROM contacts ORDER BY name")->fetchAll(); }catch(Throwable $e){}
@@ -64,24 +64,24 @@ try{ $accounts=$pdo->query("SELECT * FROM finance_accounts WHERE COALESCE(active
 try{ $personnel=$pdo->query("SELECT id,name FROM personnel WHERE COALESCE(active,1)=1 ORDER BY name")->fetchAll(); }catch(Throwable $e){}
 $stepOpts=finance_record_type_options();
 ?>
-<div class="panel" style="display:flex;gap:8px"><a class="btn dark" href="kasa.php" style="flex:1;text-align:center">🏦 Kasa Durumu</a></div>
-<div class="panel">
+<div class="df-panel" style="display:flex;gap:8px"><a class="df-btn df-btn--primary" href="kasa.php" style="flex:1;justify-content:center"><?=ds_icon('wallet',14)?> Kasa Durumu</a></div>
+<div class="df-panel" style="margin-top:12px">
 <form method="post" id="paymentForm">
   <label>Ne kaydediyorsun?</label>
   <select name="record_step" id="pmStep" onchange="pmApplyStep()">
-    <?php foreach($stepOpts as $key=>$o): ?><option value="<?=$key?>" <?=$cid&&$key==='cari'?'selected':''?>><?=$o['icon']?> <?=htmlspecialchars($o['label'])?></option><?php endforeach; ?>
+    <?php foreach($stepOpts as $key=>$o): ?><option value="<?=$key?>" <?=$cid&&$key==='cari'?'selected':''?>><?=$o['icon']?> <?=h($o['label'])?></option><?php endforeach; ?>
   </select>
 
   <div id="pmField_contact_id">
   <label>Cari</label>
   <select name="contact_id"><option value="">— Cari seçilmedi —</option>
-  <?php foreach($cs as $c): ?><option value="<?=$c['id']?>" <?=$cid===(int)$c['id']?'selected':''?>><?=htmlspecialchars($c['name'])?></option><?php endforeach; ?></select>
+  <?php foreach($cs as $c): ?><option value="<?=$c['id']?>" <?=$cid===(int)$c['id']?'selected':''?>><?=h($c['name'])?></option><?php endforeach; ?></select>
   </div>
 
   <div id="pmField_personnel_id" style="display:none">
   <label>Personel</label>
   <select name="personnel_id"><option value="">— Personel seçilmedi —</option>
-  <?php foreach($personnel as $p): ?><option value="<?=(int)$p['id']?>"><?=htmlspecialchars($p['name'])?></option><?php endforeach; ?></select>
+  <?php foreach($personnel as $p): ?><option value="<?=(int)$p['id']?>"><?=h($p['name'])?></option><?php endforeach; ?></select>
   </div>
 
   <!-- GİDER TÜRÜ CONTEXT-AWARE (2026-07-04): payment_type-bağlı "Gider Türü" — seçenekleri
@@ -93,13 +93,13 @@ $stepOpts=finance_record_type_options();
 
   <label>Hesap / Kasa / Kart</label>
   <select name="account_id"><option value="">Yönteme göre otomatik</option>
-  <?php foreach($accounts as $a): ?><option value="<?=$a['id']?>"><?=htmlspecialchars($a['account_type'].' - '.$a['name'].' / '.mm($a['current_balance']??0))?></option><?php endforeach; ?></select>
+  <?php foreach($accounts as $a): ?><option value="<?=$a['id']?>"><?=h($a['account_type'].' - '.$a['name'].' / '.mm($a['current_balance']??0))?></option><?php endforeach; ?></select>
 
   <label>Tutar</label><input type="number" step="0.01" name="amount" required>
   <label>Ödeme Yöntemi</label>
   <select name="payment_channel"><option>Nakit</option><option>Banka</option><option>Kredi Kartı</option><option>POS</option><option>Çek</option><option>Senet</option></select>
   <label>Açıklama</label><textarea name="description" id="pmDesc" rows="2" placeholder="Gider / ödeme açıklaması"></textarea>
-  <button class="btn dark" style="width:100%;padding:14px;margin-top:8px">💸 Ödemeyi Kaydet</button>
+  <button class="df-btn df-btn--primary df-btn--lg" style="width:100%;margin-top:8px"><?=ds_icon('check',16)?> Ödemeyi Kaydet</button>
 </form>
 </div>
 <script>
@@ -133,18 +133,22 @@ function pmApplyStep(){
 }
 pmApplyStep();
 </script>
-<div class="panel"><b>Son Ödemeler</b>
+<div class="df-panel" style="margin-top:12px"><b><?=ds_icon('box',16)?> Son Ödemeler</b>
 <?php
 try{
   $recent=$pdo->prepare("SELECT f.*, c.name cari, ac.name kat FROM finance_movements f LEFT JOIN contacts c ON c.id=f.contact_id LEFT JOIN accounting_categories ac ON ac.id=f.category_id WHERE f.direction='out' AND f.movement_type IN ('normal','mobile') ORDER BY f.id DESC LIMIT 10");
   $recent->execute();
   $rrows=$recent->fetchAll();
-  if(!$rrows) echo '<p class="muted" style="margin:10px 0 0">Henüz ödeme yok.</p>';
+  if(!$rrows) ds_empty_state('Henüz ödeme yok.');
   foreach($rrows as $m){
     $tag=$m['cari'] ?: ($m['kat'] ?: '-');
-    echo '<a class="item" href="movement_view.php?id='.(int)$m['id'].'" style="display:block"><b style="color:#f87171">'.mm($m['amount']).'</b><br><small>'.htmlspecialchars($tag.' · '.($m['payment_channel']?:'').' · '.($m['movement_date']??'')).'</small></a>';
+    ds_list_item(
+      '<b style="color:var(--df-danger-ink)">'.mm($m['amount']).'</b>',
+      'movement_view.php?id='.(int)$m['id'],
+      h($tag.' · '.($m['payment_channel']?:'').' · '.($m['movement_date']??''))
+    );
   }
-}catch(Throwable $e){ echo '<div class="err">'.htmlspecialchars($e->getMessage()).'</div>'; }
+}catch(Throwable $e){ echo ds_alert('danger',$e->getMessage()); }
 ?>
 </div>
 <?php botx(); ?>

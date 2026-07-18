@@ -15,9 +15,9 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['add_cn'])){
 }
 
 topx('Çek / Senet');
-if(isset($_GET['ok'])) echo '<div class="ok">Kayıt eklendi.</div>';
-if(isset($_GET['deleted'])) echo '<div class="ok">Kayıt silindi.</div>';
-if(!empty($_SESSION['cn_err'])){ echo '<div class="err">'.htmlspecialchars($_SESSION['cn_err']).'</div>'; unset($_SESSION['cn_err']); }
+if(isset($_GET['ok'])) echo ds_alert('success','Kayıt eklendi.');
+if(isset($_GET['deleted'])) echo ds_alert('success','Kayıt silindi.');
+if(!empty($_SESSION['cn_err'])){ echo ds_alert('danger',$_SESSION['cn_err']); unset($_SESSION['cn_err']); }
 
 $typeOpts=checks_notes_types();
 $dirOpts=checks_notes_directions();
@@ -35,12 +35,12 @@ foreach($rows as $r){ if($r['status']==='portfoyde') $countPortfoyde++; }
   <div class="card blue"><span>🧾</span><b><?=$countPortfoyde?></b><small>Portföyde</small></div>
 </div>
 
-<details class="panel"><summary style="font-weight:900;cursor:pointer">➕ Yeni Çek / Senet Kaydı</summary>
+<details class="df-panel" style="margin-top:12px"><summary style="font-weight:900;cursor:pointer"><?=ds_icon('plus',14)?> Yeni Çek / Senet Kaydı</summary>
 <form method="post" style="margin-top:10px" enctype="multipart/form-data">
   <label>Yön <small class="muted">(bizim verdiğimiz mi, bize verilen mi)</small></label>
-  <select name="direction" id="cn-dir-new" onchange="updateCnStatusLabels(this)"><?php foreach($dirOpts as $dk=>$dl): ?><option value="<?=$dk?>"><?=htmlspecialchars($dl)?></option><?php endforeach; ?></select>
+  <select name="direction" id="cn-dir-new" onchange="updateCnStatusLabels(this)"><?php foreach($dirOpts as $dk=>$dl): ?><option value="<?=$dk?>"><?=h($dl)?></option><?php endforeach; ?></select>
   <label>Tür</label>
-  <select name="type"><?php foreach($typeOpts as $tk=>$tl): ?><option value="<?=$tk?>"><?=htmlspecialchars($tl)?></option><?php endforeach; ?></select>
+  <select name="type"><?php foreach($typeOpts as $tk=>$tl): ?><option value="<?=$tk?>"><?=h($tl)?></option><?php endforeach; ?></select>
   <label>Numara</label>
   <input name="number" placeholder="Çek/senet numarası">
   <label>Tutar</label>
@@ -49,55 +49,55 @@ foreach($rows as $r){ if($r['status']==='portfoyde') $countPortfoyde++; }
   <input type="date" name="due_date">
   <label>Cari <small class="muted">(opsiyonel)</small></label>
   <select name="contact_id" id="contactSel" onchange="onCnContactChange()"><option value="">— Cari seçilmedi —</option>
-  <?php foreach($contacts as $c): ?><option value="<?=$c['id']?>"><?=htmlspecialchars($c['name'])?></option><?php endforeach; ?>
+  <?php foreach($contacts as $c): ?><option value="<?=$c['id']?>"><?=h($c['name'])?></option><?php endforeach; ?>
   <option value="__new__">➕ Listede yok — Yeni Cari Ekle…</option>
   </select>
-  <div id="newContactBox" style="display:none;background:rgba(37,99,235,.12);border-radius:12px;padding:10px;margin:6px 0 12px">
+  <div id="newContactBox" class="df-panel" style="display:none;background:rgba(37,99,235,.12);margin:6px 0 12px">
     <input type="text" id="qnContactName" placeholder="Müşteri adı">
-    <button type="button" class="btn dark" style="width:100%" onclick="quickContactCheckMob(document.getElementById('qnContactName').value)">✓ Ekle ve Seç</button>
+    <button type="button" class="df-btn df-btn--primary" style="width:100%" onclick="quickContactCheckMob(document.getElementById('qnContactName').value)"><?=ds_icon('check',14)?> Ekle ve Seç</button>
   </div>
   <label>Banka Adı <small class="muted">(çek ise)</small></label>
   <input name="bank_name">
   <label>Durum</label>
-  <select name="status" id="cn-status-new"><?php foreach($statusOpts as $sk=>$sl): ?><option value="<?=$sk?>" <?=$sk==='portfoyde'?'selected':''?>><?=htmlspecialchars($sl)?></option><?php endforeach; ?></select>
+  <select name="status" id="cn-status-new"><?php foreach($statusOpts as $sk=>$sl): ?><option value="<?=$sk?>" <?=$sk==='portfoyde'?'selected':''?>><?=h($sl)?></option><?php endforeach; ?></select>
   <label>Not</label>
   <textarea name="notes" rows="2"></textarea>
   <label>Fotoğraf / Dosya <small class="muted">(opsiyonel, jpg/png/webp/gif/pdf, en fazla 15 MB)</small></label>
   <input type="file" name="attachment" accept=".jpg,.jpeg,.png,.webp,.gif,.pdf">
-  <button class="btn dark" name="add_cn" value="1" style="width:100%;padding:13px;margin-top:8px">💾 Kaydet</button>
+  <button class="df-btn df-btn--primary df-btn--lg" name="add_cn" value="1" style="width:100%;margin-top:8px"><?=ds_icon('check',16)?> Kaydet</button>
 </form>
 </details>
 
-<div class="panel" style="display:flex;gap:8px;flex-wrap:wrap">
-  <a class="btn <?=$dirFilter===''?'dark':'secondary'?>" href="checks_notes.php<?=$typeFilter?'?type='.$typeFilter:''?>" style="flex:1;text-align:center">Tüm Yönler</a>
+<div class="df-panel" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+  <a class="df-btn <?=$dirFilter===''?'df-btn--primary':'df-btn--secondary'?>" href="checks_notes.php<?=$typeFilter?'?type='.$typeFilter:''?>" style="flex:1;justify-content:center">Tüm Yönler</a>
   <?php foreach($dirOpts as $dk=>$dl): ?>
-  <a class="btn <?=$dirFilter===$dk?'dark':'secondary'?>" href="checks_notes.php?direction=<?=$dk?><?=$typeFilter?'&type='.$typeFilter:''?>" style="flex:1;text-align:center"><?=htmlspecialchars($dl)?></a>
+  <a class="df-btn <?=$dirFilter===$dk?'df-btn--primary':'df-btn--secondary'?>" href="checks_notes.php?direction=<?=$dk?><?=$typeFilter?'&type='.$typeFilter:''?>" style="flex:1;justify-content:center"><?=h($dl)?></a>
   <?php endforeach; ?>
 </div>
 
-<div class="panel" style="display:flex;gap:8px;flex-wrap:wrap">
-  <a class="btn <?=$typeFilter===''?'dark':'secondary'?>" href="checks_notes.php<?=$dirFilter?'?direction='.$dirFilter:''?>" style="flex:1;text-align:center">Tümü</a>
+<div class="df-panel" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+  <a class="df-btn <?=$typeFilter===''?'df-btn--primary':'df-btn--secondary'?>" href="checks_notes.php<?=$dirFilter?'?direction='.$dirFilter:''?>" style="flex:1;justify-content:center">Tümü</a>
   <?php foreach($typeOpts as $tk=>$tl): ?>
-  <a class="btn <?=$typeFilter===$tk?'dark':'secondary'?>" href="checks_notes.php?type=<?=$tk?><?=$dirFilter?'&direction='.$dirFilter:''?>" style="flex:1;text-align:center"><?=htmlspecialchars($tl)?></a>
+  <a class="df-btn <?=$typeFilter===$tk?'df-btn--primary':'df-btn--secondary'?>" href="checks_notes.php?type=<?=$tk?><?=$dirFilter?'&direction='.$dirFilter:''?>" style="flex:1;justify-content:center"><?=h($tl)?></a>
   <?php endforeach; ?>
 </div>
 
-<div class="panel"><b>📜 Kayıtlar</b>
+<div class="df-panel" style="margin-top:12px"><b><?=ds_icon('info',16)?> Kayıtlar</b>
 <?php
-if(!$rows) echo '<p class="muted" style="margin:10px 0 0">Henüz kayıt yok — yukarıdan ekleyin.</p>';
+if(!$rows) ds_empty_state('Henüz kayıt yok — yukarıdan ekleyin.');
 foreach($rows as $r){
     $overdue = $r['status']==='portfoyde' && $r['due_date'] && $r['due_date']<$today;
     $upcoming = $r['status']==='portfoyde' && $r['due_date'] && $r['due_date']>=$today && $r['due_date']<=$soon;
-    $color = $overdue ? '#f87171' : ($upcoming ? '#f59e0b' : '#4ade80');
+    $color = $overdue ? 'var(--df-danger-ink)' : ($upcoming ? 'var(--df-warning-ink)' : 'var(--df-success-ink)');
     $ic = $r['type']==='senet' ? '📝' : '🧾';
     $att = !empty($r['attachment']) ? ' 📎' : '';
     $rDir = $r['direction'] ?? 'alinan';
     $dirIc = $rDir==='verilen' ? '📤' : '📥';
     $finIc = !empty($r['finance_movement_id']) ? ' 💰' : (!empty($r['contact_id']) ? ' ⚠️' : '');
-    echo '<a class="item" href="check_note_view.php?id='.(int)$r['id'].'" style="display:flex;justify-content:space-between;align-items:center">'
-       .'<span>'.$dirIc.$ic.' <b>'.htmlspecialchars($typeOpts[$r['type']]??$r['type']).' '.htmlspecialchars($r['number']?:'').$att.'</b><br>'
-       .'<small class="muted">'.htmlspecialchars(($r['contact_name']?:'-').' · '.($r['due_date']?:'Vadesiz').($overdue?' ⚠️':($upcoming?' ⏳':''))).$finIc.'</small></span>'
-       .'<b style="color:'.$color.'">'.mm($r['amount']).'</b></a>';
+    $titleHtml = $dirIc.$ic.' <b>'.h($typeOpts[$r['type']]??$r['type']).' '.h($r['number']?:'').'</b>'.$att;
+    $descHtml = h(($r['contact_name']?:'-').' · '.($r['due_date']?:'Vadesiz').($overdue?' ⚠️':($upcoming?' ⏳':''))).$finIc;
+    $metaHtml = '<b style="color:'.$color.'">'.mm($r['amount']).'</b>';
+    ds_list_item($titleHtml, 'check_note_view.php?id='.(int)$r['id'], $descHtml, $metaHtml);
 }
 ?>
 </div>

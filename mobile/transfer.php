@@ -38,30 +38,30 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 }
 
 topx('Hesap Transferi');
-if(!empty($_SESSION['transfer_err'])){ echo '<div class="err">'.htmlspecialchars($_SESSION['transfer_err']).'</div>'; unset($_SESSION['transfer_err']); }
+if(!empty($_SESSION['transfer_err'])){ echo ds_alert('danger',$_SESSION['transfer_err']); unset($_SESSION['transfer_err']); }
 
 $accounts=[];
 try{ $accounts=$pdo->query("SELECT * FROM finance_accounts WHERE COALESCE(active,1)=1 ORDER BY account_type,name")->fetchAll(); }catch(Throwable $e){}
 ?>
-<div class="panel" style="display:flex;gap:8px"><a class="btn dark" href="kasa.php" style="flex:1;text-align:center">🏦 Kasa Durumu</a></div>
+<div class="df-panel" style="display:flex;gap:8px"><a class="df-btn df-btn--primary" href="kasa.php" style="flex:1;justify-content:center"><?=ds_icon('wallet',14)?> Kasa Durumu</a></div>
 
 <?php if(!$accounts): ?>
-<div class="panel"><p class="muted">Önce Kasa ekranından hesap eklemelisiniz.</p></div>
+<div class="df-panel" style="margin-top:12px"><?php ds_empty_state('Önce Kasa ekranından hesap eklemelisiniz.'); ?></div>
 <?php else: ?>
-<div class="panel">
+<div class="df-panel" style="margin-top:12px">
 <form method="post">
   <label>Kaynak Hesap</label>
   <select name="from_account_id" required><option value="">— Seç —</option>
-  <?php foreach($accounts as $a): ?><option value="<?=$a['id']?>"><?=htmlspecialchars($a['account_type'].' - '.$a['name'].' / '.mm($a['current_balance']??0))?></option><?php endforeach; ?></select>
+  <?php foreach($accounts as $a): ?><option value="<?=$a['id']?>"><?=h($a['account_type'].' - '.$a['name'].' / '.mm($a['current_balance']??0))?></option><?php endforeach; ?></select>
 
   <label>Hedef Hesap <small class="muted">(kredi kartı = karta ödeme)</small></label>
   <select name="to_account_id" required><option value="">— Seç —</option>
-  <?php foreach($accounts as $a): ?><option value="<?=$a['id']?>"><?=htmlspecialchars($a['account_type'].' - '.$a['name'].' / '.mm($a['current_balance']??0))?></option><?php endforeach; ?></select>
+  <?php foreach($accounts as $a): ?><option value="<?=$a['id']?>"><?=h($a['account_type'].' - '.$a['name'].' / '.mm($a['current_balance']??0))?></option><?php endforeach; ?></select>
 
   <label>Tutar</label><input type="number" step="0.01" name="amount" required>
   <label>Tarih</label><input type="date" name="movement_date" value="<?=date('Y-m-d')?>">
   <label>Açıklama</label><textarea name="description" rows="2" placeholder="Hesaplar arası transfer"></textarea>
-  <button class="btn dark" style="width:100%;padding:14px;margin-top:8px">↔️ Transferi Yap</button>
+  <button class="df-btn df-btn--primary df-btn--lg" style="width:100%;margin-top:8px">↔️ Transferi Yap</button>
 </form>
 </div>
 <?php endif; ?>
