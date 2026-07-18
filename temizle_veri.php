@@ -2,7 +2,7 @@
 require_once __DIR__.'/boot.php';
 require_login();
 $pdo=db();
-if(!is_admin()){ require_once __DIR__.'/layout_top.php'; echo '<div class="alert">Bu sayfa sadece yöneticiye açıktır.</div>'; require __DIR__.'/layout_bottom.php'; exit; }
+if(!is_admin()){ require_once __DIR__.'/layout_top.php'; echo ds_alert('danger','Bu sayfa sadece yöneticiye açıktır.'); require __DIR__.'/layout_bottom.php'; exit; }
 
 // Kategori → tablolar. Kullanıcı/personel/hesap/kategori KORUNUR.
 $groups = [
@@ -42,39 +42,38 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
   }
 }
 require_once __DIR__.'/layout_top.php';
+ds_page_header('Veri Temizleme (Canlıya Hazırlık)', ds_icon('trash',24), '', ds_button('Panel','dashboard.php','secondary','','',true), false, true);
 ?>
-<div class="panel-head"><h1>🧹 Veri Temizleme (Canlıya Hazırlık)</h1><a class="btn secondary" href="dashboard.php">Panel</a></div>
 
-<?php if($done): ?><div class="ok">Temizlendi: <?=h(implode(', ',$done))?></div><?php endif; ?>
-<?php if($msg): ?><div class="alert"><?=h($msg)?></div><?php endif; ?>
+<?php if($done): ?><?=ds_alert('success','Temizlendi: '.implode(', ',$done))?><?php endif; ?>
+<?php if($msg): ?><?=ds_alert('danger',$msg)?><?php endif; ?>
 
-<section class="panel" style="max-width:680px;border:1px solid #b91c1c">
-  <div style="color:#fca5a5;font-weight:800;margin-bottom:6px">⚠️ DİKKAT — geri alınamaz!</div>
-  <p class="muted" style="margin:0 0 12px">Seçtiğin kategorilerin <b>tüm kayıtları silinir</b>. Kullanıcılar, personel, banka/kasa hesapları ve ürün kategorileri <b>korunur</b>. Canlıya geçmeden test verisini temizlemek içindir.</p>
+<section class="df-card" style="max-width:680px;margin-top:var(--df-space-4);border-color:var(--df-danger)">
+  <div style="color:var(--df-danger-ink);font-weight:800;margin-bottom:6px">⚠️ DİKKAT — geri alınamaz!</div>
+  <p class="df-muted" style="margin:0 0 var(--df-space-3)">Seçtiğin kategorilerin <b>tüm kayıtları silinir</b>. Kullanıcılar, personel, banka/kasa hesapları ve ürün kategorileri <b>korunur</b>. Canlıya geçmeden test verisini temizlemek içindir.</p>
   <form method="post">
-    <table style="width:100%;border-collapse:collapse">
-      <thead><tr style="text-align:left;color:#7f95b2;font-size:13px"><th style="padding:6px">Sil</th><th style="padding:6px">Kategori</th><th style="padding:6px;text-align:right">Kayıt</th></tr></thead>
+    <div class="df-table-wrap"><table class="df-table">
+      <thead><tr><th>Sil</th><th>Kategori</th><th style="text-align:right">Kayıt</th></tr></thead>
       <tbody>
       <?php foreach($groups as $key=>$g):
         $cnt=0; foreach($g[1] as $t){ $c=tcount($pdo,$t); if($c>0)$cnt+=$c; } ?>
-        <tr style="border-top:1px solid rgba(255,255,255,.08)">
-          <td style="padding:8px 6px"><input type="checkbox" name="g[]" value="<?=h($key)?>" <?=$cnt==0?'disabled':''?>></td>
-          <td style="padding:8px 6px"><?=h($g[0])?><br><small class="muted"><?=h(implode(', ',$g[1]))?></small></td>
-          <td style="padding:8px 6px;text-align:right;font-weight:700"><?=$cnt?></td>
+        <tr>
+          <td><input type="checkbox" name="g[]" value="<?=h($key)?>" <?=$cnt==0?'disabled':''?>></td>
+          <td><?=h($g[0])?><br><small class="df-muted"><?=h(implode(', ',$g[1]))?></small></td>
+          <td style="text-align:right;font-weight:700"><?=$cnt?></td>
         </tr>
       <?php endforeach; ?>
       </tbody>
-    </table>
-    <label style="display:flex;align-items:center;gap:8px;margin-top:12px"><input type="checkbox" name="reset_balance" value="1"> Finans seçilirse kasa/banka bakiyelerini açılış değerine sıfırla</label>
-    <div style="margin-top:14px">
-      <label>Onay — kutuya büyük harfle <b>SİL</b> yaz:</label>
-      <input name="confirm" placeholder="SİL" autocomplete="off" style="max-width:160px">
+    </table></div>
+    <label style="display:flex;align-items:center;gap:8px;margin-top:var(--df-space-3);font-size:var(--df-type-body-size);color:var(--df-ink-900)"><input type="checkbox" name="reset_balance" value="1"> Finans seçilirse kasa/banka bakiyelerini açılış değerine sıfırla</label>
+    <div style="margin-top:var(--df-space-3)">
+      <?php ds_form_field('Onay — kutuya büyük harfle SİL yaz', '<input name="confirm" placeholder="SİL" autocomplete="off" style="max-width:160px">'); ?>
     </div>
-    <button class="btn" style="background:#b91c1c;margin-top:12px" onclick="return confirm('Seçili kategoriler KALICI olarak silinecek. Emin misin?')">🗑️ Seçilenleri Sil</button>
+    <button class="df-btn df-btn--danger" style="margin-top:var(--df-space-2)" onclick="return confirm('Seçili kategoriler KALICI olarak silinecek. Emin misin?')"><?=ds_icon('trash',16)?> Seçilenleri Sil</button>
   </form>
 </section>
 
-<section class="panel" style="max-width:680px">
-  <b>Korunan tablolar:</b> <span class="muted">app_users, personnel, personnel_devices, finance_accounts, product_categories, product_brands, product_units, push_subs</span>
+<section class="df-card" style="max-width:680px;margin-top:var(--df-space-4)">
+  <b>Korunan tablolar:</b> <span class="df-muted">app_users, personnel, personnel_devices, finance_accounts, product_categories, product_brands, product_units, push_subs</span>
 </section>
 <?php require __DIR__.'/layout_bottom.php'; ?>

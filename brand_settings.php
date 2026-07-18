@@ -53,12 +53,11 @@ $cur_logo = get_setting('brand_logo','');
 $cur_icon = get_setting('brand_icon','');
 
 require __DIR__.'/layout_top.php';
+ds_page_header('Logo / Marka Ayarları', ds_icon('tag',24), 'Yüklenen logo; giriş ekranı, üst menü ve mobil uygulamada görünür. PNG veya JPG önerilir (şeffaf arkaplan için PNG).', '', false, true);
 ?>
-<h1>🎨 Logo / Marka Ayarları</h1>
-<p class="muted">Yüklenen logo; giriş ekranı, üst menü ve mobil uygulamada görünür. PNG veya JPG önerilir (şeffaf arkaplan için PNG).</p>
 
-<?php if($msg): ?><div class="ok"><?=h($msg)?></div><?php endif; ?>
-<?php if($err): ?><div class="alert"><?=h($err)?></div><?php endif; ?>
+<?php if($msg): ?><?=ds_alert('success',$msg)?><?php endif; ?>
+<?php if($err): ?><?=ds_alert('danger',$err)?><?php endif; ?>
 
 <!-- Reset formları — yükleme formunun dışında, iç içe form yok -->
 <?php if($cur_logo && is_file(__DIR__.'/'.$cur_logo)): ?>
@@ -74,73 +73,72 @@ require __DIR__.'/layout_top.php';
 
 <form method="post" enctype="multipart/form-data">
 <input type="hidden" name="action" value="upload">
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:18px">
+<div class="df-brand-grid" style="margin-top:var(--df-space-4)">
 
     <!-- Ana Logo -->
-    <div class="panel">
-        <h2 style="margin:0 0 12px;font-size:18px">📷 Ana Logo</h2>
-        <p class="muted" style="margin:0 0 12px">Giriş sayfası ve yan menüde kullanılır. Yatay/kare logo önerilir.</p>
+    <div class="df-card">
+        <h2 style="margin:0 0 var(--df-space-3);font-size:18px"><?=ds_icon('tag',18)?> Ana Logo</h2>
+        <p class="df-muted" style="margin:0 0 var(--df-space-3)">Giriş sayfası ve yan menüde kullanılır. Yatay/kare logo önerilir.</p>
 
         <?php if($cur_logo && is_file(__DIR__.'/'.$cur_logo)): ?>
-        <div style="background:#f5f7fb;border:1px solid #eef2f6;border-radius:14px;padding:14px;text-align:center;margin-bottom:14px">
+        <div style="background:var(--df-surface-sunken);border:1px solid var(--df-hairline);border-radius:var(--df-radius-md);padding:var(--df-space-4);text-align:center;margin-bottom:var(--df-space-4)">
             <img src="<?=h($cur_logo)?>?v=<?=filemtime(__DIR__.'/'.$cur_logo)?>" alt="Mevcut Logo"
                  style="max-width:100%;max-height:120px;object-fit:contain;display:block;margin:auto">
-            <div class="muted" style="margin-top:8px;font-size:12px">Mevcut logo</div>
+            <div class="df-muted" style="margin-top:8px;font-size:12px">Mevcut logo</div>
         </div>
-        <button type="button" class="btn secondary" style="margin-bottom:14px;font-size:13px"
+        <button type="button" class="df-btn df-btn--secondary df-btn--sm" style="margin-bottom:var(--df-space-4)"
                 onclick="if(confirm('Ana logoyu varsayılana döndür?'))document.getElementById('frm-reset-logo').submit()">↩ Varsayılana dön</button>
         <?php else: ?>
-        <div style="background:#f5f7fb;border:1px dashed #d0d5dd;border-radius:14px;padding:20px;text-align:center;margin-bottom:14px;color:#667085">
+        <div style="background:var(--df-surface-sunken);border:1px dashed var(--df-hairline);border-radius:var(--df-radius-md);padding:var(--df-space-5);text-align:center;margin-bottom:var(--df-space-4);color:var(--df-ink-500)">
             Özel logo yok — varsayılan kullanılıyor
         </div>
         <?php endif; ?>
 
-        <label style="font-weight:800;display:block;margin-bottom:6px">Yeni logo yükle</label>
-        <input type="file" name="brand_logo" accept="image/png,image/jpeg,image/webp,image/gif"
-               style="border:1px solid #d0d5dd;border-radius:12px;padding:10px;width:100%;background:#fff">
-        <div class="muted" style="margin-top:6px;font-size:12px">Önerilen: PNG, şeffaf, min 200×60 px</div>
+        <?php ds_form_field('Yeni logo yükle', '<input type="file" name="brand_logo" accept="image/png,image/jpeg,image/webp,image/gif">', 'Önerilen: PNG, şeffaf, min 200×60 px'); ?>
     </div>
 
     <!-- Uygulama İkonu -->
-    <div class="panel">
-        <h2 style="margin:0 0 12px;font-size:18px">📱 Uygulama İkonu (PWA)</h2>
-        <p class="muted" style="margin:0 0 12px">Mobil ana ekrana eklenen uygulama ikonu. Kare resim önerilir.</p>
+    <div class="df-card">
+        <h2 style="margin:0 0 var(--df-space-3);font-size:18px"><?=ds_icon('box',18)?> Uygulama İkonu (PWA)</h2>
+        <p class="df-muted" style="margin:0 0 var(--df-space-3)">Mobil ana ekrana eklenen uygulama ikonu. Kare resim önerilir.</p>
 
         <?php if($cur_icon && is_file(__DIR__.'/'.$cur_icon)): ?>
-        <div style="background:#f5f7fb;border:1px solid #eef2f6;border-radius:14px;padding:14px;text-align:center;margin-bottom:14px">
+        <div style="background:var(--df-surface-sunken);border:1px solid var(--df-hairline);border-radius:var(--df-radius-md);padding:var(--df-space-4);text-align:center;margin-bottom:var(--df-space-4)">
             <img src="<?=h($cur_icon)?>?v=<?=filemtime(__DIR__.'/'.$cur_icon)?>" alt="Mevcut İkon"
-                 style="width:80px;height:80px;object-fit:contain;border-radius:18px;border:1px solid #eef2f6;display:block;margin:auto">
-            <div class="muted" style="margin-top:8px;font-size:12px">Mevcut ikon</div>
+                 style="width:80px;height:80px;object-fit:contain;border-radius:18px;border:1px solid var(--df-hairline);display:block;margin:auto">
+            <div class="df-muted" style="margin-top:8px;font-size:12px">Mevcut ikon</div>
         </div>
-        <button type="button" class="btn secondary" style="margin-bottom:14px;font-size:13px"
+        <button type="button" class="df-btn df-btn--secondary df-btn--sm" style="margin-bottom:var(--df-space-4)"
                 onclick="if(confirm('Uygulama ikonunu varsayılana döndür?'))document.getElementById('frm-reset-icon').submit()">↩ Varsayılana dön</button>
         <?php else: ?>
-        <div style="background:#f5f7fb;border:1px dashed #d0d5dd;border-radius:14px;padding:20px;text-align:center;margin-bottom:14px;color:#667085">
+        <div style="background:var(--df-surface-sunken);border:1px dashed var(--df-hairline);border-radius:var(--df-radius-md);padding:var(--df-space-5);text-align:center;margin-bottom:var(--df-space-4);color:var(--df-ink-500)">
             Özel ikon yok — varsayılan kullanılıyor
         </div>
         <?php endif; ?>
 
-        <label style="font-weight:800;display:block;margin-bottom:6px">Yeni ikon yükle</label>
-        <input type="file" name="brand_icon" accept="image/png,image/jpeg,image/webp,image/gif"
-               style="border:1px solid #d0d5dd;border-radius:12px;padding:10px;width:100%;background:#fff">
-        <div class="muted" style="margin-top:6px;font-size:12px">Önerilen: PNG, kare, min 192×192 px</div>
+        <?php ds_form_field('Yeni ikon yükle', '<input type="file" name="brand_icon" accept="image/png,image/jpeg,image/webp,image/gif">', 'Önerilen: PNG, kare, min 192×192 px'); ?>
     </div>
 
 </div>
 
-<div style="margin-top:16px">
-    <button type="submit" class="btn" style="padding:13px 28px">⬆ Logo / İkonu Kaydet</button>
+<div style="margin-top:var(--df-space-4)">
+    <button type="submit" class="df-btn df-btn--primary df-btn--lg"><?=ds_icon('check',16)?> Logo / İkonu Kaydet</button>
 </div>
 </form>
 
-<div class="panel" style="margin-top:24px;background:#f0f9ff;border:1px solid #bae6fd">
-    <strong style="color:#0369a1">ℹ Bilgi</strong>
-    <ul style="margin:8px 0 0;padding-left:20px;color:#0c4a6e;font-size:14px;line-height:1.7">
+<div class="df-card" style="margin-top:var(--df-space-5);background:var(--df-info-soft);border-color:var(--df-info)">
+    <strong style="color:var(--df-info-ink)"><?=ds_icon('info',16)?> Bilgi</strong>
+    <ul style="margin:8px 0 0;padding-left:20px;color:var(--df-info-ink);font-size:14px;line-height:1.7">
         <li>Yüklenen logo anında aktif olur — sayfayı yenileyince görünür.</li>
         <li>Mobil PWA ikonunun güncellenmesi için tarayıcı önbelleğini temizleyip uygulamayı yeniden ana ekrana ekleyin.</li>
         <li>Her site (PRIMAC/ACANS) kendi <code>uploads/brand_logo.png</code> dosyasını barındırır; logolar karışmaz.</li>
         <li>"Varsayılana dön" seçeneği ayarı siler; sistem otomatik olarak varsayılan logoya döner.</li>
     </ul>
 </div>
+
+<style>
+body.nav-compact .df-brand-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--df-space-5)}
+@media(max-width:760px){body.nav-compact .df-brand-grid{grid-template-columns:1fr}}
+</style>
 
 <?php require __DIR__.'/layout_bottom.php'; ?>

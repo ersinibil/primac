@@ -58,100 +58,92 @@ $webhook_url   = base_url().'wa_webhook.php?key='.$s_webhook_key;
 
 $page_title='WhatsApp Ayarları';
 require_once __DIR__.'/layout_top.php';
+ds_page_header('WhatsApp Otomatik Gönderim Ayarları', ds_icon('settings',24), 'Günlük hatırlatıcılar ve bildirimler bu ayarlarla otomatik WhatsApp mesajı gönderir.', ds_button('💬 Konuşmalar','wa_conversations.php','secondary','','',true), false, true);
 ?>
 
-<div class="panel-head">
-<h1>📱 WhatsApp Otomatik Gönderim Ayarları</h1>
-<a class="btn secondary" href="wa_conversations.php">💬 Konuşmalar</a>
-</div>
-<p class="muted">Günlük hatırlatıcılar ve bildirimler bu ayarlarla otomatik WhatsApp mesajı gönderir.</p>
-
 <?php if($msg): ?>
-<div class="<?=h($msg_type)?>"><?=h($msg)?></div>
+<?=ds_alert($msg_type==='ok'?'success':'danger',$msg)?>
 <?php endif; ?>
 
-<div class="panel" style="max-width:680px">
-    <div class="panel-head"><h2>Bağlantı Ayarları</h2></div>
+<section class="df-card" style="max-width:680px;margin-top:var(--df-space-4)">
+    <h2 class="df-section-title">Bağlantı Ayarları</h2>
     <form method="post">
         <input type="hidden" name="action" value="save">
-        <div class="form-grid">
+        <div class="df-form-grid-2">
 
-            <label class="full" style="display:flex;align-items:center;gap:10px;cursor:pointer">
+            <div class="df-form-span-2">
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:var(--df-type-body-size);color:var(--df-ink-900)">
                 <input type="checkbox" name="wa_enabled" value="1" <?=($s_enabled==='1'?'checked':'')?> style="width:18px;height:18px;margin-top:0">
                 <span>WhatsApp Otomatik Gönderimi Aktif</span>
             </label>
+            </div>
 
-            <label>Sağlayıcı
-                <select name="wa_provider" id="wa_provider" onchange="toggleProvider()" style="width:100%;border:1px solid #d0d5dd;border-radius:12px;padding:11px;margin-top:6px;background:#fff">
-                    <option value="ultramsg" <?=($s_provider==='ultramsg'?'selected':'')?>>UltraMsg (önerilen)</option>
-                    <option value="custom"   <?=($s_provider==='custom'?'selected':'')?>>Özel / Custom Gateway</option>
-                </select>
-            </label>
+            <?php ds_form_field('Sağlayıcı', '<select name="wa_provider" id="wa_provider" onchange="toggleProvider()">
+                <option value="ultramsg" '.($s_provider==='ultramsg'?'selected':'').'>UltraMsg (önerilen)</option>
+                <option value="custom" '.($s_provider==='custom'?'selected':'').'>Özel / Custom Gateway</option>
+            </select>'); ?>
 
-            <label id="row_instance">Instance ID
-                <input type="text" name="wa_instance" value="<?=h($s_instance)?>" placeholder="instance12345">
-            </label>
+            <div id="row_instance"><?php ds_form_field('Instance ID', '<input type="text" name="wa_instance" value="'.h($s_instance).'" placeholder="instance12345">'); ?></div>
 
-            <label>Token / API Anahtarı
-                <input type="text" name="wa_token" value="<?=h($s_token)?>" placeholder="UltraMsg veya gateway token'ı">
-            </label>
+            <?php ds_form_field('Token / API Anahtarı', '<input type="text" name="wa_token" value="'.h($s_token).'" placeholder="UltraMsg veya gateway token\'ı">'); ?>
 
-            <label class="full" id="row_url" style="display:none">Özel Gateway URL
-                <input type="url" name="wa_url" value="<?=h($s_url)?>" placeholder="https://api.example.com/send">
-            </label>
+            <div class="df-form-span-2" id="row_url" style="display:none"><?php ds_form_field('Özel Gateway URL', '<input type="url" name="wa_url" value="'.h($s_url).'" placeholder="https://api.example.com/send">'); ?></div>
 
         </div>
-        <div style="margin-top:16px;padding-top:12px;border-top:1px solid #eef2f6">
-            <p class="muted" style="margin:0 0 10px">
+        <div style="margin-top:var(--df-space-4);padding-top:var(--df-space-3);border-top:1px solid var(--df-hairline)">
+            <p class="df-muted" style="margin:0 0 10px">
                 <strong>UltraMsg kurulumu:</strong>
                 <a href="https://ultramsg.com" target="_blank" rel="noopener">ultramsg.com</a>'dan hesap açın → Instance oluşturun → QR okutun →
                 Instance ID ve Token'ı yukarıya yapıştırın.
             </p>
-            <button type="submit" class="btn">💾 Kaydet</button>
+            <button type="submit" class="df-btn df-btn--primary"><?=ds_icon('check',16)?> Kaydet</button>
         </div>
     </form>
-</div>
+</section>
 
-<div class="panel" style="max-width:680px;margin-top:20px">
-    <div class="panel-head"><h2>Gelen Mesaj Webhook'u</h2></div>
-    <p class="muted" style="margin:0 0 10px">
+<section class="df-card" style="max-width:680px;margin-top:var(--df-space-4)">
+    <h2 class="df-section-title">Gelen Mesaj Webhook'u</h2>
+    <p class="df-muted" style="margin:0 0 10px">
         Karşı taraftan gelen WhatsApp cevaplarının sisteme düşmesi için bu URL'i UltraMsg panelinde
         (Instance → Settings → Webhook URL) tanımlayın. Anahtar bu sistemde üretildi, kimseyle
         paylaşmayın — sızarsa hemen yenileyin.
     </p>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <input type="text" readonly value="<?=h($webhook_url)?>" onclick="this.select()" style="flex:1;min-width:280px;border:1px solid #d0d5dd;border-radius:12px;padding:11px;background:#f8fafc;font-family:monospace;font-size:13px">
+        <input type="text" readonly value="<?=h($webhook_url)?>" onclick="this.select()" style="flex:1;min-width:280px;border:1px solid var(--df-hairline);border-radius:var(--df-radius-sm);padding:11px;background:var(--df-surface-sunken);font-family:monospace;font-size:13px">
         <form method="post" onsubmit="return confirm('Anahtar yenilenirse UltraMsg panelindeki eski webhook URL çalışmaz hale gelir. Emin misiniz?')">
             <input type="hidden" name="action" value="regen_webhook_key">
-            <button type="submit" class="btn secondary small">🔄 Anahtarı Yenile</button>
+            <button type="submit" class="df-btn df-btn--secondary df-btn--sm"><?=ds_icon('edit',14)?> Anahtarı Yenile</button>
         </form>
     </div>
-</div>
+</section>
 
-<div class="panel" style="max-width:680px;margin-top:20px">
-    <div class="panel-head"><h2>Test Mesajı Gönder</h2></div>
+<section class="df-card" style="max-width:680px;margin-top:var(--df-space-4)">
+    <h2 class="df-section-title">Test Mesajı Gönder</h2>
 
     <?php if($test_result): ?>
         <?php list($tr_type,$tr_msg)=explode(':',$test_result,2); ?>
-        <div class="<?=($tr_type==='ok'?'ok':'alert')?>"><?=h($tr_msg)?></div>
+        <?=ds_alert($tr_type==='ok'?'success':'danger',$tr_msg)?>
     <?php endif; ?>
 
     <form method="post">
         <input type="hidden" name="action" value="test">
-        <div class="form-grid">
-            <label>Telefon Numarası
-                <input type="text" name="test_phone" placeholder="05321234567 veya +905321234567" value="<?=h($_POST['test_phone']??'')?>">
-            </label>
-            <label>Mesaj
-                <input type="text" name="test_text" value="<?=h($_POST['test_text']??((app_config()['app_name']??'OTS').' — WhatsApp test mesajı.'))?>" placeholder="Test mesajı">
-            </label>
+        <div class="df-form-grid-2">
+            <?php ds_form_field('Telefon Numarası', '<input type="text" name="test_phone" placeholder="05321234567 veya +905321234567" value="'.h($_POST['test_phone']??'').'">'); ?>
+            <?php ds_form_field('Mesaj', '<input type="text" name="test_text" value="'.h($_POST['test_text']??((app_config()['app_name']??'OTS').' — WhatsApp test mesajı.')).'" placeholder="Test mesajı">'); ?>
         </div>
-        <div style="margin-top:14px">
-            <button type="submit" class="btn secondary">📤 Gönder</button>
-            <span class="muted" style="margin-left:10px;font-size:12px">Mevcut kaydedilmiş ayarlarla gönderir.</span>
+        <div style="margin-top:var(--df-space-3)">
+            <button type="submit" class="df-btn df-btn--secondary"><?=ds_icon('send',16)?> Gönder</button>
+            <span class="df-muted" style="margin-left:10px;font-size:12px">Mevcut kaydedilmiş ayarlarla gönderir.</span>
         </div>
     </form>
-</div>
+</section>
+
+<style>
+body.nav-compact .df-form-grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 var(--df-space-4)}
+body.nav-compact .df-form-span-2{grid-column:1 / -1}
+body.nav-compact .df-section-title{font-size:var(--df-type-section-size);font-weight:var(--df-type-section-weight);color:var(--df-ink-900);margin:0 0 var(--df-space-3)}
+@media(max-width:640px){body.nav-compact .df-form-grid-2{grid-template-columns:1fr}}
+</style>
 
 <script>
 function toggleProvider(){

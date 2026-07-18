@@ -45,71 +45,73 @@ $personnel=$pdo->query("SELECT name,phone FROM personnel WHERE COALESCE(active,1
 $contacts=$pdo->query("SELECT name,phone FROM contacts WHERE phone<>'' ORDER BY name")->fetchAll();
 
 require_once __DIR__.'/layout_top.php';
+ds_page_header('WhatsApp — Toplu Gönderim', ds_icon('send',24), '', '', false, true);
 ?>
-<div class="panel-head">
-<h1>WhatsApp — Toplu Gönderim</h1>
-</div>
 
-<section class="panel" style="max-width:560px">
-<?php if($error): ?><div class="alert"><?=h($error)?></div><?php endif; ?>
+<section class="df-card" style="max-width:640px;margin-top:var(--df-space-4)">
+<?php if($error): ?><?=ds_alert('danger',$error)?><?php endif; ?>
 <?php if($manualBulkLinks): ?>
-    <div class="alert" style="margin-bottom:10px">
+    <div class="df-alert df-alert--warning" style="margin-bottom:var(--df-space-3);display:block">
         <p style="margin:0 0 8px"><?=h($manualNote?:'API üzerinden gönderilemedi. Aşağıdaki kişileri tek tek elle açıp gönderebilirsiniz:')?></p>
         <?php foreach($manualBulkLinks as $mb): ?>
-        <a href="<?=h($mb['link'])?>" target="_blank" rel="noopener" class="btn small" style="background:#16a34a;color:#fff;margin:0 6px 6px 0;display:inline-flex">📲 <?=h($mb['phone'])?></a>
+        <a href="<?=h($mb['link'])?>" target="_blank" rel="noopener" class="df-btn df-btn--sm" style="background:var(--df-success);color:#fff;margin:0 6px 6px 0"><?=ds_icon('send',14)?> <?=h($mb['phone'])?></a>
         <?php endforeach; ?>
     </div>
 <?php endif; ?>
-<?php if($ok): ?><div class="ok"><?=h($ok)?></div><?php endif; ?>
+<?php if($ok): ?><?=ds_alert('success',$ok)?><?php endif; ?>
 
-<form method="post" class="form-grid" enctype="multipart/form-data" onsubmit="return waConfirmSubmit()">
+<form method="post" class="df-form-grid-2" enctype="multipart/form-data" onsubmit="return waConfirmSubmit()">
 
-<div class="full" style="display:flex;justify-content:space-between;align-items:center">
-    <label style="font-weight:800;margin:0">Personel</label>
-    <button type="button" class="btn secondary small" onclick="waToggleAll('wa-bp',this)">Tümünü Kaldır</button>
+<div class="df-form-span-2" style="display:flex;justify-content:space-between;align-items:center">
+    <label class="df-form-label" style="margin:0">Personel</label>
+    <button type="button" class="df-btn df-btn--secondary df-btn--sm" onclick="waToggleAll('wa-bp',this)">Tümünü Kaldır</button>
 </div>
-<div class="full" style="max-height:180px;overflow:auto;border:1px solid #e5e7eb;border-radius:10px;padding:8px;margin:6px 0 12px">
+<div class="df-form-span-2" style="max-height:180px;overflow:auto;border:1px solid var(--df-hairline);border-radius:var(--df-radius-sm);padding:8px;margin:6px 0 var(--df-space-4)">
     <?php foreach($personnel as $p): ?>
     <label style="display:flex;align-items:center;gap:8px;padding:4px 0;font-weight:400">
         <input type="checkbox" class="wa-bp" name="bulk_personnel[]" value="<?=h($p['phone'])?>" checked style="width:auto">
-        <?=h($p['name'])?> <span class="muted" style="font-size:12px"><?=h($p['phone'])?></span>
+        <?=h($p['name'])?> <span class="df-muted" style="font-size:12px"><?=h($p['phone'])?></span>
     </label>
     <?php endforeach; ?>
-    <?php if(!$personnel): ?><p class="muted" style="margin:4px 0">Telefonlu personel yok.</p><?php endif; ?>
+    <?php if(!$personnel): ?><p class="df-muted" style="margin:4px 0">Telefonlu personel yok.</p><?php endif; ?>
 </div>
 
-<div class="full" style="display:flex;justify-content:space-between;align-items:center">
-    <label style="font-weight:800;margin:0">Cari</label>
-    <button type="button" class="btn secondary small" onclick="waToggleAll('wa-bc',this)">Tümünü Kaldır</button>
+<div class="df-form-span-2" style="display:flex;justify-content:space-between;align-items:center">
+    <label class="df-form-label" style="margin:0">Cari</label>
+    <button type="button" class="df-btn df-btn--secondary df-btn--sm" onclick="waToggleAll('wa-bc',this)">Tümünü Kaldır</button>
 </div>
-<div class="full" style="max-height:180px;overflow:auto;border:1px solid #e5e7eb;border-radius:10px;padding:8px;margin-top:6px">
+<div class="df-form-span-2" style="max-height:180px;overflow:auto;border:1px solid var(--df-hairline);border-radius:var(--df-radius-sm);padding:8px;margin-top:6px">
     <?php foreach($contacts as $c): ?>
     <label style="display:flex;align-items:center;gap:8px;padding:4px 0;font-weight:400">
         <input type="checkbox" class="wa-bc" name="bulk_contacts[]" value="<?=h($c['phone'])?>" checked style="width:auto">
-        <?=h($c['name'])?> <span class="muted" style="font-size:12px"><?=h($c['phone'])?></span>
+        <?=h($c['name'])?> <span class="df-muted" style="font-size:12px"><?=h($c['phone'])?></span>
     </label>
     <?php endforeach; ?>
-    <?php if(!$contacts): ?><p class="muted" style="margin:4px 0">Telefonlu cari yok.</p><?php endif; ?>
+    <?php if(!$contacts): ?><p class="df-muted" style="margin:4px 0">Telefonlu cari yok.</p><?php endif; ?>
 </div>
 
-<label class="full">Mesaj
-<textarea id="waMsg" name="message" rows="5" placeholder="Mesajınızı yazın…"><?=h($_POST['message'] ?? '')?></textarea>
-</label>
+<div class="df-form-span-2"><?php ds_form_field('Mesaj', '<textarea id="waMsg" name="message" rows="5" placeholder="Mesajınızı yazın…">'.h($_POST['message'] ?? '').'</textarea>'); ?></div>
 
-<div class="full" style="display:flex;gap:8px;align-items:center;margin-top:-8px">
+<div class="df-form-span-2" style="display:flex;gap:8px;align-items:center;margin-top:-8px">
     <?=emoji_picker_html('waMsg')?>
-    <label class="btn secondary small" style="margin:0;cursor:pointer">
-        📎 Dosya/Video/Ses Ekle
+    <label class="df-btn df-btn--secondary df-btn--sm" style="margin:0;cursor:pointer">
+        <?=ds_icon('plus',14)?> Dosya/Video/Ses Ekle
         <input type="file" name="attach" accept="image/*,video/*,audio/*,application/pdf,.doc,.docx,.xls,.xlsx" style="display:none" onchange="document.getElementById('waFileName').textContent=this.files[0]?this.files[0].name:''">
     </label>
-    <span id="waFileName" class="muted" style="font-size:13px"></span>
+    <span id="waFileName" class="df-muted" style="font-size:13px"></span>
 </div>
 
-<div class="full">
-<button type="submit" class="btn dark">📤 Gönder</button>
+<div class="df-form-span-2">
+<button type="submit" class="df-btn df-btn--primary"><?=ds_icon('send',16)?> Gönder</button>
 </div>
 </form>
 </section>
+
+<style>
+body.nav-compact .df-form-grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 var(--df-space-4)}
+body.nav-compact .df-form-span-2{grid-column:1 / -1}
+@media(max-width:640px){body.nav-compact .df-form-grid-2{grid-template-columns:1fr}}
+</style>
 
 <script>
 function waToggleAll(cls, btn){

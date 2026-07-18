@@ -34,55 +34,49 @@ $myNotes=personal_notes_list($pdo,$me,$f,$date);
 require_once __DIR__.'/share_lib.php';
 $myPhone=my_phone($pdo,$me);
 require_once __DIR__.'/layout_top.php';
+$__notesActions = $date ? ds_button('✕ Tüm Notlar','notes.php','secondary','','',true) : '';
+ds_page_header('Notlarım'.($date?' — '.h(date('d.m.Y',strtotime($date))):''), ds_icon('edit',24), 'Bu alan sadece sana özel — personel göremez.', $__notesActions, false, true);
 ?>
-<div class="panel-head"><h1>📝 Notlarım<?=$date?' — '.h(date('d.m.Y',strtotime($date))):''?></h1>
-<?php if($date): ?><a class="btn secondary" href="notes.php">✕ Tüm Notlar</a><?php endif; ?>
-</div>
-<p class="muted">Bu alan sadece sana özel — personel göremez.</p>
 
-<?php if(!empty($_GET['ok'])): ?><div class="ok">Not eklendi, bildirim gönderildi.</div><?php endif; ?>
-<?php if($err): ?><div class="alert"><?=h($err)?></div><?php endif; ?>
+<?php if(!empty($_GET['ok'])): ?><?=ds_alert('success','Not eklendi, bildirim gönderildi.')?><?php endif; ?>
+<?php if($err): ?><?=ds_alert('danger',$err)?><?php endif; ?>
 
-<section class="panel">
-<form method="post" class="form-grid">
+<section class="df-card" style="margin-top:var(--df-space-4)">
+<form method="post" class="df-form-grid-2">
 <input type="hidden" name="note_add" value="1">
-<label class="full">Başlık
-<input name="note_title" required>
-</label>
-<label class="full">Detay (opsiyonel)
-<textarea name="note_body" rows="3"></textarea>
-</label>
-<label>Termin (opsiyonel — takvime işlenir)
-<input type="date" name="note_due">
-</label>
-<div class="full">
-<button class="btn" type="submit" style="margin-top:6px">📝 Not Ekle</button>
+<div class="df-form-span-2"><?php ds_form_field('Başlık', '<input name="note_title" required>'); ?></div>
+<div class="df-form-span-2"><?php ds_form_field('Detay (opsiyonel)', '<textarea name="note_body" rows="3"></textarea>'); ?></div>
+<?php ds_form_field('Termin (opsiyonel — takvime işlenir)', '<input type="date" name="note_due">'); ?>
+<div class="df-form-span-2">
+<button class="df-btn df-btn--primary" type="submit"><?=ds_icon('plus',16)?> Not Ekle</button>
 </div>
 </form>
 </section>
 
-<div class="filters">
-<a href="notes.php?f=open" <?=$f==='open'?'style="background:#101828;color:#fff"':''?>>Açık</a>
-<a href="notes.php?f=done" <?=$f==='done'?'style="background:#101828;color:#fff"':''?>>Tamamlanan</a>
-</div>
+<?php
+ds_tabs([
+    ['label'=>'Açık','url'=>'notes.php?f=open','active'=>$f==='open'],
+    ['label'=>'Tamamlanan','url'=>'notes.php?f=done','active'=>$f==='done'],
+]);
+?>
 
 <?php if(!$myNotes): ?>
-<div class="panel" style="text-align:center;color:#667085"><?=$f==='done'?'Tamamlanan not yok.':'Açık not yok.'?></div>
+<?=ds_empty_state($f==='done'?'Tamamlanan not yok.':'Açık not yok.', null, ds_icon('edit',32))?>
 <?php endif; ?>
 <?php foreach($myNotes as $n):
     $waTxt="📝 Not: ".$n['title'].($n['note']?"\n".$n['note']:'').($n['due_date']?"\n📅 ".$n['due_date']:'');
 ?>
-<div class="panel" style="margin-bottom:12px;background:#fffbeb">
+<div class="df-card" style="margin-top:var(--df-space-3);background:var(--df-warning-soft)">
 <b><?=h($n['title'])?></b>
-<?php if($n['note']): ?><div class="muted" style="margin-top:4px"><?=nl2br(h($n['note']))?></div><?php endif; ?>
-<?php if($n['due_date']): ?><div class="muted" style="margin-top:4px">📅 <?=h($n['due_date'])?></div><?php endif; ?>
-<div class="actions" style="margin-top:10px">
-<?php if($myPhone): ?><a class="btn small" style="background:#16a34a;color:#fff" href="<?=h(wa_link($waTxt,$myPhone))?>" target="_blank" rel="noopener">📲 WhatsApp</a><?php endif; ?>
+<?php if($n['note']): ?><div class="df-muted" style="margin-top:4px"><?=nl2br(h($n['note']))?></div><?php endif; ?>
+<?php if($n['due_date']): ?><div class="df-muted" style="margin-top:4px"><?=ds_icon('calendar',14)?> <?=h($n['due_date'])?></div><?php endif; ?>
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+<?php if($myPhone): ?><a class="df-btn df-btn--sm" style="background:var(--df-success);color:#fff" href="<?=h(wa_link($waTxt,$myPhone))?>" target="_blank" rel="noopener"><?=ds_icon('send',14)?> WhatsApp</a><?php endif; ?>
 <?php if($f!=='done'): ?>
-<button type="button" class="btn small" style="background:#f59e0b;color:#fff" data-edit-id="<?=(int)$n['id']?>" data-edit-title="<?=h($n['title'])?>" data-edit-body="<?=h($n['note'])?>" data-edit-due="<?=h($n['due_date'])?>" onclick="noteEditOpen(this)">✏️ Düzenle</button>
-<form method="post" style="display:inline"><input type="hidden" name="note_id" value="<?=(int)$n['id']?>"><button class="btn small" name="note_done" value="1" style="background:#2563eb;color:#fff">✓ Tamamla</button></form>
+<button type="button" class="df-btn df-btn--sm" style="background:var(--df-warning);color:#fff" data-edit-id="<?=(int)$n['id']?>" data-edit-title="<?=h($n['title'])?>" data-edit-body="<?=h($n['note'])?>" data-edit-due="<?=h($n['due_date'])?>" onclick="noteEditOpen(this)"><?=ds_icon('edit',14)?> Düzenle</button>
+<form method="post" style="display:inline"><input type="hidden" name="note_id" value="<?=(int)$n['id']?>"><button class="df-btn df-btn--sm df-btn--primary" name="note_done" value="1"><?=ds_icon('check',14)?> Tamamla</button></form>
 <?php endif; ?>
-<form method="post" style="display:inline" onsubmit="return confirm('Not silinsin mi?')"><input type="hidden" name="note_id" value="<?=(int)$n['id']?>"><button class="btn small danger" name="note_del" value="1">🗑 Sil</button></form>
+<form method="post" style="display:inline" onsubmit="return confirm('Not silinsin mi?')"><input type="hidden" name="note_id" value="<?=(int)$n['id']?>"><button class="df-btn df-btn--sm df-btn--danger" name="note_del" value="1"><?=ds_icon('trash',14)?> Sil</button></form>
 </div>
 </div>
 <?php endforeach; ?>
@@ -93,23 +87,17 @@ require_once __DIR__.'/layout_top.php';
      personal_notes şemasında (migration 037) yok — bu form sadece var olan kolonları
      (title/note/due_date) düzenler, DB şeması bu iş kapsamında GENİŞLETİLMEDİ. -->
 <div id="noteEditOverlay" style="display:none;position:fixed;inset:0;background:rgba(16,24,40,.55);z-index:1000;align-items:center;justify-content:center;padding:16px">
-  <div class="panel" style="max-width:480px;width:100%;margin:0">
-    <div class="panel-head"><h2 style="margin:0;font-size:18px">✏️ Notu Düzenle</h2></div>
-    <form method="post" class="form-grid">
+  <div class="df-card" style="max-width:480px;width:100%;margin:0">
+    <h2 style="margin:0 0 var(--df-space-3);font-size:18px"><?=ds_icon('edit',18)?> Notu Düzenle</h2>
+    <form method="post" class="df-form-grid-2">
       <input type="hidden" name="note_update" value="1">
       <input type="hidden" name="note_id" id="edit_note_id" value="">
-      <label class="full">Başlık
-        <input name="note_title" id="edit_note_title" required>
-      </label>
-      <label class="full">Detay (opsiyonel)
-        <textarea name="note_body" id="edit_note_body" rows="3"></textarea>
-      </label>
-      <label>Termin (opsiyonel)
-        <input type="date" name="note_due" id="edit_note_due">
-      </label>
-      <div class="full" style="display:flex;gap:10px;margin-top:6px">
-        <button class="btn" type="submit">💾 Kaydet</button>
-        <button class="btn secondary" type="button" onclick="noteEditClose()">Vazgeç</button>
+      <div class="df-form-span-2"><?php ds_form_field('Başlık', '<input name="note_title" id="edit_note_title" required>'); ?></div>
+      <div class="df-form-span-2"><?php ds_form_field('Detay (opsiyonel)', '<textarea name="note_body" id="edit_note_body" rows="3"></textarea>'); ?></div>
+      <div class="df-form-span-2"><?php ds_form_field('Termin (opsiyonel)', '<input type="date" name="note_due" id="edit_note_due">'); ?></div>
+      <div class="df-form-span-2" style="display:flex;gap:10px">
+        <button class="df-btn df-btn--primary" type="submit"><?=ds_icon('check',16)?> Kaydet</button>
+        <button class="df-btn df-btn--secondary" type="button" onclick="noteEditClose()">Vazgeç</button>
       </div>
     </form>
   </div>
@@ -130,5 +118,11 @@ document.getElementById('noteEditOverlay').addEventListener('click', function(e)
 });
 </script>
 <?php endif; ?>
+
+<style>
+body.nav-compact .df-form-grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 var(--df-space-4)}
+body.nav-compact .df-form-span-2{grid-column:1 / -1}
+@media(max-width:640px){body.nav-compact .df-form-grid-2{grid-template-columns:1fr}}
+</style>
 
 <?php require_once __DIR__.'/layout_bottom.php'; ?>

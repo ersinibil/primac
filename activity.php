@@ -9,27 +9,24 @@ require_once __DIR__.'/layout_top.php';
 require_once __DIR__.'/activity_lib.php';
 
 $module=$_GET['module'] ?? '';
+ds_page_header('Son İşlemler', ds_icon('menu-dots',24), '', ds_button('Ana Sayfa','dashboard.php','secondary','','',true), false, true);
 ?>
 
-<div class="panel-head">
-<h1>Son İşlemler</h1>
-<a class="btn secondary" href="dashboard.php">Ana Sayfa</a>
-</div>
+<section class="df-card" style="margin-top:var(--df-space-4)">
+<h2 class="df-section-title">İşlem Akışı</h2>
+<?php
+ds_tabs([
+    ['label'=>'Tümü','url'=>'activity.php','active'=>$module===''],
+    ['label'=>'İşler','url'=>'activity.php?module=İşler','active'=>$module==='İşler'],
+    ['label'=>'Cari','url'=>'activity.php?module=Cari','active'=>$module==='Cari'],
+    ['label'=>'Finans','url'=>'activity.php?module=Finans','active'=>$module==='Finans'],
+    ['label'=>'Stok','url'=>'activity.php?module=Stok','active'=>$module==='Stok'],
+    ['label'=>'Personel','url'=>'activity.php?module=Personel','active'=>$module==='Personel'],
+    ['label'=>'Telegram','url'=>'activity.php?module=Telegram','active'=>$module==='Telegram'],
+]);
+?>
 
-<section class="panel">
-<div class="panel-head">
-<h2>İşlem Akışı</h2>
-<div class="actions">
-<a class="btn small secondary" href="activity.php">Tümü</a>
-<a class="btn small secondary" href="activity.php?module=İşler">İşler</a>
-<a class="btn small secondary" href="activity.php?module=Cari">Cari</a>
-<a class="btn small secondary" href="activity.php?module=Finans">Finans</a>
-<a class="btn small secondary" href="activity.php?module=Stok">Stok</a>
-<a class="btn small secondary" href="activity.php?module=Personel">Personel</a>
-<a class="btn small secondary" href="activity.php?module=Telegram">Telegram</a>
-</div>
-</div>
-
+<div style="margin-top:var(--df-space-4)">
 <?php
 try{
     activity_install();
@@ -42,9 +39,14 @@ try{
     }
     activity_render_list($rows);
 }catch(Throwable $e){
-    echo "<div class='alert'>".h($e->getMessage())."</div>";
+    echo ds_alert('danger', $e->getMessage());
 }
 ?>
+</div>
 </section>
+
+<style>
+body.nav-compact .df-section-title{font-size:var(--df-type-section-size);font-weight:var(--df-type-section-weight);color:var(--df-ink-900);margin:0 0 var(--df-space-3)}
+</style>
 
 <?php require_once __DIR__.'/layout_bottom.php'; ?>

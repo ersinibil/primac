@@ -23,54 +23,46 @@ $sqlWhere=$where ? 'WHERE '.implode(' AND ',$where) : '';
 $personnel=db()->query("SELECT id,name FROM personnel WHERE active=1 ORDER BY name")->fetchAll();
 ?>
 
-<style>
-.report-grid{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:14px;margin:14px 0 22px}
-.report-card{border-radius:22px;padding:18px;color:#101828;box-shadow:0 10px 30px rgba(16,24,40,.07);border:1px solid rgba(15,23,42,.06)}
-.report-card small{display:block;font-weight:900;color:#475467}.report-card strong{display:block;font-size:26px;margin:8px 0}.r1{background:linear-gradient(135deg,#dbeafe,#eff6ff)}.r2{background:linear-gradient(135deg,#dcfce7,#f0fdf4)}.r3{background:linear-gradient(135deg,#fee2e2,#fff1f2)}.r4{background:linear-gradient(135deg,#fef3c7,#fffbeb)}
-.money-pos{font-weight:900;color:#166534}.money-neg{font-weight:900;color:#991b1b}.money-zero{font-weight:900;color:#667085}
-@media(max-width:960px){.report-grid{grid-template-columns:1fr}}
-</style>
+<?php
+ds_page_header('Cari Raporlar', ds_icon('users',24), '',
+    ds_button('Cari Hesaplar','contacts.php','secondary','','',true).ds_button('Finans','finance.php','secondary','','',true), false, true);
+?>
 
-<div class="panel-head">
-<h1>Cari Raporlar</h1>
-<div class="actions">
-<a class="btn secondary" href="contacts.php">Cari Hesaplar</a>
-<a class="btn secondary" href="finance.php">Finans</a>
-</div>
-</div>
+<section class="df-card" style="margin-top:var(--df-space-4)">
+<form method="get" class="df-form-grid-3">
+<?php
+$__modeOpts='<option value="">Tüm Bakiyeler</option>
+<option value="receivable" '.($mode==='receivable'?'selected':'').'>Alacaklı Cariler</option>
+<option value="payable" '.($mode==='payable'?'selected':'').'>Borçlu Cariler</option>
+<option value="zero" '.($mode==='zero'?'selected':'').'>Sıfır Bakiyeler</option>';
+ds_form_field('Rapor Tipi', '<select name="mode">'.$__modeOpts.'</select>');
 
-<section class="panel">
-<form method="get" class="form-grid">
-<label>Rapor Tipi
-<select name="mode">
-<option value="">Tüm Bakiyeler</option>
-<option value="receivable" <?=$mode==='receivable'?'selected':''?>>Alacaklı Cariler</option>
-<option value="payable" <?=$mode==='payable'?'selected':''?>>Borçlu Cariler</option>
-<option value="zero" <?=$mode==='zero'?'selected':''?>>Sıfır Bakiyeler</option>
-</select>
-</label>
+$__typeOpts='<option value="">Tümü</option>
+<option '.($type==='Müşteri'?'selected':'').'>Müşteri</option>
+<option '.($type==='Tedarikçi'?'selected':'').'>Tedarikçi</option>
+<option '.($type==='Her İkisi'?'selected':'').'>Her İkisi</option>';
+ds_form_field('Cari Tipi', '<select name="type">'.$__typeOpts.'</select>');
 
-<label>Cari Tipi
-<select name="type">
-<option value="">Tümü</option>
-<option <?=$type==='Müşteri'?'selected':''?>>Müşteri</option>
-<option <?=$type==='Tedarikçi'?'selected':''?>>Tedarikçi</option>
-<option <?=$type==='Her İkisi'?'selected':''?>>Her İkisi</option>
-</select>
-</label>
-
-<label>Temsilci
-<select name="representative_id">
-<option value="">Tümü</option>
-<?php foreach($personnel as $p): ?>
-<option value="<?=$p['id']?>" <?=$rep===$p['id']?'selected':''?>><?=h($p['name'])?></option>
-<?php endforeach; ?>
-</select>
-</label>
-
-<div style="align-self:end"><button class="btn">Raporla</button></div>
+$__repOpts='<option value="">Tümü</option>';
+foreach($personnel as $p){ $__repOpts.='<option value="'.(int)$p['id'].'" '.($rep===(int)$p['id']?'selected':'').'>'.h($p['name']).'</option>'; }
+ds_form_field('Temsilci', '<select name="representative_id">'.$__repOpts.'</select>');
+?>
+<div class="df-form-span-3"><button class="df-btn df-btn--primary" type="submit">Raporla</button></div>
 </form>
 </section>
+
+<style>
+body.nav-compact .df-form-grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0 var(--df-space-4)}
+body.nav-compact .df-form-span-3{grid-column:1 / -1}
+@media(max-width:900px){body.nav-compact .df-form-grid-3{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:640px){body.nav-compact .df-form-grid-3{grid-template-columns:1fr}}
+.report-grid{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:var(--df-space-4);margin:var(--df-space-4) 0 var(--df-space-5)}
+.report-card{border-radius:var(--df-radius-lg);padding:var(--df-space-4);color:var(--df-ink-900);box-shadow:var(--df-elevation-raised);border:1px solid var(--df-hairline)}
+.report-card small{display:block;font-weight:900;color:var(--df-ink-600)}.report-card strong{display:block;font-size:26px;margin:8px 0}
+.r1{background:linear-gradient(135deg,#dbeafe,#eff6ff)}.r2{background:linear-gradient(135deg,#dcfce7,#f0fdf4)}.r3{background:linear-gradient(135deg,#fee2e2,#fff1f2)}.r4{background:linear-gradient(135deg,#fef3c7,#fffbeb)}
+.money-pos{font-weight:900;color:var(--df-success-ink)}.money-neg{font-weight:900;color:var(--df-danger-ink)}.money-zero{font-weight:900;color:var(--df-ink-500)}
+@media(max-width:960px){.report-grid{grid-template-columns:1fr}}
+</style>
 
 <?php
 $rows=[];
@@ -102,7 +94,7 @@ try{
         $rows[]=$r;
     }
 }catch(Throwable $e){
-    echo "<div class='alert'>".h($e->getMessage())."</div>";
+    echo ds_alert('danger', $e->getMessage());
 }
 
 // PHP 7.2 uyumluluğu: fn() arrow function PHP 7.4+ gerektirir (2026-07-03 denetiminde bulundu,
@@ -120,20 +112,20 @@ $totalBalance=array_sum(array_map(function($r){ return (float)$r['balance']; },$
 <div class="report-card r4"><small>Net Bakiye</small><strong><?=money($totalBalance)?></strong></div>
 </section>
 
-<section class="panel">
-<div class="panel-head">
-<h2>Rapor Detayı</h2>
-<div class="actions">
-<a class="btn small secondary" href="contacts_report.php?mode=receivable">Alacaklılar</a>
-<a class="btn small secondary" href="contacts_report.php?mode=payable">Borçlular</a>
-<a class="btn small secondary" href="contacts_report.php">Tümü</a>
-<a class="btn small" style="background:#2563eb;color:#fff" href="report.php?modul=cari_toplu&mode=<?=urlencode($mode)?>&type=<?=urlencode($type)?>&from=<?=date('Y-m-01')?>&to=<?=date('Y-m-t')?>">📊 Toplu Ekstre Oluştur (PDF)</a>
+<section class="df-card" style="margin-top:var(--df-space-4)">
+<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:var(--df-space-3);margin-bottom:var(--df-space-3)">
+<h2 class="df-section-title" style="margin:0">Rapor Detayı</h2>
+<div style="display:flex;gap:8px;flex-wrap:wrap">
+<?=ds_button('Alacaklılar','contacts_report.php?mode=receivable','secondary','','',true)?>
+<?=ds_button('Borçlular','contacts_report.php?mode=payable','secondary','','',true)?>
+<?=ds_button('Tümü','contacts_report.php','secondary','','',true)?>
+<?=ds_button('📊 Toplu Ekstre Oluştur (PDF)','report.php?modul=cari_toplu&mode='.urlencode($mode).'&type='.urlencode($type).'&from='.date('Y-m-01').'&to='.date('Y-m-t'),'primary','','',true)?>
 </div>
 </div>
-<table>
+<div class="df-table-wrap"><table class="df-table">
 <thead><tr><th>Cari</th><th>Tip</th><th>Temsilci</th><th>Açılış</th><th>Tahsilat</th><th>Ödeme</th><th>Bakiye</th><th>Profil</th></tr></thead>
 <tbody>
-<?php foreach($rows as $r): 
+<?php foreach($rows as $r):
 $balClass=$r['balance']>0?'money-pos':($r['balance']<0?'money-neg':'money-zero');
 $repName=($r['representative_mode'] ?? '')==='anonim'?'Anonim':($r['representatives'] ?: '-');
 ?>
@@ -145,12 +137,16 @@ $repName=($r['representative_mode'] ?? '')==='anonim'?'Anonim':($r['representati
 <td class="money-pos"><?=money($r['total_in'])?></td>
 <td class="money-neg"><?=money($r['total_out'])?></td>
 <td class="<?=$balClass?>"><?=money($r['balance'])?></td>
-<td><a class="btn small secondary" href="contact_view.php?id=<?=$r['id']?>">Aç</a></td>
+<td><?=ds_button('Aç','contact_view.php?id='.(int)$r['id'],'secondary','df-btn--sm','',true)?></td>
 </tr>
 <?php endforeach; ?>
-<?php if(!$rows): ?><tr><td colspan="8" class="muted">Bu filtreye uygun kayıt yok.</td></tr><?php endif; ?>
+<?php if(!$rows): ?><tr><td colspan="8" class="df-muted">Bu filtreye uygun kayıt yok.</td></tr><?php endif; ?>
 </tbody>
-</table>
+</table></div>
 </section>
+
+<style>
+body.nav-compact .df-section-title{font-size:var(--df-type-section-size);font-weight:var(--df-type-section-weight);color:var(--df-ink-900)}
+</style>
 
 <?php require_once __DIR__.'/layout_bottom.php'; ?>

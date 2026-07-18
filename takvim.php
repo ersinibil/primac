@@ -28,11 +28,11 @@ $today=(int)date('j'); $isThisMonth=($ym===date('Y-m'));
 // ızgarası zaten tüm günleri iç içe gösterdiği için tıklamanın hiçbir etkisi olmuyordu.
 $g=(int)($_GET['g']??0);
 require_once __DIR__.'/layout_top.php';
+$__takvimActions = ds_button('‹ Önceki','takvim.php?ay='.h($prev),'secondary','','',true).ds_button('Sonraki ›','takvim.php?ay='.h($next),'secondary','','',true);
+ds_page_header('Takvim — '.$mn[$first->format('m')].' '.$first->format('Y'), ds_icon('calendar',24), '', $__takvimActions, false, true);
 ?>
-<div class="panel-head"><h1>📅 Takvim — <?=$mn[$first->format('m')].' '.$first->format('Y')?></h1>
-<span><a class="btn secondary" href="takvim.php?ay=<?=$prev?>">‹ Önceki</a> <a class="btn secondary" href="takvim.php?ay=<?=$next?>">Sonraki ›</a></span></div>
-<section class="panel">
-<table style="table-layout:fixed">
+<section class="df-card df-calendar-card" style="margin-top:var(--df-space-4)">
+<table class="df-calendar-table" style="table-layout:fixed">
 <thead><tr><?php foreach(['Pzt','Sal','Çar','Per','Cum','Cmt','Paz'] as $w) echo "<th style='text-align:center'>$w</th>"; ?></tr></thead>
 <tbody><tr>
 <?php
@@ -41,8 +41,8 @@ for($i=0;$i<$startW;$i++){ echo "<td></td>"; $cell++; }
 for($d=1;$d<=$daysIn;$d++){
   if($cell%7===0 && $cell>0) echo "</tr><tr>";
   $isToday=($isThisMonth&&$d===$today); $isSel=($g===$d);
-  echo "<td style='vertical-align:top;height:90px;padding:4px;".($isSel?'background:#334155':($isToday?'background:#1e3a5f':''))."'>";
-  echo "<a href='takvim.php?ay=".h($ym)."&g=$d' style='text-decoration:none;font-weight:700;display:block;".($isSel?'color:#fff':($isToday?'color:#60a5fa':'color:#7f95b2'))."'>$d</a>";
+  echo "<td style='vertical-align:top;height:90px;padding:4px;".($isSel?'background:var(--df-ink-300)':($isToday?'background:var(--df-accent-soft)':''))."'>";
+  echo "<a href='takvim.php?ay=".h($ym)."&g=$d' style='text-decoration:none;font-weight:700;display:block;".($isSel?'color:var(--df-surface)':($isToday?'color:var(--df-accent)':'color:var(--df-ink-500)'))."'>$d</a>";
   // Bir gün seçiliyken (g>0) ızgara SADECE seçili günün maddelerini gösterir — diğer günler için
   // sadece bir nokta rozeti (kaç madde olduğu) kalır. UX/STABILITY PATCH-002: kullanıcı "bir güne
   // basınca sadece o gün görünmeli, başka gün gösterilmeyecek" dedi — önceden ızgara HER günün
@@ -50,11 +50,11 @@ for($d=1;$d<=$daysIn;$d++){
   // veriyordu (aslında sadece alttaki detay paneli filtreleniyordu, ızgara değil).
   if(!empty($byDay[$d])){
     if($g>0 && !$isSel){
-      echo "<span style='display:block;text-align:center;margin-top:4px;font-size:10px;color:#d97706'>●".(count($byDay[$d])>1?' '.count($byDay[$d]):'')."</span>";
+      echo "<span style='display:block;text-align:center;margin-top:4px;font-size:10px;color:var(--df-warning-ink)'>●".(count($byDay[$d])>1?' '.count($byDay[$d]):'')."</span>";
     }else{
-      foreach($byDay[$d] as $j){ $isNote=!empty($j['_note']); $isTask=!empty($j['_task']); $c=($isNote||$isTask)?'#eab308':(in_array($j['status'],['Tamamlandı','Teslim Edildi'])?'#16a34a':($j['status']==='İptal'?'#94a3b8':'#d97706'));
+      foreach($byDay[$d] as $j){ $isNote=!empty($j['_note']); $isTask=!empty($j['_task']); $c=($isNote||$isTask)?'var(--df-warning)':(in_array($j['status'],['Tamamlandı','Teslim Edildi'])?'var(--df-success)':($j['status']==='İptal'?'var(--df-ink-300)':'var(--df-warning)'));
         $icon=$isNote?'📝 ':($isTask?'🎯 ':'');
-        $itemStyle="display:block;font-size:11px;background:rgba(217,119,6,.15);border-left:3px solid $c;border-radius:4px;padding:2px 4px;margin-top:2px;color:#e7eefc;text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis";
+        $itemStyle="display:block;font-size:11px;background:var(--df-warning-soft);border-left:3px solid $c;border-radius:4px;padding:2px 4px;margin-top:2px;color:var(--df-ink-900);text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis";
         // Görev maddesi artık mytasks.php'ye gidiyor — 'tasks' yetkisi istemeyen kişisel görev
         // sayfası (bkz. mytasks.php), önceki "yetkisizse düz metin" geçici çözümüne gerek kalmadı.
         // REOPEN-001: not linki artık kendi gününe (?date=) filtrelenmiş notes.php'ye gidiyor —
@@ -71,22 +71,32 @@ while($cell%7!==0){ echo "<td></td>"; $cell++; }
 </tr></tbody></table>
 </section>
 <?php if($g>0): ?>
-<section class="panel">
-<div class="panel-head"><h2><?=$g.' '.$mn[$first->format('m')]?> işleri/notları</h2>
-<a class="btn secondary" href="takvim.php?ay=<?=h($ym)?>">✕ Kapat</a></div>
+<section class="df-card" style="margin-top:var(--df-space-4)">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--df-space-3)">
+<h2 class="df-section-title" style="margin:0"><?=$g.' '.$mn[$first->format('m')]?> işleri/notları</h2>
+<?=ds_button('✕ Kapat','takvim.php?ay='.h($ym),'secondary','','',true)?>
+</div>
 <?php if(empty($byDay[$g])): ?>
-<div class="muted" style="text-align:center;padding:12px">Bu günde iş/görev/not yok.</div>
+<?=ds_empty_state('Bu günde iş/görev/not yok.')?>
 <?php else: foreach($byDay[$g] as $j):
   $isNote=!empty($j['_note']); $isTask=!empty($j['_task']);
   $icon=$isNote?'📝':($isTask?'🎯':'📋');
   // REOPEN-001: not linki kendi gününe (?date=) filtrelenmiş notes.php'ye gidiyor.
   $href=$isNote?('notes.php?date='.($j['due_date']??'')):($isTask?'task_view.php?id='.(int)$j['id']:'job_view.php?id='.(int)$j['id']);
 ?>
-<a href="<?=h($href)?>" style="display:flex;justify-content:space-between;align-items:center;padding:10px 4px;border-bottom:1px solid #eef2f6;text-decoration:none;color:inherit">
+<a href="<?=h($href)?>" style="display:flex;justify-content:space-between;align-items:center;padding:10px 4px;border-bottom:1px solid var(--df-hairline);text-decoration:none;color:inherit">
 <span><?=$icon?> <?=htmlspecialchars($j['title'])?></span>
-<span class="muted" style="font-size:12px"><?=htmlspecialchars($j['status'])?></span>
+<span class="df-muted" style="font-size:12px"><?=htmlspecialchars($j['status'])?></span>
 </a>
 <?php endforeach; endif; ?>
 </section>
 <?php endif; ?>
+
+<style>
+body.nav-compact .df-calendar-table{width:100%;border-collapse:collapse}
+body.nav-compact .df-calendar-table th{padding:6px;color:var(--df-ink-500);font-size:12px;font-weight:700}
+body.nav-compact .df-calendar-table td{border:1px solid var(--df-hairline)}
+body.nav-compact .df-section-title{font-size:var(--df-type-section-size);font-weight:var(--df-type-section-weight);color:var(--df-ink-900)}
+</style>
+
 <?php require_once __DIR__.'/layout_bottom.php'; ?>

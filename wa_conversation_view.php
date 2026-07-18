@@ -132,15 +132,13 @@ $lastMsgId = $messages ? (int)end($messages)['id'] : 0;
 @media(max-width:900px){.wa-shell{flex-direction:column}.wa-list-col{width:100%;max-height:220px;border-right:0}}
 </style>
 
-<div class="panel-head">
-<h1>💬 WhatsApp Konuşmaları</h1>
-<div class="actions">
-<?php if($conv['contact_real_id']): ?><a class="btn secondary" href="contact_view.php?id=<?=(int)$conv['contact_real_id']?>">👥 Cari Kartı</a><?php endif; ?>
-<a class="btn secondary" href="wa_conversations.php">Tüm Konuşmalar</a>
-</div>
-</div>
+<?php
+ds_page_header('WhatsApp Konuşmaları', ds_icon('chat',24), '',
+    ($conv['contact_real_id']?ds_button('👥 Cari Kartı','contact_view.php?id='.(int)$conv['contact_real_id'],'secondary','','',true):'').
+    ds_button('Tüm Konuşmalar','wa_conversations.php','secondary','','',true), false, true);
+?>
 
-<section class="panel" style="padding:0">
+<section class="df-card" style="padding:0;margin-top:var(--df-space-4)">
 <div class="wa-shell">
   <div class="wa-list-col">
     <?=wa_new_conversation_picker_html($pdo)?>
@@ -154,14 +152,14 @@ $lastMsgId = $messages ? (int)end($messages)['id'] : 0;
     <div class="wa-thread-head">
       <div>
         <b><?=h($conv['contact_name'] ?: $conv['phone'])?></b><br>
-        <span class="muted" style="font-size:13px"><?=h($conv['phone'])?><?php if($conv['contact_type']): ?> · <?=h($conv['contact_type'])?><?php endif; ?></span>
-        <?php if(!empty($conv['authorized_person'])): ?><br><span class="muted" style="font-size:13px">Yetkili: <?=h($conv['authorized_person'])?></span><?php endif; ?>
+        <span class="df-muted" style="font-size:13px"><?=h($conv['phone'])?><?php if($conv['contact_type']): ?> · <?=h($conv['contact_type'])?><?php endif; ?></span>
+        <?php if(!empty($conv['authorized_person'])): ?><br><span class="df-muted" style="font-size:13px">Yetkili: <?=h($conv['authorized_person'])?></span><?php endif; ?>
       </div>
     </div>
 
     <div class="wa-thread" id="waThread">
     <?php if(!$messages): ?>
-      <p class="muted">Bu konuşmada henüz mesaj yok.</p>
+      <p class="df-muted">Bu konuşmada henüz mesaj yok.</p>
     <?php else: foreach($messages as $m): $mine=$m['direction']==='outbound'; ?>
       <div class="bubble <?=$mine?'mine':'theirs'?>" data-id="<?=(int)$m['id']?>">
         <?=h($m['body'])?><?php if($m['media_url']): ?><br>📎 <a href="<?=h($m['media_url'])?>" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline"><?=h($m['media_type']?:'Medya')?></a><?php endif; ?>
@@ -174,7 +172,7 @@ $lastMsgId = $messages ? (int)end($messages)['id'] : 0;
       <button type="button" class="icon" title="Yakında" disabled>😀</button>
       <button type="button" class="icon" title="Yakında" disabled>📎</button>
       <textarea id="waComposeText" rows="1" placeholder="Mesajınızı yazın…"></textarea>
-      <button type="button" class="btn dark" id="waSendBtn">Gönder</button>
+      <button type="button" class="df-btn df-btn--primary" id="waSendBtn">Gönder</button>
     </div>
   </div>
 </div>
