@@ -2,7 +2,42 @@
 
 <!-- Açık geliştirme görevleri. Kapanan madde buradan silinip memory/features.md'ye taşınır. -->
 
-## 🔴 CONTEXT HANDOFF — 2026-07-18 (context limiti doldu, yeni oturum bu bloktan devam etsin)
+## 🟡 DEVAM — 2026-07-18 ikinci tur (guncelleme.zip tazelendi, primac.tr durumu HÂLÂ TEYİT EDİLEMEDİ)
+
+**Son commit:** `15959a2` (main, origin ile senkron, working tree TEMİZ — bu tur repo'ya commit
+YAPMADI, sadece Masaüstü deploy paketine dokundu).
+
+**Bulgu**: `~/Desktop/PRIMAC-GUNCELLEME/guncelleme.zip` **BAYAT** çıktı — `git archive` zaman
+damgası ~12:27'ydi, oysa migration `048_checks_notes_lifecycle.sql` 12:31'de, commit `1f8a897`
+12:13'te, commit `1f19528` 12:42'de, commit `9700a31` (nav accordion fix) daha da sonra oluştu.
+Yani zip primac.tr'ye yüklenmiş olsaydı bile **çek/senet yaşam döngüsü (048), CPA satış P0 veri
+bütünlüğü düzeltmesi ve nav accordion düzeltmesi sunucuya GİTMEMİŞ olacaktı.**
+**Düzeltme**: zip `git archive HEAD` (commit `15959a2`) + `vendor/` yeniden üretildi (ilk denemede
+vendor dosyaları yanlışlıkla zip KÖKÜNE gitmişti — `vendor/autoload.php` yerine `autoload.php` —
+fark edilip düzeltildi). Yeni zip'te 045/046/047/048 migration'ları, `checks_notes_lib.php`,
+`check_note_view.php`, `mobile/check_note_view.php`, `assets/js/ds-foundation.js`,
+`vendor/autoload.php` doğru yollarda doğrulandı; `config.php` SIZMADI (sadece `config.sample.php`
+var). `~/Desktop/PRIMAC-GUNCELLEME/guncelleme.zip` bu yeni zip ile DEĞİŞTİRİLDİ, yüklemeye hazır.
+
+**⚠️ primac.tr'de migrate.php'nin GERÇEKTEN çalıştırılıp çalıştırılmadığı HÂLÂ TEYİT EDİLEMEDİ** —
+bu ortamdan primac.tr'ye SSH/cPanel/admin oturumu erişimi yok. Salt-okunur kontrol: site erişilebilir
+(200), `https://primac.tr/migrate.php` ve `https://primac.tr/guncelle.php` sunucuda MEVCUT (ikisi de
+200 dönüyor, key olmadan migrate.php beklendiği gibi "Yetki yok" diyor) — ama bu dosyaların hangi
+zip sürümünden geldiği ve DB'de hangi migration'ların uygulandığı buradan görülemiyor. **Yeni oturum/
+Product Owner**: tazelenmiş zip'i primac.tr'ye (cPanel File Manager) yükleyip
+`https://primac.tr/guncelle.php` çalıştırmalı (`NASIL.txt`'deki 3 adım) — idempotent olduğu için
+daha önce kısmen uygulanmışsa bile zarar vermez.
+
+**⚠️ Ayrı bulgu — Product Owner'a sorulmalı**: lokal `/Users/acans/ACANS-OTS/config.php`'de
+`db_name` = `u7883898_primacos` — bu isim `CLAUDE.md`/`memory/deploy.md` tablosunda PROD
+(acanstr.com/ots) veritabanı olarak kayıtlı, `db_host` ise `localhost`. Yerel makinede 3306 portunda
+gerçekten bir MySQL çalışıyor, muhtemelen bu sadece PROD şemasının/adının lokale klonlanmış bir
+kopyası (host `localhost` olduğu için teknik olarak bu makineden başka bir yere gitmiyor) — ama isim
+çakışması yüzünden bu oturumda güvenlik sınıflandırıcısı bu DB'ye SELECT sorgusu atmamı bile
+engelledi. Bu DB'nin gerçekten sadece lokal bir kopya mı yoksa yanlışlıkla gerçek PROD kimlik
+bilgileri mi olduğu Product Owner tarafından doğrulanmalı — dokunulmadı.
+
+## 🔴 CONTEXT HANDOFF — 2026-07-18 (context limiti doldu, yeni oturum bu bloktan devam etsin) [ÖNCEKİ TUR]
 
 **Son commit:** `9700a31` (main, origin ile senkron, working tree TAMAMEN TEMİZ).
 **Commit aralığı bu oturumda:** `4185989..9700a31` (10 commit, 38 PHP dosyası + JS/CSS, hepsi
