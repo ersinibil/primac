@@ -90,15 +90,19 @@ require __DIR__.'/layout_top.php';
 .badge-red{background:#fee2e2;color:#b91c1c;border-radius:4px;padding:2px 7px;font-size:11px;font-weight:700}
 </style>
 
-<div class="panel-head noprint">
-    <h1>📅 Günlük İş Raporu</h1>
-    <div class="actions">
-        <form method="get" style="display:flex;gap:8px;align-items:center">
-            <input type="date" name="d" value="<?=h($tarih)?>" class="form-control" style="max-width:160px">
-            <button type="submit" class="btn secondary">Göster</button>
-        </form>
-        <button onclick="shareReportPDF(this)" class="btn" style="background:#16a34a">📄 PDF İndir / Paylaş</button>
-    </div>
+<div class="noprint">
+<?php
+ob_start();
+?>
+<form method="get" style="display:inline-flex;gap:8px;align-items:center">
+<input type="date" name="d" value="<?=h($tarih)?>" style="max-width:160px">
+<button type="submit" class="df-btn df-btn--secondary">Göster</button>
+</form>
+<button onclick="shareReportPDF(this)" class="df-btn df-btn--primary" style="background:var(--df-success)">📄 PDF İndir / Paylaş</button>
+<?php
+$__grActions = ob_get_clean();
+ds_page_header('📅 Günlük İş Raporu', ds_icon('calendar',24), '', $__grActions, false, true);
+?>
 </div>
 
 <div id="repArea" style="max-width:860px;margin:0 auto;background:#fff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden">
