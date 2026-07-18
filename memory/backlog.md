@@ -2,6 +2,73 @@
 
 <!-- Açık geliştirme görevleri. Kapanan madde buradan silinip memory/features.md'ye taşınır. -->
 
+## 🔴 CONTEXT HANDOFF — 2026-07-18 (context limiti doldu, yeni oturum bu bloktan devam etsin)
+
+**Son commit:** `9700a31` (main, origin ile senkron, working tree TAMAMEN TEMİZ).
+**Commit aralığı bu oturumda:** `4185989..9700a31` (10 commit, 38 PHP dosyası + JS/CSS, hepsi
+`php -l` temiz, hiçbir yarım/bozuk dosya YOK).
+
+### Genel ilke (değişmedi)
+EVOLUTION, NOT REVOLUTION. DB/route/iş akışları/stok-cari-finans matematiği korunarak kademeli
+geliştirme. PRIMAC OTS = şirketin günlük Operation OS'u, sıradan ERP değil. Web+mobil TEK ÜRÜN
+hissi vermeli. Kesin UI kuralı: kullanıcıya görünen eski/legacy OTS ekranı YOK, Design System tek
+görsel dil. Çalışma şekli: kısa/doğrudan görevler, gereksiz audit yok, uygula→test et→commit→push→
+devam et, ~5 anlamlı işte tek toplu rapor, SADECE veri kaybı/migration/güvenlik/mimari Product
+Owner kararı gerektiren durumlarda dur.
+
+### ⚠️ KRİTİK UYARI — "Tamamlandı" raporuna güvenme
+Bu oturumdaki TÜM işler kod seviyesinde tamamlandı, `php -l` temiz, CPA ve çek/senet için manuel
+senaryo izi (code trace) ile doğrulandı — **ama bu ortamda gerçek tarayıcı/mobil cihaz/canlı DB
+testi YAPILAMADI.** Örnek: bir önceki oturumda "Legacy UI Temizliği tamamlandı" + "İletişim
+Merkezi tamamlandı" raporu verilmişti, ama kullanıcı gerçek cihazda test edince mobilde TÜM SAYFA
+yatay kayan bir hata bulundu (P0 olarak bu oturumda düzeltildi, commit `db4ad66`). Yeni oturum
+"commit var" görünce tamam saymasın — mümkünse gerçek UI/tarayıcı ile doğrulasın, değilse bunu
+açıkça Product Owner'a bildirsin.
+
+### Durum tablosu (Product Owner'ın istediği 10 başlık)
+
+| # | Konu | Durum | Not |
+|---|---|---|---|
+| 1 | P0 Talep Yönlendirme | ✅ (önceki oturum) | Bu oturumda dokunulmadı — REOPEN backlog'a göre 2026-07-07'de kapatıldı. Yeni oturum gerçek kodla (mobile talep/request atama akışı) teyit ETMEDEN "tamam" saymasın. |
+| 2 | Yetki/Güvenlik/Auth (P0-AUTH-01/02, mükerrer hesap, stale user_id, id=1 koruması) | ✅ (önceki oturum + bu oturumda kod incelemesiyle DOĞRULANDI) | `personnel_lib.php::personnel_create_login()/personnel_reset_password()/personnel_update_account_role()` okunup korumaların (mükerrer hesap engeli, stale user_id, deterministik şifre hedefi, id=1) hâlâ doğru çalıştığı teyit edildi — YENİ bir şey yazılmadı, sadece doğrulandı. |
+| 3 | Design System / Legacy UI | ✅ kod tamam | Önceki oturum "11 gerekçeli istisna" ile kapatmıştı. Bu oturumda YENİ eklenen tüm ekranlar (WhatsApp, CPA, personel kimlik başlığı, Home, çek/senet) DS uyumlu yazıldı. Gerçek ekran taraması yapılmadı — yeni oturum şüpheliyse `grep` tabanlı legacy-class taramasını tekrar çalıştırabilir (yöntem: script yaklaşımı önceki oturum özetinde var). |
+| 4 | İletişim Merkezi + WhatsApp | ✅ kod tamam, ⚠️ TEST BEKLİYOR | Bu oturumda: sekme sırası Sohbetler\|WhatsApp\|Bildirimler\|Taleplerim\|Duyurular (`share_lib.php::ic_tabs()`), WhatsApp ekranları (`wa_conversations.php`/`wa_conversation_view.php`/mobil eşdeğerleri) messages.php'nin DS diline taşındı, sol menüde İletişim Merkezi artık 5 kategoriyle (İşler/Ticaret/Üretim & Stok/Finans/Yönetim) AYNI `.df-rail-cat-btn` kutu stilini kullanıyor. **P0 mobil yatay taşma bugfix** (`.df-tabs` artık kendi içinde kayıyor, sayfa değil — `db4ad66`) — kullanıcı video ile bildirmişti. WhatsApp Toplu Gönderim (`wa_send_now.php`) nav'da Yönetim'den İletişim Merkezi'ne taşındı (`f4e08a3`). Gerçek cihazda TEST EDİLMEDİ. |
+| 5 | Personel + OTS Hesabı + Yetki Tek Merkez | ✅ kod tamam, ⚠️ TEST BEKLİYOR | `personnel.php` (kartlı ana ekran) zaten doğruydu, DEĞİŞMEDİ. `personnel_edit.php`: sticky kimlik başlığı (avatar+ad+rol+Aktif/Pasif+OTS hesap rozeti) eklendi, sekmeler GENEL→OTS HESABI & YETKİLER→GÖREVLER→PERFORMANS önceliğine alındı (Takvim/Mesajlar/Notlar/Dosyalar/Maaş/Hareket SİLİNMEDİ, ikincil sırada kaldı — zaten çalışan işlevsellik). `mobile/personnel_view.php` aynı sekmeli yapıya (Genel/OTS Hesabı & Yetkiler/Görevler/Performans) dönüştürüldü. `nav_lib.php`: "Kullanıcı ve Yetkileri Yönet" → "Sistem Kullanıcıları", adminOnly, Yönetim kategorisinin sonuna taşındı (`users.php` SİLİNMEDİ, sadece nav'dan demote edildi + `is_admin()` kapısı sertleştirildi). Commit `3796f3f`. |
+| 6 | Mobil Menü (kategori/niyet bazlı IA) | ✅ (önceki oturum, NAV-001B) | Bu oturumda dokunulmadı — `nav_lib.php::nav_grouped_for_launcher()` zaten is_takip/sat_tahsil/stok/iletisim/yonet gruplarıyla çalışıyor, alt nav Ana/İş/Cari/İletişim/Menü zaten kurulu. Yeni oturum gerçek mobil ekranda teyit edebilir. |
+| 7 | CPA (Customer Procurement Allocation) | ✅ kod tamam (A+B katmanı), ⚠️ TEST BEKLİYOR, **migrate.php ÇALIŞTIRILMALI** | A) `cpa_preferences` (045, önceki oturum) — tercih edilen tedarikçi. B) `cpa_allocations`+`cpa_allocation_consumptions` (046+047, BU oturum) — miktarsal müşteri tahsisi (`cpa_allocation_lib.php`, `cpa_allocation.php`+mobil, `contact_view.php`/`product_view.php` "Tahsisli Stok" bölümleri). **P0 veri bütünlüğü kapatıldı** (`1f8a897`): satış düzenleme/silme artık `stock_lib.php::stock_update_sale()/stock_reverse_sale()` içinden `cpa_alloc_reverse_for_sale()`/`cpa_alloc_consume_for_sale()` ile TEK ortak noktadan (web+mobil+sil.php+trade_core.php hepsi buradan geçer) tüketimi geri alıp yeniden uyguluyor — çift tüketim/çift iade YOK (ledger-sil bazlı idempotent). Migration artık TEK şema otoritesi — `cpa_allocation_lib.php` runtime'da CREATE TABLE YAPMIYOR, **primac.tr'de migrate.php çalıştırılmadan bu özellik kullanılamaz** (yazma fonksiyonları açık hata verir). Senaryo (2500 alış→1000 tahsis→400 satış→700'e düzenle→sil) elle kod izi ile doğrulandı, gerçek DB'de DOĞRULANMADI. |
+| 8 | Home Final UX | ✅ kod tamam, ⚠️ GÖRSEL DOĞRULAMA BEKLİYOR (Product Owner "web 1440px + mobil 390px doğrula" istedi, YAPILAMADI) | Tekrarlı sarı Nabız banner'ı kaldırıldı, yerine rol/yetkiye göre filtrelenmiş "BUGÜN" durum kartları (Kritik Stok/Açık-Geciken Görev/Bekleyen Talep — sıfırsa gizli) geldi. Web: BUGÜN→Hero→Hızlı İşlemler→Devam Et→2 kolon (Bugünün Akışı\|Bekleyenler)→Genel Bakış (admin-only,kapalı). Mobil: en önemli BUGÜN kartı tam genişlik+kalanı kompakt, "Bekleyenler" ayrı kolon yerine "Bugünün Akışı" başlığı altında birleşti. Yeni business logic YOK — `home_lib.php`'nin var olan fonksiyonları (`home_build_queue`/`home_build_continue`/`home_build_overview`/`task_my_stats`) yeniden düzenlendi. Commit `42947f1`. `dashboard.php`'nin `$__navMode==='legacy'` dalı (eski "Komuta Merkezi") DEAD KOD — nav_effective_mode() hep 'compact' döndürüyor, dokunulmadı (bilinçli). |
+| 9 | Çek/Senet Finansal Yaşam Döngüsü | ✅ kod tamam, ⚠️ TEST BEKLİYOR, **migrate.php ÇALIŞTIRILMALI** | `checks_notes_lib.php`: `checks_notes_collect()`(Tahsil Et)/`pay()`(Öde) — seçilen kasa/banka hesabına gerçek hareket (`contact_id=NULL`, cari İKİNCİ KEZ etkilenmiyor). `endorse()`(Ciro Et) — kasa/banka hareketi YOK, sadece ciro edilen tedarikçinin borcu kapanıyor (ciro_contact_id ile zincir izlenebilir). `bounce()`(Karşılıksız)/`cancel()`(İptal) — orijinal kabul hareketini geri alıp müşteri borcunu yeniden açıyor (`checks_notes_reverse_finance()`, silmedeki AYNI fonksiyon). Durum makinesi: SADECE 'portfoyde'den aksiyon alınabilir, final durum değişmez, `checks_notes_update()` artık status kabul etmiyor (önceki kritik açık: serbest "Durum" dropdown'ı hiç para hareketi olmadan "Tahsil Edildi" yazdırabiliyordu — KAPATILDI). Silme sadece finansal olarak dokunulmamış kayıtlarda (`checks_notes_can_delete()`). Yeni `check_note_view.php` (web, YOKTU, oluşturuldu) + `mobile/check_note_view.php` (güncellendi) — durum makinesi butonları + hareket geçmişi zaman çizelgesi. Migration 048 (`settle_date`/`settle_account_id`/`settle_finance_movement_id`/`ciro_contact_id`/`ciro_finance_movement_id`/`settle_notes`) — **primac.tr'de migrate.php çalıştırılmadan yeni kolonlar yok, tahsil/ciro/öde SQL hatası verir.** Commit `1f19528`. |
+| 10 | Navigation / Accordion State | ✅ kod tamam, ⚠️ TARAYICI TIKLAMA TESTİ BEKLİYOR | Kök neden bulundu ve düzeltildi: `assets/js/ds-foundation.js`'deki `dfRailToggle()` bir sessionStorage katmanı taşıyordu — kategori-dışı (Ana Sayfa/İletişim Merkezi) sayfalarda ÖNCEKİ sayfadan kalma kategoriyi client-side yeniden açıyordu (sunucu doğru şekilde kapalı bassa bile). sessionStorage TAMAMEN kaldırıldı — durum artık SADECE sunucunun `layout_top.php::$__catHasActive` hesaplamasından geliyor (tek merkezi state). Commit `9700a31`. |
+
+### ⚠️ Ayrıca Product Owner'a bildirilecek (bu oturumun kapsamı DIŞINDA bırakıldı, silinmedi/değiştirilmedi)
+1. **CPA — alış silme/düzenleme ile tahsis referansı**: bir alışın (satın alma) CPA tahsisi varken
+   silinmesi/düzenlenmesi bu turda ele alınmadı (kapsam: sadece SATIŞ tarafı istenmişti). Mevcut
+   `stock_purchase_avg_cost_safe()` güvenlik kapısı (bu üründe sonraki herhangi bir stok hareketi
+   varsa alış silinemez/düzenlenemez) dolaylı koruma sağlıyor ama tüketilmemiş bir tahsis varken
+   hiç satış olmadan alış silinmesi durumu ele alınmadı.
+2. **Çek/Senet — kabul-anı cari işareti şüphesi**: `checks_notes_sync_finance()`'in (çek/senet
+   KABUL edilince oluşan cari kapama hareketi, önceki oturumdan) işareti `contact_balance_case_sql()`
+   üzerinden incelendi — `movement_type='cek_senet'` 'normal'/'mobile' listesinde olmadığı için
+   ELSE dalına düşüyor (satış/alış gibi "borç ARTIRAN" işaret alıyor), oysa kod yorumu ("Alınan =
+   Tahsilat") ve `status='Tahsil Edildi'` etiketi niyetin "borç AZALTAN" (gerçek Tahsilat gibi)
+   olduğunu gösteriyor. Bu MEVCUT (bu oturumdan önceki, muhtemelen 2026-07-03'ten beri var olan)
+   bir işaret tutarsızlığı OLABİLİR — ama TÜM geçmiş cari bakiyelerini geriye dönük etkileyeceği
+   için SESSİZCE değiştirilmedi. **Product Owner'ın açık kararı gerekiyor**: gerçek bir örnek
+   üzerinden (bir müşteriden 1000 TL'lik çek alındığında contact_balance() DOĞRU YÖNDE mi
+   değişiyor, +1000 mi -1000 mi?) primac.tr'de canlı veriyle doğrulanmalı.
+
+### Yeni oturumda İLK yapılacaklar (Product Owner'ın kendi sırası)
+1. Bu bloğu oku.
+2. `git status` + `git log --oneline -15` ile senkron olduğunu doğrula (beklenen HEAD: `9700a31`).
+3. **primac.tr'de `migrate.php` çalıştırılmalı** (046/047/048 migration'ları uygulanmadıysa CPA
+   tahsis ve çek/senet yaşam döngüsü kullanılamaz).
+4. Yukarıdaki 10 maddelik tabloyu gerçek kod/gerçek ekran ile teyit et — "commit var" diye tamam
+   sayma.
+5. Bu işler bitmeden (özellikle gerçek test/doğrulama) yeni özellik BAŞLATMA.
+6. Product Owner GENEL KAPANIŞ RAPORU istediğinde yukarıdaki tabloyu doğrudan kullanabilirsin
+   (✅/⚠️/❌/🐛 formatı zaten hazır).
+
+
 ## RELEASE 0.9 — 2026-07-17 BÜYÜK OTURUM ÖZETİ (P0-AUTH-02, Legacy temizliği, İletişim Merkezi, DS migration dalgası)
 Tek oturumda 31 commit. Sırayla: (1) **P0-AUTH-02** — Canan'ın gerçek giriş sorunu bulundu:
 users.php'nin "Şifre Sıfırla ve WhatsApp Gönder" özelliği WA gönderimi başarısız olsa bile şifreyi
