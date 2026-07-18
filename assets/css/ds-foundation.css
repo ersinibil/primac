@@ -346,6 +346,16 @@ body.mobile-shell{
    devam eder (touch/scroll olayları etkilenmez, sadece çubuk gizlenir). */
 .df-tabs{display:flex;background:var(--df-surface-sunken);border-radius:var(--df-radius-sm);padding:3px;gap:2px;box-shadow:inset 0 0 0 1px var(--df-hairline);max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
 .df-tabs::-webkit-scrollbar{display:none}
+/* P0 SEKME OVERFLOW GÖSTERGESİ (2026-07-18) — çok sekmeli ekranlarda (personnel_edit.php ~9 sekme)
+   aktif sekme sayfa yenilendiğinde her zaman scrollLeft=0'dan başlıyordu; sekme listenin sonundaysa
+   (ör. "Hareket Geçmişi") görünür alanın dışında kalıyor, gizli scrollbar yüzünden kullanıcı daha
+   fazla sekme olduğunu fark edemiyordu. ds-foundation.js aktif sekmeyi otomatik görünür alana
+   kaydırıyor + taşma varsa bu iki class'ı (kenar soluklaştırma = "daha fazlası var" ipucu) açıp
+   kapatıyor. Saf CSS mask-image — yeni bir buton/ikon bileşeni İCAT EDİLMEDİ, mevcut pill yüzeyin
+   kendisi kenarlarda yumuşakça soluklaşıyor (DS'in mevcut sade diliyle tutarlı).*/
+.df-tabs--fade-left{-webkit-mask-image:linear-gradient(to right,transparent,#000 22px);mask-image:linear-gradient(to right,transparent,#000 22px)}
+.df-tabs--fade-right{-webkit-mask-image:linear-gradient(to left,transparent,#000 22px);mask-image:linear-gradient(to left,transparent,#000 22px)}
+.df-tabs--fade-left.df-tabs--fade-right{-webkit-mask-image:linear-gradient(to right,transparent,#000 22px,#000 calc(100% - 22px),transparent);mask-image:linear-gradient(to right,transparent,#000 22px,#000 calc(100% - 22px),transparent)}
 .df-tab{border:0;background:transparent;color:var(--df-ink-600);font-size:12.5px;font-weight:600;padding:7px 16px;border-radius:6px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;transition:background var(--df-dur-fast) var(--df-ease-standard),color var(--df-dur-fast) var(--df-ease-standard);flex:0 0 auto;white-space:nowrap}
 .df-tab--active{background:var(--df-surface);color:var(--df-ink-900);box-shadow:var(--df-shadow-sm)}
 body.mobile-shell .df-tab--active{background:var(--df-accent);color:#fff;box-shadow:none}

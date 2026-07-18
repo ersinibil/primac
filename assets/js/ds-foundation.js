@@ -56,3 +56,34 @@ function dfAccordionToggle(headerEl){
         else{ openCat(rail, el); }
     };
 })();
+
+/* P0 SEKME OVERFLOW DÜZELTMESİ (2026-07-18) — personnel_edit.php gibi çok sekmeli (~9 sekme)
+ * ekranlarda .df-tabs zaten kendi içinde yatay kayıyordu (bkz. ds-foundation.css'teki 2026-07-18
+ * notu) ama iki eksik vardı: (1) sayfa her yenilendiğinde kaydırma pozisyonu sıfırlanıyor, aktif
+ * sekme listenin sonundaysa (ör. "Hareket Geçmişi") görünür alanın dışında kalıyordu; (2) gizli
+ * scrollbar yüzünden daha fazla sekme olduğuna dair hiçbir ipucu yoktu. Bu blok TÜM .df-tabs
+ * örneklerinde (web+mobil, ds_tabs() ortak bileşeni — search.php/İletişim Merkezi/personel/
+ * çek-senet vb. hepsi otomatik kapsanır) çalışır: aktif sekmeyi yükleme anında görünür alana
+ * kaydırır, taşma durumuna göre kenar soluklaştırma class'larını günceller.
+ */
+(function(){
+    function updateFade(bar){
+        var maxScroll = bar.scrollWidth - bar.clientWidth;
+        var atStart = bar.scrollLeft <= 1;
+        var atEnd = bar.scrollLeft >= maxScroll - 1;
+        bar.classList.toggle('df-tabs--fade-left', maxScroll > 1 && !atStart);
+        bar.classList.toggle('df-tabs--fade-right', maxScroll > 1 && !atEnd);
+    }
+    function initTabs(bar){
+        var active = bar.querySelector('.df-tab--active');
+        if(active){ active.scrollIntoView({behavior:'auto', inline:'nearest', block:'nearest'}); }
+        updateFade(bar);
+        bar.addEventListener('scroll', function(){ updateFade(bar); }, {passive:true});
+    }
+    document.addEventListener('DOMContentLoaded', function(){
+        document.querySelectorAll('.df-tabs').forEach(initTabs);
+        window.addEventListener('resize', function(){
+            document.querySelectorAll('.df-tabs').forEach(updateFade);
+        });
+    });
+})();

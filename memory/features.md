@@ -2,6 +2,17 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
+## fix(ui): sekme çubuğu (df-tabs) overflow — aktif sekme otomatik görünür alana kayıyor (2026-07-18)
+personnel_edit.php'de ~9 sekme varken (en son "Hareket Geçmişi") sayfa her yenilendiğinde
+`.df-tabs`'ın kaydırma pozisyonu sıfırlanıyordu — aktif sekme listenin sonundaysa görünür alanın
+dışında kalıyor, gizli scrollbar yüzünden kullanıcı fark edemiyordu. `ds-foundation.js`'e (TÜM
+`ds_tabs()` tüketicilerini kapsayan, web+mobil ortak) eklenen bir blok: (1) sayfa yüklenince aktif
+sekmeyi `scrollIntoView({inline:'nearest',block:'nearest'})` ile görünür alana kaydırıyor (sayfa
+dikey kaydırmasını etkilemeden), (2) taşma varsa `ds-foundation.css`'teki yeni
+`.df-tabs--fade-left/right` (mask-image kenar soluklaştırma, yeni bileşen icat edilmedi) class'larını
+scroll/resize'da güncelliyor. Sekme genişlikleri zaten `flex:0 0 auto` ile sıkıştırılmıyordu — o
+kısım değişmedi. Sadece CSS+JS, hiçbir PHP/iş mantığı dosyası değişmedi (`ds_tabs()` markup'ı aynı).
+
 ## fix(home): mükerrer kritik stok gösterimi kaldırıldı (2026-07-18)
 HOME FINAL (2026-07-18) kararının niyeti ("aynı bilgiyi iki kez göstermeme") koddan eksik
 uygulanmıştı: `home_build_queue()` (`home_lib.php`), zaten "Bugün" kompakt kartında
