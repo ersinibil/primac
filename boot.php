@@ -50,15 +50,32 @@ function csrf_field(){
 }
 
 // $_POST['csrf_token'] (klasik form) VEYA X-CSRF-Token header'ı (fetch/AJAX) kabul edilir.
+// P0 MOBİL HOTFIX (2026-07-19, Product Owner FAIL raporu — "Bağlantı hatası") KÖK NEDENİ: bu
+// fonksiyon token uyuşmazlığında HER ZAMAN ham HTML 403 sayfası basıyordu — ajax_nav_prefs.php gibi
+// zaten `Content-Type: application/json` header'ı göndermiş bir uç noktada bile. fetch() tarafında
+// `.then(r=>r.json())` bu HTML gövdeyi JSON olarak parse edemeyip SyntaxError fırlatıyor, bu da
+// jenerik `.catch()` bloğuna düşüp gerçek nedeni gizleyen "Bağlantı hatası" mesajını gösteriyordu —
+// asıl sorun (CSRF/oturum uyuşmazlığı) hiç görünmüyordu. Artık fetch/AJAX istekleri (X-CSRF-Token
+// header'ı VEYA zaten ayarlanmış application/json Content-Type ile ayırt edilir) geçerli JSON
+// {ok:false,message:...} alır — klasik form POST'ları (X-CSRF-Token YOK) eski HTML sayfasını almaya
+// devam eder, geriye dönük davranış bozulmadı.
 function csrf_verify(){
     $token = $_POST['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
     $valid = !empty($_SESSION['csrf_token']) && hash_equals($_SESSION['csrf_token'], (string)$token);
     if(!$valid){
         http_response_code(403);
-        echo "<!doctype html><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>"
-            ."<div style='font-family:-apple-system,Arial,sans-serif;max-width:480px;margin:60px auto;text-align:center;padding:24px'>"
-            ."<div style='font-size:46px'>🔒</div>"
-            ."<h1 style='font-size:19px;margin:10px 0'>Güvenlik doğrulaması başarısız. Lütfen sayfayı yenileyip tekrar deneyin.</h1></div>";
+        $isAjax = !empty($_SERVER['HTTP_X_CSRF_TOKEN'])
+            || (stripos($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json') !== false)
+            || (stripos(implode("\n", headers_list()), 'application/json') !== false);
+        if($isAjax){
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['ok'=>false,'message'=>'Güvenlik doğrulaması başarısız (oturum/CSRF uyuşmadı). Sayfayı yenileyip tekrar deneyin.']);
+        } else {
+            echo "<!doctype html><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>"
+                ."<div style='font-family:-apple-system,Arial,sans-serif;max-width:480px;margin:60px auto;text-align:center;padding:24px'>"
+                ."<div style='font-size:46px'>🔒</div>"
+                ."<h1 style='font-size:19px;margin:10px 0'>Güvenlik doğrulaması başarısız. Lütfen sayfayı yenileyip tekrar deneyin.</h1></div>";
+        }
         exit;
     }
 }

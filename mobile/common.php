@@ -126,6 +126,28 @@ function botx(){
   if(isRootTab) b.style.display='none';
 })();
 
+/* P0 MOBİL HOTFIX (2026-07-19, Product Owner FAIL raporu) — composer/nav çakışması KÖK NEDENİ:
+   messages.php/wa_conversation_view.php composer'ın alt konumunu SABİT bir piksel tahminiyle
+   (70px) hesaplıyordu; gerçek cihazda bu tahmin nav'ın GERÇEK render edilen yüksekliğiyle (Dynamic
+   Type/yazı ölçeği, farklı iPhone safe-area değerleri) örtüşmüyordu → composer nav'ın ÜSTÜNE değil
+   ÜZERİNE biniyordu. ResizeObserver ile nav'ın gerçek yüksekliği ölçülüp --acans-navh custom
+   property'sine yazılıyor, composer/thread CSS'i bunu okuyor. Önceki (Round 2'de kaldırılan)
+   JS-ölçüm denemesinden farkı: DOMContentLoaded'da TEK SEFERLİK ölçüm yerine ResizeObserver
+   KALICI/asenkron gözlemliyor — CSS tam uygulanmadan/font yüklenmeden erken ölçüm riski yok, boyut
+   her değiştiğinde (klavye aç/kapa, orientation, Dynamic Type) otomatik güncelleniyor. Sabit CSS
+   calc() fallback'i (70px + safe-area) JS hiç çalışmasa/ResizeObserver desteklenmese bile korunur. */
+(function(){
+  var navEl = document.querySelector('.df-m-bottomnav') || document.querySelector('.bottom');
+  if(!navEl) return;
+  function setH(h){ if(h>0) document.documentElement.style.setProperty('--acans-navh', Math.round(h)+'px'); }
+  if('ResizeObserver' in window){
+    new ResizeObserver(function(){ setH(navEl.getBoundingClientRect().height); }).observe(navEl);
+  } else {
+    setH(navEl.getBoundingClientRect().height);
+    window.addEventListener('resize', function(){ setH(navEl.getBoundingClientRect().height); });
+  }
+})();
+
 /* Offline banner — sinyal durumunu göster */
 (function(){
   var banner=document.getElementById('offline-banner');

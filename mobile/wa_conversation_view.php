@@ -55,6 +55,53 @@ if($_SERVER['REQUEST_METHOD']==='POST' && ($_POST['ajax_send'] ?? '')==='1'){
     exit;
 }
 
+// --- AJAX: KENDİ gönderdiğimiz bir WhatsApp mesajını kayıttan kaldır ---
+// P0 MOBİL HOTFIX (2026-07-19, Product Owner talebi — "WhatsApp mesaj aksiyonları eksik") ARAŞTIRMA
+// SONUCU: WhatsApp'ın resmi Business Platform API'si (Meta Cloud API) işletmenin gönderdiği bir
+// mesajı silme/geri çekme (recall/unsend) veya düzenleme (edit) için HİÇBİR uç nokta SUNMUYOR —
+// bu, platformun genel/dokümante edilmiş bir kısıtı, bu projeye özel değil. Bu projedeki gönderim
+// katmanı (share_lib.php::wa_send()/wa_send_media()) UltraMsg (WhatsApp Web otomasyonu tabanlı,
+// gayri-resmi bir sağlayıcı) VEYA ayarlardan girilen genel/özel bir gateway URL'i kullanıyor — ikisi
+// için de bu kod tabanında delete/edit çağrısı YAZILMAMIŞ, ve UltraMsg'in güncel API yüzeyinde böyle
+// bir uç nokta olup olmadığı bu ortamdan (canlı internet/hesap erişimi yok) DOĞRULANAMADI — bu yüzden
+// UYDURULMADI. Bunun yerine dürüst/gerçek bir aksiyon uygulandı: bu buton müşterinin telefonundaki
+// mesajı SİLMEZ/DEĞİŞTİRMEZ, SADECE bizim wa_messages log'umuzdan kaldırır (mobile/messages.php'nin
+// kendi internal_messages sil/düzenle akışıyla AYNI risk sınıfı DEĞİL — oradaki mesajlar hiç dış
+// sisteme gitmediği için "silmek" gerçekten siliyor; burada UI metni bu farkı AÇIKÇA belirtiyor).
+// "Düzenle" hiç eklenmedi: zaten karşı tarafın telefonunda görünen metni değiştirmenin YOLU yok —
+// sahte bir "düzenle" ekranı personeli mesajın karşı tarafta da değiştiğine inandırıp yanıltırdı.
+if($_SERVER['REQUEST_METHOD']==='POST' && ($_POST['ajax_delete_msg'] ?? '')==='1'){
+    header('Content-Type: application/json; charset=utf-8');
+    csrf_verify();
+    $mid=(int)($_POST['id'] ?? 0);
+    $convId=(int)($conv['id'] ?? 0);
+    if(!$mid || !$convId){ echo json_encode(['ok'=>false,'error'=>'Geçersiz istek.']); exit; }
+    try{
+        $chk=$pdo->prepare("SELECT direction FROM wa_messages WHERE id=? AND conversation_id=?");
+        $chk->execute([$mid,$convId]); $row=$chk->fetch();
+        if(!$row){ echo json_encode(['ok'=>false,'error'=>'Mesaj bulunamadı.']); exit; }
+        if($row['direction']!=='outbound'){ echo json_encode(['ok'=>false,'error'=>'Sadece kendi gönderdiğiniz mesajlar kayıttan kaldırılabilir.']); exit; }
+        $pdo->prepare("DELETE FROM wa_messages WHERE id=?")->execute([$mid]);
+        echo json_encode(['ok'=>true]);
+    }catch(Throwable $e){ echo json_encode(['ok'=>false,'error'=>'Silinemedi.']); }
+    exit;
+}
+
+// --- AJAX: konuşmayı kayıttan tamamen temizle — mobile/messages.php::delConv() ile AYNI desen,
+// sadece bizim log'umuzu temizler, WhatsApp tarafında hiçbir etkisi yok (yukarıdaki notla aynı gerekçe). ---
+if($_SERVER['REQUEST_METHOD']==='POST' && ($_POST['ajax_delete_conv'] ?? '')==='1'){
+    header('Content-Type: application/json; charset=utf-8');
+    csrf_verify();
+    $convId=(int)($conv['id'] ?? 0);
+    if(!$convId){ echo json_encode(['ok'=>false,'error'=>'Geçersiz istek.']); exit; }
+    try{
+        $pdo->prepare("DELETE FROM wa_messages WHERE conversation_id=?")->execute([$convId]);
+        $pdo->prepare("DELETE FROM wa_conversations WHERE id=?")->execute([$convId]);
+        echo json_encode(['ok'=>true]);
+    }catch(Throwable $e){ echo json_encode(['ok'=>false,'error'=>'Silinemedi.']); }
+    exit;
+}
+
 // --- AJAX: poll ---
 if(($_GET['poll'] ?? '')==='1'){
     header('Content-Type: application/json; charset=utf-8');
@@ -108,13 +155,15 @@ $lastMsgId = $messages ? (int)end($messages)['id'] : 0;
 .bubble.mine{align-self:flex-end;background:#2563eb;color:#fff;border-bottom-right-radius:5px}
 .bubble.theirs{align-self:flex-start;background:rgba(255,255,255,.12);border-bottom-left-radius:5px}
 .thread{display:flex;flex-direction:column;gap:8px;padding-bottom:8px}
-/* P0 MOBİL SHELL USER TEST REGRESYONU (2026-07-18, Product Owner kararı) — composer artık global
-   bottom nav'ın YERİNİ ALMAZ, nav'ın TAM ÜSTÜNE oturur (bkz. messages.php'deki AYNI not/mekanizma). */
-.composer{position:fixed;left:0;right:0;bottom:calc(70px + env(safe-area-inset-bottom));background:#071326;border-top:1px solid rgba(255,255,255,.12);padding:8px 8px 8px;z-index:1001}
+/* P0 MOBİL HOTFIX (2026-07-19, Product Owner FAIL raporu) — composer artık global bottom nav'ın
+   YERİNİ ALMAZ, nav'ın TAM ÜSTÜNE oturur (bkz. messages.php'deki AYNI not/mekanizma) — common.php::
+   botx()'teki ResizeObserver'ın yazdığı --acans-navh (gerçek ölçülen nav yüksekliği) okunuyor,
+   sabit calc(70px+safe-area) sadece JS hiç çalışmazsa devreye giren fallback. */
+.composer{position:fixed;left:0;right:0;bottom:var(--acans-navh, calc(70px + env(safe-area-inset-bottom)));background:#071326;border-top:1px solid rgba(255,255,255,.12);padding:8px 8px 8px;z-index:1001}
 .composer .wrap{max-width:520px;margin:auto;display:flex;gap:8px;align-items:flex-end}
 .composer textarea{flex:1;margin:0;resize:none;max-height:100px}
 .composer button.send{flex:0 0 auto;width:50px;height:46px;border-radius:14px;font-size:18px}
-body.chat-mode .thread{padding-bottom:calc(88px + 70px + env(safe-area-inset-bottom))}
+body.chat-mode .thread{padding-bottom:calc(var(--acans-composerh, 88px) + var(--acans-navh, calc(70px + env(safe-area-inset-bottom))))}
 </style>
 
 <div class="df-panel">
@@ -131,7 +180,9 @@ body.chat-mode .thread{padding-bottom:calc(88px + 70px + env(safe-area-inset-bot
 <div style="display:flex;gap:8px;margin-bottom:10px">
 <?php if($conv['contact_real_id']): ?><?=ds_button(ds_icon('users',15).' Cari Kartı','contact_view.php?id='.(int)$conv['contact_real_id'],'secondary','','style="flex:1;justify-content:center"',true)?><?php endif; ?>
 <?=ds_button(ds_icon('chat',15).' Tüm Konuşmalar','wa_conversations.php','secondary','','style="flex:1;justify-content:center"',true)?>
+<?php if((int)($conv['id'] ?? 0) > 0): ?><button type="button" id="waDelConvBtn" class="df-btn df-btn--secondary" style="flex:0 0 auto;color:var(--df-danger-ink,#f87171)" title="Konuşmayı kayıttan temizle (WhatsApp'ta silinmez)"><?=ds_icon('trash',15)?></button><?php endif; ?>
 </div>
+<p class="small" style="margin:-4px 0 10px;color:var(--df-ink-500,#94a3b8)">Sil aksiyonları sadece bu ekrandaki kaydı temizler — WhatsApp'ta karşı tarafın telefonundaki mesajı SİLMEZ (WhatsApp Business API bunu desteklemiyor).</p>
 
 <div class="thread" id="waThread">
 <?php if(!$messages): ?>
@@ -164,6 +215,7 @@ body.chat-mode .thread{padding-bottom:calc(88px + 70px + env(safe-area-inset-bot
   var textEl = document.getElementById('waComposeText');
   var sendBtn = document.getElementById('waSendBtn');
   var composer = document.getElementById('waComposer');
+  if(composer && 'ResizeObserver' in window){ new ResizeObserver(function(){ document.documentElement.style.setProperty('--acans-composerh', Math.round(composer.getBoundingClientRect().height)+'px'); }).observe(composer); }
 
   function scrollBottom(){ window.scrollTo(0, document.body.scrollHeight); }
   scrollBottom();
@@ -178,7 +230,7 @@ body.chat-mode .thread{padding-bottom:calc(88px + 70px + env(safe-area-inset-bot
   }
   function unpinComposer(){
     if(!composer) return;
-    composer.style.top='auto'; composer.style.bottom='calc(70px + env(safe-area-inset-bottom))'; composer.style.paddingBottom='';
+    composer.style.top='auto'; composer.style.bottom='var(--acans-navh, calc(70px + env(safe-area-inset-bottom)))'; composer.style.paddingBottom='';
   }
   if(window.visualViewport){
     window.visualViewport.addEventListener('resize', function(){ pinComposer(); scrollBottom(); });
@@ -203,6 +255,7 @@ body.chat-mode .thread{padding-bottom:calc(88px + 70px + env(safe-area-inset-bot
     html += '<small>'+dstr+'</small>';
     div.innerHTML = html;
     thread.appendChild(div);
+    if(div.classList.contains('mine')) bindLongPress(div);
     lastId = Math.max(lastId, m.id);
     scrollBottom();
   }
@@ -236,6 +289,36 @@ body.chat-mode .thread{padding-bottom:calc(88px + 70px + env(safe-area-inset-bot
   textEl.addEventListener('keydown', function(e){
     if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); doSend(); }
   });
+
+  // Mesaj yönetimi (P0 MOBİL HOTFIX 2026-07-19): "sürekli buton" yerine uzun-basma context action —
+  // sadece KENDİ gönderdiğimiz mesajlarda (.bubble.mine), sadece kayıttan kaldırma (bkz. dosya başındaki
+  // ajax_delete_msg notu — WhatsApp tarafında bir etkisi yoktur, "Düzenle" bilinçli olarak YOK).
+  var pressTimer=null;
+  function bindLongPress(el){
+    var fire=function(){ pressTimer=null; if(!confirm('Bu mesaj kayıttan kaldırılsın mı?\n(WhatsApp\'ta karşı tarafta SİLİNMEZ, sadece bizim listemizden kalkar)')) return;
+      var mid=el.getAttribute('data-id');
+      var fd=new FormData(); fd.append('ajax_delete_msg','1'); fd.append('id',mid);
+      fetch(window.location.pathname+'?id='+convId,{method:'POST',credentials:'same-origin',headers:{'X-CSRF-Token':window.CSRF_TOKEN},body:fd})
+        .then(function(r){return r.json();}).then(function(d){ if(d&&d.ok){ el.remove(); } else { alert((d&&d.error)||'Silinemedi.'); } })
+        .catch(function(){ alert('Bağlantı hatası — tekrar deneyin.'); });
+    };
+    el.addEventListener('touchstart',function(){ pressTimer=setTimeout(fire,550); },{passive:true});
+    el.addEventListener('touchend',function(){ if(pressTimer){clearTimeout(pressTimer);pressTimer=null;} });
+    el.addEventListener('touchmove',function(){ if(pressTimer){clearTimeout(pressTimer);pressTimer=null;} });
+    el.addEventListener('contextmenu',function(e){ e.preventDefault(); fire(); }); // masaüstü/sağ tık test kolaylığı
+  }
+  thread.querySelectorAll('.bubble.mine').forEach(bindLongPress);
+
+  var delConvBtn=document.getElementById('waDelConvBtn');
+  if(delConvBtn){
+    delConvBtn.addEventListener('click', function(){
+      if(!confirm('Bu konuşma kayıttan tamamen temizlensin mi?\n(WhatsApp\'ta SİLİNMEZ, sadece bu ekrandaki geçmiş kalkar)')) return;
+      var fd=new FormData(); fd.append('ajax_delete_conv','1');
+      fetch(window.location.pathname+'?id='+convId,{method:'POST',credentials:'same-origin',headers:{'X-CSRF-Token':window.CSRF_TOKEN},body:fd})
+        .then(function(r){return r.json();}).then(function(d){ if(d&&d.ok){ window.location.href='wa_conversations.php'; } else { alert((d&&d.error)||'Silinemedi.'); } })
+        .catch(function(){ alert('Bağlantı hatası — tekrar deneyin.'); });
+    });
+  }
 
   if(convId){
     setInterval(function(){
