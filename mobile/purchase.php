@@ -86,6 +86,10 @@ if($editId && can_edit_delete()){
 }
 
 topx($editMode ? 'Alışı Düzenle' : 'Satın Alma');
+// CARİDEN BAŞLATILAN İŞLEMLERDE BAĞLAMI KORU (2026-07-19, Product Owner kararı) — Cari Detay'dan
+// "+ Alış" ile gelindiğinde tedarikçi otomatik seçili olsun (web ../purchase.php + mobile/sales.php
+// ile AYNI ?contact_id= deseni). Düzenleme modu her zaman önceliklidir.
+$cid = $editMode ? (int)$editMode['purchase']['contact_id'] : (int)($_GET['contact_id'] ?? 0);
 $cs=$pdo->query("SELECT id,name FROM contacts WHERE type IN ('Tedarikçi','Her İkisi') OR type IS NULL ORDER BY name")->fetchAll();
 if(!$cs) $cs=$pdo->query("SELECT id,name FROM contacts ORDER BY name")->fetchAll();
 $ps=$pdo->query("SELECT id,name,unit,purchase_price,vat_rate FROM stock_items WHERE COALESCE(active,1)=1 ORDER BY name")->fetchAll();
@@ -108,7 +112,7 @@ try{ $__allocCustomers=$pdo->query("SELECT id,name FROM contacts WHERE type IN (
   <label>Tedarikçi</label>
   <select name="contact_id" id="contactSel" required onchange="onSupplierChange()">
     <option value="">— Seç —</option>
-    <?php foreach($cs as $c): ?><option value="<?=$c['id']?>" <?=$editMode && (int)$editMode['purchase']['contact_id']===(int)$c['id']?'selected':''?>><?=h($c['name'])?></option><?php endforeach; ?>
+    <?php foreach($cs as $c): ?><option value="<?=$c['id']?>" <?=$cid===(int)$c['id']?'selected':''?>><?=h($c['name'])?></option><?php endforeach; ?>
     <option value="__new__">➕ Listede yok — Yeni Tedarikçi Ekle…</option>
   </select>
   <div id="newContactBox" class="df-panel" style="display:none;background:rgba(37,99,235,.12);margin:6px 0 12px">

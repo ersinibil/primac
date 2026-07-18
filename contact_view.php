@@ -195,6 +195,11 @@ ob_start();
 ?>
 <?=ds_button('+ Tahsilat', 'finance_new.php?direction=in&contact_id='.$id, 'primary', '', '', true)?>
 <?=ds_button('+ Ödeme', 'finance_new.php?direction=out&contact_id='.$id, 'secondary', '', '', true)?>
+<?php // CARİDEN BAŞLATILAN İŞLEMLERDE BAĞLAMI KORU (2026-07-19, Product Owner kararı) — Tahsilat/
+// Ödeme ile aynı standart: cari bağlamı ?contact_id= ile hedef forma taşınır, sales.php/purchase.php
+// bunu okuyup carii otomatik seçer (aynı mekanizma, yeni bir akış İCAT edilmedi). ?>
+<?=ds_button('+ Satış', 'sales.php?contact_id='.$id, 'secondary', '', '', true)?>
+<?=ds_button('+ Alış', 'purchase.php?contact_id='.$id, 'secondary', '', '', true)?>
 <?=ds_button('📊 Cari Raporu', 'report.php?modul=cari_detay&ref='.$id, 'secondary', '', '', true)?>
 <?php if($waConvId): ?><?=ds_button('💬 WhatsApp', 'wa_conversation_view.php?id='.(int)$waConvId, 'secondary', '', '', true)?>
 <?php elseif(!empty($c['phone'])): ?><?=ds_button('💬 WhatsApp', 'wa_conversation_view.php?phone='.urlencode($c['phone']), 'secondary', '', '', true)?>

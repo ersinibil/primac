@@ -142,11 +142,15 @@ ds_page_header($__title, ds_icon('box',24), '', $__actions, true, true);
   <?php endif; ?>
 
   <?php
+  // CARİDEN BAŞLATILAN İŞLEMLERDE BAĞLAMI KORU (2026-07-19, Product Owner kararı) — Cari Detay'dan
+  // "+ Alış" ile gelindiğinde tedarikçi otomatik seçili olsun (sales.php'deki $viewContactId ile
+  // AYNI ?contact_id= deseni). Düzenleme modu her zaman önceliklidir.
+  $__preSupplierId = $editMode ? (int)$editMode['purchase']['contact_id'] : (int)($_GET['contact_id'] ?? 0);
   $__supplierOpts = '';
   try{
     $cs=$pdo->query("SELECT id,name FROM contacts WHERE type IN ('Tedarikçi','Her İkisi') OR type IS NULL ORDER BY name")->fetchAll();
     if(!$cs) $cs=$pdo->query("SELECT id,name FROM contacts ORDER BY name")->fetchAll();
-    foreach($cs as $c){ $__supplierOpts .= '<option value="'.$c['id'].'" '.($editMode && (int)$editMode['purchase']['contact_id']===(int)$c['id']?'selected':'').'>'.h($c['name']).'</option>'; }
+    foreach($cs as $c){ $__supplierOpts .= '<option value="'.$c['id'].'" '.($__preSupplierId===(int)$c['id']?'selected':'').'>'.h($c['name']).'</option>'; }
   }catch(Throwable $e){}
   ds_form_field('Tedarikçi', '<select name="contact_id" id="contactSel" required onchange="onSupplierChange()"><option value="">— Seç —</option>'.$__supplierOpts.'<option value="__new__">➕ Listede yok — Yeni Tedarikçi Ekle…</option></select>');
   ?>

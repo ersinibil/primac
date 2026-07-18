@@ -152,7 +152,9 @@ try{
 <div class="df-panel" style="margin-top:10px">
   <div style="display:flex;gap:8px;flex-wrap:wrap">
     <?=ds_button(ds_icon('wallet',15).' Tahsilat','collection.php?contact_id='.$id,'secondary','','style="flex:1 1 45%;justify-content:center"',true)?>
+    <?=ds_button(ds_icon('wallet',15).' Ödeme','payment.php?contact_id='.$id,'secondary','','style="flex:1 1 45%;justify-content:center"',true)?>
     <?=ds_button(ds_icon('box',15).' Satış','sales.php?contact_id='.$id,'secondary','','style="flex:1 1 45%;justify-content:center"',true)?>
+    <?=ds_button(ds_icon('box',15).' Alış','purchase.php?contact_id='.$id,'secondary','','style="flex:1 1 45%;justify-content:center"',true)?>
     <?=ds_button(ds_icon('chat',15).' Cari Sohbeti','thread_open.php?type=cari&ref='.$id,'secondary','','style="flex:1 1 45%;justify-content:center"',true)?>
     <?=ds_button(ds_icon('info',15).' Cari Raporu','report.php?modul=cari_detay&ref='.$id,'secondary','','style="flex:1 1 45%;justify-content:center"',true)?>
     <?php if($waConvId): ?>
