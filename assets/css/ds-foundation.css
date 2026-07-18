@@ -447,6 +447,23 @@ body.mobile-shell .df-tab--active{background:var(--df-accent);color:#fff;box-sha
 .df-home-dow{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--df-accent)}
 .df-home-date{font-size:18px;color:var(--df-ink-900)}
 
+/* ── HOME FINAL (2026-07-18) — "BUGÜN" durum kartları + alt bölüm iki kolon (Bugünün Akışı |
+   Bekleyenler). Web+mobil ORTAK (bkz. dashboard.php/mobile/index.php'nin ikisi de bu sınıfları
+   kullanıyor) — genişlik güvenliği bilerek min-width:0/flex-wrap ile sağlandı (P0 mobil yatay
+   taşma düzeltmesiyle AYNI disiplin). */
+.df-home-lab-sm{font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--df-ink-500);margin:0 0 8px}
+.df-home-today-row{display:flex;flex-wrap:wrap;gap:8px;min-width:0}
+.df-home-today-card{display:inline-flex;align-items:center;gap:7px;padding:9px 13px;border-radius:var(--df-radius-md);text-decoration:none;font-size:12.5px;font-weight:700;border:1px solid transparent;white-space:nowrap;max-width:100%}
+.df-home-today-card .df-home-chev--sm{margin-left:2px}
+.df-home-today-card--danger{background:var(--df-danger-soft);color:var(--df-danger-ink);border-color:var(--df-danger)}
+.df-home-today-card--warning{background:var(--df-warning-soft);color:var(--df-warning-ink);border-color:var(--df-warning)}
+.df-home-today-card--info{background:var(--df-accent-soft);color:var(--df-accent-soft-ink);border-color:var(--df-accent)}
+.df-home-today-card--success{background:var(--df-success-soft);color:var(--df-success-ink);border-color:var(--df-success)}
+.df-home-flow-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;min-width:0}
+.df-home-flow-grid>div{min-width:0}
+@media(max-width:900px){.df-home-flow-grid{grid-template-columns:1fr}}
+body.mobile-shell .df-home-flow-grid{grid-template-columns:1fr}
+
 .df-home-hero{display:flex;align-items:center;gap:14px;background:var(--df-accent-soft);border:1.5px solid var(--df-accent);border-radius:var(--df-radius-lg);padding:18px 20px;text-decoration:none;box-shadow:var(--df-shadow-sm);transition:transform var(--df-dur-fast) var(--df-ease-standard),box-shadow var(--df-dur-fast) var(--df-ease-standard)}
 .df-home-hero:hover{transform:translateY(-1px);box-shadow:var(--df-shadow-md)}
 .df-home-hero:active{transform:scale(.994)}

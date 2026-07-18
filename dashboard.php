@@ -922,17 +922,44 @@ $__homeCanSee = function($perm){ return user_can($perm); };
 $__homeQ = home_build_queue($pdo, is_admin(), $__homeCanSee, $__homePid, 'web');
 $__homeC = home_build_continue($pdo, is_admin(), $__homeCanSee, $__homePid);
 $__homeDay = home_today_label();
-$__pulseUrl = home_pulse_target($__pulseOverdue, is_admin()||user_can('jobs'), $__pulseCriticalStock, is_admin()||user_can('stock'));
+
+// HOME FINAL (2026-07-18, Product Owner kararı) — "BUGÜN" durum kartları eski sarı Nabız banner'ının
+// YERİNE geçti (aynı bilgiyi iki kez göstermeme kuralı — banner "X kritik stok" diyordu, aşağıdaki
+// kart da aynısını gösterecekti). Sadece ANLAMLI (>0) ve yetkili olunan kartlar görünür. Yeni
+// matematik/sorgu İCAT EDİLMEDİ: $__pulseCriticalStock bu dosyanın başında zaten hesaplı,
+// task_my_stats() home_build_queue()'nun da kullandığı aynı fonksiyon, bekleyen talep sayımı
+// requests.php'nin kendi 'Yeni'/'İnceleniyor' durum tanımıyla birebir aynı.
+$__todayCards = [];
+if($__pulseOk && (is_admin()||user_can('stock')) && $__pulseCriticalStock > 0){
+    $__todayCards[] = ['tone'=>'danger','icon'=>'⚠️','label'=>$__pulseCriticalStock.' Kritik Stok','url'=>'stock.php?critical=1'];
+}
+if($__homePid && function_exists('task_my_stats')){
+    try{
+        $__mts = task_my_stats($pdo, $__homePid);
+        if(!empty($__mts['overdue'])) $__todayCards[] = ['tone'=>'danger','icon'=>'⚠️','label'=>$__mts['overdue'].' Geciken Görev','url'=>'mytasks.php'];
+        elseif(!empty($__mts['today'])) $__todayCards[] = ['tone'=>'info','icon'=>'✓','label'=>$__mts['today'].' Açık Görev','url'=>'mytasks.php'];
+    }catch(Throwable $e){}
+}
+if(is_admin()){
+    try{
+        $__pendingReq = (int)($pdo->query("SELECT COUNT(*) c FROM management_requests WHERE status IN ('Yeni','İnceleniyor')")->fetch()['c'] ?? 0);
+        if($__pendingReq > 0) $__todayCards[] = ['tone'=>'warning','icon'=>'📨','label'=>$__pendingReq.' Bekleyen Talep','url'=>'requests.php'];
+    }catch(Throwable $e){}
+}
 ?>
-<?php if($__pulseUrl): ?>
-<a href="<?=h($__pulseUrl)?>" style="display:block;text-decoration:none;color:inherit"><?=ds_alert(home_pulse_alert_type($__pulse['level']), $__pulse['message'])?></a>
-<?php else: ?>
-<?=ds_alert(home_pulse_alert_type($__pulse['level']), $__pulse['message'])?>
-<?php endif; ?>
 <div class="df-home-daylabel"><span class="df-home-dow"><?=h($__homeDay['dow'])?></span><span class="df-home-date"><?=h($__homeDay['date'])?></span></div>
 
+<?php if($__todayCards): ?>
+<div class="df-home-lab">Bugün</div>
+<div class="df-home-today-row">
+  <?php foreach($__todayCards as $__tc): ?>
+  <a class="df-home-today-card df-home-today-card--<?=h($__tc['tone'])?>" href="<?=h($__tc['url'])?>"><span aria-hidden="true"><?=$__tc['icon']?></span><?=h($__tc['label'])?><span class="df-home-chev df-home-chev--sm" aria-hidden="true"></span></a>
+  <?php endforeach; ?>
+</div>
+<?php endif; ?>
+
 <?php if($__homeQ['hero']): $__h=$__homeQ['hero']; ?>
-<a class="df-home-hero" href="<?=h($__h['url'])?>">
+<a class="df-home-hero" href="<?=h($__h['url'])?>" style="margin-top:var(--df-space-4)">
   <div class="df-home-hero-body">
     <div class="df-home-hero-title"><?=h($__h['title'])?></div>
     <div class="df-home-hero-meta"><?=h($__h['meta'])?></div>
@@ -940,26 +967,10 @@ $__pulseUrl = home_pulse_target($__pulseOverdue, is_admin()||user_can('jobs'), $
   </div>
   <div class="df-home-chev"></div>
 </a>
-<?php else: ?>
-<div class="df-panel" style="text-align:center;padding:28px 16px">
+<?php elseif(!$__todayCards): ?>
+<div class="df-panel" style="text-align:center;padding:28px 16px;margin-top:var(--df-space-4)">
   <div style="font-size:14px;font-weight:700">Bugün her şey yolunda</div>
   <div style="font-size:12.5px;color:var(--df-ink-600);margin-top:4px">Sırada acil bir iş yok.</div>
-</div>
-<?php endif; ?>
-
-<?php if($__homeQ['queue']): ?>
-<div>
-  <div class="df-home-lab">Sırada</div>
-  <div class="df-home-qlist">
-    <?php foreach($__homeQ['queue'] as $__qi): ?>
-    <a class="df-home-qrow" href="<?=h($__qi['url'])?>">
-      <div class="df-home-qrow-body"><div class="df-home-qrow-title"><?=h($__qi['title'])?></div><div class="df-home-qrow-meta"><?=h($__qi['meta'])?></div></div>
-      <span class="df-badge df-badge--<?=h(home_pill_badge_tone($__qi['pill']['tone']))?>" style="font-size:10px;padding:3px 8px"><?=h($__qi['pill']['label'])?></span>
-      <div class="df-home-chev df-home-chev--sm"></div>
-    </a>
-    <?php endforeach; ?>
-  </div>
-  <?php if($__homeQ['more'] > 0): ?><a class="df-home-more" href="jobs.php">+<?=(int)$__homeQ['more']?> iş daha</a><?php endif; ?>
 </div>
 <?php endif; ?>
 
@@ -995,6 +1006,51 @@ $__qaAll = array_merge($__qaSplit['primary'], $__qaSplit['overflow']);
   </div>
 </div>
 <?php endif; ?>
+
+<?php
+// HOME FINAL (2026-07-18, Product Owner kararı) — masaüstü boşluğunu değerlendiren alt bölüm, iki
+// kolon: "Bugünün Akışı" (bugüne termini olan işler — dead legacy Komuta Merkezi dalındaki AYNI
+// sorgu, sadece burada da kullanılıyor, yeni sorgu İCAT EDİLMEDİ) | "Bekleyenler" (yukarıda hero
+// için zaten hesaplanan $__homeQ['queue'] — "Sırada" adı "Bekleyenler" olarak yeniden adlandırıldı,
+// veri KAYNAĞI aynı, ayrıca hiçbir yerde tekrar sorgulanmadı).
+$__todayJobs = [];
+if(is_admin() || user_can('jobs')){
+    try{ $__todayJobs = $pdo->query("SELECT id,job_no,title FROM jobs WHERE due_date=CURDATE() AND status NOT IN ('Tamamlandı','İptal','Teslim Edildi') ORDER BY id DESC LIMIT 6")->fetchAll(); }catch(Throwable $e){}
+}
+?>
+<div class="df-home-flow-grid" style="margin-top:var(--df-space-5)">
+  <div>
+    <div class="df-home-lab-sm">Bugünün Akışı</div>
+    <?php if($__todayJobs): ?>
+    <div class="df-home-qlist">
+      <?php foreach($__todayJobs as $__tj): ?>
+      <a class="df-home-qrow" href="job_view.php?id=<?=(int)$__tj['id']?>">
+        <div class="df-home-qrow-body"><div class="df-home-qrow-title"><?=h($__tj['title'])?></div><div class="df-home-qrow-meta"><?=h($__tj['job_no'])?> · Bugün teslim</div></div>
+        <div class="df-home-chev df-home-chev--sm"></div>
+      </a>
+      <?php endforeach; ?>
+    </div>
+    <?php else: ?>
+    <div class="df-panel" style="padding:16px;text-align:center;color:var(--df-ink-600);font-size:12.5px">Bugüne ait planlı iş yok.</div>
+    <?php endif; ?>
+  </div>
+  <div>
+    <div class="df-home-lab-sm">Bekleyenler</div>
+    <?php if($__homeQ['queue']): ?>
+    <div class="df-home-qlist">
+      <?php foreach($__homeQ['queue'] as $__qi): ?>
+      <a class="df-home-qrow" href="<?=h($__qi['url'])?>">
+        <div class="df-home-qrow-body"><div class="df-home-qrow-title"><?=h($__qi['title'])?></div><div class="df-home-qrow-meta"><?=h($__qi['meta'])?></div></div>
+        <span class="df-badge df-badge--<?=h(home_pill_badge_tone($__qi['pill']['tone']))?>" style="font-size:10px;padding:3px 8px"><?=h($__qi['pill']['label'])?></span>
+      </a>
+      <?php endforeach; ?>
+    </div>
+    <?php if($__homeQ['more'] > 0): ?><a class="df-home-more" href="jobs.php">+<?=(int)$__homeQ['more']?> iş daha</a><?php endif; ?>
+    <?php else: ?>
+    <div class="df-panel" style="padding:16px;text-align:center;color:var(--df-ink-600);font-size:12.5px">Bekleyen aksiyon yok 🎉</div>
+    <?php endif; ?>
+  </div>
+</div>
 
 <?php if(is_admin()):
     // FAZ 2C-ii (2026-07-17) — E: Genel Bakış. Yalnızca Admin, varsayılan KAPALI (ds_accordion_item

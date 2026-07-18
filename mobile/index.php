@@ -185,17 +185,46 @@ $__homeCanSee = function($perm){ return user_can($perm); };
 $__homeQ = home_build_queue($pdo, $isAdmin, $__homeCanSee, $pid, 'mobile');
 $__homeC = home_build_continue($pdo, $isAdmin, $__homeCanSee, $pid);
 $__homeDay = home_today_label();
-$__pulseUrl = home_pulse_target($__pulseOverdue, $__pulseShowJobs, $__pulseCriticalStock, $__pulseShowStock);
+
+// HOME FINAL (2026-07-18, Product Owner kararı) — "BUGÜN" durum kartları eski Nabız banner'ının
+// YERİNE geçti (web dashboard.php ile AYNI mantık/veri kaynağı — bkz. oradaki not, kopya kod değil,
+// aynı $__pulseCriticalStock/task_my_stats()/management_requests sayımı). Mobilde en önemli (ilk)
+// kart tam genişlik, kalanı kompakt satırda.
+$__todayCards = [];
+if($__pulseOk && $__pulseShowStock && $__pulseCriticalStock > 0){
+    $__todayCards[] = ['tone'=>'danger','icon'=>'⚠️','label'=>$__pulseCriticalStock.' Kritik Stok','url'=>'stock.php?critical=1'];
+}
+if($pid && function_exists('task_my_stats')){
+    try{
+        $__mts = task_my_stats($pdo, $pid);
+        if(!empty($__mts['overdue'])) $__todayCards[] = ['tone'=>'danger','icon'=>'⚠️','label'=>$__mts['overdue'].' Geciken Görev','url'=>'mytasks.php'];
+        elseif(!empty($__mts['today'])) $__todayCards[] = ['tone'=>'info','icon'=>'✓','label'=>$__mts['today'].' Açık Görev','url'=>'mytasks.php'];
+    }catch(Throwable $e){}
+}
+if($isAdmin){
+    try{
+        $__pendingReq = (int)($pdo->query("SELECT COUNT(*) c FROM management_requests WHERE status IN ('Yeni','İnceleniyor')")->fetch()['c'] ?? 0);
+        if($__pendingReq > 0) $__todayCards[] = ['tone'=>'warning','icon'=>'📨','label'=>$__pendingReq.' Bekleyen Talep','url'=>'requests.php'];
+    }catch(Throwable $e){}
+}
+$__todayPrimary = $__todayCards ? array_shift($__todayCards) : null;
 ?>
-<?php if($__pulseUrl): ?>
-<a href="<?=h($__pulseUrl)?>" style="display:block;text-decoration:none;color:inherit"><?=ds_alert(home_pulse_alert_type($__pulse['level']), $__pulse['message'])?></a>
-<?php else: ?>
-<?=ds_alert(home_pulse_alert_type($__pulse['level']), $__pulse['message'])?>
-<?php endif; ?>
 <div class="df-home-daylabel"><span class="df-home-dow"><?=h($__homeDay['dow'])?></span><span class="df-home-date"><?=h($__homeDay['date'])?></span></div>
 
+<?php if($__todayPrimary): ?>
+<div class="df-home-lab">Bugün</div>
+<a class="df-home-today-card df-home-today-card--<?=h($__todayPrimary['tone'])?>" href="<?=h($__todayPrimary['url'])?>" style="width:100%;box-sizing:border-box;justify-content:space-between;font-size:14px;padding:13px 16px"><span><span aria-hidden="true"><?=$__todayPrimary['icon']?></span> <?=h($__todayPrimary['label'])?></span><span class="df-home-chev" aria-hidden="true"></span></a>
+<?php if($__todayCards): ?>
+<div class="df-home-today-row" style="margin-top:8px">
+  <?php foreach($__todayCards as $__tc): ?>
+  <a class="df-home-today-card df-home-today-card--<?=h($__tc['tone'])?>" href="<?=h($__tc['url'])?>"><span aria-hidden="true"><?=$__tc['icon']?></span><?=h($__tc['label'])?></a>
+  <?php endforeach; ?>
+</div>
+<?php endif; ?>
+<?php endif; ?>
+
 <?php if($__homeQ['hero']): $__h=$__homeQ['hero']; ?>
-<a class="df-home-hero" href="<?=h($__h['url'])?>">
+<a class="df-home-hero" href="<?=h($__h['url'])?>" style="margin-top:var(--df-space-4)">
   <div class="df-home-hero-body">
     <div class="df-home-hero-title"><?=h($__h['title'])?></div>
     <div class="df-home-hero-meta"><?=h($__h['meta'])?></div>
@@ -203,26 +232,10 @@ $__pulseUrl = home_pulse_target($__pulseOverdue, $__pulseShowJobs, $__pulseCriti
   </div>
   <div class="df-home-chev"></div>
 </a>
-<?php else: ?>
-<div class="df-panel" style="text-align:center;padding:24px 14px">
+<?php elseif(!$__todayPrimary): ?>
+<div class="df-panel" style="text-align:center;padding:24px 14px;margin-top:var(--df-space-4)">
   <div style="font-size:13.5px;font-weight:700">Bugün her şey yolunda</div>
   <div style="font-size:12px;color:var(--df-ink-600);margin-top:4px">Sırada acil bir iş yok.</div>
-</div>
-<?php endif; ?>
-
-<?php if($__homeQ['queue']): ?>
-<div>
-  <div class="df-home-lab">Sırada</div>
-  <div class="df-home-qlist">
-    <?php foreach($__homeQ['queue'] as $__qi): ?>
-    <a class="df-home-qrow" href="<?=h($__qi['url'])?>">
-      <div class="df-home-qrow-body"><div class="df-home-qrow-title"><?=h($__qi['title'])?></div><div class="df-home-qrow-meta"><?=h($__qi['meta'])?></div></div>
-      <span class="df-badge df-badge--<?=h(home_pill_badge_tone($__qi['pill']['tone']))?>" style="font-size:10px;padding:3px 8px"><?=h($__qi['pill']['label'])?></span>
-      <div class="df-home-chev df-home-chev--sm"></div>
-    </a>
-    <?php endforeach; ?>
-  </div>
-  <?php if($__homeQ['more'] > 0): ?><a class="df-home-more" href="jobs.php">+<?=(int)$__homeQ['more']?> iş daha</a><?php endif; ?>
 </div>
 <?php endif; ?>
 
@@ -255,6 +268,28 @@ $__qaAll = array_merge($__qaSplit['primary'], $__qaSplit['overflow']);
     </a>
     <?php endforeach; ?>
   </div>
+</div>
+<?php endif; ?>
+
+<?php
+// HOME FINAL (2026-07-18, Product Owner kararı) — "Bugünün Akışı": web'deki gibi ayrı bir
+// "Bekleyenler" kolonu mobilde İSTENMEDİ ("maksimum birkaç önemli kayıt" + "Tümünü Gör") — aynı
+// $__homeQ['queue'] (zaten home_build_queue($platform='mobile') ile 2 kayda sınırlı, yeni sorgu
+// YOK) burada "Sırada" yerine bu başlık altında gösteriliyor, veri kaynağı ve sırası DEĞİŞMEDİ.
+?>
+<?php if($__homeQ['queue']): ?>
+<div>
+  <div class="df-home-lab">Bugünün Akışı</div>
+  <div class="df-home-qlist">
+    <?php foreach($__homeQ['queue'] as $__qi): ?>
+    <a class="df-home-qrow" href="<?=h($__qi['url'])?>">
+      <div class="df-home-qrow-body"><div class="df-home-qrow-title"><?=h($__qi['title'])?></div><div class="df-home-qrow-meta"><?=h($__qi['meta'])?></div></div>
+      <span class="df-badge df-badge--<?=h(home_pill_badge_tone($__qi['pill']['tone']))?>" style="font-size:10px;padding:3px 8px"><?=h($__qi['pill']['label'])?></span>
+      <div class="df-home-chev df-home-chev--sm"></div>
+    </a>
+    <?php endforeach; ?>
+  </div>
+  <a class="df-home-more" href="jobs.php">Tümünü Gör</a>
 </div>
 <?php endif; ?>
 
