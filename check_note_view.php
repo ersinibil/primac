@@ -52,6 +52,14 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['cancel_cn'])){
     }catch(Throwable $e){ $_SESSION['cn_err']=$e->getMessage(); }
     header('Location: check_note_view.php?id='.$id); exit;
 }
+if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['reopen_cn'])){
+    try{
+        if(!can_edit_delete()) throw new Exception('Bu işlem için yetkiniz yok.');
+        checks_notes_reopen($pdo,$userId,$id,$_POST['reason']??'');
+        $_SESSION['cn_ok']='İşlem geri alındı — kayıt tekrar Portföyde/Bekliyor durumunda.';
+    }catch(Throwable $e){ $_SESSION['cn_err']=$e->getMessage(); }
+    header('Location: check_note_view.php?id='.$id); exit;
+}
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['edit_cn'])){
     try{
         if(!can_edit_delete()) throw new Exception('Bu işlem için yetkiniz yok.');
@@ -136,6 +144,9 @@ ds_page_header($ic.' '.($typeOpts[$row['type']]??$row['type']).' '.h($row['numbe
 <?php if(in_array('karsiliksiz',$actions,true)): ?>
 <button type="button" class="df-btn df-btn--danger" onclick="cnToggle('cnBounceBox')">⚠️ Karşılıksız</button>
 <?php endif; ?>
+<?php if(in_array('reopen',$actions,true)): ?>
+<button type="button" class="df-btn df-btn--secondary" onclick="cnToggle('cnReopenBox')">↩️ İşlemi Geri Al</button>
+<?php endif; ?>
 <?php if(in_array('duzenle',$actions,true)): ?>
 <button type="button" class="df-btn df-btn--secondary" onclick="cnToggle('cnEditBox')">✏️ Düzenle</button>
 <?php endif; ?>
@@ -206,6 +217,18 @@ ds_form_field('Tarih', '<input type="date" name="settle_date" value="'.h($today)
 <input type="hidden" name="bounce_cn" value="1">
 <?php ds_form_field('Not', '<input name="reason" placeholder="Opsiyonel">'); ?>
 <button class="df-btn df-btn--danger">⚠️ Karşılıksız İşaretle</button>
+</form>
+</div>
+<?php endif; ?>
+
+<?php if(in_array('reopen',$actions,true)): ?>
+<div id="cnReopenBox" class="df-card" style="display:none;background:var(--df-accent-soft);border-color:transparent;margin-top:var(--df-space-3)">
+<h3 class="df-section-subtitle">İşlemi Geri Al</h3>
+<p class="df-section-hint"><?=$row['status']==='ciro_edildi'?'Ciro hareketi geri alınır, hedef tedarikçinin borcu yeniden açılır.':'Kasa/banka hareketi geri alınır, hesap bakiyesi düzeltilir.'?> Kayıt tekrar Portföyde/Bekliyor durumuna döner — cariye (ilk kabul hareketi) dokunulmaz, o zaten kapalıydı. Sonra Düzenle/Sil yeniden kullanılabilir.</p>
+<form method="post" onsubmit="return confirm('Bu işlem geri alınacak, kayıt tekrar Portföyde/Bekliyor durumuna dönecek. Emin misiniz?')">
+<input type="hidden" name="reopen_cn" value="1">
+<?php ds_form_field('Not', '<input name="reason" placeholder="Opsiyonel">'); ?>
+<button class="df-btn df-btn--primary">↩️ İşlemi Geri Al</button>
 </form>
 </div>
 <?php endif; ?>

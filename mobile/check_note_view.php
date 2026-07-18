@@ -45,6 +45,15 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['cancel_cn'])){
     }catch(Throwable $e){ $_SESSION['cn_err']=$e->getMessage(); }
     header('Location: check_note_view.php?id='.$id); exit;
 }
+/* İşlemi Geri Al — SADECE tahsil_edildi/ciro_edildi (checks_notes_reopen() kendi de kontrol ediyor) */
+if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['reopen_cn'])){
+    try{
+        if(!can_edit_delete()) throw new Exception('Bu işlem için yetkiniz yok.');
+        checks_notes_reopen($pdo,$userId,$id,$_POST['reason']??'');
+        $_SESSION['cn_ok']='İşlem geri alındı — kayıt tekrar Portföyde/Bekliyor durumunda.';
+    }catch(Throwable $e){ $_SESSION['cn_err']=$e->getMessage(); }
+    header('Location: check_note_view.php?id='.$id); exit;
+}
 /* Çek/senet düzenle — SADECE portföyde (checks_notes_update() kendi de kontrol ediyor) */
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['edit_cn'])){
     if(!can_edit_delete()){
@@ -124,6 +133,7 @@ try{
   <?php if(in_array('ciro',$actions,true)): ?><button type="button" class="df-btn df-btn--secondary" onclick="cnToggle('cnEndorseBox')">🔄 Ciro Et</button><?php endif; ?>
   <?php if(in_array('ode',$actions,true)): ?><button type="button" class="df-btn df-btn--primary" onclick="cnToggle('cnPayBox')">💸 Öde</button><?php endif; ?>
   <?php if(in_array('karsiliksiz',$actions,true)): ?><button type="button" class="df-btn df-btn--danger" onclick="cnToggle('cnBounceBox')">⚠️ Karşılıksız</button><?php endif; ?>
+  <?php if(in_array('reopen',$actions,true)): ?><button type="button" class="df-btn df-btn--secondary" onclick="cnToggle('cnReopenBox')">↩️ İşlemi Geri Al</button><?php endif; ?>
   <?php if(in_array('duzenle',$actions,true)): ?><button type="button" class="df-btn df-btn--secondary" onclick="cnToggle('cnEditBox')">✏️ Düzenle</button><?php endif; ?>
   <?php if(in_array('iptal',$actions,true)): ?><button type="button" class="df-btn df-btn--secondary" onclick="cnToggle('cnCancelBox')">✕ İptal</button><?php endif; ?>
   </div>
@@ -184,6 +194,18 @@ try{
       <label>Not <small class="muted">(opsiyonel)</small></label>
       <input name="reason">
       <button class="df-btn df-btn--danger df-btn--lg" style="width:100%;margin-top:8px">⚠️ Karşılıksız İşaretle</button>
+    </form>
+  </div>
+  <?php endif; ?>
+
+  <?php if(in_array('reopen',$actions,true)): ?>
+  <div id="cnReopenBox" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.1)">
+    <p class="small"><?=$r['status']==='ciro_edildi'?'Ciro hareketi geri alınır, hedef tedarikçinin borcu yeniden açılır.':'Kasa/banka hareketi geri alınır, hesap bakiyesi düzeltilir.'?> Kayıt tekrar Portföyde/Bekliyor durumuna döner — cariye dokunulmaz.</p>
+    <form method="post" onsubmit="return confirm('Bu işlem geri alınacak, kayıt tekrar Portföyde/Bekliyor durumuna dönecek. Emin misiniz?')">
+      <input type="hidden" name="reopen_cn" value="1">
+      <label>Not <small class="muted">(opsiyonel)</small></label>
+      <input name="reason">
+      <button class="df-btn df-btn--primary df-btn--lg" style="width:100%;margin-top:8px">↩️ İşlemi Geri Al</button>
     </form>
   </div>
   <?php endif; ?>
@@ -253,7 +275,7 @@ try{
 
 <script>
 function cnToggle(id){
-  ['cnCollectBox','cnPayBox','cnEndorseBox','cnBounceBox','cnCancelBox','cnEditBox'].forEach(function(bid){
+  ['cnCollectBox','cnPayBox','cnEndorseBox','cnBounceBox','cnReopenBox','cnCancelBox','cnEditBox'].forEach(function(bid){
     if(bid!==id){ var el=document.getElementById(bid); if(el) el.style.display='none'; }
   });
   var box=document.getElementById(id);

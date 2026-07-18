@@ -390,11 +390,22 @@ function checks_notes_require_lifecycle(){
     }
 }
 
-// Durum makinesi: hangi aksiyon butonları gösterilsin. Terminal durumlarda (tahsil_edildi/
-// ciro_edildi/karsiliksiz/iptal) HİÇBİR finansal aksiyon yok — sadece rozet + geçmiş.
+// Durum makinesi: hangi aksiyon butonları gösterilsin.
+// FİNANS — ÇEK/SENET DÜZENLE + KONTROLLÜ SİL/GERİ AL (2026-07-19, Product Owner kararı): önceden
+// tahsil_edildi/ciro_edildi durumlarında HİÇBİR aksiyon yoktu (kullanıcı test/veri hatasını asla
+// düzeltemiyordu, sadece "Detay" görüyordu). Artık bu iki durumda TEK aksiyon var: "İşlemi Geri
+// Al" (checks_notes_reopen()) — kaydı 'portfoyde'ye döndürür, o AN Düzenle/Tahsil/Ciro/Sil yeniden
+// görünür olur (zincir: Geri Al → Düzenle/Sil, alanlar asla final işlem üzerinden sessizce
+// değiştirilmez). karsiliksiz/iptal BİLİNÇLİ OLARAK bu kapsamın DIŞINDA bırakıldı (Product Owner'ın
+// bu turda istediği 5 durum: Portföyde/Bekliyor/Ciro Edildi/Tahsil Edildi/Ödendi) — o iki durum
+// zaten checks_notes_can_delete() üzerinden silinebiliyor, yeni epic açılmadı.
 function checks_notes_available_actions($row){
-    if(($row['status'] ?? '') !== 'portfoyde') return [];
-    return $row['direction']==='verilen' ? ['ode','duzenle','iptal'] : ['tahsil','ciro','karsiliksiz','duzenle','iptal'];
+    $status = $row['status'] ?? '';
+    if($status === 'portfoyde'){
+        return $row['direction']==='verilen' ? ['ode','duzenle','iptal'] : ['tahsil','ciro','karsiliksiz','duzenle','iptal'];
+    }
+    if(in_array($status, ['tahsil_edildi','ciro_edildi'], true)) return ['reopen'];
+    return [];
 }
 
 // Silme SADECE finansal olarak "dokunulmamış" kayıtlarda mümkün — tahsil edilmiş/ödenmiş/ciro
@@ -566,6 +577,61 @@ function checks_notes_cancel($pdo, $userId, $id, $reason=''){
             ->execute([date('Y-m-d'),trim((string)$reason),$id]);
         checks_notes_sync_task_status($pdo, $row['task_id'] ?? null, 'iptal');
         if(function_exists('audit_log')) audit_log($userId,'update','checks_notes',$id,['status'=>$row['status']],['status'=>'iptal']);
+        if($ownsTx) $pdo->commit();
+    }catch(Throwable $e){
+        if($ownsTx) $pdo->rollBack();
+        throw $e;
+    }
+}
+
+/**
+ * İŞLEMİ GERİ AL (2026-07-19, Product Owner kararı — "kullanıcı test/veri hatasını düzeltebilmeli
+ * ama finansal iz bırakmadan sessiz DELETE yapılamaz") — 'tahsil_edildi' (Tahsil Edildi/Ödendi,
+ * yön farketmez — ikisi de AYNI status değeri) veya 'ciro_edildi' durumundaki bir kaydı
+ * 'portfoyde'ye döndürür, İLGİLİ hareketi tersler:
+ *   - ciro_edildi: ciro_finance_movement_id satırı silinir (hedef tedarikçinin borcu yeniden
+ *     açılır) — checks_notes_endorse() kasa/banka hareketi OLUŞTURMADIĞI için burada da bir hesap
+ *     bakiyesi tersleme YOK.
+ *   - tahsil_edildi: settle_finance_movement_id satırı (gerçek kasa/banka hareketi) hem finans
+ *     hesabı bakiyesinden (finance_movement_reverse_balance()) hem de tablodan silinir.
+ * İKİ DURUMDA DA orijinal kabul hareketi (finance_movement_id — çek alındığında/verildiğinde
+ * carinin borcunu kapatan hareket) HİÇ DOKUNULMAZ: tahsil/ciro zaten cariyi ikinci kez
+ * etkilemiyordu (bkz. checks_notes_collect()/pay()/endorse() docblock'ları), geri alma da aynı
+ * ilkeyi korur — cari kapalı kalır, sadece tahsil/ciro'nun KENDİ hareketi geri alınır.
+ * @throws Exception geçersiz durum veya kayıt yok
+ */
+function checks_notes_reopen($pdo, $userId, $id, $reason=''){
+    checks_notes_require_lifecycle();
+    $id=(int)$id;
+    $row=checks_notes_get($pdo,$id);
+    if(!$row) throw new Exception('Kayıt bulunamadı.');
+    if(!in_array($row['status'] ?? '', ['tahsil_edildi','ciro_edildi'], true)){
+        throw new Exception('Bu kayıt geri alınabilir bir durumda değil.');
+    }
+
+    $ownsTx=!$pdo->inTransaction();
+    if($ownsTx) $pdo->beginTransaction();
+    try{
+        if($row['status']==='ciro_edildi'){
+            if(!empty($row['ciro_finance_movement_id'])){
+                $pdo->prepare("DELETE FROM finance_movements WHERE id=? AND movement_type='cek_senet_ciro'")->execute([$row['ciro_finance_movement_id']]);
+            }
+            $pdo->prepare("UPDATE checks_notes SET status='portfoyde', ciro_contact_id=NULL, ciro_finance_movement_id=NULL, settle_date=NULL, settle_notes=? WHERE id=?")
+                ->execute([trim((string)$reason), $id]);
+        } else { // tahsil_edildi (alınan: "Tahsil Edildi" / verilen: "Ödendi" — aynı status)
+            if(!empty($row['settle_finance_movement_id'])){
+                $fmq=$pdo->prepare("SELECT * FROM finance_movements WHERE id=? AND movement_type='cek_senet_tahsil'");
+                $fmq->execute([$row['settle_finance_movement_id']]);
+                $fmRow=$fmq->fetch();
+                if($fmRow){
+                    finance_movement_reverse_balance($pdo, $fmRow);
+                    $pdo->prepare("DELETE FROM finance_movements WHERE id=?")->execute([$fmRow['id']]);
+                }
+            }
+            $pdo->prepare("UPDATE checks_notes SET status='portfoyde', settle_date=NULL, settle_account_id=NULL, settle_finance_movement_id=NULL, settle_notes=? WHERE id=?")
+                ->execute([trim((string)$reason), $id]);
+        }
+        if(function_exists('audit_log')) audit_log($userId,'update','checks_notes',$id,['status'=>$row['status']],['status'=>'portfoyde','reopen_reason'=>trim((string)$reason)]);
         if($ownsTx) $pdo->commit();
     }catch(Throwable $e){
         if($ownsTx) $pdo->rollBack();
