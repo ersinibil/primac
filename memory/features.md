@@ -2,6 +2,14 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
+## feat: P0 Tahsilat/Ödeme UX + çek/senet entegrasyonu (2026-07-18, commit 1aafe7d)
+finance_new.php + mobile/collection.php + mobile/payment.php: Yöntem=Çek/Senet seçilince artık
+kasa/banka hesabı sorulmuyor, kayıt checks_notes_lib.php'nin TEK kaynağına (checks_notes_create()/
+checks_notes_endorse()) gidiyor — önceden mobilde Çek/Senet sessizce "Diğer" hesabına yazılıp
+YANLIŞ bir kasa/banka hareketi üretiyordu, bu düzeltildi. Ödeme+Çek/Senet'te "Kendi çekimizi ver"
+/"Portföydeki çeki ciro et" ayrımı var. Cari seçim listesi Tahsilat'ta Müşteriler/Ödeme'de
+Tedarikçiler varsayılan, "Tüm Cariler" bir tık uzakta (cari modeli değişmedi, sadece filtre).
+
 ## fix+feat: MOBİL SHELL/NAV KAPANIŞI (2026-07-18, commit c215360..2dabae1)
 Gerçek cihaz testinde bulunan "sistematik shell/navigation sorunları" denetimi. Sonuç: çoğu madde
 bu oturumun ÖNCEKİ turlarında zaten çözülmüştü (mekanik tarama ile doğrulandı, gereksiz tekrar
