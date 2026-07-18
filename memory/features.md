@@ -2,6 +2,22 @@
 
 <!-- En yeni en üstte. Tamamlanan özellikler ve mimari kararlar. -->
 
+## fix: P0 MOBİL NAV/TEMA — 3. tur, sağlamlaştırma + Ayarlar toplanması (2026-07-18, commit f2eff0d)
+Önceki turun composer konumlandırması (--acans-navh, JS ile ölçülüp yazılan CSS custom property)
+gerçek cihazda kırılgan olabilirdi (timing) — SABİT `calc(70px + env(safe-area-inset-bottom))`'a
+geçirildi, JS ölçüm bağımlılığı kaldırıldı. Geri buton artık THY-tarzı: Ana/İş/Cari/İletişim
+(liste)/Menü(kök) — alt bar ana navigasyon olduğu 5 kök ekranda TAMAMEN gizli (merkezi
+common.php::botx() kuralı), detay ekranlarında bağlamsal ("‹ Sohbetler" vb.). **Tema kalıcılığı
+kök nedeni bulundu:** `user_preferences` tablosu (migration 044) yoksa `user_pref_set()` sessizce
+no-op oluyordu — kaydedildi denip aslında hiç yazılmıyordu. `user_prefs_table_ready()` guard'ı +
+`ajax_nav_prefs.php`'nin `set_theme` action'ı artık migration eksikse AÇIK hata veriyor, JS de
+fetch yanıtını kontrol edip gösteriyor (sessiz "kaydedildi" yalanı YOK). Menü ekranı: Görünüm/
+Bildirim/Profil/Web Sürümü/Çıkış artık dağınık "Genel" + kapalı `<details>` değil, Menü'nün EN
+ÜSTÜNDE tek satırlık "⚙️ Ayarlar" girişi altında ayrı bir ekranda (`more.php?open=ayarlar`).
+**Açık:** primac.tr'de migration 044'ün gerçekten çalıştırılıp çalıştırılmadığı hâlâ doğrulanmadı —
+çalıştırılmamışsa tema kaydı artık en azından AÇIKÇA başarısız olduğunu söyler, sessizce yanlış
+"kaydedildi" göstermez.
+
 ## fix: P0 MOBİL SHELL 2. REGRESYON — service worker stale cache kök nedeni (2026-07-18, commit 81de59a)
 İlk shell düzeltmesi (21f23d0: chat-mode artık .df-m-bottomnav'ı gizlemiyor) gerçek cihazda hâlâ
 FAIL verdi, route bazlı TUTARSIZ (İşler'de nav var, Menü/İletişim Merkezi/WhatsApp'ta yok) — bu
