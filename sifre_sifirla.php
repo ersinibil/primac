@@ -235,35 +235,38 @@ $show_code = $_SESSION['reset_show_code'] ?? null; // yalnızca WA/mail yoksa
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title><?=h($app_name)?> — Şifremi Unuttum</title>
+<?php ds_styles(); ?>
 <style>
+/* Girişsiz auth akışı — index.php'deki aynı desen: app shell yok, ama tüm renkler DS token'larından
+   (var(--df-*)) geliyor (P0 Legacy UI Temizliği, 2026-07-18). Class isimleri/yapı DEĞİŞMEDİ. */
 *{box-sizing:border-box}
 body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
      background:linear-gradient(135deg,#071326,#10233f);
-     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:#101828}
-.card{width:440px;max-width:94vw;background:#fff;border-radius:24px;padding:32px;
+     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:var(--df-ink-900)}
+.card{width:440px;max-width:94vw;background:var(--df-surface);border-radius:var(--df-radius-lg);padding:32px;
       box-shadow:0 30px 80px rgba(0,0,0,.28)}
-.logo{width:56px;height:56px;border-radius:16px;background:#fff;overflow:hidden;
+.logo{width:56px;height:56px;border-radius:var(--df-radius-md);background:#fff;overflow:hidden;
       padding:6px;display:flex;align-items:center;justify-content:center;margin-bottom:14px}
 .logo img{width:100%;height:100%;object-fit:contain}
 h1{margin:0 0 6px;font-size:26px}
-.muted{color:#667085;margin-bottom:24px;font-size:14px}
+.muted{color:var(--df-ink-500);margin-bottom:24px;font-size:14px}
 label{display:block;font-weight:700;margin:14px 0 6px;font-size:14px}
 input[type=text],input[type=email],input[type=password]{
-  width:100%;border:1.5px solid #d0d5dd;border-radius:12px;
-  padding:12px 14px;font-size:15px;outline:none}
-input:focus{border-color:#4f46e5}
-.btn{display:block;width:100%;border:0;border-radius:12px;
-     background:#111827;color:#fff;padding:13px;margin-top:16px;
+  width:100%;border:1.5px solid var(--df-hairline);border-radius:var(--df-radius-md);
+  padding:12px 14px;font-size:15px;outline:none;background:var(--df-surface);color:var(--df-ink-900)}
+input:focus{border-color:var(--df-accent)}
+.btn{display:block;width:100%;border:0;border-radius:var(--df-radius-md);
+     background:var(--df-accent);color:var(--df-accent-ink);padding:13px;margin-top:16px;
      font-weight:700;font-size:15px;cursor:pointer}
-.btn:hover{background:#1f2937}
-.btn-link{background:none;border:none;color:#4f46e5;cursor:pointer;
+.btn:hover{background:var(--df-accent-hover)}
+.btn-link{background:none;border:none;color:var(--df-accent);cursor:pointer;
           font-size:13px;padding:0;text-decoration:underline;margin-top:12px}
-.alert{background:#fee2e2;color:#991b1b;padding:12px 16px;border-radius:10px;margin:14px 0;font-size:14px}
-.notice{background:#dcfce7;color:#14532d;padding:12px 16px;border-radius:10px;margin:14px 0;font-size:14px}
-.warn{background:#fef9c3;color:#713f12;padding:12px 16px;border-radius:10px;margin:14px 0;font-size:14px}
-.back{display:inline-block;margin-top:16px;font-size:13px;color:#4f46e5;text-decoration:none}
-.step{font-size:12px;color:#9ca3af;margin-bottom:4px;letter-spacing:.5px;text-transform:uppercase}
-hr{border:none;border-top:1px solid #f1f5f9;margin:18px 0}
+.alert{background:var(--df-danger-soft);color:var(--df-danger-ink);padding:12px 16px;border-radius:var(--df-radius-md);margin:14px 0;font-size:14px}
+.notice{background:var(--df-success-soft);color:var(--df-success-ink);padding:12px 16px;border-radius:var(--df-radius-md);margin:14px 0;font-size:14px}
+.warn{background:var(--df-warning-soft);color:var(--df-warning-ink);padding:12px 16px;border-radius:var(--df-radius-md);margin:14px 0;font-size:14px}
+.back{display:inline-block;margin-top:16px;font-size:13px;color:var(--df-accent);text-decoration:none}
+.step{font-size:12px;color:var(--df-ink-300);margin-bottom:4px;letter-spacing:.5px;text-transform:uppercase}
+hr{border:none;border-top:1px solid var(--df-hairline);margin:18px 0}
 </style>
 </head>
 <body>
