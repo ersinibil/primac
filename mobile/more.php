@@ -3,9 +3,15 @@ $pdo=db();
 // P0 MOBİL SHELL KAPANIŞI (2026-07-18): kategori seviyesindeyken başlık + geri hedefi kategoriye
 // göre değişir (Menü'ye deterministik döner) — topx() bu yüzden $__openCat çözüldükten SONRA
 // çağrılıyor (nav_lib.php zaten common.php→boot.php zinciriyle yüklü).
+// P0 MOBİL UX (2026-07-18, Product Owner kararı 2. madde) — "Ayarlar" (Görünüm/Bildirim/Profil)
+// gerçek bir kategori DEĞİL (nav_category_keys() 5 iş kategorisiyle karışmasın diye) — açık
+// bir sözde-kategori olarak ayrı tutuluyor, aynı ?open= parametresini paylaşıyor (ikinci bir
+// URL şeması İCAT EDİLMEDİ).
 $__openCatTitle = $_GET['open'] ?? '';
-if(!in_array($__openCatTitle, nav_category_keys(), true)) $__openCatTitle='';
-topx($__openCatTitle!=='' ? nav_category_label($__openCatTitle) : 'Menü', $__openCatTitle!=='' ? 'more.php' : null);
+$__isSettings = ($__openCatTitle === 'ayarlar');
+if(!$__isSettings && !in_array($__openCatTitle, nav_category_keys(), true)) $__openCatTitle='';
+$__pageTitle = $__isSettings ? 'Ayarlar' : ($__openCatTitle!=='' ? nav_category_label($__openCatTitle) : 'Menü');
+topx($__pageTitle, ($__isSettings || $__openCatTitle!=='') ? 'more.php' : null, 'Menü');
 /* NAV-001B (2026-07-16) — Product Owner kararı: "Diğer kullanıcıların mevcut web VE MOBİL
  * deneyimi birebir korunacaktır" — bu dosya da $__navMode'a göre iki yola ayrılıyor.
  * legacy: ORİJİNAL renkli-kart menü listesi birebir korunur (aşağıda, değişmedi).
@@ -171,8 +177,67 @@ $__openCat = $__openCatTitle;
 $__icBadgeM = unread_msg() + unread_notif();
 ?>
 
-<?php if($__openCat===''): ?>
-<!-- SEVİYE 1: büyük kategori kutuları -->
+<?php if($__isSettings): ?>
+<!-- AYARLAR (P0 MOBİL UX, 2026-07-18, Product Owner kararı 2-3. madde) — Görünüm/Bildirim/Profil
+     kişisel uygulama ayarları artık İş kategorileriyle karışmıyor, uzun listenin dibinde
+     kaybolmuyor: Menü'nün en üstünde TEK satırlık kompakt bir giriş noktasından buraya geliniyor. -->
+<div class="df-panel">
+  <b style="display:block;margin-bottom:10px">Görünüm</b>
+  <div class="df-tabs" id="themePicker">
+    <button type="button" class="df-tab<?=$__mobTheme==='system'?' df-tab--active':''?>" data-theme="system" onclick="setMobileTheme(this,'system')">Sistem</button>
+    <button type="button" class="df-tab<?=$__mobTheme==='light'?' df-tab--active':''?>" data-theme="light" onclick="setMobileTheme(this,'light')">Açık</button>
+    <button type="button" class="df-tab<?=$__mobTheme==='dark'?' df-tab--active':''?>" data-theme="dark" onclick="setMobileTheme(this,'dark')">Koyu</button>
+  </div>
+  <p class="small" style="margin-top:8px" id="themeStatus">Sistem: telefonun açık/koyu ayarını takip eder.</p>
+</div>
+<script>
+// P0 MOBİL TEMA KALICILIĞI REGRESYONU (2026-07-18, Product Owner kararı) — ÖNCEDEN fetch()'in
+// sonucu hiç kontrol edilmiyordu: kayıt sessizce başarısız olsa bile kullanıcı sadece o an
+// client-side boyanan ekranı görüyordu, bir sonraki sayfada her zaman eski değere dönüyordu.
+// Artık başarı/hata AÇIKÇA gösteriliyor — "kaydedildi" sessizce YALANLANMIYOR. Sunucu (data-theme
+// attribute'u topx()'ün HER render'ında $__mobTheme'den TAZE okunur) TEK doğruluk kaynağı;
+// buradaki document.documentElement ataması sadece bu SAYFADA anlık geri bildirim için.
+function setMobileTheme(btn,theme){
+  var status=document.getElementById('themeStatus');
+  if(theme==='system') document.documentElement.removeAttribute('data-theme');
+  else document.documentElement.setAttribute('data-theme',theme);
+  document.querySelectorAll('#themePicker .df-tab').forEach(function(b){ b.classList.toggle('df-tab--active', b===btn); });
+  status.textContent='Kaydediliyor…'; status.style.color='';
+  fetch('../ajax_nav_prefs.php',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded','X-CSRF-Token':window.CSRF_TOKEN},
+    body:'action=set_theme&theme='+encodeURIComponent(theme)+'&csrf_token='+encodeURIComponent(window.CSRF_TOKEN)})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d && d.ok){ status.textContent='Kaydedildi — tüm ekranlarda kalıcı.'; status.style.color='var(--df-success-ink,#4ade80)'; }
+      else { status.textContent='⚠️ '+((d&&d.message)||'Kaydedilemedi.'); status.style.color='var(--df-danger-ink,#f87171)'; }
+    })
+    .catch(function(){ status.textContent='⚠️ Bağlantı hatası — kaydedilemedi, tekrar deneyin.'; status.style.color='var(--df-danger-ink,#f87171)'; });
+}
+</script>
+
+<div class="df-panel" style="margin-top:12px;padding:6px">
+  <a class="df-nav-row" href="profile.php">Profil / Şifre</a>
+  <a class="df-nav-row" href="push_enable.php">Bildirim Ayarları (Push Kur/Test)</a>
+  <a class="df-nav-row" href="../dashboard.php?web=1">Web Sürümü (Masaüstü)</a>
+  <a class="df-nav-row" href="../logout.php">Çıkış Yap</a>
+</div>
+
+<?php if(user_can('users')): ?>
+<div class="df-panel" style="text-align:center;margin-top:12px">
+  <b>🔔 Bildirim & Ses (Test)</b>
+  <p class="small" style="margin-top:4px">Sadece yöneticiler görür — geliştirme/teşhis amaçlıdır.</p>
+  <button class="df-btn df-btn--primary" style="width:100%;margin-top:8px" onclick="var m=window.ACANS_TEST?ACANS_TEST():'hazır değil';document.getElementById('tres').textContent=m;">Bildirimleri Aç / Test Et</button>
+  <p id="tres" class="small" style="margin-top:8px;color:#4ade80"></p>
+</div>
+<?php endif; ?>
+
+<?php elseif($__openCat===''): ?>
+<!-- SEVİYE 1: kompakt Ayarlar girişi (en üstte, aramanın hemen altında) + büyük kategori kutuları -->
+<a class="df-panel" href="more.php?open=ayarlar" style="display:flex;align-items:center;gap:12px;margin-bottom:14px;text-decoration:none;color:inherit">
+  <span style="flex:0 0 auto;width:44px;height:44px;border-radius:var(--df-radius-md);background:var(--df-surface-sunken);display:flex;align-items:center;justify-content:center"><?=ds_icon('settings',22)?></span>
+  <div style="flex:1;min-width:0"><b>Ayarlar</b><div class="small">Görünüm · Bildirim · Profil</div></div>
+  <?=ds_icon('chevron-right',18)?>
+</a>
+
 <a class="df-panel" href="messages.php" style="display:flex;align-items:center;gap:12px;margin-bottom:10px;text-decoration:none;color:inherit">
   <span style="flex:0 0 auto;width:44px;height:44px;border-radius:var(--df-radius-md);background:var(--df-surface-sunken);display:flex;align-items:center;justify-content:center"><?=ds_icon('chat',22)?></span>
   <div style="flex:1;min-width:0"><b>İletişim Merkezi</b><div class="small">Sohbetler · WhatsApp · Bildirimler · Talepler · Duyurular</div></div>
@@ -197,44 +262,13 @@ $__icBadgeM = unread_msg() + unread_notif();
 </a>
 <?php endforeach; ?>
 
-<div style="font-weight:900;margin:18px 4px 8px">Genel</div>
-<div class="df-panel" style="padding:6px">
-  <a class="df-nav-row" href="profile.php">Profil / Şifre</a>
-  <a class="df-nav-row" href="../dashboard.php?web=1">Web Sürümü (Masaüstü)</a>
-  <?php if(user_can('users')): ?><a class="df-nav-row" href="push_enable.php">Bildirim Kur (Push)</a><?php endif; ?>
-  <a class="df-nav-row" href="../logout.php">Çıkış Yap</a>
-</div>
-
-<!-- P0 MOBİL SHELL USER TEST REGRESYONU (2026-07-18, Product Owner kararı 5. madde) — Mobil Tema:
-     Sistem/Açık/Koyu. <details> varsayılan KAPALI (ekranı gereksiz uzatmasın) — sade, tek satırlık
-     bir kontrol. Saat bazlı otomatik geçiş YOK; mevcut ajax_nav_prefs.php'nin AYNI pref-kaydetme
-     ucuna (set_theme action) yazar, ikinci bir kaydetme mekanizması İCAT EDİLMEDİ. -->
-<details class="df-panel" style="margin-top:10px;padding:10px 12px">
-  <summary style="font-weight:700;cursor:pointer">Görünüm</summary>
-  <div style="margin-top:10px">
-    <div class="df-tabs" id="themePicker">
-      <button type="button" class="df-tab<?=$__mobTheme==='system'?' df-tab--active':''?>" data-theme="system" onclick="setMobileTheme(this,'system')">Sistem</button>
-      <button type="button" class="df-tab<?=$__mobTheme==='light'?' df-tab--active':''?>" data-theme="light" onclick="setMobileTheme(this,'light')">Açık</button>
-      <button type="button" class="df-tab<?=$__mobTheme==='dark'?' df-tab--active':''?>" data-theme="dark" onclick="setMobileTheme(this,'dark')">Koyu</button>
-    </div>
-    <p class="small" style="margin-top:8px">Sistem: telefonun açık/koyu ayarını takip eder.</p>
-  </div>
-</details>
-<script>
-function setMobileTheme(btn,theme){
-  if(theme==='system') document.documentElement.removeAttribute('data-theme');
-  else document.documentElement.setAttribute('data-theme',theme);
-  document.querySelectorAll('#themePicker .df-tab').forEach(function(b){ b.classList.toggle('df-tab--active', b===btn); });
-  fetch('../ajax_nav_prefs.php',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded','X-CSRF-Token':window.CSRF_TOKEN},
-    body:'action=set_theme&theme='+encodeURIComponent(theme)+'&csrf_token='+encodeURIComponent(window.CSRF_TOKEN)});
-}
-</script>
-
 <?php else:
     $__catItems = nav_items_for_category($__canSee, $isAdmin, $__openCat, 'mobile');
 ?>
-<!-- SEVİYE 2: kategori içi aksiyonlar -->
-<a href="more.php" style="display:inline-flex;align-items:center;gap:4px;color:var(--df-ink-500);text-decoration:none;font-weight:700;margin-bottom:12px"><span style="display:inline-flex;transform:rotate(180deg)"><?=ds_icon('chevron-right',16)?></span> Menü</a>
+<!-- SEVİYE 2: kategori içi aksiyonlar — geri dönüş TEK yerden: topbar'ın ‹ Menü butonu
+     ($backUrl='more.php', bkz. dosya başı) — burada İKİNCİ bir "‹ Menü" linki YAZILMADI
+     (P0 MOBİL NAVİGASYON, 2026-07-18: "Menü içinde gereksiz ikinci navigasyon/geri karmaşası
+     oluşturma"). -->
 <h2 style="margin:0 0 12px;display:flex;align-items:center;gap:10px"><?=ds_icon($__catIconMapM[$__openCat] ?? 'menu', 22)?> <?=h(nav_category_label($__openCat))?></h2>
 <?php if(!$__catItems): ?>
 <?php ds_empty_state('Bu kategoride yetkili aksiyon yok.'); ?>
@@ -245,15 +279,6 @@ function setMobileTheme(btn,theme){
 <?php endforeach; ?>
 </div>
 <?php endif; ?>
-<?php endif; ?>
-
-<?php if(user_can('users')): ?>
-<div class="df-panel" style="text-align:center;margin-top:14px">
-  <b>🔔 Bildirim & Ses (Test)</b>
-  <p class="small" style="margin-top:4px">Sadece yöneticiler görür — geliştirme/teşhis amaçlıdır.</p>
-  <button class="df-btn df-btn--primary" style="width:100%;margin-top:8px" onclick="var m=window.ACANS_TEST?ACANS_TEST():'hazır değil';document.getElementById('tres').textContent=m;">Bildirimleri Aç / Test Et</button>
-  <p id="tres" class="small" style="margin-top:8px;color:#4ade80"></p>
-</div>
 <?php endif; ?>
 <?php endif; ?>
 <?php botx(); ?>

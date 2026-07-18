@@ -4,6 +4,21 @@
  * Kartları'nın iç sırası) ve 'dashboard_section_order' (Komuta Merkezi sayfasındaki ana bölümlerin
  * sırası) anahtarları kullanılıyor — ikisi birbirinden bağımsız. */
 
+// P0 MOBİL TEMA KALICILIĞI REGRESYONU (2026-07-18) — cpa_alloc_tables_ready()/checks_notes_
+// lifecycle_ready() ile AYNI desen: user_preferences (migration 044) çalıştırılmamışsa
+// user_pref_set()/get() ÖNCEDEN sessizce no-op oluyordu (try/catch Throwable hepsini yutuyordu) —
+// kullanıcı "Açık" seçiyor, o AN client-side JS ile ekranı boyuyor ama kayıt hiç DB'ye yazılamıyor,
+// bir sonraki sayfa yüklemesinde her zaman varsayılana (Sistem) dönüyordu — SESSİZCE. Artık
+// çağıran taraf (ajax_nav_prefs.php) bu durumu ayırt edip AÇIK bir hata gösterebiliyor.
+function user_prefs_table_ready($pdo){
+    static $ready = null;
+    if($ready === null){
+        try{ $ready = (bool)$pdo->query("SHOW TABLES LIKE 'user_preferences'")->fetch(); }
+        catch(Throwable $e){ $ready = false; }
+    }
+    return $ready;
+}
+
 function user_pref_get($pdo, $userId, $key, $default = null) {
     try {
         $st = $pdo->prepare("SELECT pref_value FROM user_preferences WHERE user_id=? AND pref_key=?");

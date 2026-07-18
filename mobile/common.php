@@ -109,25 +109,21 @@ function botx(){
 <div class="bottom"><div class="nav"><a href="index.php"><span>🏠</span>Ana</a><?php if($__showJobs): ?><a href="jobs.php"><span>📋</span>İş</a><?php endif; ?><?php if($__showContacts): ?><a href="contacts.php"><span>👥</span>Cari</a><?php endif; ?><a href="messages.php"><span>💬</span>Mesaj<?=$mb?></a><a href="more.php"><span>☰</span>Menü</a></div></div>
 <?php endif; ?>
 <script>
-/* Ana sayfada geri butonunu gizle */
-(function(){var b=document.getElementById('backbtn');if(b&&(/(^|\/)index\.php$/.test(location.pathname)||/\/mobile\/?$/.test(location.pathname)))b.style.display='none';})();
-
-/* P0 MOBİL SHELL USER TEST REGRESYONU (2026-07-18) — bottom nav'ın GERÇEK render edilmiş
-   yüksekliğini (safe-area dahil) ölçüp --acans-navh custom property'sine yazar. Sabit piksel
-   İCAT EDİLMEDİ — composer (messages.php/wa_conversation_view.php) bu değeri kullanarak nav'ın
-   TAM üstüne oturur, cihazdan cihaza (safe-area farkı) kırılmaz. Nav gizliyken (klavye açık,
-   body.kb) 0 yazılır ki composer o an nav'ın "hayalet" boşluğunu bırakmasın. */
+/* P0 MOBİL NAVİGASYON (2026-07-18, Product Owner kararı — THY benzeri mobil mantık) — alt bar
+   ANA navigasyondur: Ana/İş/Cari/İletişim/Menü'nün KÖK ekranlarında (henüz bir detaya inilmemişse)
+   geri butonu ANLAMSIZDIR, kullanıcı zaten alt bardan yön değiştirebiliyor — bu 5 kök ekranda geri
+   buton TAMAMEN gizlenir. Detay ekranlarına inildiğinde (messages.php?with=/thread=, more.php?open=,
+   kişi/personel/belge detayları vb.) topx()'e $backUrl/$backLabel verilir, o zaman geri buton
+   bağlamsal metinle (‹ Sohbetler, ‹ WhatsApp...) görünür. Merkezi TEK kural — sayfa sayfa hack YOK. */
 (function(){
-  function syncNavHeight(){
-    var nav=document.querySelector('.df-m-bottomnav')||document.querySelector('.bottom');
-    var h=(nav && getComputedStyle(nav).display!=='none') ? nav.offsetHeight : 0;
-    document.documentElement.style.setProperty('--acans-navh', h+'px');
-  }
-  syncNavHeight();
-  window.addEventListener('resize', syncNavHeight);
-  window.addEventListener('orientationchange', function(){ setTimeout(syncNavHeight,150); });
-  document.addEventListener('focusin', function(){ setTimeout(syncNavHeight,50); });
-  document.addEventListener('focusout', function(){ setTimeout(syncNavHeight,200); });
+  var b=document.getElementById('backbtn'); if(!b) return;
+  var p=location.pathname, q=location.search;
+  var isRootTab = /(^|\/)index\.php$/.test(p) || /\/mobile\/?$/.test(p)
+    || /(^|\/)jobs\.php$/.test(p)
+    || /(^|\/)contacts\.php$/.test(p)
+    || (/(^|\/)messages\.php$/.test(p) && !/[?&](with|thread)=/.test(q))
+    || (/(^|\/)more\.php$/.test(p) && !/[?&]open=/.test(q));
+  if(isRootTab) b.style.display='none';
 })();
 
 /* Offline banner — sinyal durumunu göster */

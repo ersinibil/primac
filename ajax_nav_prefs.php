@@ -51,7 +51,17 @@ try {
         if (!in_array($theme, ['system', 'light', 'dark'], true)) {
             throw new Exception('Geçersiz tema.');
         }
-        user_pref_set(db(), $userId, 'mobile_theme', $theme);
+        // P0 MOBİL TEMA KALICILIĞI REGRESYONU (2026-07-18) — user_preferences (migration 044)
+        // çalıştırılmamışsa user_pref_set() ÖNCEDEN sessizce başarısız oluyordu: kullanıcı "Açık"
+        // seçiyor, o an ekran boyanıyor ama hiçbir sayfa geçişinde kalıcı olmuyordu — SESSİZCE.
+        // Artık açık, anlaşılır bir hata dönüyor (kod değişikliği değil, migrate.php gerektiren
+        // bir altyapı eksikliği — sessizce "kaydedildi" DENMEZ).
+        if (!user_prefs_table_ready(db())) {
+            throw new Exception('Tema tercihi kaydedilemedi: user_preferences tablosu yok (migration 044 çalıştırılmamış). Yönetici migrate.php\'yi çalıştırmalı.');
+        }
+        if (!user_pref_set(db(), $userId, 'mobile_theme', $theme)) {
+            throw new Exception('Tema tercihi kaydedilemedi (veritabanı hatası).');
+        }
         echo json_encode(['ok' => true, 'message' => 'Tema kaydedildi.']);
         exit;
     }
