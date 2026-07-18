@@ -205,6 +205,31 @@ $__icBadgeM = unread_msg() + unread_notif();
   <a class="df-nav-row" href="../logout.php">Çıkış Yap</a>
 </div>
 
+<!-- P0 MOBİL SHELL USER TEST REGRESYONU (2026-07-18, Product Owner kararı 5. madde) — Mobil Tema:
+     Sistem/Açık/Koyu. <details> varsayılan KAPALI (ekranı gereksiz uzatmasın) — sade, tek satırlık
+     bir kontrol. Saat bazlı otomatik geçiş YOK; mevcut ajax_nav_prefs.php'nin AYNI pref-kaydetme
+     ucuna (set_theme action) yazar, ikinci bir kaydetme mekanizması İCAT EDİLMEDİ. -->
+<details class="df-panel" style="margin-top:10px;padding:10px 12px">
+  <summary style="font-weight:700;cursor:pointer">Görünüm</summary>
+  <div style="margin-top:10px">
+    <div class="df-tabs" id="themePicker">
+      <button type="button" class="df-tab<?=$__mobTheme==='system'?' df-tab--active':''?>" data-theme="system" onclick="setMobileTheme(this,'system')">Sistem</button>
+      <button type="button" class="df-tab<?=$__mobTheme==='light'?' df-tab--active':''?>" data-theme="light" onclick="setMobileTheme(this,'light')">Açık</button>
+      <button type="button" class="df-tab<?=$__mobTheme==='dark'?' df-tab--active':''?>" data-theme="dark" onclick="setMobileTheme(this,'dark')">Koyu</button>
+    </div>
+    <p class="small" style="margin-top:8px">Sistem: telefonun açık/koyu ayarını takip eder.</p>
+  </div>
+</details>
+<script>
+function setMobileTheme(btn,theme){
+  if(theme==='system') document.documentElement.removeAttribute('data-theme');
+  else document.documentElement.setAttribute('data-theme',theme);
+  document.querySelectorAll('#themePicker .df-tab').forEach(function(b){ b.classList.toggle('df-tab--active', b===btn); });
+  fetch('../ajax_nav_prefs.php',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded','X-CSRF-Token':window.CSRF_TOKEN},
+    body:'action=set_theme&theme='+encodeURIComponent(theme)+'&csrf_token='+encodeURIComponent(window.CSRF_TOKEN)});
+}
+</script>
+
 <?php else:
     $__catItems = nav_items_for_category($__canSee, $isAdmin, $__openCat, 'mobile');
 ?>

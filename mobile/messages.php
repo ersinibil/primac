@@ -143,7 +143,7 @@ if ($with) {
 
 // P0 MOBİL SHELL KAPANIŞI (2026-07-18): Sohbet/Grup Detayı → İletişim Merkezi (messages.php)
 // listesine deterministik döner, history.back()'e güvenmez (bkz. common.php::topx() notu).
-topx($thread ? 'Grup' : ($with ? 'Sohbet' : 'İletişim Merkezi'), ($thread || $with) ? 'messages.php' : null);
+topx($thread ? 'Grup' : ($with ? 'Sohbet' : 'İletişim Merkezi'), ($thread || $with) ? 'messages.php' : null, 'Sohbetler');
 ?>
 <?php if(!$thread && !$with){ require_once __DIR__.'/../share_lib.php'; ic_tabs('sohbetler'); } ?>
 <style>
@@ -161,14 +161,17 @@ topx($thread ? 'Grup' : ($with ? 'Sohbet' : 'İletişim Merkezi'), ($thread || $
 .bubble small{display:block;font-size:10px;opacity:.6;margin-top:3px;text-align:right}
 .mine{align-self:flex-end;background:#2563eb;border-bottom-right-radius:5px}
 .theirs{align-self:flex-start;background:rgba(255,255,255,.12);border-bottom-left-radius:5px}
-.composer{position:fixed;left:0;right:0;bottom:0;background:#071326;border-top:1px solid rgba(255,255,255,.12);padding:8px 8px calc(8px + env(safe-area-inset-bottom));z-index:1001}
+/* P0 MOBİL SHELL USER TEST REGRESYONU (2026-07-18, Product Owner kararı) — composer artık global
+   bottom nav'ın YERİNİ ALMAZ, nav'ın TAM ÜSTÜNE oturur (bottom:var(--acans-navh), common.php'nin
+   ölçtüğü gerçek nav yüksekliği — bkz. common.php::botx() içindeki syncNavHeight()). */
+.composer{position:fixed;left:0;right:0;bottom:var(--acans-navh,64px);background:#071326;border-top:1px solid rgba(255,255,255,.12);padding:8px 8px 8px;z-index:1001}
 .composer .wrap{max-width:520px;margin:auto;display:flex;gap:8px;align-items:flex-end}
 .composer textarea{flex:1;margin:0;resize:none;max-height:120px}
 .composer button{flex:0 0 auto;width:50px;height:46px;border-radius:14px;font-size:18px}
 .peer-head{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:10px 12px;margin-bottom:10px}
-/* CHAT MODU: composer fixed kalır, JS ile klavyenin tam üstüne pinlenir */
-body.chat-mode{padding-bottom:0}
-body.chat-mode .thread{padding-bottom:88px}
+/* CHAT MODU: composer + nav ikisi de fixed — thread'in alt boşluğu ikisinin toplam yüksekliğini
+   karşılamalı ki son mesaj balonu arkalarında kalmasın. */
+body.chat-mode .thread{padding-bottom:calc(88px + var(--acans-navh,64px))}
 </style>
 <?php
 function avatar_color($id){ $c=['#3b82f6','#22c55e','#f97316','#8b5cf6','#ef4444','#14b8a6','#eab308','#ec4899']; return $c[$id % count($c)]; }
@@ -321,7 +324,7 @@ document.getElementById('msgform').addEventListener('submit',function(e){ e.prev
 // klavye: composer'ı görünür alanın dibine pinle
 var composer=document.querySelector('.composer');
 function pinC(){ if(!composer||!window.visualViewport)return; var v=window.visualViewport; composer.style.top=(v.offsetTop+v.height-composer.offsetHeight)+'px'; composer.style.bottom='auto'; composer.style.paddingBottom='8px'; }
-function unpinC(){ if(!composer)return; composer.style.top='auto'; composer.style.bottom='0'; composer.style.paddingBottom=''; }
+function unpinC(){ if(!composer)return; composer.style.top='auto'; composer.style.bottom='var(--acans-navh,64px)'; composer.style.paddingBottom=''; }
 if(window.visualViewport){ window.visualViewport.addEventListener('resize',function(){pinC();scrollBottom();}); window.visualViewport.addEventListener('scroll',pinC); }
 var ta2=document.querySelector('.composer textarea');
 if(ta2){ ta2.addEventListener('focus',function(){ setTimeout(function(){pinC();scrollBottom();},250); }); ta2.addEventListener('blur',function(){ setTimeout(unpinC,100); }); }
@@ -477,7 +480,7 @@ function pinComposer(){
 }
 function unpinComposer(){
   if(!composer) return;
-  composer.style.top='auto'; composer.style.bottom='0';
+  composer.style.top='auto'; composer.style.bottom='var(--acans-navh,64px)';
   composer.style.paddingBottom='';
 }
 if(window.visualViewport){

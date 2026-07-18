@@ -19,7 +19,7 @@ if($goFile!=='' && strpos($go,'../')!==0 && !file_exists(__DIR__.'/'.$goFile) &&
 
 // P0 MOBİL SHELL KAPANIŞI (2026-07-18): Bildirim Detayı → Bildirimler listesine deterministik
 // döner (bkz. common.php::topx() notu).
-topx('Bildirim Detayı', 'notifications.php');
+topx('Bildirim Detayı', 'notifications.php', 'Bildirimler');
 ?>
 <div class="df-panel">
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:4px">

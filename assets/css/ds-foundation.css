@@ -209,8 +209,27 @@ body.mobile-shell .ds-table tr:hover td{background:rgba(255,255,255,.06)}
   --df-elevation-flat:var(--df-shadow-none);--df-elevation-raised:var(--df-shadow-sm);
   --df-elevation-floating:var(--df-shadow-md);--df-elevation-modal:var(--df-shadow-lg);
 }
-/* Dark (mobil chrome) yön değişimi — yalnızca ışık yönü tersine dönen token'lar yeniden tanımlanır */
-body.mobile-shell{
+/* P0 MOBİL SHELL USER TEST REGRESYONU (2026-07-18, Product Owner kararı 5. madde) — MOBİL TEMA:
+   Sistem/Açık/Koyu. Önceden body.mobile-shell HER ZAMAN koyu tondu (telefon açık modda olsa
+   bile) — mobilde hiç açık tema YOKTU. Artık: "Sistem" (varsayılan, kullanıcı hiç seçmediyse)
+   prefers-color-scheme:dark medya sorgusuyla telefonun kendi ayarını takip eder (sistem açıksa
+   :root'un ZATEN açık token'ları hiç ezilmeden kalır). "Koyu"yu BİLEREK seçen kullanıcı için
+   html[data-theme="dark"] AYNI token'ları sistem tercihinden bağımsız uygular. "Açık"ı BİLEREK
+   seçen kullanıcı için html[data-theme="light"] — sistem koyu olsa bile :root'un açık
+   değerlerini AÇIKÇA geri yükler (attribute selector özgüllüğü media query'den yüksek olduğu
+   için ekstra bir !important gerekmedi). Saat bazlı otomatik geçiş YOK — sadece bu üç durum. */
+@media (prefers-color-scheme: dark){
+  body.mobile-shell{
+    --df-canvas:#0B1220;--df-surface:#101E38;--df-surface-sunken:rgba(255,255,255,.06);--df-hairline:rgba(255,255,255,.12);
+    --df-ink-900:#F8FAFC;--df-ink-600:#B6C0CE;--df-ink-500:#94A3B8;--df-ink-300:#5C6779;
+    --df-accent-soft:rgba(37,99,235,.20);--df-accent-soft-ink:#8FB1FF;
+    --df-success-soft:rgba(22,163,74,.18);--df-success-ink:#6FE3A0;
+    --df-warning-soft:rgba(245,158,11,.18);--df-warning-ink:#FBBF62;
+    --df-danger-soft:rgba(220,38,38,.18);--df-danger-ink:#FF9C9C;
+    --df-info-soft:rgba(14,165,233,.18);--df-info-ink:#7DD8FF;
+  }
+}
+html[data-theme="dark"] body.mobile-shell{
   --df-canvas:#0B1220;--df-surface:#101E38;--df-surface-sunken:rgba(255,255,255,.06);--df-hairline:rgba(255,255,255,.12);
   --df-ink-900:#F8FAFC;--df-ink-600:#B6C0CE;--df-ink-500:#94A3B8;--df-ink-300:#5C6779;
   --df-accent-soft:rgba(37,99,235,.20);--df-accent-soft-ink:#8FB1FF;
@@ -218,6 +237,15 @@ body.mobile-shell{
   --df-warning-soft:rgba(245,158,11,.18);--df-warning-ink:#FBBF62;
   --df-danger-soft:rgba(220,38,38,.18);--df-danger-ink:#FF9C9C;
   --df-info-soft:rgba(14,165,233,.18);--df-info-ink:#7DD8FF;
+}
+html[data-theme="light"] body.mobile-shell{
+  --df-canvas:#F7F8FA;--df-surface:#FFFFFF;--df-surface-sunken:#F2F4F7;--df-hairline:#E4E7EC;
+  --df-ink-900:#101828;--df-ink-600:#475467;--df-ink-500:#667085;--df-ink-300:#98A2B3;
+  --df-accent-soft:#EFF4FF;--df-accent-soft-ink:#1D4ED8;
+  --df-success-soft:#DCFCE7;--df-success-ink:#166534;
+  --df-warning-soft:#FEF3C7;--df-warning-ink:#92400E;
+  --df-danger-soft:#FEE2E2;--df-danger-ink:#991B1B;
+  --df-info-soft:#E0F2FE;--df-info-ink:#075985;
 }
 @media (prefers-reduced-motion:reduce){
   .df-btn,.df-icon-btn,.df-fab,.df-badge,.df-skel{transition-duration:.01ms!important;animation-duration:.01ms!important}
@@ -796,6 +824,12 @@ body.mob-compact .df-m-topbar{position:sticky;top:0;z-index:50;background:var(--
 body.mob-compact .df-m-topbar-row{display:flex;align-items:center;gap:var(--df-space-3)}
 body.mob-compact .df-m-back{flex:0 0 auto}
 body.mob-compact .df-m-back .df-icon{transform:rotate(180deg)}
+/* P0 MOBİL SHELL USER TEST REGRESYONU (2026-07-18, Product Owner kararı) — geri butonuna görünür
+   bağlamsal etiket ("‹ Sohbetler" gibi) eklenebilsin diye .df-icon-btn'in sabit 38px kare genişliği
+   BU varyantta içeriğe göre büyüyen genişliğe geçiyor — yeni bir buton bileşeni İCAT EDİLMEDİ,
+   sadece .df-m-back'e özel bir genişlik/gap eki. */
+body.mob-compact .df-m-back--labeled{width:auto;padding:0 var(--df-space-2) 0 6px;gap:2px}
+body.mob-compact .df-m-back-label{font-size:var(--df-type-body-size);font-weight:600;white-space:nowrap}
 body.mob-compact .df-m-brand{display:flex;align-items:center;gap:var(--df-space-3);color:var(--df-ink-900);text-decoration:none;min-width:0;flex:1}
 body.mob-compact .df-m-logo{width:42px;height:42px;border-radius:var(--df-radius-md);background:var(--df-surface);flex:0 0 auto;display:flex;align-items:center;justify-content:center;overflow:hidden}
 body.mob-compact .df-m-logo img{width:100%;height:100%;object-fit:contain}
@@ -815,6 +849,13 @@ body.mob-compact .df-m-bottomnav-row{max-width:520px;margin:auto;display:flex;ga
 body.mob-compact .df-m-bottomnav-link{flex:1;min-width:0;position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center;color:var(--df-ink-500);text-decoration:none;font-size:var(--df-type-caption-size);font-weight:650;padding:var(--df-space-2) 2px;border-radius:var(--df-radius-sm)}
 body.mob-compact .df-m-bottomnav-link.is-active{color:var(--df-ink-900)}
 body.mob-compact .df-m-bottomnav-link .df-count-badge{position:absolute;top:0;right:14px}
-body.mob-compact.chat-mode .df-m-bottomnav{display:none}
-body.mob-compact.chat-mode{padding-bottom:0}
+/* P0 MOBİL SHELL USER TEST REGRESYONU (2026-07-18, Product Owner kararı) — "Composer görünse
+   bile global bottom nav kaybolmamalı": chat-mode ARTIK .df-m-bottomnav'ı GİZLEMEZ (önceki turun
+   kararı tersine çevrildi — gerçek cihaz testinde composer'ın nav'ın YERİNİ ALMASI değil, nav'ın
+   ÜSTÜNE binmesi gerektiği doğrulandı). Composer'ın kendi konumu (messages.php/
+   wa_conversation_view.php'deki .composer{bottom:var(--acans-navh,64px)}) nav'ın YÜKSEKLİĞİ kadar
+   yukarı çekilir — common.php::botx() içindeki JS bu yüksekliği ölçüp --acans-navh'a yazar (sabit
+   piksel değeri İCAT EDİLMEDİ, gerçek render edilmiş yükseklik kullanılıyor, safe-area farkı olan
+   cihazlarda da doğru kalır). Klavye açıkken (body.kb) nav'ı GİZLEMEYE devam ediyoruz — bu ayrı,
+   kasıtlı bir davranış (ekran alanı klavyeye ayrılır), chat-mode'un KENDİSİ artık nav'ı gizlemiyor. */
 body.mob-compact.kb .df-m-bottomnav{display:none!important}

@@ -42,6 +42,20 @@ try {
         exit;
     }
 
+    // P0 MOBİL SHELL USER TEST REGRESYONU (2026-07-18, Product Owner kararı 5. madde) — Mobil Tema:
+    // Sistem/Açık/Koyu. Saat bazlı otomatik tema YOK — "Sistem" prefers-color-scheme'i takip eder,
+    // kullanıcı manuel seçerse (Açık/Koyu) kalıcı olur. ajax_nav_prefs.php'nin AYNI pref-kaydetme
+    // deseni (user_pref_set) kullanıldı, ikinci bir kaydetme ucu İCAT EDİLMEDİ.
+    if ($action === 'set_theme') {
+        $theme = $_POST['theme'] ?? '';
+        if (!in_array($theme, ['system', 'light', 'dark'], true)) {
+            throw new Exception('Geçersiz tema.');
+        }
+        user_pref_set(db(), $userId, 'mobile_theme', $theme);
+        echo json_encode(['ok' => true, 'message' => 'Tema kaydedildi.']);
+        exit;
+    }
+
     if ($action === 'reset_pins') {
         user_pref_delete(db(), $userId, $prefKey);
         echo json_encode(['ok' => true, 'message' => 'Sabitlemeler varsayılana döndürüldü.']);

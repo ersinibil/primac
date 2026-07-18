@@ -92,7 +92,7 @@ if($conv && (int)$conv['id']>0){
 
 // P0 MOBİL SHELL KAPANIŞI (2026-07-18): WhatsApp Konuşma Detayı → WhatsApp listesine deterministik
 // döner (bkz. common.php::topx() notu).
-topx($conv['contact_name'] ?? 'Konuşma', 'wa_conversations.php');
+topx($conv['contact_name'] ?? 'Konuşma', 'wa_conversations.php', 'WhatsApp');
 if(!$conv){ echo ds_alert('danger','Konuşma bulunamadı.'); botx(); exit; }
 $lastMsgId = $messages ? (int)end($messages)['id'] : 0;
 ?>
@@ -108,12 +108,13 @@ $lastMsgId = $messages ? (int)end($messages)['id'] : 0;
 .bubble.mine{align-self:flex-end;background:#2563eb;color:#fff;border-bottom-right-radius:5px}
 .bubble.theirs{align-self:flex-start;background:rgba(255,255,255,.12);border-bottom-left-radius:5px}
 .thread{display:flex;flex-direction:column;gap:8px;padding-bottom:8px}
-.composer{position:fixed;left:0;right:0;bottom:0;background:#071326;border-top:1px solid rgba(255,255,255,.12);padding:8px 8px calc(8px + env(safe-area-inset-bottom));z-index:1001}
+/* P0 MOBİL SHELL USER TEST REGRESYONU (2026-07-18, Product Owner kararı) — composer artık global
+   bottom nav'ın YERİNİ ALMAZ, nav'ın TAM ÜSTÜNE oturur (bkz. messages.php'deki AYNI not/mekanizma). */
+.composer{position:fixed;left:0;right:0;bottom:var(--acans-navh,64px);background:#071326;border-top:1px solid rgba(255,255,255,.12);padding:8px 8px 8px;z-index:1001}
 .composer .wrap{max-width:520px;margin:auto;display:flex;gap:8px;align-items:flex-end}
 .composer textarea{flex:1;margin:0;resize:none;max-height:100px}
 .composer button.send{flex:0 0 auto;width:50px;height:46px;border-radius:14px;font-size:18px}
-body.chat-mode{padding-bottom:0}
-body.chat-mode .thread{padding-bottom:88px}
+body.chat-mode .thread{padding-bottom:calc(88px + var(--acans-navh,64px))}
 </style>
 
 <div class="df-panel">
@@ -177,7 +178,7 @@ body.chat-mode .thread{padding-bottom:88px}
   }
   function unpinComposer(){
     if(!composer) return;
-    composer.style.top='auto'; composer.style.bottom='0'; composer.style.paddingBottom='';
+    composer.style.top='auto'; composer.style.bottom='var(--acans-navh,64px)'; composer.style.paddingBottom='';
   }
   if(window.visualViewport){
     window.visualViewport.addEventListener('resize', function(){ pinComposer(); scrollBottom(); });
