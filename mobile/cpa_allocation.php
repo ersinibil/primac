@@ -128,6 +128,9 @@ try{ $customers=$pdo->query("SELECT id,name FROM contacts ORDER BY name")->fetch
   <div style="margin-top:4px;font-weight:800">Kalan: <?=stock_qty_fmt($remaining)?> <?=h($a['unit'])?></div>
   <?php if($a['notes']): ?><div class="df-list-row-desc" style="margin-top:4px"><?=h($a['notes'])?></div><?php endif; ?>
   <?php if($canEdit && $a['status']!=='İptal'): ?>
+  <?php if($remaining>0.0000001): ?>
+  <a class="df-btn df-btn--primary df-btn--lg" style="width:100%;margin-top:10px" href="sales.php?contact_id=<?=(int)$a['customer_id']?>&stock_item_id=<?=(int)$a['stock_item_id']?>&qty=<?=h($remaining)?>">🧾 Sat</a>
+  <?php endif; ?>
   <form method="post" style="display:flex;gap:6px;align-items:center;margin-top:10px">
     <input type="hidden" name="alloc_id" value="<?=(int)$a['id']?>">
     <input type="number" step="0.001" min="0" name="new_qty" value="<?=h($a['allocated_qty'])?>" style="flex:1;margin:0">

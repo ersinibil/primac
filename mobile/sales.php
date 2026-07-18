@@ -170,6 +170,21 @@ topx($isEditView ? 'Satışı Düzenle' : 'Satış Yap');
 <?php
 $cs=$pdo->query("SELECT id,name FROM contacts ORDER BY name")->fetchAll();
 $ps=$pdo->query("SELECT id,name,quantity,unit,sale_price,vat_rate FROM stock_items WHERE COALESCE(active,1)=1 ORDER BY name")->fetchAll();
+
+// P0 CPA KULLANICI AKIŞI (2026-07-18, "satış nereden olacak?" sadeleştirme) — web sales.php ile AYNI
+// GET ön-doldurma ("Müşteriye Ayrılan" ekranlarındaki "🧾 Sat" bağlantısı). $cid zaten dosyanın
+// başında $_GET['contact_id']'den geliyor, burada sadece ürün satırı ekleniyor.
+if(!$stockShortage && !$editMode && !empty($_GET['stock_item_id'])){
+    $__gpid=(int)$_GET['stock_item_id'];
+    $__gprod=null;
+    foreach($ps as $__p){ if((int)$__p['id']===$__gpid){ $__gprod=$__p; break; } }
+    $viewLines[] = [
+        'id'=>$__gpid,
+        'qty'=>(float)($_GET['qty'] ?? 1),
+        'price'=>$__gprod ? (float)$__gprod['sale_price'] : 0,
+        'vat'=>$__gprod && $__gprod['vat_rate']!==null ? (float)$__gprod['vat_rate'] : 20,
+    ];
+}
 ?>
 
 <!-- JS ile dinamik satır eklenen kritik akış — #itemsBody/.row-prod/.row-qty/.row-price/.row-vat/

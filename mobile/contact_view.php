@@ -331,7 +331,10 @@ try{
     </div>
     <small class="df-text-caption">Ayrılan <?=stock_qty_fmt($ar['allocated_qty'])?> · Tüketilen <?=stock_qty_fmt($ar['consumed_qty'])?> · Kalan <b><?=stock_qty_fmt($__remM)?></b></small>
     <?php if(cpa_alloc_can_edit()): ?>
-    <div style="display:flex;gap:6px;margin-top:6px">
+    <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
+      <?php if($ar['status']!=='İptal' && $__remM>0.0000001): ?>
+      <a class="df-btn df-btn--primary df-btn--sm" href="sales.php?contact_id=<?=$id?>&stock_item_id=<?=(int)$ar['stock_item_id']?>&qty=<?=h($__remM)?>">🧾 Sat</a>
+      <?php endif; ?>
       <a class="df-btn df-btn--secondary df-btn--sm" href="cpa_allocation.php?purchase_id=<?=(int)$ar['purchase_movement_id']?>">Yönet</a>
       <?php if($ar['status']!=='İptal'): ?>
       <form method="post" style="margin:0" onsubmit="return confirm('Bu tahsis iptal edilecek. Emin misiniz?')">

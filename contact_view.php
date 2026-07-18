@@ -540,6 +540,9 @@ $__allocRows = cpa_alloc_list_for_customer($pdo, $id, true);
 <td><?=ds_badge($ar['status'])?></td>
 <?php if(cpa_alloc_can_edit()): ?>
 <td class="nowrap">
+<?php if($ar['status']!=='İptal' && $__rem>0.0000001): ?>
+<a class="df-btn df-btn--primary df-btn--sm" href="sales.php?contact_id=<?=$id?>&stock_item_id=<?=(int)$ar['stock_item_id']?>&qty=<?=h($__rem)?>">🧾 Sat</a>
+<?php endif; ?>
 <a class="df-btn df-btn--secondary df-btn--sm" href="cpa_allocation.php?purchase_id=<?=(int)$ar['purchase_movement_id']?>">Yönet</a>
 <?php if($ar['status']!=='İptal'): ?>
 <form method="post" style="display:inline-block;margin:0" onsubmit="return confirm('Bu tahsis iptal edilecek, kalan miktar serbest stoğa dönecek. Emin misiniz?')">

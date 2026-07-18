@@ -244,9 +244,10 @@ $__allocUsage = cpa_alloc_list_for_product($pdo, $id, true);
 <div class="df-stat"><span>Serbest Stok</span><strong style="color:var(--df-success-ink)"><?=stock_qty_fmt($__free['free'])?></strong></div>
 </div>
 <div class="df-table-wrap"><table class="df-table">
-<thead><tr><th>Müşteri</th><th style="text-align:right">Tahsis</th><th style="text-align:right">Tüketilen</th><th style="text-align:right">Kalan</th><th>Durum</th></tr></thead>
+<thead><tr><th>Müşteri</th><th style="text-align:right">Tahsis</th><th style="text-align:right">Tüketilen</th><th style="text-align:right">Kalan</th><th>Durum</th><?php if(cpa_alloc_can_edit()): ?><th></th><?php endif; ?></tr></thead>
 <tbody>
 <?php
+$__canSellAlloc = cpa_alloc_can_edit();
 foreach($__allocUsage as $au){
     $__rem=(float)$au['allocated_qty']-(float)$au['consumed_qty'];
     echo "<tr>";
@@ -255,9 +256,16 @@ foreach($__allocUsage as $au){
     echo "<td style='text-align:right'>".stock_qty_fmt($au['consumed_qty'])."</td>";
     echo "<td style='text-align:right;font-weight:800'>".stock_qty_fmt($__rem)."</td>";
     echo "<td>".ds_badge($au['status'])."</td>";
+    if($__canSellAlloc){
+        echo "<td class='nowrap'>";
+        if($au['status']!=='İptal' && $__rem>0.0000001){
+            echo "<a class='df-btn df-btn--primary df-btn--sm' href='sales.php?contact_id=".(int)$au['customer_id']."&stock_item_id=".$id."&qty=".h($__rem)."'>🧾 Sat</a>";
+        }
+        echo "</td>";
+    }
     echo "</tr>";
 }
-if(!$__allocUsage) echo "<tr><td colspan='5' class='df-muted'>Bu ürün için henüz tahsis yapılmamış.</td></tr>";
+if(!$__allocUsage) echo "<tr><td colspan='".($__canSellAlloc?6:5)."' class='df-muted'>Bu ürün için henüz tahsis yapılmamış.</td></tr>";
 ?>
 </tbody>
 </table></div>

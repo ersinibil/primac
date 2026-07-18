@@ -104,7 +104,7 @@ body.nav-compact .df-stat strong{font-size:var(--df-type-subtitle-size);color:va
 <?php if($__custs): ?>
 <div class="df-muted" style="font-size:12px;margin-top:4px">
 <?php foreach($__custs as $__c): $__rem=(float)$__c['allocated_qty']-(float)$__c['consumed_qty']; ?>
-<div><?=h($__c['customer_name'] ?: '—')?> → <b><?=stock_qty_fmt($__rem)?> <?=h($__l['unit'])?></b><?php if($__c['consumed_qty']>0): ?> <span style="color:var(--df-ink-400)">(tüketilen <?=stock_qty_fmt($__c['consumed_qty'])?>)</span><?php endif; ?></div>
+<div><?=h($__c['customer_name'] ?: '—')?> → <b><?=stock_qty_fmt($__rem)?> <?=h($__l['unit'])?></b><?php if($__c['consumed_qty']>0): ?> <span style="color:var(--df-ink-400)">(tüketilen <?=stock_qty_fmt($__c['consumed_qty'])?>)</span><?php endif; ?><?php if(cpa_alloc_can_edit() && $__rem>0.0000001): ?> <a class="df-btn df-btn--primary df-btn--sm" style="padding:2px 10px;font-size:11px" href="sales.php?contact_id=<?=(int)$__c['customer_id']?>&stock_item_id=<?=(int)$__l['stock_item_id']?>&qty=<?=h($__rem)?>">🧾 Sat</a><?php endif; ?></div>
 <?php endforeach; ?>
 </div>
 <?php endif; ?>

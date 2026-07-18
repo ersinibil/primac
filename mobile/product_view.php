@@ -163,10 +163,15 @@ try{
   <?php if(!$__allocUsageM): ?>
   <p class="muted" style="margin:0">Bu ürün için henüz müşteriye ayrılmamış.</p>
   <?php else: foreach($__allocUsageM as $au): $__remU=(float)$au['allocated_qty']-(float)$au['consumed_qty']; ?>
-  <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-top:1px solid rgba(255,255,255,.08)">
-    <div><a href="contact_view.php?id=<?=(int)$au['customer_id']?>"><?=h($au['customer_name']?:'#'.$au['customer_id'])?></a>
-      <br><small class="muted">Ayrılan <?=stock_qty_fmt($au['allocated_qty'])?> · Kalan <?=stock_qty_fmt($__remU)?></small></div>
-    <?=ds_badge($au['status'])?>
+  <div style="padding:8px 0;border-top:1px solid rgba(255,255,255,.08)">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div><a href="contact_view.php?id=<?=(int)$au['customer_id']?>"><?=h($au['customer_name']?:'#'.$au['customer_id'])?></a>
+        <br><small class="muted">Ayrılan <?=stock_qty_fmt($au['allocated_qty'])?> · Kalan <?=stock_qty_fmt($__remU)?></small></div>
+      <?=ds_badge($au['status'])?>
+    </div>
+    <?php if(cpa_alloc_can_edit() && $au['status']!=='İptal' && $__remU>0.0000001): ?>
+    <a class="df-btn df-btn--primary df-btn--sm" style="margin-top:6px" href="sales.php?contact_id=<?=(int)$au['customer_id']?>&stock_item_id=<?=$id?>&qty=<?=h($__remU)?>">🧾 Sat</a>
+    <?php endif; ?>
   </div>
   <?php endforeach; endif; ?>
 </div>

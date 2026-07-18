@@ -133,6 +133,9 @@ Ayrılan: <?=stock_qty_fmt($a['allocated_qty'])?> <?=h($a['unit'])?> · Tüketil
 </div>
 <?php if($canEdit && $a['status']!=='İptal'): ?>
 <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:var(--df-space-3)">
+<?php if($remaining>0.0000001): ?>
+<a class="df-btn df-btn--primary df-btn--sm" href="sales.php?contact_id=<?=(int)$a['customer_id']?>&stock_item_id=<?=(int)$a['stock_item_id']?>&qty=<?=h($remaining)?>">🧾 Sat</a>
+<?php endif; ?>
 <form method="post" style="display:flex;gap:6px;align-items:center;margin:0">
 <input type="hidden" name="alloc_id" value="<?=(int)$a['id']?>">
 <input type="number" step="0.001" min="0" name="new_qty" value="<?=h($a['allocated_qty'])?>" style="width:110px;margin:0">

@@ -151,6 +151,27 @@ $products  = $pdo->query(
     "SELECT id,name,quantity,unit,sale_price,avg_cost,purchase_price,vat_rate FROM stock_items WHERE COALESCE(active,1)=1 ORDER BY name"
 )->fetchAll();
 
+// P0 CPA KULLANICI AKIŞI (2026-07-18, "satış nereden olacak?" sadeleştirme) — "Müşteriye Ayrılan"
+// ekranlarındaki (contact_view.php/product_view.php/trade_document_view.php/cpa_allocation.php)
+// "🧾 Sat" bağlantısından gelen GET ön-doldurma. YENİ bir satış akışı İCAT EDİLMEDİ — $viewContactId/
+// $viewLines zaten var olan düzenleme/stok-yetersiz ekranıyla AYNI mekanizma, sadece üçüncü bir
+// kaynaktan (GET) besleniyor. $isEditView BİLİNÇLİ olarak false kalıyor — bu bir düzenleme değil,
+// forma önceden doldurulmuş YENİ bir satış.
+if (!$stockShortage && !$editMode && (!empty($_GET['contact_id']) || !empty($_GET['stock_item_id']))) {
+    $viewContactId = (int)($_GET['contact_id'] ?? 0);
+    $__gpid = (int)($_GET['stock_item_id'] ?? 0);
+    if ($__gpid) {
+        $__gprod = null;
+        foreach ($products as $__p) { if ((int)$__p['id'] === $__gpid) { $__gprod = $__p; break; } }
+        $viewLines[] = [
+            'id' => $__gpid,
+            'qty' => (float)($_GET['qty'] ?? 1),
+            'price' => $__gprod ? (float)$__gprod['sale_price'] : 0,
+            'vat' => $__gprod && $__gprod['vat_rate'] !== null ? (float)$__gprod['vat_rate'] : 20,
+        ];
+    }
+}
+
 require_once __DIR__.'/layout_top.php';
 ?>
 
