@@ -4,6 +4,19 @@
  * CV/özgeçmiş dosya eki: database/migrations/036_personnel_cv.sql
  * Desen checks_notes_lib.php::checks_notes_handle_upload() ile birebir aynı (2026-07-03). */
 
+// PERSONEL YÖNETİMİ — TEK MERKEZ/TEK KİŞİ/TEK AKIŞ (2026-07-18): önceden personnel.php'ye özel
+// yerel bir fonksiyondu — personnel_edit.php'nin sabit kimlik başlığı da aynı avatarı kullanacağı
+// için (kişi kartından detaya geçerken aynı görsel kimlik korunsun diye) buraya taşındı. Fotoğraf/
+// photo kolonu şemada yok (bkz. ROADMAP.md), baş harf rozeti bilinçli bir yer tutucu.
+function personnel_initials($name){
+    $name=trim((string)$name);
+    if($name==='') return '?';
+    $parts=preg_split('/\s+/',$name);
+    $ini='';
+    foreach(array_slice($parts,0,2) as $p){ $ini.=mb_substr($p,0,1,'UTF-8'); }
+    return mb_strtoupper($ini,'UTF-8') ?: '?';
+}
+
 // RELEASE 0.9 — PİLOT KULLANIMA HAZIRLIK / Personel-Kullanıcı-Yetki Sadeleştirme (2026-07-17,
 // Product Owner kararı: "Personel oluşturmak veya düzenlemek için farklı ekranlar arasında
 // dolaşılmayacak — tek Personel Yönetimi ekranı"). Admin büyük çoğunlukla bu hazır rollerden birini

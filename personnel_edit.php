@@ -235,19 +235,23 @@ try{
     $financeRows=$fm->fetchAll();
 }catch(Throwable $e){}
 
-// Sekme listesi + geçerli sekme (whitelist — GET parametresinden keyfi değer geçilemez).
+// PERSONEL YÖNETİMİ — TEK MERKEZ/TEK KİŞİ/TEK AKIŞ (2026-07-18, Product Owner kararı): sekme
+// SIRASI artık istenen "GENEL / OTS HESABI & YETKİLER / GÖREVLER / PERFORMANS" iskeletini önce
+// verir — mevcut ek sekmeler (Takvim/Mesajlar/Notlar/Dosyalar/Maaş/Hareket) SİLİNMEDİ (gerçek,
+// zaten çalışan işlevsellik; "paralel ekran" değil, aynı tek merkezi ekranın parçası) ama
+// istenen 4 kavramın ARKASINA değil önüne/arasına düşmesin diye ikincil sırada kalıyor.
 $tabLabels=[
-    'genel'=>'👤 Genel Bilgiler',
-    'gorevler'=>'✅ Görevler',
-    'takvim'=>'📅 Takvim',
-    'mesajlar'=>'💬 Mesajlar',
-    'notlar'=>'📝 Notlar',
+    'genel'=>'👤 Genel',
 ];
-if($hasCvCol) $tabLabels['dosyalar']='📎 Dosyalar';
+if($canManageAccounts) $tabLabels['giris']='🔑 OTS Hesabı & Yetkiler';
+$tabLabels['gorevler']='✅ Görevler';
 $tabLabels['performans']='📈 Performans';
+$tabLabels['takvim']='📅 Takvim';
+$tabLabels['mesajlar']='💬 Mesajlar';
+$tabLabels['notlar']='📝 Notlar';
+if($hasCvCol) $tabLabels['dosyalar']='📎 Dosyalar';
 $tabLabels['maas']='💰 Maaş/Avans/Prim';
 $tabLabels['hareket']='🧾 Hareket Geçmişi';
-if($canManageAccounts) $tabLabels['giris']='🔑 Hesap ve Yetki';
 
 $tab = isset($_GET['tab']) ? (string)$_GET['tab'] : 'genel';
 if(!array_key_exists($tab,$tabLabels)) $tab='genel';
@@ -255,18 +259,34 @@ if(!array_key_exists($tab,$tabLabels)) $tab='genel';
 // RELEASE 0.9 — Personel Ekranları DS Migration (2026-07-17): render katmanı ds_lib.php'ye
 // taşındı, POST/iş mantığı (yukarısı) HİÇ değişmedi. ds_tabs() zaten canlı kanıtlanmış bir
 // bileşen (search.php); df-table ilk kez burada kullanılıyor ama CSS'i tam ve stabil.
-ds_page_header($p['name'], ds_icon('user',24), '', ds_button('Personel Listesi','personnel.php','secondary','','',true).delete_button('personnel',$id), false, true);
+ds_page_header('Personel Detayı', '', '', ds_button('Personel Listesi','personnel.php','secondary','','',true).delete_button('personnel',$id), false, true);
 ?>
 
 <?php if($error): ?><?=ds_alert('danger',$error)?><?php endif; ?>
 <?php if($ok): ?><?=ds_alert('success',$ok)?><?php endif; ?>
 <?php if($waCred): ?><a href="<?=h($waCred)?>" target="_blank" rel="noopener" class="df-btn df-btn--primary" style="background:var(--df-success);margin-bottom:var(--df-space-3)">📲 Giriş bilgisini WhatsApp ile gönder</a><?php endif; ?>
 
+<?php
+// PERSONEL YÖNETİMİ — TEK MERKEZ/TEK KİŞİ/TEK AKIŞ (2026-07-18, Product Owner kararı): "seçilen
+// kişinin kimliği ekranın üstünde SABİT ve çok net görünsün... admin aşağı kaydırırken bile kimin
+// üzerinde işlem yaptığını kaybetmesin." position:sticky ile sekmeler arası geçişte ve sayfa
+// kaydırılırken üstte kalır — hangi sekmede olursa olsun kimlik referansı hiç kaybolmaz.
+?>
+<div class="df-personnel-identity">
+  <div class="df-personnel-identity-avatar"><?=h(personnel_initials($p['name']))?></div>
+  <div class="df-personnel-identity-text">
+    <h1><?=h($p['name'])?></h1>
+    <div class="df-personnel-identity-role"><?=h($p['role'] ?: 'Personel')?> · <?=h($p['work_type'] ?: '-')?></div>
+  </div>
+  <div class="df-personnel-identity-badges">
+    <?=$p['active']?ds_badge('● Aktif','green'):ds_badge('● Pasif','red')?>
+    <?=$staffUserId?ds_badge('OTS: ● Hesap Aktif','green'):ds_badge('OTS: Hesap Yok','gray')?>
+  </div>
+</div>
+
 <div class="df-personnel-statrow">
-<div class="df-personnel-stat"><span>Rol</span><strong><?=h($p['role'] ?: '-')?></strong></div>
-<div class="df-personnel-stat"><span>Çalışma</span><strong><?=h($p['work_type'] ?: '-')?></strong></div>
-<div class="df-personnel-stat"><span>Durum</span><strong><?=$p['active']?ds_badge('Aktif','green'):ds_badge('Pasif','red')?></strong></div>
 <div class="df-personnel-stat"><span>Açık Görev</span><strong><?=safe_count("SELECT COUNT(*) c FROM tasks WHERE personnel_id=".(int)$id." AND status!='Tamamlandı' AND deleted_at IS NULL")?></strong></div>
+<div class="df-personnel-stat"><span>Bugünkü Görev</span><strong><?=safe_count("SELECT COUNT(*) c FROM tasks WHERE personnel_id=".(int)$id." AND due_date=CURDATE() AND deleted_at IS NULL")?></strong></div>
 </div>
 
 <?php
@@ -496,6 +516,12 @@ ds_form_field('Çalışma Tipi', '<select name="work_type">'.$__workOpts.'</sele
 <?php endif; ?>
 
 <style>
+body.nav-compact .df-personnel-identity{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:var(--df-space-3);flex-wrap:wrap;background:var(--df-surface);border:1px solid var(--df-hairline);border-radius:var(--df-radius-lg);box-shadow:var(--df-elevation-raised);padding:var(--df-space-4);margin:var(--df-space-4) 0}
+body.nav-compact .df-personnel-identity-avatar{width:56px;height:56px;border-radius:var(--df-radius-md);background:var(--df-ink-900);color:var(--df-surface);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:20px;flex:0 0 auto}
+body.nav-compact .df-personnel-identity-text{flex:1;min-width:160px}
+body.nav-compact .df-personnel-identity-text h1{margin:0;font-size:20px;font-weight:800;color:var(--df-ink-900)}
+body.nav-compact .df-personnel-identity-role{color:var(--df-ink-500);font-size:var(--df-type-body-size);margin-top:2px}
+body.nav-compact .df-personnel-identity-badges{display:flex;gap:8px;flex-wrap:wrap;flex:0 0 auto}
 body.nav-compact .df-personnel-statrow{display:flex;flex-wrap:wrap;gap:var(--df-space-3);margin:var(--df-space-4) 0}
 body.nav-compact .df-personnel-stat{flex:1;min-width:120px;background:var(--df-surface);border:1px solid var(--df-hairline);border-radius:var(--df-radius-md);padding:var(--df-space-3);display:flex;flex-direction:column;gap:4px}
 body.nav-compact .df-personnel-stat span{font-size:var(--df-type-caption-size);color:var(--df-ink-500)}

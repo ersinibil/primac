@@ -1,6 +1,13 @@
 <?php
 require_once __DIR__.'/boot.php';
 require_permission('users');
+// PERSONEL YÖNETİMİ — TEK MERKEZ/TEK KİŞİ/TEK AKIŞ (2026-07-18, Product Owner kararı): günlük
+// personel/hesap/yetki akışı artık personnel_edit.php'nin "OTS Hesabı & Yetkiler" sekmesinde —
+// bu sayfa artık "Sistem Kullanıcıları" (ikincil/ileri yönetim, toplu WhatsApp gönderimi +
+// bağsız/eski hesap temizliği) olarak SADECE üst admin'e açık. require_permission('users') zaten
+// pratikte bunu sağlıyordu ('users' izni personel rol-preset arayüzünden hiçbir zaman verilemiyor
+// — bkz. personnel_sanitize_permissions()) ama açık is_admin() kontrolü kasıtlı sertleştirme.
+if(!is_admin()){ http_response_code(403); exit('Bu sayfa sadece sistem yöneticisine açıktır. Personel hesap/yetki işlemleri için ilgili personelin detay ekranındaki "OTS Hesabı & Yetkiler" sekmesini kullanın.'); }
 require_once __DIR__.'/share_lib.php';
 
 $pdo=db();

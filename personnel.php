@@ -1,16 +1,6 @@
 <?php
+require_once __DIR__.'/personnel_lib.php';
 require_once __DIR__.'/layout_top.php';
-
-// Personel isminden avatar baş harfleri (fotoğraf/photo kolonu şemada yok — bkz. ROADMAP.md,
-// bu yüzden placeholder olarak baş harf rozeti kullanılıyor, hayali bir kolon icat edilmedi).
-function personnel_initials($name){
-    $name=trim((string)$name);
-    if($name==='') return '?';
-    $parts=preg_split('/\s+/',$name);
-    $ini='';
-    foreach(array_slice($parts,0,2) as $p){ $ini.=mb_substr($p,0,1,'UTF-8'); }
-    return mb_strtoupper($ini,'UTF-8') ?: '?';
-}
 
 // RELEASE 0.9 — Personel Ekranları DS Migration (2026-07-17): sayfa artık ds_lib.php'nin
 // PROVEN (search.php/mytasks.php/job_view.php'de zaten canlıda kullanılan) bileşenlerine

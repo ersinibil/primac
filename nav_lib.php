@@ -88,7 +88,14 @@ function nav_taxonomy(){
         ['key'=>'gunluk_rapor','label'=>'Günlük İş Raporu Al','url'=>'gunluk_rapor.php','group'=>'yonet','perm'=>'report','primary'=>false,'category'=>'yonetim','categoryOrder'=>6,'isPrimaryAction'=>false,'searchKeywords'=>['günlük rapor']],
         ['key'=>'contacts_report','label'=>'Cari Ekstresi Al','url'=>'contacts_report.php','group'=>'yonet','perm'=>'contacts','primary'=>false,'category'=>'ticaret','categoryOrder'=>7,'isPrimaryAction'=>false,'searchKeywords'=>['cari ekstre','bakiye raporu']],
         ['key'=>'activity','label'=>'Son İşlemleri Gör','url'=>'activity.php','group'=>'yonet','perm'=>null,'primary'=>false,'adminOnly'=>true,'category'=>'yonetim','categoryOrder'=>7,'isPrimaryAction'=>false,'searchKeywords'=>['son işlemler','aktivite']],
-        ['key'=>'users','label'=>'Kullanıcı & Yetki Yönet','url'=>'users.php','group'=>'yonet','perm'=>'users','primary'=>false,'actionLabel'=>'Kullanıcı ve Yetkileri Yönet','category'=>'yonetim','categoryOrder'=>4,'isPrimaryAction'=>false,'searchKeywords'=>['kullanıcı','yetki']],
+        // PERSONEL YÖNETİMİ — TEK MERKEZ/TEK KİŞİ/TEK AKIŞ (2026-07-18, Product Owner kararı):
+        // günlük personel/hesap/yetki akışı artık TAMAMEN personnel.php→personnel_edit.php'nin
+        // "OTS Hesabı & Yetkiler" sekmesinde — bu ekran artık günlük operasyon menüsüyle YARIŞMASIN
+        // diye adminOnly yapıldı, en düşük öncelikli sıraya (categoryOrder) çekildi ve "Sistem
+        // Kullanıcıları" olarak yeniden adlandırıldı (ikincil/ileri yönetim alanı — kullanıcı adı/
+        // hesap taşıma gibi personel akışının dışındaki nadir vakalar + toplu WhatsApp gönderimi
+        // için hâlâ gerekli, users.php SİLİNMEDİ). Backend/auth mantığı bozulmadı.
+        ['key'=>'users','label'=>'Sistem Kullanıcıları','url'=>'users.php','group'=>'yonet','perm'=>'users','primary'=>false,'adminOnly'=>true,'actionLabel'=>'Sistem Kullanıcılarını Yönet','category'=>'yonetim','categoryOrder'=>13,'isPrimaryAction'=>false,'searchKeywords'=>['sistem kullanıcıları','ileri yönetim']],
         ['key'=>'audit_log','label'=>'Denetim Günlüğünü Gör','url'=>'audit_log.php','group'=>'yonet','perm'=>'users','primary'=>false,'actionLabel'=>'Denetim Kayıtlarını Gör','category'=>'yonetim','categoryOrder'=>8,'isPrimaryAction'=>false,'searchKeywords'=>['denetim','log']],
         ['key'=>'wa_settings','label'=>'WhatsApp Ayarlarını Düzenle','url'=>'wa_settings.php','group'=>'yonet','perm'=>'users','primary'=>false,'category'=>'yonetim','categoryOrder'=>9,'isPrimaryAction'=>false,'searchKeywords'=>['whatsapp ayar']],
         ['key'=>'brand_settings','label'=>'Logo / Marka Düzenle','url'=>'brand_settings.php','group'=>'yonet','perm'=>'users','primary'=>false,'category'=>'yonetim','categoryOrder'=>11,'isPrimaryAction'=>false,'searchKeywords'=>['logo','marka']],

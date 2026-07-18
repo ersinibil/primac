@@ -128,26 +128,46 @@ try{
     }
     $acikIs=(int)$pdo->query("SELECT COUNT(*) c FROM jobs WHERE responsible_personnel_id=$id AND status NOT IN ('Tamamlandı','İptal','Teslim Edildi')")->fetch()['c'];
     $acikGorev=(int)$pdo->query("SELECT COUNT(*) c FROM tasks WHERE personnel_id=$id AND status NOT IN ('Tamamlandı','İptal')")->fetch()['c'];
+
+    // PERSONEL YÖNETİMİ — TEK MERKEZ/TEK KİŞİ/TEK AKIŞ (2026-07-18, Product Owner kararı): web
+    // personnel_edit.php ile aynı bilgi mimarisi — sabit kimlik başlığı + Genel/OTS Hesabı &
+    // Yetkiler/Görevler/Performans sekmeleri. Whitelist — GET'ten keyfi değer geçilemez.
+    $tabLabels=['genel'=>'👤 Genel'];
+    if($canManageAccounts) $tabLabels['giris']='🔑 OTS Hesabı & Yetkiler';
+    $tabLabels['gorevler']='✅ Görevler';
+    $tabLabels['performans']='📈 Performans';
+    $tab = isset($_GET['tab']) ? (string)$_GET['tab'] : 'genel';
+    if(!array_key_exists($tab,$tabLabels)) $tab='genel';
 ?>
 <?php if($ok): ?><?=ds_alert('success',$ok)?><?php endif; ?>
 <?php if($er): ?><?=ds_alert('danger',$er)?><?php endif; ?>
 <?php if($waCred): ?><a href="<?=h($waCred)?>" target="_blank" rel="noopener" class="df-btn df-btn--primary" style="display:flex;background:var(--df-success);margin-bottom:var(--df-space-2)"><?=ds_icon('send',16)?> Giriş bilgisini WhatsApp ile gönder</a><?php endif; ?>
 
-<div class="df-panel">
-  <h2 style="margin:0"><?=h($p['name'])?></h2>
-  <div class="muted"><?=h($p['role']?:'Personel')?><?=$usr?' · '.ds_icon('user',13).' '.h($usr['username']):' · giriş yok'?></div>
-  <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
-    <span class="df-badge df-badge--info"><?=ds_icon('briefcase',13)?> Açık iş: <b><?=$acikIs?></b></span>
-    <span class="df-badge df-badge--success"><?=ds_icon('check',13)?> Açık görev: <b><?=$acikGorev?></b></span>
-  </div>
-  <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
-    <?=ds_button(ds_icon('calendar',15).' İş Ekle','task_new.php','secondary','','style="flex:1;justify-content:center"',true)?>
-    <?=ds_button(ds_icon('briefcase',15).' Performans','kpi.php','secondary','','style="flex:1;justify-content:center"',true)?>
-    <?php if($usr): ?><?=ds_button(ds_icon('chat',15).' Mesaj','messages.php?with='.(int)$usr['id'],'primary','','style="flex:1;justify-content:center"',true)?><?php endif; ?>
+<div class="df-personnel-identity">
+  <div class="df-personnel-identity-avatar"><?=h(personnel_initials($p['name']))?></div>
+  <div class="df-personnel-identity-text">
+    <h2><?=h($p['name'])?></h2>
+    <div class="muted"><?=h($p['role']?:'Personel')?></div>
+    <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
+      <?=$p['active']?ds_badge('● Aktif','green'):ds_badge('● Pasif','red')?>
+      <?=$usr?ds_badge('OTS: ● Hesap Aktif','green'):ds_badge('OTS: Hesap Yok','gray')?>
+    </div>
   </div>
 </div>
+<div style="display:flex;gap:8px;margin:10px 0;flex-wrap:wrap">
+  <span class="df-badge df-badge--info"><?=ds_icon('briefcase',13)?> Açık iş: <b><?=$acikIs?></b></span>
+  <span class="df-badge df-badge--success"><?=ds_icon('check',13)?> Açık görev: <b><?=$acikGorev?></b></span>
+  <?php if($usr): ?><?=ds_button(ds_icon('chat',15).' Mesaj','messages.php?with='.(int)$usr['id'],'primary','df-btn--sm','',true)?><?php endif; ?>
+</div>
 
-<div class="df-panel"><b><?=ds_icon('edit',16)?> Bilgileri Düzenle</b>
+<?php
+$__tabItems=[];
+foreach($tabLabels as $tkey=>$tlabel){ $__tabItems[]=['label'=>$tlabel,'url'=>'personnel_view.php?id='.$id.'&tab='.$tkey,'active'=>$tab===$tkey]; }
+ds_tabs($__tabItems);
+?>
+
+<?php if($tab==='genel'): ?>
+<div class="df-panel" style="margin-top:10px"><b><?=ds_icon('edit',16)?> Bilgileri Düzenle</b>
 <form method="post" style="margin-top:8px" enctype="multipart/form-data">
   <label>Ad Soyad</label><input name="name" value="<?=h($p['name'])?>" required>
   <label>Görev / Rol</label><input name="role" value="<?=h($p['role']??'')?>">
@@ -172,6 +192,11 @@ try{
 <?php endif; ?>
 </div>
 
+<div class="df-panel"><b><?=ds_icon('info',16)?> İşlem Kaydı</b>
+  <p class="muted" style="margin:4px 0 8px;font-size:12px">Bu personelin yaptığı son işlemler (düzenleme/ekleme/satış vb.).</p>
+  <?php if(function_exists('activity_user_html')) echo activity_user_html($pdo,$usr['id']??0,40); ?>
+</div>
+
 <?php if($isAdmin): ?>
 <div class="df-panel">
   <form method="post" onsubmit="return confirm('Bu personeli ve bağlı tüm verileri KALICI olarak silmek istediğinize emin misiniz?')" style="margin:0">
@@ -179,9 +204,10 @@ try{
   </form>
 </div>
 <?php endif; ?>
+<?php endif; ?>
 
-<?php if($canManageAccounts): ?>
-<div class="df-panel"><b><?=ds_icon('user',16)?> Hesap ve Yetki</b>
+<?php if($canManageAccounts && $tab==='giris'): ?>
+<div class="df-panel" style="margin-top:10px"><b><?=ds_icon('user',16)?> OTS Hesabı & Yetkiler</b>
 <?php if($usr && (int)$usr['id']===1): ?>
   <p class="muted" style="margin:8px 0">Bu hesap sistemin ana yöneticisi — korumalıdır, rolü buradan değiştirilemez.</p>
 <?php elseif($usr): ?>
@@ -206,10 +232,34 @@ try{
 </div>
 <?php endif; ?>
 
-<div class="df-panel"><b><?=ds_icon('info',16)?> İşlem Kaydı</b>
-  <p class="muted" style="margin:4px 0 8px;font-size:12px">Bu personelin yaptığı son işlemler (düzenleme/ekleme/satış vb.).</p>
-  <?php if(function_exists('activity_user_html')) echo activity_user_html($pdo,$usr['id']??0,40); ?>
+<?php if($tab==='gorevler'): ?>
+<div class="df-panel" style="margin-top:10px"><b><?=ds_icon('check',16)?> Görevler</b>
+<p class="muted" style="margin:4px 0 8px;font-size:12px">Bu personele atanmış son 20 görev (durum değişikliği için Görevler ekranı kullanılır).</p>
+<?php
+$__ts=$pdo->prepare("SELECT t.*, j.job_no, j.title job_title FROM tasks t LEFT JOIN jobs j ON j.id=t.job_id WHERE t.personnel_id=? AND t.deleted_at IS NULL ORDER BY t.id DESC LIMIT 20");
+$__ts->execute([$id]);
+$__tasks=$__ts->fetchAll();
+if(!$__tasks) ds_empty_state('Henüz görev yok.');
+foreach($__tasks as $__t){
+    $__desc=($__t['job_no']?h($__t['job_no'].' - '.$__t['job_title']):'').($__t['due_date']?' · '.h($__t['due_date']):'');
+    ds_list_item(h($__t['title']), 'task_view.php?id='.(int)$__t['id'], $__desc, ds_badge($__t['status']));
+}
+?>
 </div>
+<?php endif; ?>
+
+<?php if($tab==='performans'): ?>
+<div class="df-panel" style="margin-top:10px"><b><?=ds_icon('briefcase',16)?> Performans (KPI)</b>
+<p class="muted" style="margin:8px 0">Tüm personel sıralaması ve puan hesaplama yöntemi için KPI ekranına gidin.</p>
+<?=ds_button('KPI Sayfasına Git','kpi.php','primary','','style="width:100%;justify-content:center"',true)?>
+</div>
+<?php endif; ?>
+
+<style>
+.df-personnel-identity{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:12px;background:var(--df-surface,#0f1d33);border-radius:16px;padding:14px;margin-top:10px}
+.df-personnel-identity-avatar{width:52px;height:52px;border-radius:14px;background:var(--c-accent,#2563eb);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;flex:0 0 auto}
+.df-personnel-identity-text h2{margin:0;font-size:18px}
+</style>
 <?php
 }catch(Throwable $e){ echo ds_alert('danger',$e->getMessage()); }
 botx();
