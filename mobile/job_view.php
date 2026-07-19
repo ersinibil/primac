@@ -227,8 +227,8 @@ try{
 <div class="panel">
   <b>📎 Fotoğraf / Dosya</b>
   <form style="margin-top:8px" id="upf" onsubmit="return false">
-    <input type="file" name="file" id="jfile" accept="image/*,application/pdf,video/*,audio/*" multiple required style="background:rgba(255,255,255,.07)">
-    <div id="jlbl" style="color:#94a3b8;font-size:12px;margin:4px 0"></div>
+    <input type="file" name="file" id="jfile" accept="image/*,application/pdf,video/*,audio/*" multiple required style="background:var(--df-surface-sunken,rgba(255,255,255,.07))">
+    <div id="jlbl" style="color:var(--df-ink-500,#94a3b8);font-size:12px;margin:4px 0"></div>
     <button class="btn dark" type="submit" id="upbtn" style="width:100%;padding:12px">⬆ Yükle</button>
   </form>
   <script>
@@ -274,7 +274,7 @@ try{
       $wa='https://wa.me/'.$custPhone.'?text='.rawurlencode('Onayınıza sunulan dosya: '.$link);
       $appr=$fl['approval_status'];
       $aColor=$appr==='Onaylandı'?'#22c55e':($appr==='Reddedildi'?'#f87171':'#94a3b8');
-      echo '<div style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:8px">';
+      echo '<div style="background:var(--df-surface-sunken,rgba(255,255,255,.06));border:1px solid var(--df-hairline,rgba(255,255,255,.1));border-radius:14px;padding:8px">';
       $fpath='../'.htmlspecialchars($fl['file_path']);
       $fext=strtolower(pathinfo($fl['file_path'],PATHINFO_EXTENSION));
       $fvid=in_array($fext,['mp4','mov','webm','m4v']);
@@ -285,7 +285,7 @@ try{
       }else{
         echo '<div onclick="ACANS_VIEW(\''.$fpath.'\',\'file\')" style="height:90px;display:flex;align-items:center;justify-content:center;font-size:34px;cursor:pointer">📄</div>';
       }
-      echo '<small style="display:block;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:4px">'.htmlspecialchars($fl['original_name']).'</small>';
+      echo '<small style="display:block;color:var(--df-ink-500,#94a3b8);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:4px">'.htmlspecialchars($fl['original_name']).'</small>';
       echo '<small style="color:'.$aColor.';font-weight:900">'.htmlspecialchars($appr).'</small>';
       echo '<div style="display:flex;gap:6px;margin-top:6px">';
       if($custPhone) echo '<a href="'.htmlspecialchars($wa).'" class="btn" style="flex:1;background:#16a34a;color:#fff;padding:7px;font-size:12px">WhatsApp</a>';
@@ -307,7 +307,7 @@ try{
   }catch(Throwable $e){ $hist=[]; }
   if(!$hist){ echo '<p class="muted" style="margin:10px 0 0">Henüz hareket kaydı yok.</p>'; }
   else {
-    echo '<div style="margin-top:8px;border-left:2px solid rgba(255,255,255,.12);padding-left:12px">';
+    echo '<div style="margin-top:8px;border-left:2px solid var(--df-hairline,rgba(255,255,255,.12));padding-left:12px">';
     foreach($hist as $h){
       echo '<div style="margin-bottom:12px;position:relative">';
       echo '<div style="position:absolute;left:-18px;top:2px;font-size:13px">'.($h['icon']?:'•').'</div>';
