@@ -60,6 +60,9 @@ ds_page_header('Çek / Senet Takibi', ds_icon('tag',24), '', $__cnActions, false
 
 <?php if($error): ?><?=ds_alert('danger',$error)?><?php endif; ?>
 <?php if($ok): ?><?=ds_alert('success',$ok)?><?php endif; ?>
+<?php if(!checks_notes_lifecycle_ready()): ?>
+<?=ds_alert('danger','⚠️ Çek/Senet yaşam döngüsü (Tahsil Et / Öde / Ciro Et / İşlemi Geri Al) bu sunucuda henüz AKTİF DEĞİL — migration 048 çalıştırılmamış. "Düzenle" ve "Sil" (henüz sonuçlanmamış kayıtlarda) etkilenmez, ama tahsilat/ödeme/ciro/geri alma denendiğinde hata verir. Çözüm: migrate.php çalıştırılmalı.')?>
+<?php endif; ?>
 
 <section class="df-card">
 <h2 style="font-size:var(--df-type-section-size);margin:0 0 var(--df-space-3)">Yeni Çek / Senet Kaydı</h2>

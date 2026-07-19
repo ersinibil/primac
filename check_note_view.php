@@ -112,6 +112,9 @@ ds_page_header($ic.' '.($typeOpts[$row['type']]??$row['type']).' '.h($row['numbe
 
 <?php if($error): ?><?=ds_alert('danger',$error)?><?php endif; ?>
 <?php if($ok): ?><?=ds_alert('success',$ok)?><?php endif; ?>
+<?php if(!checks_notes_lifecycle_ready()): ?>
+<?=ds_alert('danger','⚠️ Çek/Senet yaşam döngüsü (Tahsil Et / Öde / Ciro Et / İşlemi Geri Al) bu sunucuda henüz AKTİF DEĞİL — migration 048 çalıştırılmamış. Çözüm: migrate.php çalıştırılmalı.')?>
+<?php endif; ?>
 
 <section class="df-card">
 <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">

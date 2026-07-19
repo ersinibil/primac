@@ -82,6 +82,7 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['delete_cn'])){
 topx('Çek / Senet');
 if(!empty($_SESSION['cn_ok'])){ echo ds_alert('success',$_SESSION['cn_ok']); unset($_SESSION['cn_ok']); }
 if(!empty($_SESSION['cn_err'])){ echo ds_alert('danger',$_SESSION['cn_err']); unset($_SESSION['cn_err']); }
+if(!checks_notes_lifecycle_ready()) echo ds_alert('danger','⚠️ Çek/Senet yaşam döngüsü (Tahsil Et / Öde / Ciro Et / İşlemi Geri Al) bu sunucuda henüz AKTİF DEĞİL — migration 048 çalıştırılmamış. Çözüm: migrate.php çalıştırılmalı.');
 
 $typeOpts=checks_notes_types();
 $dirOpts=checks_notes_directions();

@@ -18,6 +18,7 @@ topx('Çek / Senet');
 if(isset($_GET['ok'])) echo ds_alert('success','Kayıt eklendi.');
 if(isset($_GET['deleted'])) echo ds_alert('success','Kayıt silindi.');
 if(!empty($_SESSION['cn_err'])){ echo ds_alert('danger',$_SESSION['cn_err']); unset($_SESSION['cn_err']); }
+if(!checks_notes_lifecycle_ready()) echo ds_alert('danger','⚠️ Çek/Senet yaşam döngüsü (Tahsil Et / Öde / Ciro Et / İşlemi Geri Al) bu sunucuda henüz AKTİF DEĞİL — migration 048 çalıştırılmamış. "Düzenle" ve "Sil" (henüz sonuçlanmamış kayıtlarda) etkilenmez. Çözüm: migrate.php çalıştırılmalı.');
 
 $typeOpts=checks_notes_types();
 $dirOpts=checks_notes_directions();
