@@ -167,10 +167,12 @@ try{
     // PERSONEL YÖNETİMİ — TEK MERKEZ/TEK KİŞİ/TEK AKIŞ (2026-07-18, Product Owner kararı): web
     // personnel_edit.php ile aynı bilgi mimarisi — sabit kimlik başlığı + Genel/OTS Hesabı &
     // Yetkiler/Görevler/Performans sekmeleri. Whitelist — GET'ten keyfi değer geçilemez.
-    $tabLabels=['genel'=>'👤 Genel'];
-    if($canManageAccounts) $tabLabels['giris']='🔑 OTS Hesabı & Yetkiler';
-    $tabLabels['gorevler']='✅ Görevler';
-    $tabLabels['performans']='📈 Performans';
+    // SON POLISH (2026-07-19): emoji sekme etiketleri kaldırıldı — web personnel_edit.php ile
+    // aynı karar (ds_tabs() zaten düz metin, rapor ailesiyle tutarlılık).
+    $tabLabels=['genel'=>'Genel'];
+    if($canManageAccounts) $tabLabels['giris']='OTS Hesabı & Yetkiler';
+    $tabLabels['gorevler']='Görevler';
+    $tabLabels['performans']='Performans';
     $tab = isset($_GET['tab']) ? (string)$_GET['tab'] : 'genel';
     if(!array_key_exists($tab,$tabLabels)) $tab='genel';
 ?>
@@ -251,15 +253,17 @@ ds_tabs($__tabItems);
     <button class="df-btn df-btn--secondary" type="submit">Değiştir</button>
   </form>
   <?php if($__usernameConflict): $__lg=null; try{ $__lgq=$pdo->prepare("SELECT username FROM app_users WHERE id=?"); $__lgq->execute([$__usernameConflict['legacy_user_id']]); $__lg=$__lgq->fetch(); }catch(Throwable $e){} ?>
+  <!-- SON POLISH (2026-07-19): kırmızı destructive buton kaldırıldı — bu işlem hesap SİLMİYOR,
+       kontrollü username devri. Normal primary aksiyon. -->
   <div class="df-panel" style="background:var(--df-warning-soft,rgba(245,158,11,.18));margin:8px 0">
-    <b><?=ds_icon('info',15)?> Kullanıcı adı pasif eski hesapta</b>
-    <p class="muted" style="margin:6px 0;font-size:12.5px">Hesap #<?=(int)$__usernameConflict['legacy_user_id']?> (<?=h($__lg['username']??'')?>) pasif — geçmiş kayıtları bozmadan arşivleyip bu adı devralabilirsiniz.</p>
+    <b style="display:block;font-size:14px;margin-bottom:4px">Kullanıcı adı pasif eski hesapta</b>
+    <p class="muted" style="margin:0 0 10px;font-size:12.5px;line-height:1.5">"<?=h($__usernameConflict['attempted_username'])?>" kullanıcı adı pasif Hesap #<?=(int)$__usernameConflict['legacy_user_id']?> (<?=h($__lg['username']??'')?>) tarafından tutuluyor. Geçmiş kayıtları korunarak arşivlenebilir ve bu hesaba atanabilir.</p>
     <form method="post" onsubmit="return confirm('Eski hesap arşivlenecek ve &quot;<?=h($__usernameConflict['attempted_username'])?>&quot; bu hesaba atanacak. Onaylıyor musunuz?')">
       <input type="hidden" name="reclaim_username" value="1">
       <input type="hidden" name="legacy_user_id" value="<?=(int)$__usernameConflict['legacy_user_id']?>">
       <input type="hidden" name="new_username" value="<?=h($__usernameConflict['attempted_username'])?>">
-      <label style="display:flex;gap:8px;align-items:center;margin:8px 0;font-size:12.5px"><input type="checkbox" name="confirm_reclaim" value="1" required style="width:auto"> Onaylıyorum: arşivle ve bu hesaba ata.</label>
-      <button type="submit" class="df-btn df-btn--danger df-btn--sm" style="width:100%">Eski Kullanıcı Adını Arşivle ve Ata</button>
+      <label style="display:flex;gap:8px;align-items:flex-start;margin:0 0 10px;font-size:12.5px;line-height:1.4"><input type="checkbox" name="confirm_reclaim" value="1" required style="width:auto;margin-top:2px;flex:0 0 auto"> Eski kullanıcı adını arşivleyerek devralmayı onaylıyorum.</label>
+      <button type="submit" class="df-btn df-btn--primary" style="width:100%">Arşivle ve Kullanıcı Adını Devral</button>
     </form>
   </div>
   <?php endif; ?>

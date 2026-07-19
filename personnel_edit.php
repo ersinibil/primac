@@ -288,18 +288,21 @@ try{
 // verir — mevcut ek sekmeler (Takvim/Mesajlar/Notlar/Dosyalar/Maaş/Hareket) SİLİNMEDİ (gerçek,
 // zaten çalışan işlevsellik; "paralel ekran" değil, aynı tek merkezi ekranın parçası) ama
 // istenen 4 kavramın ARKASINA değil önüne/arasına düşmesin diye ikincil sırada kalıyor.
+// SON POLISH (2026-07-19): emoji sekme etiketleri kaldırıldı — ds_tabs() zaten sadece düz metin
+// destekliyor (h() ile escape ediyor, SVG ikon geçirilemez), rapor ailesinde de aynı karar
+// verildi (report_modules()) — tutarlılık için düz Türkçe metin.
 $tabLabels=[
-    'genel'=>'👤 Genel',
+    'genel'=>'Genel',
 ];
-if($canManageAccounts) $tabLabels['giris']='🔑 OTS Hesabı & Yetkiler';
-$tabLabels['gorevler']='✅ Görevler';
-$tabLabels['performans']='📈 Performans';
-$tabLabels['takvim']='📅 Takvim';
-$tabLabels['mesajlar']='💬 Mesajlar';
-$tabLabels['notlar']='📝 Notlar';
-if($hasCvCol) $tabLabels['dosyalar']='📎 Dosyalar';
-$tabLabels['maas']='💰 Maaş/Avans/Prim';
-$tabLabels['hareket']='🧾 Hareket Geçmişi';
+if($canManageAccounts) $tabLabels['giris']='OTS Hesabı & Yetkiler';
+$tabLabels['gorevler']='Görevler';
+$tabLabels['performans']='Performans';
+$tabLabels['takvim']='Takvim';
+$tabLabels['mesajlar']='Mesajlar';
+$tabLabels['notlar']='Notlar';
+if($hasCvCol) $tabLabels['dosyalar']='Dosyalar';
+$tabLabels['maas']='Maaş/Avans/Prim';
+$tabLabels['hareket']='Hareket Geçmişi';
 
 $tab = isset($_GET['tab']) ? (string)$_GET['tab'] : 'genel';
 if(!array_key_exists($tab,$tabLabels)) $tab='genel';
@@ -530,15 +533,32 @@ ds_form_field('Çalışma Tipi', '<select name="work_type">'.$__workOpts.'</sele
     <button class="df-btn df-btn--secondary">Değiştir</button>
   </form>
   <?php if($__usernameConflict): $__lg=null; try{ $__lgq=$pdo->prepare("SELECT username FROM app_users WHERE id=?"); $__lgq->execute([$__usernameConflict['legacy_user_id']]); $__lg=$__lgq->fetch(); }catch(Throwable $e){} ?>
-  <div class="df-alert df-alert--warning" style="margin:0 0 var(--df-space-5);max-width:420px">
-    <b><?=ds_icon('info',16)?> Bu kullanıcı adı pasif bir eski hesap tarafından kullanılıyor</b>
-    <p style="margin:6px 0">Hesap #<?=(int)$__usernameConflict['legacy_user_id']?> (<?=h($__lg['username']??'')?>) pasif durumda ama geçmiş sohbet/işlem kayıtları ID üzerinden ona bağlı — silinemez. İsterseniz eski hesabın kullanıcı adını arşive taşıyıp bu adı bu hesaba atayabilirsiniz.</p>
-    <form method="post" onsubmit="return confirm('Eski hesap #<?=(int)$__usernameConflict['legacy_user_id']?> kullanıcı adı arşivlenecek ve \'<?=h($__usernameConflict['attempted_username'])?>\' bu hesaba atanacak. Onaylıyor musunuz?')">
+  <style>
+  /* SON POLISH (2026-07-19): .df-alert{display:flex} her DIRECT CHILD'ı yatay flex item yapıyor —
+     buraya konan başlık+açıklama+form 3 ayrı flex item olup dar sütunlara sıkışıyordu (canlı
+     bulgu). .df-alert KULLANILMIYOR — bilinçli özel kompakt kart: sol/ana alan (başlık+açıklama)
+     ve sağ/aksiyon alanı (checkbox+buton) iki geniş flex bölge, sadece <640px'te alt alta. */
+  .pt-conflict{background:var(--df-warning-soft,#fef3c7);border:1px solid var(--df-warning,#f59e0b);border-radius:var(--df-radius-md,10px);padding:var(--df-space-4,16px);margin:0 0 var(--df-space-5,24px);max-width:640px;display:flex;flex-wrap:wrap;gap:var(--df-space-4,16px);align-items:center}
+  .pt-conflict-main{flex:1 1 280px;min-width:0}
+  .pt-conflict-main b{display:block;font-size:var(--df-type-subtitle-size,15px);font-weight:var(--df-type-subtitle-weight,600);color:var(--df-ink-900,#101828);margin-bottom:4px}
+  .pt-conflict-main p{margin:0;font-size:var(--df-type-body-size,14px);color:var(--df-ink-600,#475467);line-height:1.5}
+  .pt-conflict-action{flex:0 0 auto;min-width:240px;display:flex;flex-direction:column;gap:10px}
+  .pt-conflict-action label{display:flex;gap:8px;align-items:flex-start;font-size:var(--df-type-caption-size,12.5px);color:var(--df-ink-900,#101828);line-height:1.4}
+  .pt-conflict-action label input{margin-top:2px;width:auto;flex:0 0 auto}
+  .pt-conflict-action button{white-space:nowrap}
+  @media(max-width:640px){.pt-conflict{flex-direction:column;align-items:stretch}.pt-conflict-action{min-width:0}.pt-conflict-action button{width:100%}}
+  </style>
+  <div class="pt-conflict">
+    <div class="pt-conflict-main">
+      <b>Bu kullanıcı adı pasif eski bir hesap tarafından kullanılıyor</b>
+      <p>"<?=h($__usernameConflict['attempted_username'])?>" kullanıcı adı, pasif Hesap #<?=(int)$__usernameConflict['legacy_user_id']?> (<?=h($__lg['username']??'')?>) tarafından tutuluyor. Geçmiş kayıtları korunarak eski kullanıcı adı arşivlenebilir ve bu hesaba atanabilir.</p>
+    </div>
+    <form method="post" class="pt-conflict-action" onsubmit="return confirm('Eski hesap #<?=(int)$__usernameConflict['legacy_user_id']?> kullanıcı adı arşivlenecek ve \'<?=h($__usernameConflict['attempted_username'])?>\' bu hesaba atanacak. Onaylıyor musunuz?')">
       <input type="hidden" name="reclaim_username" value="1">
       <input type="hidden" name="legacy_user_id" value="<?=(int)$__usernameConflict['legacy_user_id']?>">
       <input type="hidden" name="new_username" value="<?=h($__usernameConflict['attempted_username'])?>">
-      <label style="display:flex;gap:8px;align-items:center;margin:8px 0;font-size:13px"><input type="checkbox" name="confirm_reclaim" value="1" required style="width:auto"> Onaylıyorum: eski kullanıcı adını arşivleyip bu hesaba atamak istiyorum.</label>
-      <button type="submit" class="df-btn df-btn--danger df-btn--sm">Eski Kullanıcı Adını Arşivle ve Ata</button>
+      <label><input type="checkbox" name="confirm_reclaim" value="1" required> Eski kullanıcı adını arşivleyerek devralmayı onaylıyorum.</label>
+      <button type="submit" class="df-btn df-btn--primary">Arşivle ve Kullanıcı Adını Devral</button>
     </form>
   </div>
   <?php endif; ?>
