@@ -374,38 +374,28 @@ function build_csv($R,$appName,$from,$to){
    + düz metin. thead{display:table-header-group} ile çok sayfalı tablo başlığı her sayfada tekrar
    eder (tarayıcı print motorunun kendi mekanizması). Sadece TEK MODÜL (Yekün dahil) $R yapısı için
    —Tümü/Toplu Cari Ekstre agregaları bu turun kapsamı dışında, mevcut app-view fallback'i kullanır. */
+// ORTAK PDF BELGE DİLİ (2026-07-19) — report_render_pdf() VE gunluk_rapor.php İKİSİ DE bu iki
+// fonksiyonu kullanır (tek kurumsal belge component'i, iki ayrı tasarım üretilmesin). CSS hiçbir
+// --df-* tema token'ı kullanmaz (sabit hex) — aktif tema ne olursa olsun belge her zaman aynı.
+function report_pdf_doc_css(){
+  return '.pdf-doc{width:760px;max-width:100%;background:#ffffff;color:#0f172a;padding:34px 38px;box-sizing:border-box;font-family:inherit}.pdf-doc *{box-sizing:border-box}.pdf-doc-header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #1e3a8a;padding-bottom:14px;margin-bottom:20px}.pdf-doc-brand{display:flex;align-items:center;gap:12px}.pdf-doc-brand img{width:42px;height:42px;object-fit:contain}.pdf-doc-brand-text b{display:block;font-size:17px;font-weight:800;color:#0f172a}.pdf-doc-brand-text span{display:block;font-size:12.5px;color:#475467;margin-top:1px}.pdf-doc-meta{text-align:right;font-size:11px;color:#475467;line-height:1.6}.pdf-doc-meta b{color:#0f172a;font-weight:700}.pdf-doc-h{font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#1e3a8a;margin:20px 0 8px}table.pdf-doc-tbl{width:100%;border-collapse:collapse;font-size:12px}table.pdf-doc-tbl th{text-align:left;background:#f1f5f9;color:#334155;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;padding:7px 10px;border-bottom:1.5px solid #cbd5e1}table.pdf-doc-tbl td{padding:6px 10px;border-bottom:1px solid #e2e8f0;color:#0f172a}table.pdf-doc-tbl tr{page-break-inside:avoid;break-inside:avoid}table.pdf-doc-tbl thead{display:table-header-group}.pdf-doc-neg{color:#b91c1c;font-weight:700}.pdf-doc-foot{margin-top:22px;padding-top:10px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;font-size:10px;color:#94a3b8}.pdf-doc-empty{padding:12px 0;color:#94a3b8;font-size:12.5px;text-align:center}';
+}
+// $metaLines: [[üst etiket, değer], ...] — sağdaki meta blokta alt alta gösterilir.
+function report_pdf_doc_header($appName, $subtitle, $metaLines){
+  $out='<div class="pdf-doc-header"><div class="pdf-doc-brand">';
+  $out.='<img src="'.h(base_url().(function_exists('brand_logo')?brand_logo():'logo.png')).'" alt="" onerror="this.style.display=\'none\'">';
+  $out.='<div class="pdf-doc-brand-text"><b>'.h($appName).' OTS</b><span>'.h($subtitle).'</span></div></div>';
+  $out.='<div class="pdf-doc-meta">';
+  foreach($metaLines as $i=>$line){ $out.=($i>0?'<div style="margin-top:6px">':'<div>').h($line[0]).'<br><b>'.h($line[1]).'</b></div>'; }
+  $out.='</div></div>';
+  return $out;
+}
+
 function report_render_pdf($R,$appName,$from,$to){
   ob_start(); ?>
-<style>
-.pdf-doc{width:760px;max-width:100%;background:#ffffff;color:#0f172a;padding:34px 38px;box-sizing:border-box;font-family:inherit}
-.pdf-doc *{box-sizing:border-box}
-.pdf-doc-header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #1e3a8a;padding-bottom:14px;margin-bottom:20px}
-.pdf-doc-brand{display:flex;align-items:center;gap:12px}
-.pdf-doc-brand img{width:42px;height:42px;object-fit:contain}
-.pdf-doc-brand-text b{display:block;font-size:17px;font-weight:800;color:#0f172a}
-.pdf-doc-brand-text span{display:block;font-size:12.5px;color:#475467;margin-top:1px}
-.pdf-doc-meta{text-align:right;font-size:11px;color:#475467;line-height:1.6}
-.pdf-doc-meta b{color:#0f172a;font-weight:700}
-.pdf-doc-h{font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#1e3a8a;margin:20px 0 8px}
-table.pdf-doc-tbl{width:100%;border-collapse:collapse;font-size:12px}
-table.pdf-doc-tbl th{text-align:left;background:#f1f5f9;color:#334155;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;padding:7px 10px;border-bottom:1.5px solid #cbd5e1}
-table.pdf-doc-tbl td{padding:6px 10px;border-bottom:1px solid #e2e8f0;color:#0f172a}
-table.pdf-doc-tbl tr{page-break-inside:avoid;break-inside:avoid}
-table.pdf-doc-tbl thead{display:table-header-group}
-.pdf-doc-neg{color:#b91c1c;font-weight:700}
-.pdf-doc-foot{margin-top:22px;padding-top:10px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;font-size:10px;color:#94a3b8}
-</style>
+<style><?=report_pdf_doc_css()?></style>
 <div class="pdf-doc">
-  <div class="pdf-doc-header">
-    <div class="pdf-doc-brand">
-      <img src="<?=h(base_url().(function_exists('brand_logo')?brand_logo():'logo.png'))?>" alt="" onerror="this.style.display='none'">
-      <div class="pdf-doc-brand-text"><b><?=h($appName)?> OTS</b><span><?=h($R['title'])?> Raporu</span></div>
-    </div>
-    <div class="pdf-doc-meta">
-      <div>Rapor Dönemi<br><b><?=h($from)?> – <?=h($to)?></b></div>
-      <div style="margin-top:6px">Oluşturma<br><b><?=date('d.m.Y H:i')?></b></div>
-    </div>
-  </div>
+  <?=report_pdf_doc_header($appName, $R['title'].' Raporu', [['Rapor Dönemi',$from.' – '.$to],['Oluşturma',date('d.m.Y H:i')]])?>
 
   <?php if(!empty($R['cards'])): ?>
   <div class="pdf-doc-h">Yönetici Özeti</div>
