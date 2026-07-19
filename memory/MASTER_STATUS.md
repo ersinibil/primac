@@ -539,13 +539,41 @@ FAIL:
 - **Kapsam dar** — kullanıcının MASTER PASS madde 11'de istediği tam tarama (stock_movements→missing
   source, sales/purchases→missing contact, checks_notes→broken finance movement, personnel↔users
   orphan tam iki yönlü, trade documents→broken source links) **henüz tek bir merkezi araçta değil.**
-- **Migration 048/049/046/047'nin primac.tr'de fiilen çalıştırılıp çalıştırılmadığı BİLİNMİYOR** —
-  bu, ÇEK/SENET, CPA ve STOK modüllerindeki "CODE PASS" iddialarının hepsini şarta bağlıyor. Bu
-  BUGÜN İTİBARİYLE PROJENİN EN BÜYÜK TEK BELİRSİZLİĞİ.
 
 OPEN:
 - Tek merkezi "Veri Bütünlüğü" denetim ekranı (tüm orphan tiplerini tek yerde gösteren) —
   implementasyon "KOD YAZMA" talimatıyla durduruldu, mimari analiz yapıldı, kod yazılmadı.
+
+### P0.1 — Migration 045-049 doğrulaması (2026-07-19, ayrı tur)
+
+**DB/SCHEMA RESULT: UNKNOWN — primac.tr'ye bu ortamdan hiçbir DB/SSH/cPanel erişimi yok.** Lokal
+`config.php` var ama `db_host=localhost` (primac.tr DEĞİL) ve önceki bir oturumda `db_name`'in
+PROD (`u7883898_primacos`) ile aynı göründüğü tespit edilmişti — bu belirsizlik nedeniyle lokal DB'ye
+DE bağlanılmadı (bağlanılsa bile primac.tr'nin GERÇEK/GÜNCEL durumunu kanıtlamaz). **Varsayım
+yapılmadı, "uygulandı" denmedi.**
+
+**Migration mekanizması (`migrate.php`) kod okunarak DOĞRULANDI — CODE VERIFIED, güvenli/idempotent:**
+- `schema_migrations` takip tablosu (dosya adı bazlı) + SQL seviyesinde MySQL hata kodu toleransı
+  (1050 tablo var/1060 kolon var/1061 index var/1091 yok → hepsi "zaten uygulanmış" sayılıp atlanır).
+- Sıralı çalışır, gerçek bir hatada DURUR (sıradaki migration'lara geçmez).
+- **Başarılı ve hatasız biterse KENDİNİ SİLER** (`@unlink(__FILE__)`) — yani `migrate.php`'nin
+  sunucuda hâlâ var olması TEK BAŞINA "hiç çalışmadı" anlamına gelmez (her deploy zip'i dosyayı
+  yeniden yükler); ama içinde `❌ hata` olmadan koştuğunu gösteren bir ekran çıktısı YOKSA kanıt yok.
+- 045/046/047 (`CREATE TABLE IF NOT EXISTS`) doğal olarak idempotent. 048/049 (`ALTER TABLE ADD
+  COLUMN`/`CREATE INDEX`) MySQL 5.7'de native `IF NOT EXISTS` desteklemiyor — idempotentliği
+  SADECE migrate.php'nin 1060/1061 hata-yutma mekanizması sağlıyor (ham SQL ile elle tekrar
+  çalıştırılırsa hataya düşer, bu yüzden "migrate.php DIŞINDA manuel SQL çalıştırma" kuralı kritik).
+
+**045: UNKNOWN — 046: UNKNOWN — 047: UNKNOWN — 048: UNKNOWN — 049: UNKNOWN** (primac.tr'de
+doğrulanmadı). Beklenen şema imzaları (gelecekte tek satır sorguyla kontrol için):
+`SHOW TABLES LIKE 'cpa_preferences'` (045), `SHOW TABLES LIKE 'cpa_allocations'` (046),
+`SHOW TABLES LIKE 'cpa_allocation_consumptions'` (047), `SHOW COLUMNS FROM checks_notes LIKE
+'settle_account_id'` (048), `SHOW COLUMNS FROM stock_movements LIKE 'reversed_movement_id'` (049).
+
+**TEK GÜVENLİ ADIM:** primac.tr'de `https://primac.tr/migrate.php` çalıştırılsın (admin girişiyle,
+ya da `?key=acans-migrate-2026`). Ekranda her migration için ✅ uygulandı / ⏭️ zaten uygulanmış /
+❌ hata satırı görülecek — bu, mekanizmanın kendi tasarımı gereği kesin ve güvenli kanıttır. Manuel
+SQL çalıştırılmamalı (idempotentlik garantisi migrate.php'nin hata-yutma mantığına bağlı).
 
 ---
 
