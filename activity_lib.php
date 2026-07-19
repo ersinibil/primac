@@ -167,31 +167,38 @@ function activity_safe_stored_url($url,$platform){
 
 // Bir Son İşlemler satırını resolver + güvenli-fallback ile tek bir <a>/<div> bloğuna çevirir (web
 // ve mobil render'ı aynı mantığı paylaşsın diye ortak fonksiyona çıkarıldı).
+// PİLOT ÖNCESİ KAPANIŞ (2026-07-19, "aktif route'ta MODERN/MIXED/LEGACY" denetimi — gerçek bulgu):
+// bu fonksiyon önceden kendi özel `.activity-item`/`.activity-icon`/`.activity-body` sınıflarını
+// (layout_top.php'de hardcoded hex renkli, web zaten daima açık tema olduğu için görsel bir "beyaz
+// üstü beyaz" hatası yoktu ama DS'in geri kalanından (df-list/ds_list_item()) FARKLI bir bileşen
+// ailesiydi — aynı sayfada modern+eski karışımı hissi buradan geliyordu) kullanıyordu. Artık
+// ds_list_item() (web+mobil ORTAK DS liste satırı bileşeni) ile render ediliyor — veri/link/güvenlik
+// mantığı (activity_resolve()) hiç değişmedi, sadece görsel katman.
 function activity_row_html($r,$platform='web'){
     $res=activity_resolve($r,$platform);
-    $icon=h($r['icon'] ?: '•'); $title=h($r['title']); $desc=$r['description']?"<p>".h($r['description'])."</p>":'';
-    $meta=h($r['user_name'] ?: 'Sistem')." · ".h($r['module'])." · ".h(activity_time_ago($r['created_at']));
+    $icon=h($r['icon'] ?: '•'); $title=h($r['title']);
+    $descHtml = $r['description'] ? h($r['description']) : null;
+    $metaRight = '<span class="df-text-caption">'.h(activity_time_ago($r['created_at'])).'</span>';
+    $titleHtml = $icon.' <b>'.$title.'</b>';
+    $descFull = '<span class="df-muted">'.h($r['user_name'] ?: 'Sistem').' · '.h($r['module']).'</span>'.($descHtml ? '<br>'.$descHtml : '');
+    ob_start();
     if($res['status']==='ok'){
-        return "<a class='activity-item' href='".h($res['url'])."'>"
-            ."<div class='activity-icon'>$icon</div>"
-            ."<div class='activity-body'><div><b>$title</b></div>$desc"
-            ."<small>$meta</small></div></a>";
+        ds_list_item($titleHtml, $res['url'], $descFull, $metaRight);
+    }else{
+        $note = $res['status']==='missing' ? 'Kayıt artık mevcut değil'
+            : ($res['status']==='no_detail' ? 'Bu işlem için detay ekranı henüz yok'
+            : 'Kayıt detayına güvenli şekilde ulaşılamıyor');
+        ds_list_item($titleHtml, null, $descFull.'<br><i class="df-muted">'.h($note).'</i>', null, false);
     }
-    $note = $res['status']==='missing' ? 'Kayıt artık mevcut değil'
-        : ($res['status']==='no_detail' ? 'Bu işlem için detay ekranı henüz yok'
-        : 'Kayıt detayına güvenli şekilde ulaşılamıyor');
-    return "<div class='activity-item' style='opacity:.55;cursor:default'>"
-        ."<div class='activity-icon'>$icon</div>"
-        ."<div class='activity-body'><div><b>$title</b></div>$desc"
-        ."<small>$meta · <i>$note</i></small></div></div>";
+    return ob_get_clean();
 }
 
 function activity_render_list($rows,$platform='web'){
     if(!$rows){
-        echo "<p class='muted'>Henüz işlem kaydı yok.</p>";
+        ds_empty_state('Henüz işlem kaydı yok.');
         return;
     }
-    echo "<div class='activity-list'>";
+    echo "<div class='df-list'>";
     foreach($rows as $r){ echo activity_row_html($r,$platform); }
     echo "</div>";
 }
