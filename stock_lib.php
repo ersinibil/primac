@@ -2,6 +2,22 @@
 // stock_lib.php — ortak stok yönetimi fonksiyonları
 // web (purchase.php, sales.php) ve mobil (mobile/purchase.php, mobile/sales.php) tarafından kullanılır
 
+// KRİTİK STOK KURALI — TEK KAYNAK (2026-07-19, P0 yanlış-pozitif düzeltmesi): critical_level=0
+// "kritik stok takibi bu üründe kapalı" demektir — quantity=0 olsa bile kritik listesine/sayacına
+// GİRMEMELİ. Önceki kod her yerde ayrı ayrı sadece "quantity<=critical_level" kontrol ediyordu;
+// critical_level=0 + quantity=0 durumunda 0<=0 doğru olduğu için ürün yanlışlıkla kritik
+// görünüyordu (canlı örnek: Nfc 3D Anahtarlık). Ana Sayfa/Stok Yönetimi/filtre/rapor — hepsi
+// SQL tarafında stock_critical_where(), PHP tarafında stock_is_critical() kullanmalı; iki ayrı
+// hesap YOK, tek kaynak bu ikisi.
+function stock_critical_where($alias=''){
+    $prefix = $alias!=='' ? $alias.'.' : '';
+    return "{$prefix}critical_level > 0 AND {$prefix}quantity <= {$prefix}critical_level";
+}
+function stock_is_critical($quantity, $criticalLevel){
+    $criticalLevel = (float)$criticalLevel;
+    return $criticalLevel > 0 && (float)$quantity <= $criticalLevel;
+}
+
 /**
  * stock_movements tablosuna MERKEZİ, doğru şemayla hareket kaydeden fonksiyon.
  * (2026-07-03 Deniz/ots-schema-drift-guard denetiminde bulundu: trade_core.php,

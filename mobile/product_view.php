@@ -71,7 +71,7 @@ if(!empty($_GET['ok'])) echo ds_alert('success','Ürün güncellendi.');
 try{
     $s=$pdo->prepare("SELECT * FROM stock_items WHERE id=?"); $s->execute([$id]); $p=$s->fetch();
     if(!$p) throw new Exception('Ürün bulunamadı.');
-    $krit=($p['quantity']<=($p['critical_level']??0));
+    $krit=stock_is_critical($p['quantity'], $p['critical_level']??0);
     $aktif=!isset($p['active']) || $p['active'];
 ?>
 <div class="df-panel">

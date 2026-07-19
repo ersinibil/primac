@@ -5,6 +5,7 @@
 // başlık öncekiyle birebir aynı (app_config()['app_name']) kalmaya devam eder.
 topx($__navMode !== 'legacy' ? 'PRIMAC OTS' : (app_config()['app_name'] ?? 'OTS'));
 require_once __DIR__.'/../tasks_lib.php';
+require_once __DIR__.'/../stock_lib.php';
 $pdo=db();
 
 // NAV-001B (2026-07-16) — Product Owner kararı: "Diğer kullanıcıların mevcut web VE MOBİL
@@ -13,12 +14,12 @@ $pdo=db();
 // birebir korunur. compact: Product Owner'ın istediği sade "şu an ne yapmalıyım" ekranı.
 $open=mc("SELECT COUNT(*) c FROM jobs WHERE status NOT IN ('Tamamlandı','İptal','Teslim Edildi')");
 $overdue_count=mc("SELECT COUNT(*) c FROM jobs WHERE status NOT IN ('Tamamlandı','İptal','Teslim Edildi') AND due_date IS NOT NULL AND due_date<CURDATE()");
-$crit=mc("SELECT COUNT(*) c FROM stock_items WHERE quantity<=critical_level");
+$crit=mc("SELECT COUNT(*) c FROM stock_items WHERE ".stock_critical_where());
 
 $__pulseOk = true; $__pulseOverdue = 0; $__pulseCriticalStock = 0;
 try {
     $__pulseOverdue = (int)($pdo->query("SELECT COUNT(*) c FROM jobs WHERE status NOT IN ('Tamamlandı','İptal','Teslim Edildi') AND due_date IS NOT NULL AND due_date<CURDATE()")->fetch()['c'] ?? 0);
-    $__pulseCriticalStock = (int)($pdo->query("SELECT COUNT(*) c FROM stock_items WHERE quantity<=critical_level")->fetch()['c'] ?? 0);
+    $__pulseCriticalStock = (int)($pdo->query("SELECT COUNT(*) c FROM stock_items WHERE ".stock_critical_where())->fetch()['c'] ?? 0);
 } catch(Throwable $e) { $__pulseOk = false; }
 $__pulseShowJobs = $isAdmin||user_can('jobs');
 $__pulseShowStock = $isAdmin||user_can('stock');

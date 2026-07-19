@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__.'/layout_top.php';
+require_once __DIR__.'/stock_lib.php';
 
 $categoryId=(int)($_GET['category_id'] ?? 0);
 $pasifDahil=isset($_GET['pasif_dahil']);
@@ -8,7 +9,7 @@ $where=[];
 $params=[];
 if($categoryId){ $where[]='s.category_id=?'; $params[]=$categoryId; }
 if(!$pasifDahil){ $where[]='(s.active IS NULL OR s.active=1)'; }
-if($criticalOnly){ $where[]='s.quantity<=s.critical_level'; }
+if($criticalOnly){ $where[]=stock_critical_where('s'); }
 $sqlWhere=$where ? 'WHERE '.implode(' AND ',$where) : '';
 
 $categories=db()->query("SELECT * FROM product_categories WHERE active=1 ORDER BY name")->fetchAll();
@@ -24,7 +25,7 @@ ds_page_header('Ürün / Stok Yönetimi', ds_icon('box',24), '', $__stockActions
 
 <section class="crm-tabs" style="grid-template-columns:repeat(4,minmax(160px,1fr))">
 <a class="crm-card crm-blue" href="stock.php"><small>Ürün</small><strong><?=safe_count("SELECT COUNT(*) c FROM stock_items")?></strong><span>Toplam ürün</span></a>
-<a class="crm-card" style="background:linear-gradient(135deg,#fee2e2,#fef2f2)" href="stock.php?critical=1"><small>Kritik</small><strong><?=safe_count("SELECT COUNT(*) c FROM stock_items WHERE quantity <= critical_level")?></strong><span>Kritik stok</span></a>
+<a class="crm-card" style="background:linear-gradient(135deg,#fee2e2,#fef2f2)" href="stock.php?critical=1"><small>Kritik</small><strong><?=safe_count("SELECT COUNT(*) c FROM stock_items WHERE ".stock_critical_where())?></strong><span>Kritik stok</span></a>
 <a class="crm-card crm-green" href="stock_movement_new.php?type=in"><small>Giriş</small><strong>+</strong><span>Alış / tedarik</span></a>
 <a class="crm-card crm-orange" href="stock_movement_new.php?type=out"><small>Çıkış</small><strong>-</strong><span>Satış / kullanım</span></a>
 </section>

@@ -2,6 +2,7 @@
 // ACANS OS — Paylaşımlı Rapor Kütüphanesi (mobil + web ortak)
 if(file_exists(__DIR__.'/contacts_lib.php')) require_once __DIR__.'/contacts_lib.php';
 if(file_exists(__DIR__.'/finance_lib.php')) require_once __DIR__.'/finance_lib.php';
+if(file_exists(__DIR__.'/stock_lib.php')) require_once __DIR__.'/stock_lib.php';
 function report_modules(){ return ['tumu'=>'🗂️ Tümü','genel'=>'📊 Yekün','tahsilat'=>'💰 Tahsilat/Finans','muhasebe'=>'📒 Muhasebe','is'=>'📋 İş Emirleri','gorevler'=>'✓ Görevler','personel'=>'👷 Personel','satis'=>'🧾 Satış','satinalma'=>'📥 Satın Alma','teklif'=>'📄 Teklif','cari'=>'👥 Cari','stok'=>'📦 Stok']; }
 // "Tümü"de yer alacak modüller (özet hariç tek tek hepsi)
 function report_all_keys(){ return ['genel','tahsilat','muhasebe','is','gorevler','personel','satis','satinalma','teklif','cari','stok']; }
@@ -266,7 +267,7 @@ function rpt($pdo,$modul,$from,$to,$ref=0,$detail=false){
     $R['title']='Stok';
     $tot=(int)$pdo->query("SELECT COUNT(*) c FROM stock_items")->fetch()['c'];
     $val=(float)$pdo->query("SELECT COALESCE(SUM(quantity*COALESCE(sale_price,0)),0) v FROM stock_items")->fetch()['v'];
-    $krit=$pdo->query("SELECT id,name,quantity,unit,critical_level FROM stock_items WHERE quantity<=critical_level ORDER BY quantity")->fetchAll();
+    $krit=$pdo->query("SELECT id,name,quantity,unit,critical_level FROM stock_items WHERE ".stock_critical_where()." ORDER BY quantity")->fetchAll();
     $R['cards']=[['📦','Ürün',$tot,'#3b82f6'],['💎','Stok Değeri',tl($val),'#22c55e'],['⚠️','Kritik',count($krit),'#f87171']];
     $cd=[]; foreach($krit as $r){ if(count($cd)<8)$cd[$r['name']]=(float)$r['quantity']; }
     $R['chart']=['Kritik ürün stok',$cd];

@@ -1,5 +1,6 @@
 <?php
 require_once 'common.php';
+require_once __DIR__.'/../stock_lib.php';
 $pdo=db();
 $pasifDahil=isset($_GET['pasif_dahil']);
 // MOBILE UX BUGFIX SPRINT (2026-07-15): web stock.php ile aynı düzeltme — critical=1 artık
@@ -21,7 +22,7 @@ try{
     $sql="SELECT id,name,quantity,unit,sale_price,critical_level,active FROM stock_items";
     $conditions=[];
     if(!$pasifDahil) $conditions[]="(active IS NULL OR active=1)";
-    if($criticalOnly) $conditions[]="quantity<=critical_level";
+    if($criticalOnly) $conditions[]=stock_critical_where();
     if($conditions) $sql.=" WHERE ".implode(' AND ',$conditions);
     $sql.=" ORDER BY name LIMIT 200";
     $rows=$pdo->query($sql)->fetchAll();
@@ -30,7 +31,7 @@ try{
     }else{
         echo '<div class="df-list" style="margin-top:12px">';
         foreach($rows as $r){
-            $kr=($r['quantity']<=($r['critical_level']??0));
+            $kr=stock_is_critical($r['quantity'], $r['critical_level']??0);
             $isPasif=isset($r['active']) && !$r['active'];
             $titleHtml = '<b>'.h($r['name']).'</b>';
             if($isPasif) $titleHtml .= ' '.ds_badge('Pasif','red');

@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__.'/layout_top.php';
+require_once __DIR__.'/stock_lib.php';
 if(file_exists(__DIR__.'/activity_lib.php')) require_once __DIR__.'/activity_lib.php';
 require_once __DIR__.'/notes_lib.php';
 require_once __DIR__.'/user_prefs_lib.php';
@@ -112,7 +113,7 @@ try {
 
 // Gecikme analizi
 $overdue_count = safe_count("SELECT COUNT(*) c FROM jobs WHERE due_date IS NOT NULL AND due_date<CURDATE() AND status NOT IN ('Tamamlandı','İptal','Teslim Edildi')");
-$critical_stock = safe_count("SELECT COUNT(*) c FROM stock_items WHERE quantity <= critical_level");
+$critical_stock = safe_count("SELECT COUNT(*) c FROM stock_items WHERE ".stock_critical_where());
 // OTONOM KAPANIŞ PASS (2026-07-19): checks_notes_overdue_count() zaten yazılmıştı (checks_notes_lib.php)
 // ama hiçbir dashboard/alert paneline bağlanmamıştı — vadesi geçmiş portföydeki çek/senet sayısı
 // hiçbir yerde görünmüyordu. jobs/stok ile aynı desene (Gecikme Uyarı Panosu) üçüncü kart olarak eklendi.
@@ -124,7 +125,7 @@ $checks_overdue_count = function_exists('checks_notes_overdue_count') ? checks_n
 $__pulseOk = true; $__pulseOverdue = 0; $__pulseCriticalStock = 0;
 try {
     $__pulseOverdue = (int)($pdo->query("SELECT COUNT(*) c FROM jobs WHERE due_date IS NOT NULL AND due_date<CURDATE() AND status NOT IN ('Tamamlandı','İptal','Teslim Edildi')")->fetch()['c'] ?? 0);
-    $__pulseCriticalStock = (int)($pdo->query("SELECT COUNT(*) c FROM stock_items WHERE quantity<=critical_level")->fetch()['c'] ?? 0);
+    $__pulseCriticalStock = (int)($pdo->query("SELECT COUNT(*) c FROM stock_items WHERE ".stock_critical_where())->fetch()['c'] ?? 0);
 } catch(Throwable $e) { $__pulseOk = false; }
 $__pulse = dashboard_pulse_state($__pulseOk, $__pulseOverdue, is_admin()||user_can('jobs'), $__pulseCriticalStock, is_admin()||user_can('stock'));
 
@@ -140,7 +141,7 @@ $late=safe_count("SELECT COUNT(*) c FROM jobs WHERE due_date IS NOT NULL AND due
 $approval=safe_count("SELECT COUNT(*) c FROM job_files WHERE approval_status='Müşteri Onayı Bekliyor'");
 $external=safe_count("SELECT COUNT(*) c FROM jobs WHERE job_type IN ('dis_atolye','tedarikcide_uretim') AND status NOT IN ('Tamamlandı','İptal','Teslim Edildi')");
 $production=safe_count("SELECT COUNT(*) c FROM jobs WHERE job_type IN ('3d_imalat','uv_baski','lazer') AND status NOT IN ('Tamamlandı','İptal','Teslim Edildi')");
-$stock=safe_count("SELECT COUNT(*) c FROM stock_items WHERE quantity <= critical_level");
+$stock=safe_count("SELECT COUNT(*) c FROM stock_items WHERE ".stock_critical_where());
 $tasks=safe_count("SELECT COUNT(*) c FROM tasks WHERE status!='Tamamlandı'");
 $receivable=safe_sum("SELECT COALESCE(SUM(amount),0) s FROM finance_movements WHERE direction='in' AND status='Bekliyor'");
 $payable=safe_sum("SELECT COALESCE(SUM(amount),0) s FROM finance_movements WHERE direction='out' AND status='Bekliyor'");
