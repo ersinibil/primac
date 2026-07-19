@@ -231,6 +231,19 @@ if($editRow){
     }
     $initialStep=finance_record_type_info($editRow,$catGroup,$accType);
 }
+// FİNANS UX REGRESYON — ÖDEME YAP EKRANINI AYIR (2026-07-19, Product Owner kararı) — Ödeme
+// (out) artık üstte "Cari / Tedarikçi Ödemesi" / "Genel Gider" seçimiyle iki akışa ayrılıyor.
+// Backend AYNI: "Cari / Tedarikçi Ödemesi" zaten var olan record_step==='cari' yolunu kullanır
+// (finance_movements INSERT'i, finance_accounts bakiyesi, contact_balance_case_sql() — hiçbiri
+// değişmedi), sadece bu adım artık ayrı bir "Ne kaydediyorsun?" seçeneği değil, üst seviye
+// varsayılan mod. Varsayılan HER ZAMAN 'cari' — düzenleme modunda kayıt gerçekten 'cari' DEĞİLSE
+// (personel/isletme/vergi/arac/diger) 'genel' açılır; uyarı-sonrası yeniden gösterimde kullanıcının
+// az önce seçtiği adım korunur.
+$initialPayType='cari';
+if($direction==='out'){
+    $__stepSrc = $warning ? ($_POST['record_step'] ?? null) : ($editRow ? $initialStep : null);
+    if($__stepSrc !== null && $__stepSrc !== 'cari') $initialPayType='genel';
+}
 ?>
 
 <?php
@@ -263,10 +276,26 @@ $channelOpts=['Nakit','Banka / EFT','Kredi Kartı','POS','Çek','Senet','Diğer'
 
 <?php ds_form_field('İşlem Tipi', '<select name="direction" id="fnDirection" onchange="fnFilterCats();fnToggleWizard()"><option value="in" '.($direction==='in'?'selected':'').'>Tahsilat</option><option value="out" '.($direction==='out'?'selected':'').'>Ödeme</option></select>'); ?>
 
-<div id="fnWizardLabel" class="df-form-span-2" style="<?=$direction==='out'?'':'display:none'?>">
+<div id="fnPayTypeWrap" class="df-form-span-2" style="<?=$direction==='out'?'':'display:none'?>">
+<label class="df-form-label">Ödeme Türü</label>
+<div class="df-tabs" id="fnPayType" style="margin-bottom:10px">
+  <button type="button" class="df-tab df-tab--active" data-ptype="cari" onclick="fnSetPayType(this,'cari')">Cari / Tedarikçi Ödemesi</button>
+  <button type="button" class="df-tab" data-ptype="genel" onclick="fnSetPayType(this,'genel')">Genel Gider</button>
+</div>
+</div>
+
+<div id="fnWizardLabel" class="df-form-span-2" style="display:none">
 <?php
+// 'cari' artık ayrı bir "Ne kaydediyorsun?" seçeneği DEĞİL (üstteki Ödeme Türü'nün "Cari /
+// Tedarikçi Ödemesi" sekmesi bu işi görüyor) — ama <option value="cari"> DOM'da GİZLİ kalıyor ki
+// fnApplyPayType() 'cari' modunda #fnStep'in value'sunu JS'ten güvenle 'cari' yapabilsin (var
+// olmayan bir value atamak <select>'i boşa düşürür).
 $__stepOpts='';
-foreach($stepOpts as $key=>$o){ $__stepOpts.='<option value="'.$key.'" '.($initialStep===$key?'selected':'').'>'.$o['icon'].' '.h($o['label']).'</option>'; }
+foreach($stepOpts as $key=>$o){
+    $__hide = ($key==='cari') ? ' style="display:none"' : '';
+    $__sel = ($initialStep===$key && $key!=='cari') ? 'selected' : '';
+    $__stepOpts.='<option value="'.$key.'"'.$__hide.' '.$__sel.'>'.$o['icon'].' '.h($o['label']).'</option>';
+}
 ds_form_field('Ne kaydediyorsun?', '<select name="record_step" id="fnStep" onchange="fnApplyStep()">'.$__stepOpts.'</select>');
 ?>
 </div>
@@ -411,13 +440,16 @@ function fnBuildTurOptions(step){
   sel.dataset.current='';
 }
 // FINANCE UX REFACTOR (2026-07-04): sihirbaz SADECE Ödeme (out) tarafında aktif — Tahsilat/Gelir
-// akışı bu ekranda hiç değişmiyor, sihirbaz seçilince gizlenir, alanlar zorunlu olmaz.
+// akışı bu ekranda hiç değişmiyor. FİNANS UX REGRESYON — ÖDEME YAP EKRANINI AYIR (2026-07-19):
+// Ödeme artık önce fnApplyPayType()'a (Cari/Tedarikçi Ödemesi vs Genel Gider) devrediyor — o da
+// gerekirse fnApplyStep()'i çağırır.
 function fnToggleWizard(){
   var out=document.getElementById('fnDirection').value==='out';
-  document.getElementById('fnWizardLabel').style.display = out?'':'none';
+  document.getElementById('fnPayTypeWrap').style.display = out?'':'none';
   document.getElementById('fnField_category_id').style.display = out?'none':'';
   document.getElementById('fnCatSel').required = false;
   if(!out){
+    document.getElementById('fnWizardLabel').style.display='none';
     document.getElementById('fnField_personnel_id').style.display='none';
     document.getElementById('fnField_personnel_id').querySelector('select').required=false;
     document.getElementById('fnField_contact_id').style.display='';
@@ -425,21 +457,55 @@ function fnToggleWizard(){
     document.getElementById('fnField_payment_type').style.display='none';
     document.getElementById('fnTurSel').required=false;
     document.getElementById('fnDesc').required=false;
-  } else { fnApplyStep(); }
+  } else { fnApplyPayType(); }
   // P0 FİNANS UX + ÇEK/SENET ENTEGRASYONU (2026-07-18): cari-kapsam etiketi (Müşteriler/
   // Tedarikçiler) ve Çek/Senet modu yön değişince YENİDEN uygulanır — fnToggleCek() bu ikisinin
   // "son sözü" (çek/senet seçiliyken wizard/kategori görünürlüğünü ezer).
   fnApplyContactScope();
   fnToggleCek();
 }
-// Her adım sadece kendi ilgili alanını gösterir (yanlış kayıt ihtimalini azaltma amacı) — Cari
-// alanı SADECE "Cari Ödemesi" adımında görünür/zorunlu, Personel SADECE "Personel Ödemesi"nde.
+// FİNANS UX REGRESYON — ÖDEME YAP EKRANINI AYIR (2026-07-19, Product Owner kararı) — Ödeme
+// (out) üstte "Cari / Tedarikçi Ödemesi" / "Genel Gider" seçimiyle iki akışa ayrılır. "Cari /
+// Tedarikçi Ödemesi" backend'de AYNEN var olan record_step==='cari' yolunu kullanır (INSERT/bakiye
+// mantığı hiç değişmedi) — #fnStep <select>'i JS'ten 'cari' değerine sabitler (DOM'da gizli
+// <option value="cari"> zaten var, bkz. yukarıdaki PHP döngüsü). "Genel Gider" mevcut sihirbazın
+// (Ne kaydediyorsun?/Gider Türü) BİREBİR aynısı, sadece "Cari Ödemesi" artık dropdown'da seçenek
+// olarak sunulmuyor (üstteki tab zaten o işi görüyor).
+var FN_PAY_TYPE = <?=json_encode($initialPayType)?>;
+function fnSetPayType(btn, ptype){
+  FN_PAY_TYPE = ptype;
+  fnApplyPayType();
+}
+function fnApplyPayType(){
+  document.querySelectorAll('#fnPayType .df-tab').forEach(function(b){ b.classList.toggle('df-tab--active', b.dataset.ptype===FN_PAY_TYPE); });
+  if(document.getElementById('fnDirection').value!=='out') return;
+  var contactBox=document.getElementById('fnField_contact_id');
+  if(FN_PAY_TYPE==='cari'){
+    document.getElementById('fnStep').value='cari';
+    document.getElementById('fnWizardLabel').style.display='none';
+    document.getElementById('fnField_payment_type').style.display='none';
+    document.getElementById('fnTurSel').required=false;
+    document.getElementById('fnField_personnel_id').style.display='none';
+    document.getElementById('fnField_personnel_id').querySelector('select').required=false;
+    contactBox.style.display='';
+    document.getElementById('fnContactQuery').required=true;
+    document.getElementById('fnDesc').required=false;
+  }else{
+    contactBox.style.display='none';
+    document.getElementById('fnContactQuery').required=false;
+    if(window.fnContactPicker) window.fnContactPicker.clear();
+    document.getElementById('fnWizardLabel').style.display='';
+    if(document.getElementById('fnStep').value==='cari') document.getElementById('fnStep').value='diger';
+    fnApplyStep();
+  }
+  fnApplyContactScope();
+}
+// Her adım sadece kendi ilgili alanını gösterir (yanlış kayıt ihtimalini azaltma amacı) — Personel
+// SADECE "Personel Ödemesi"nde görünür/zorunlu. Cari artık bu sihirbazın işi değil (fnApplyPayType()).
 function fnApplyStep(){
   if(document.getElementById('fnDirection').value!=='out') return;
+  if(FN_PAY_TYPE!=='genel') return;
   var step=document.getElementById('fnStep').value;
-  var contactBox=document.getElementById('fnField_contact_id');
-  contactBox.style.display = (step==='cari') ? '' : 'none';
-  document.getElementById('fnContactQuery').required = (step==='cari');
   var persBox=document.getElementById('fnField_personnel_id');
   persBox.style.display = (step==='personel') ? '' : 'none';
   persBox.querySelector('select').required = (step==='personel');
@@ -493,6 +559,9 @@ function fnToggleCek(){
     contactBox.style.display='';
     document.getElementById('fnContactQuery').required=true;
     if(out){
+      // Çek/Senet'te Ödeme Türü sekmesi devre dışı — checks_notes_lib.php akışı zaten HER ZAMAN
+      // cari ister, "Genel Gider" bu yöntemle anlamsız.
+      document.getElementById('fnPayTypeWrap').style.display='none';
       document.getElementById('fnWizardLabel').style.display='none';
       document.getElementById('fnField_personnel_id').style.display='none';
       document.getElementById('fnField_personnel_id').querySelector('select').required=false;
@@ -501,8 +570,8 @@ function fnToggleCek(){
       document.getElementById('fnDesc').required=false;
     }
   } else if(out){
-    document.getElementById('fnWizardLabel').style.display='';
-    fnApplyStep();
+    document.getElementById('fnPayTypeWrap').style.display='';
+    fnApplyPayType();
   }
 }
 function fnSetCekMode(btn, mode){

@@ -104,10 +104,21 @@ $stepOpts=finance_record_type_options();
 <div class="df-panel" style="display:flex;gap:8px"><a class="df-btn df-btn--primary" href="kasa.php" style="flex:1;justify-content:center"><?=ds_icon('wallet',14)?> Kasa Durumu</a></div>
 <div class="df-panel" style="margin-top:12px">
 <form method="post" id="paymentForm" enctype="multipart/form-data">
-  <div id="pmWizardWrap">
+  <!-- FİNANS UX REGRESYON — ÖDEME YAP EKRANINI AYIR (2026-07-19, Product Owner kararı) — ekran
+       artık üstte "Cari / Tedarikçi Ödemesi" / "Genel Gider" seçimiyle iki akışa ayrılıyor.
+       Varsayılan HER ZAMAN cari (bu ekranın edit modu yok, her açılış yeni kayıt). -->
+  <div id="pmPayTypeWrap">
+  <label>Ödeme Türü</label>
+  <div class="df-tabs" id="pmPayType" style="margin:0 0 12px">
+    <button type="button" class="df-tab df-tab--active" data-ptype="cari" onclick="pmSetPayType(this,'cari')">Cari / Tedarikçi Ödemesi</button>
+    <button type="button" class="df-tab" data-ptype="genel" onclick="pmSetPayType(this,'genel')">Genel Gider</button>
+  </div>
+  </div>
+
+  <div id="pmWizardWrap" style="display:none">
   <label>Ne kaydediyorsun?</label>
   <select name="record_step" id="pmStep" onchange="pmApplyStep()">
-    <?php foreach($stepOpts as $key=>$o): ?><option value="<?=$key?>" <?=$cid&&$key==='cari'?'selected':''?>><?=$o['icon']?> <?=h($o['label'])?></option><?php endforeach; ?>
+    <?php foreach($stepOpts as $key=>$o): ?><option value="<?=$key?>"<?=$key==='cari'?' style="display:none"':''?>><?=$o['icon']?> <?=h($o['label'])?></option><?php endforeach; ?>
   </select>
   </div>
 
@@ -194,20 +205,52 @@ function pmBuildTurOptions(step){
     sel.appendChild(el);
   }
 }
-// Her adım sadece kendi ilgili alanını gösterir (yanlış kayıt ihtimalini azaltma amacı) — Cari
-// alanı SADECE "Cari Ödemesi" adımında, Personel SADECE "Personel Ödemesi" adımında görünür.
+// Her adım sadece kendi ilgili alanını gösterir (yanlış kayıt ihtimalini azaltma amacı) — Personel
+// SADECE "Personel Ödemesi"nde görünür/zorunlu. Cari artık bu sihirbazın işi değil (pmApplyPayType()).
 function pmApplyStep(){
   if(document.getElementById('pmChannel').value==='Çek'||document.getElementById('pmChannel').value==='Senet') return;
+  if(PM_PAY_TYPE!=='genel') return;
   var step=document.getElementById('pmStep').value;
-  var contactBox=document.getElementById('pmField_contact_id');
-  contactBox.style.display = (step==='cari') ? '' : 'none';
-  document.getElementById('pmContactQuery').required = (step==='cari');
   var persBox=document.getElementById('pmField_personnel_id');
   persBox.style.display = (step==='personel') ? '' : 'none';
   persBox.querySelector('select').required = (step==='personel');
+  document.getElementById('pmField_payment_type').style.display='';
   pmBuildTurOptions(step);
   document.getElementById('pmTurSel').required = (PM_TUR_REQUIRED.indexOf(step)!==-1);
   document.getElementById('pmDesc').required = (step==='diger');
+}
+
+// FİNANS UX REGRESYON — ÖDEME YAP EKRANINI AYIR (2026-07-19, Product Owner kararı) — "Cari /
+// Tedarikçi Ödemesi" backend'de AYNEN var olan record_step==='cari' yolunu kullanır (INSERT/bakiye
+// mantığı hiç değişmedi) — #pmStep'i JS'ten 'cari' değerine sabitler (DOM'da gizli
+// <option value="cari"> zaten var). "Genel Gider" mevcut sihirbazın BİREBİR aynısı.
+var PM_PAY_TYPE = 'cari';
+function pmSetPayType(btn, ptype){
+  PM_PAY_TYPE = ptype;
+  pmApplyPayType();
+}
+function pmApplyPayType(){
+  document.querySelectorAll('#pmPayType .df-tab').forEach(function(b){ b.classList.toggle('df-tab--active', b.dataset.ptype===PM_PAY_TYPE); });
+  var contactBox=document.getElementById('pmField_contact_id');
+  if(PM_PAY_TYPE==='cari'){
+    document.getElementById('pmStep').value='cari';
+    document.getElementById('pmWizardWrap').style.display='none';
+    document.getElementById('pmField_payment_type').style.display='none';
+    document.getElementById('pmTurSel').required=false;
+    document.getElementById('pmField_personnel_id').style.display='none';
+    document.getElementById('pmField_personnel_id').querySelector('select').required=false;
+    contactBox.style.display='';
+    document.getElementById('pmContactQuery').required=true;
+    document.getElementById('pmDesc').required=false;
+  }else{
+    contactBox.style.display='none';
+    document.getElementById('pmContactQuery').required=false;
+    if(window.pmContactPicker) window.pmContactPicker.clear();
+    document.getElementById('pmWizardWrap').style.display='';
+    if(document.getElementById('pmStep').value==='cari') document.getElementById('pmStep').value='diger';
+    pmApplyStep();
+  }
+  if(window.pmContactPicker) window.pmContactPicker.refresh();
 }
 
 // P0 FİNANS UX (2026-07-18, Product Owner kararı 1. madde) — cari modeli değişmedi, sadece arama
@@ -229,7 +272,10 @@ function pmToggleCek(){
   document.getElementById('pmCekBlock').style.display=isCek?'':'none';
   document.getElementById('pmBankWrap').style.display=(pm==='Çek')?'':'none';
   document.getElementById('pmField_account_id').style.display=isCek?'none':'';
-  document.getElementById('pmWizardWrap').style.display=isCek?'none':'';
+  // Çek/Senet'te Ödeme Türü sekmesi devre dışı — checks_notes_lib.php akışı zaten HER ZAMAN cari
+  // ister, "Genel Gider" bu yöntemle anlamsız.
+  document.getElementById('pmPayTypeWrap').style.display=isCek?'none':'';
+  document.getElementById('pmWizardWrap').style.display='none';
   var contactBox=document.getElementById('pmField_contact_id');
   if(isCek){
     contactBox.style.display='';
@@ -241,8 +287,7 @@ function pmToggleCek(){
     document.getElementById('pmDesc').required=false;
   }else{
     document.getElementById('pmContactQuery').required=false;
-    document.getElementById('pmField_payment_type').style.display='';
-    pmApplyStep();
+    pmApplyPayType();
   }
   if(window.pmContactPicker) window.pmContactPicker.refresh();
 }
@@ -256,7 +301,7 @@ window.pmContactPicker = dfInitContactPicker({
   inputId:'pmContactQuery', hiddenId:'pmContactSel', resultsId:'pmContactResults',
   endpoint:'../contact_search_ajax.php', getScope: function(){ return PM_SCOPE==='all' ? 'all' : 'suppliers'; }
 });
-pmApplyStep();
+pmApplyPayType();
 pmToggleCek();
 </script>
 <div class="df-panel" style="margin-top:12px"><b><?=ds_icon('box',16)?> Son Ödemeler</b>
