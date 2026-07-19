@@ -13,10 +13,24 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['add_cn'])){
     $_SESSION['cn_err']=$err;
     header('Location: checks_notes.php'); exit;
 }
+// ÇEK/SENET SİLME REGRESYONU (2026-07-19) — web checks_notes.php ile AYNI kısayol: Ciro Edildi/
+// Tahsil Edildi/Ödendi durumundaki kayıtlar için Detay sayfasına gitmeden liste satırından tek
+// tıkla "İşlemi Geri Al" — check_note_view.php'deki checks_notes_reopen() ile BİREBİR aynı çağrı.
+if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['reopen_cn'])){
+    $err='';
+    try{
+        if(!can_edit_delete()) throw new Exception('Bu işlem için yetkiniz yok.');
+        checks_notes_reopen($pdo, $ME, (int)$_POST['id'], '');
+    }catch(Throwable $e){ $err=$e->getMessage(); }
+    if($err===''){ $_SESSION['cn_ok']='İşlem geri alındı — kayıt tekrar Portföyde/Bekliyor durumunda.'; }
+    else{ $_SESSION['cn_err']=$err; }
+    header('Location: checks_notes.php'); exit;
+}
 
 topx('Çek / Senet');
 if(isset($_GET['ok'])) echo ds_alert('success','Kayıt eklendi.');
 if(isset($_GET['deleted'])) echo ds_alert('success','Kayıt silindi.');
+if(!empty($_SESSION['cn_ok'])){ echo ds_alert('success',$_SESSION['cn_ok']); unset($_SESSION['cn_ok']); }
 if(!empty($_SESSION['cn_err'])){ echo ds_alert('danger',$_SESSION['cn_err']); unset($_SESSION['cn_err']); }
 if(!checks_notes_lifecycle_ready()) echo ds_alert('danger','⚠️ Çek/Senet yaşam döngüsü (Tahsil Et / Öde / Ciro Et / İşlemi Geri Al) bu sunucuda henüz AKTİF DEĞİL — migration 048 çalıştırılmamış. "Düzenle" ve "Sil" (henüz sonuçlanmamış kayıtlarda) etkilenmez. Çözüm: migrate.php çalıştırılmalı.');
 
@@ -103,6 +117,15 @@ foreach($rows as $r){
     $descHtml = h(($r['contact_name']?:'-').' · '.($r['due_date']?:'Vadesiz').($overdue?' ⚠️':($upcoming?' ⏳':''))).$finIc;
     $metaHtml = '<b style="color:'.$color.'">'.mm($r['amount']).'</b>';
     ds_list_item($titleHtml, 'check_note_view.php?id='.(int)$r['id'], $descHtml, $metaHtml);
+    // ÇEK/SENET SİLME REGRESYONU (2026-07-19) — web checks_notes.php ile AYNI kısayol: Ciro Edildi/
+    // Tahsil Edildi/Ödendi kayıtlar için Detay'a gitmeden liste satırından tek tıkla Geri Al.
+    // ds_list_item() tüm satırı <a> yaptığı için buton İÇİNE değil, satırın ALTINA konur.
+    if(can_edit_delete() && in_array('reopen', checks_notes_available_actions($r), true)){
+        echo '<form method="post" style="padding:0 2px 8px" onsubmit="return confirm(\'Bu işlem geri alınacak, kayıt tekrar Portföyde/Bekliyor durumuna dönecek. Emin misiniz?\')">'
+            .'<input type="hidden" name="id" value="'.(int)$r['id'].'">'
+            .'<button class="df-btn df-btn--secondary df-btn--sm" name="reopen_cn" value="1" style="width:100%">↩️ Geri Al</button>'
+            .'</form>';
+    }
 }
 ?>
 </div>
