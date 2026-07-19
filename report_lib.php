@@ -32,13 +32,13 @@ function build_csv_all($pdo,$appName,$from,$to){
 function report_kpi_grid($cards){
   static $styled=false; $out='';
   if(!$styled){ $styled=true;
-    $out.='<style>.rep-tiles{display:flex;flex-wrap:wrap;gap:12px;margin:14px 0}.rep-tile{position:relative;flex:1 1 150px;min-width:150px;background:var(--df-surface,#fff);border:1px solid var(--df-hairline,#e4e7ec);border-left:4px solid var(--df-accent,#2563eb);border-radius:var(--df-radius-lg,14px);padding:14px 16px;color:var(--df-ink-900,#101828);overflow:hidden;box-shadow:var(--df-shadow-sm,0 2px 8px rgba(16,24,40,.06));text-decoration:none;display:block}.rep-tile .ic{font-size:18px;opacity:.8;color:var(--df-ink-500,#667085)}.rep-tile .vl{font-size:22px;font-weight:800;margin-top:6px;line-height:1.1;color:var(--df-ink-900,#101828)}.rep-tile .lb{font-size:12px;color:var(--df-ink-500,#667085);margin-top:3px;font-weight:600;text-transform:uppercase;letter-spacing:.03em}</style>';
+    $out.='<style>.rep-tiles{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0}.rep-tile{position:relative;flex:1 1 130px;min-width:120px;background:var(--df-surface,#fff);border:1px solid var(--df-hairline,#e4e7ec);border-radius:var(--df-radius-md,10px);padding:11px 13px;color:var(--df-ink-900,#101828);overflow:hidden;text-decoration:none;display:block}.rep-tile .lb{font-size:11px;color:var(--df-ink-500,#667085);font-weight:700;text-transform:uppercase;letter-spacing:.04em}.rep-tile .vl{font-size:19px;font-weight:800;margin-top:4px;line-height:1.15;color:var(--df-ink-900,#101828)}</style>';
   }
   $out.='<div class="rep-tiles">';
   foreach($cards as $c){
     $col=$c[3]; $clink=$c[4] ?? null; $tag=$clink?'a':'div';
-    $out.='<'.$tag.' class="rep-tile"'.($clink?' href="'.htmlspecialchars($clink).'"':'').' style="border-left-color:'.htmlspecialchars($col).($clink?';cursor:pointer':'').'">';
-    $out.='<div class="ic">'.$c[0].'</div><div class="vl">'.htmlspecialchars($c[2]).'</div><div class="lb">'.htmlspecialchars($c[1]).'</div>';
+    $out.='<'.$tag.' class="rep-tile"'.($clink?' href="'.htmlspecialchars($clink).'"':'').' style="border-left:3px solid '.htmlspecialchars($col).($clink?';cursor:pointer':'').'">';
+    $out.='<div class="lb">'.htmlspecialchars($c[1]).'</div><div class="vl">'.htmlspecialchars($c[2]).'</div>';
     $out.='</'.$tag.'>';
   }
   $out.='</div>';
@@ -79,7 +79,7 @@ function cari_toplu_summary($pdo,$mode='',$type='',$list=null){
   if($list===null) $list=cari_toplu_list($pdo,$mode,$type);
   $totAlacak=0;$totBorc=0; foreach($list as $c){ if($c['bal']>0)$totAlacak+=$c['bal']; else $totBorc+=abs($c['bal']); }
   $S=['title'=>'Toplu Cari Ekstre — '.cari_toplu_mode_label($mode).' ('.($type?:'Tümü').')',
-      'cards'=>[['👥','Cari Sayısı',count($list),'#a78bfa'],['🟢','Toplam Alacak',tl($totAlacak),'#22c55e'],['🔴','Toplam Borç',tl($totBorc),'#f87171']],
+      'cards'=>[['','Cari Sayısı',count($list),'#a78bfa'],['','Toplam Alacak',tl($totAlacak),'#22c55e'],['','Toplam Borç',tl($totBorc),'#f87171']],
       'chart'=>null,'table'=>['head'=>['Cari','Bakiye'],'rows'=>[],'links'=>[]]];
   foreach($list as $c){ $S['table']['rows'][]=[$c['name'],tl($c['bal'])]; $S['table']['links'][]='contact_view.php?id='.$c['id']; }
   return $S;
@@ -131,7 +131,7 @@ function rpt($pdo,$modul,$from,$to,$ref=0,$detail=false){
     // (2026-07-03 modül-zinciri denetiminde bulundu — bkz. finance.php/dashboard.php aynı düzeltme).
     $f=$pdo->prepare("SELECT COALESCE(SUM(CASE WHEN direction='in' THEN amount END),0) tin, COALESCE(SUM(CASE WHEN direction='out' AND COALESCE(movement_type,'')<>'transfer' THEN amount END),0) tout, COUNT(*) n FROM finance_movements WHERE DATE(movement_date) BETWEEN ? AND ?");
     $f->execute([$from,$to]); $t=$f->fetch();
-    $R['cards']=[['💰','Tahsilat',tl($t['tin']),'#22c55e'],['💸','Ödeme',tl($t['tout']),'#f87171'],['📈','Net',tl($t['tin']-$t['tout']),'#3b82f6'],['🔢','İşlem',$t['n'],'#a78bfa']];
+    $R['cards']=[['','Tahsilat',tl($t['tin']),'#22c55e'],['','Ödeme',tl($t['tout']),'#f87171'],['','Net',tl($t['tin']-$t['tout']),'#3b82f6'],['','İşlem',$t['n'],'#a78bfa']];
     $ch=$pdo->prepare("SELECT COALESCE(NULLIF(payment_channel,''),'Diğer') k, SUM(amount) s FROM finance_movements WHERE direction='in' AND DATE(movement_date) BETWEEN ? AND ? GROUP BY k ORDER BY s DESC");
     $ch->execute([$from,$to]); $cd=[]; foreach($ch->fetchAll() as $r)$cd[$r['k']]=(float)$r['s'];
     $R['chart']=['Tahsilat — kanal',$cd];
@@ -151,7 +151,7 @@ function rpt($pdo,$modul,$from,$to,$ref=0,$detail=false){
     $R['title']='Muhasebe (Kategori Gider/Gelir)';
     $s=$pdo->prepare("SELECT COALESCE(SUM(CASE WHEN direction='in' THEN amount END),0) gelir, COALESCE(SUM(CASE WHEN direction='out' THEN amount END),0) gider, COUNT(*) n FROM finance_movements WHERE movement_type='muhasebe' AND movement_date BETWEEN ? AND ?");
     $s->execute([$from,$to]); $t=$s->fetch();
-    $R['cards']=[['📈','Gelir',tl($t['gelir']),'#22c55e'],['📉','Gider',tl($t['gider']),'#f87171'],['📊','Net',tl($t['gelir']-$t['gider']),'#3b82f6'],['🔢','Kayıt',$t['n'],'#a78bfa']];
+    $R['cards']=[['','Gelir',tl($t['gelir']),'#22c55e'],['','Gider',tl($t['gider']),'#f87171'],['','Net',tl($t['gelir']-$t['gider']),'#3b82f6'],['','Kayıt',$t['n'],'#a78bfa']];
     $cc=$pdo->prepare("SELECT COALESCE(ac.name,'Kategorisiz') k, SUM(fm.amount) s FROM finance_movements fm LEFT JOIN accounting_categories ac ON ac.id=fm.category_id WHERE fm.movement_type='muhasebe' AND fm.direction='out' AND fm.movement_date BETWEEN ? AND ? GROUP BY k ORDER BY s DESC LIMIT 12");
     $cc->execute([$from,$to]); $cd=[]; foreach($cc->fetchAll() as $r)$cd[$r['k']]=(float)$r['s'];
     $R['chart']=['Gider — kategoriye göre',$cd];
@@ -169,7 +169,7 @@ function rpt($pdo,$modul,$from,$to,$ref=0,$detail=false){
     $st=$pdo->prepare("SELECT status,COUNT(*) c FROM jobs WHERE DATE(created_at) BETWEEN ? AND ? GROUP BY status"); $st->execute([$from,$to]);
     $cd=[]; $tamam=0; foreach($st->fetchAll() as $r){ $cd[$r['status']]=(int)$r['c']; if(in_array($r['status'],['Tamamlandı','Teslim Edildi']))$tamam+=(int)$r['c']; }
     $g=$pdo->prepare("SELECT COUNT(*) n FROM jobs WHERE status NOT IN ('Tamamlandı','İptal','Teslim Edildi') AND due_date IS NOT NULL AND due_date<CURDATE()"); $g->execute(); $geciken=(int)$g->fetch()['n'];
-    $R['cards']=[['📋','Açılan',$acilan,'#3b82f6'],['✓','Tamamlanan',$tamam,'#22c55e'],['▶','Açık',$acilan-$tamam,'#eab308'],['⏰','Geciken',$geciken,'#f87171']];
+    $R['cards']=[['','Açılan',$acilan,'#3b82f6'],['','Tamamlanan',$tamam,'#22c55e'],['','Açık',$acilan-$tamam,'#eab308'],['','Geciken',$geciken,'#f87171']];
     $R['chart']=['Duruma göre iş',$cd];
     $j=$pdo->prepare("SELECT j.id,j.job_no,j.title,j.status,j.due_date,p.name FROM jobs j LEFT JOIN personnel p ON p.id=j.responsible_personnel_id WHERE DATE(j.created_at) BETWEEN ? AND ? ORDER BY j.id DESC");
     $j->execute([$from,$to]); $R['table']['head']=['No','İş','Durum','Termin','Sorumlu'];
@@ -183,7 +183,7 @@ function rpt($pdo,$modul,$from,$to,$ref=0,$detail=false){
     $st=$pdo->prepare("SELECT status,COUNT(*) c FROM tasks WHERE DATE(created_at) BETWEEN ? AND ? GROUP BY status"); $st->execute([$from,$to]);
     $cd=[]; $tamam=0; foreach($st->fetchAll() as $r){ $cd[$r['status']]=(int)$r['c']; if($r['status']==='Tamamlandı')$tamam+=(int)$r['c']; }
     $g=$pdo->prepare("SELECT COUNT(*) n FROM tasks WHERE status NOT IN ('Tamamlandı','İptal') AND due_date IS NOT NULL AND due_date<CURDATE()"); $g->execute(); $geciken=(int)$g->fetch()['n'];
-    $R['cards']=[['📋','Oluşturulan',$acilan,'#3b82f6'],['✓','Tamamlanan',$tamam,'#22c55e'],['▶','Açık',$acilan-$tamam,'#eab308'],['⏰','Geciken',$geciken,'#f87171']];
+    $R['cards']=[['','Oluşturulan',$acilan,'#3b82f6'],['','Tamamlanan',$tamam,'#22c55e'],['','Açık',$acilan-$tamam,'#eab308'],['','Geciken',$geciken,'#f87171']];
     $R['chart']=['Duruma göre görev',$cd];
     $pp=$pdo->prepare("SELECT t.personnel_id, COALESCE(p.name,'Atanmamış') pn, COUNT(*) c, SUM(CASE WHEN t.status='Tamamlandı' THEN 1 ELSE 0 END) tm FROM tasks t LEFT JOIN personnel p ON p.id=t.personnel_id WHERE DATE(t.created_at) BETWEEN ? AND ? GROUP BY t.personnel_id ORDER BY c DESC");
     $pp->execute([$from,$to]); $R['table']['head']=['Personel','Toplam','Tamamlanan'];
@@ -217,7 +217,7 @@ function rpt($pdo,$modul,$from,$to,$ref=0,$detail=false){
       $R['table']['head']=['Personel','İş','Tamam','Görev','Puan'];
       foreach($ps as $r){ $R['table']['rows'][]=[$r['name'],$r['ist'],$r['itm'],$r['gtm'].'/'.$r['gt'],$r['sc']]; }
     }
-    $R['cards']=[['👷','Personel',count($ps),'#a78bfa'],['🏆','Lider',$bestN?:'-','#eab308'],['⭐','En Yüksek Puan',$best,'#22c55e']];
+    $R['cards']=[['','Personel',count($ps),'#a78bfa'],['','Lider',$bestN?:'-','#eab308'],['','En Yüksek Puan',$best,'#22c55e']];
     arsort($cd); $R['chart']=['Tamamlanan iş — personel',$cd];
     break;
 
@@ -225,7 +225,7 @@ function rpt($pdo,$modul,$from,$to,$ref=0,$detail=false){
     $R['title']='Satış';
     $s=$pdo->prepare("SELECT COALESCE(SUM(amount),0) tut,COUNT(*) n FROM finance_movements WHERE movement_type LIKE '%sale%' AND DATE(movement_date) BETWEEN ? AND ?");
     $s->execute([$from,$to]); $sd=$s->fetch();
-    $R['cards']=[['🧾','Toplam Satış',tl($sd['tut']),'#f97316'],['🔢','İşlem',$sd['n'],'#3b82f6'],['📊','Ortalama',tl($sd['n']>0?$sd['tut']/$sd['n']:0),'#22c55e']];
+    $R['cards']=[['','Toplam Satış',tl($sd['tut']),'#f97316'],['','İşlem',$sd['n'],'#3b82f6'],['','Ortalama',tl($sd['n']>0?$sd['tut']/$sd['n']:0),'#22c55e']];
     $cc=$pdo->prepare("SELECT c.name k,SUM(fm.amount) s FROM finance_movements fm LEFT JOIN contacts c ON c.id=fm.contact_id WHERE fm.movement_type LIKE '%sale%' AND DATE(fm.movement_date) BETWEEN ? AND ? GROUP BY fm.contact_id ORDER BY s DESC LIMIT 8");
     $cc->execute([$from,$to]); $cd=[]; foreach($cc->fetchAll() as $r)$cd[$r['k']?:'—']=(float)$r['s'];
     $R['chart']=['Cariye göre satış',$cd];
@@ -239,7 +239,7 @@ function rpt($pdo,$modul,$from,$to,$ref=0,$detail=false){
     $R['title']='Satın Alma';
     $s=$pdo->prepare("SELECT COALESCE(SUM(fm.amount),0) tut,COUNT(*) n FROM finance_movements fm WHERE fm.movement_type='purchase' AND DATE(fm.movement_date) BETWEEN ? AND ?");
     $s->execute([$from,$to]); $sd=$s->fetch();
-    $R['cards']=[['📥','Toplam Satın Alma',tl($sd['tut']),'#3b82f6'],['🔢','İşlem',$sd['n'],'#a78bfa'],['📊','Ortalama',tl($sd['n']>0?$sd['tut']/$sd['n']:0),'#22c55e']];
+    $R['cards']=[['','Toplam Satın Alma',tl($sd['tut']),'#3b82f6'],['','İşlem',$sd['n'],'#a78bfa'],['','Ortalama',tl($sd['n']>0?$sd['tut']/$sd['n']:0),'#22c55e']];
     // Tedarikçi bazlı kırılım
     $cc=$pdo->prepare("SELECT c.name k,SUM(fm.amount) s FROM finance_movements fm LEFT JOIN contacts c ON c.id=fm.contact_id WHERE fm.movement_type='purchase' AND DATE(fm.movement_date) BETWEEN ? AND ? GROUP BY fm.contact_id ORDER BY s DESC LIMIT 8");
     $cc->execute([$from,$to]); $cd=[]; foreach($cc->fetchAll() as $r)$cd[$r['k']?:'—']=(float)$r['s'];
@@ -258,7 +258,7 @@ function rpt($pdo,$modul,$from,$to,$ref=0,$detail=false){
     $R['title']='Teklif';
     $s=$pdo->prepare("SELECT COUNT(*) n,COALESCE(SUM(total),0) tut,COALESCE(SUM(CASE WHEN status='Kabul' THEN total ELSE 0 END),0) kabul FROM quotes WHERE DATE(quote_date) BETWEEN ? AND ?");
     $s->execute([$from,$to]); $sd=$s->fetch();
-    $R['cards']=[['📄','Teklif Sayısı',$sd['n'],'#3b82f6'],['💰','Toplam Tutar',tl($sd['tut']),'#6366f1'],['✅','Kabul Edilen',tl($sd['kabul']),'#22c55e']];
+    $R['cards']=[['','Teklif Sayısı',$sd['n'],'#3b82f6'],['','Toplam Tutar',tl($sd['tut']),'#6366f1'],['','Kabul Edilen',tl($sd['kabul']),'#22c55e']];
     $cc=$pdo->prepare("SELECT status k,COUNT(*) s FROM quotes WHERE DATE(quote_date) BETWEEN ? AND ? GROUP BY status");
     $cc->execute([$from,$to]); $cd=[]; foreach($cc->fetchAll() as $r)$cd[$r['k']?:'—']=(float)$r['s'];
     $R['chart']=['Duruma göre teklif',$cd];
@@ -277,7 +277,7 @@ function rpt($pdo,$modul,$from,$to,$ref=0,$detail=false){
       FROM contacts c ORDER BY ABS(COALESCE(c.opening_balance,0)+COALESCE((SELECT SUM($balExpr) FROM finance_movements WHERE contact_id=c.id),0)) DESC LIMIT 50")->fetchAll();
     $alacak=0;$borc=0;$cd=[];
     foreach($cl as $r){ $b=(float)$r['bal']; if($b>0)$alacak+=$b; else $borc+=abs($b); if(count($cd)<8 && $b!=0)$cd[$r['name']]=abs($b); }
-    $R['cards']=[['👥','Cari',$tot,'#a78bfa'],['🟢','Alacak',tl($alacak),'#22c55e'],['🔴','Borç',tl($borc),'#f87171']];
+    $R['cards']=[['','Cari',$tot,'#a78bfa'],['','Alacak',tl($alacak),'#22c55e'],['','Borç',tl($borc),'#f87171']];
     $R['chart']=['En yüksek bakiye',$cd];
     $R['table']['head']=['Cari','Bakiye'];
     foreach($cl as $r){ $R['table']['rows'][]=[$r['name'],tl($r['bal'])]; $R['table']['links'][]='contact_view.php?id='.(int)$r['id']; }
@@ -288,7 +288,7 @@ function rpt($pdo,$modul,$from,$to,$ref=0,$detail=false){
     $tot=(int)$pdo->query("SELECT COUNT(*) c FROM stock_items")->fetch()['c'];
     $val=(float)$pdo->query("SELECT COALESCE(SUM(quantity*COALESCE(sale_price,0)),0) v FROM stock_items")->fetch()['v'];
     $krit=$pdo->query("SELECT id,name,quantity,unit,critical_level FROM stock_items WHERE ".stock_critical_where()." ORDER BY quantity")->fetchAll();
-    $R['cards']=[['📦','Ürün',$tot,'#3b82f6'],['💎','Stok Değeri',tl($val),'#22c55e'],['⚠️','Kritik',count($krit),'#f87171']];
+    $R['cards']=[['','Ürün',$tot,'#3b82f6'],['','Stok Değeri',tl($val),'#22c55e'],['','Kritik',count($krit),'#f87171']];
     $cd=[]; foreach($krit as $r){ if(count($cd)<8)$cd[$r['name']]=(float)$r['quantity']; }
     $R['chart']=['Kritik ürün stok',$cd];
     $R['table']['head']=['Ürün','Stok','Kritik Seviye'];
@@ -305,7 +305,7 @@ function rpt($pdo,$modul,$from,$to,$ref=0,$detail=false){
     $balExpr = contact_balance_case_sql('finance_movements');
     $allBal=(float)$cc['ob'] + (float)($pdo->query("SELECT COALESCE(SUM($balExpr),0) s FROM finance_movements WHERE contact_id=".(int)$ref)->fetch()['s']);
     $jc=$pdo->prepare("SELECT COUNT(*) n FROM jobs WHERE customer_id=?"); $jc->execute([$ref]); $jn=(int)$jc->fetch()['n'];
-    $R['cards']=[['💼','Güncel Bakiye',tl($allBal),$allBal<0?'#f87171':'#22c55e'],['💰','Tahsilat',tl($t['tin']),'#22c55e'],['💸','Ödeme',tl($t['tout']),'#f87171'],['📋','İş',$jn,'#3b82f6']];
+    $R['cards']=[['','Güncel Bakiye',tl($allBal),$allBal<0?'#f87171':'#22c55e'],['','Tahsilat',tl($t['tin']),'#22c55e'],['','Ödeme',tl($t['tout']),'#f87171'],['','İş',$jn,'#3b82f6']];
     $mv=$pdo->prepare("SELECT movement_date,direction,amount,description,movement_type FROM finance_movements WHERE contact_id=? AND DATE(movement_date) BETWEEN ? AND ? ORDER BY movement_date,id");
     $mv->execute([$ref,$from,$to]); $cd=[];
     $R['table']['head']=['Tarih','Tür','Tutar','Açıklama'];
@@ -335,7 +335,7 @@ function rpt($pdo,$modul,$from,$to,$ref=0,$detail=false){
     $lFin='report.php?modul=tahsilat&from='.urlencode($from).'&to='.urlencode($to);
     $lSatis='report.php?modul=satis&from='.urlencode($from).'&to='.urlencode($to);
     $lIs='report.php?modul=is&from='.urlencode($from).'&to='.urlencode($to);
-    $R['cards']=[['💰','Tahsilat',tl($t['tin']),'#22c55e',$lFin],['💸','Ödeme',tl($t['tout']),'#f87171',$lFin],['📈','Net',tl($t['tin']-$t['tout']),'#3b82f6',$lFin],['🧾','Satış',tl($sale),'#f97316',$lSatis],['📋','Açılan İş',$acilan,'#a78bfa',$lIs],['✓','Tamamlanan',$tamam,'#14b8a6',$lIs]];
+    $R['cards']=[['','Tahsilat',tl($t['tin']),'#22c55e',$lFin],['','Ödeme',tl($t['tout']),'#f87171',$lFin],['','Net',tl($t['tin']-$t['tout']),'#3b82f6',$lFin],['','Satış',tl($sale),'#f97316',$lSatis],['','Açılan İş',$acilan,'#a78bfa',$lIs],['','Tamamlanan',$tamam,'#14b8a6',$lIs]];
     $R['chart']=['Genel',['Tahsilat'=>(float)$t['tin'],'Ödeme'=>(float)$t['tout'],'Satış'=>$sale]];
     $R['table']['head']=['Kalem','Değer'];
     $R['table']['rows']=[['Tahsilat',tl($t['tin'])],['Ödeme',tl($t['tout'])],['Net',tl($t['tin']-$t['tout'])],['Satış',tl($sale)],['Açılan İş',$acilan],['Tamamlanan İş',$tamam]];
@@ -364,30 +364,28 @@ function report_render($R,$appName,$from,$to,$full=true){
   ob_start();
   if($styled){ echo "\n"; } else { $styled=true; ?>
 <style>
-/* RAPOR AİLESİ MODERNİZASYONU (2026-07-19, Product Owner kararı — PO'nun canlıda "hepsi eski
-   görünüyor" bulgusu üzerine): önceki turda .rep-card/.rep-tbl zaten --df-surface/--df-ink-*
-   token'larına taşınmıştı (açık temada doğru beyaz/nötr render ediyor — bu doğrulandı, dokunulmadı).
-   Gerçek suçlu, token SİSTEMİNE HİÇ GİRMEYEN iki blok: .rep-hero (sabit mavi/camgöbeği gradient,
-   #1e3a8a/#2563eb/#06b6d4 literal hex) ve .rep-tile (her KPI için $c[3] rengiyle TAM GRADIENT blok +
-   beyaz metin) — ikisi de "eski renkli dashboard" görünümünün ta kendisi, hangi tema aktif olursa
-   olsun hep aynı hardcoded renkli kutu. Kaldırıldı: hero artık sade bir başlık şeridi (ds_page_header
-   ailesiyle akraba), KPI kutuları .ds-kpi-card (assets/css/ds-foundation.css, dashboard.php'nin
-   command-card'ıyla aynı aile) ile aynı dilde — beyaz/nötr zemin + $c[3] SADECE ince sol kenarlık
-   olarak semantik vurgu. Grafik çubukları da rastgele 6 renkli döngü yerine TEK aksan rengi. VERİ/
-   KPI/hesaplama HİÇ değişmedi — sadece bu iki blok ve grafik renk kaynağı. */
+/* RAPOR AİLESİ — GERÇEK YENİDEN TASARIM (2026-07-19, tur 2, Product Owner canlı ret kararı sonrası):
+   Tur 1 sadece renk/gradient kaldırıp kart iskeletini korumuştu ("reskin") — PO bunu kabul etmedi.
+   Bu turda bilgi mimarisi değişti: PRIMAC logo+"X Raporu"+oluşturma-zamanı HERO'su artık APP-VIEW'DA
+   HİÇ GÖSTERİLMİYOR (display:none) — sadece @media print'te görünür (o bağlamda anlamlı: kurumsal
+   belge başlığı). Ekranda onun yerini .rep-section-title (düz metin: "Modül Adı" + tarih aralığı)
+   alıyor. KPI kutuları da .rep-tile'dan ikon satırı kaldırılıp daha kompakt hale getirildi (etiket +
+   değer, sade kart — dashboard.php'nin command-card ailesiyle aynı dilde). VERİ/KPI/hesaplama HİÇ
+   değişmedi — sadece bu bilgi mimarisi ve render. */
 .rep{--ink:#0f172a}
 .rep *{box-sizing:border-box}
-.rep-hero{background:var(--df-surface,#fff);border:1px solid var(--df-hairline,#e4e7ec);border-radius:var(--df-radius-lg,20px);padding:18px 20px;color:var(--df-ink-900,#101828);display:flex;align-items:center;gap:14px}
-.rep-hero .lg{width:46px;height:46px;border-radius:var(--df-radius-md,14px);background:var(--df-surface-sunken,#f2f4f7);color:var(--df-accent,#2563eb);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:20px;flex:0 0 auto}
-.rep-hero h2{margin:0;font-size:var(--df-type-section-size,17px);font-weight:var(--df-type-section-weight,650)}
-.rep-hero .dt{color:var(--df-ink-500,#667085);font-size:13px;margin-top:2px}
+.rep-hero{display:none}
+.rep-section-title{margin:2px 0 14px}
+.rep-section-title h2{margin:0;font-size:var(--df-type-section-size,17px);font-weight:var(--df-type-section-weight,650);color:var(--df-ink-900,#101828)}
+.rep-section-title .dt{color:var(--df-ink-500,#667085);font-size:13px;margin-top:2px}
 /* PDF EXPORT FIX (2026-07-19): KPI kutuları CSS Grid yerine flexbox — html2canvas auto-fit/minmax'ı
    güvenilir hesaplayamıyor (bilinen sınırlama). Görünüm/sarma davranışı bu turda da korunuyor. */
-.rep-tiles{display:flex;flex-wrap:wrap;gap:12px;margin:14px 0}
-.rep-tile{position:relative;flex:1 1 150px;min-width:150px;background:var(--df-surface,#fff);border:1px solid var(--df-hairline,#e4e7ec);border-left:4px solid var(--df-accent,#2563eb);border-radius:var(--df-radius-lg,14px);padding:14px 16px;color:var(--df-ink-900,#101828);overflow:hidden;box-shadow:var(--df-shadow-sm,0 2px 8px rgba(16,24,40,.06));text-decoration:none;display:block}
-.rep-tile .ic{font-size:18px;opacity:.8;color:var(--df-ink-500,#667085)}
-.rep-tile .vl{font-size:22px;font-weight:800;margin-top:6px;line-height:1.1;color:var(--df-ink-900,#101828)}
-.rep-tile .lb{font-size:12px;color:var(--df-ink-500,#667085);margin-top:3px;font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+.rep-tiles{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0}
+.rep-tile{position:relative;flex:1 1 130px;min-width:120px;background:var(--df-surface,#fff);border:1px solid var(--df-hairline,#e4e7ec);border-radius:var(--df-radius-md,10px);padding:11px 13px;color:var(--df-ink-900,#101828);overflow:hidden;text-decoration:none;display:block}
+.rep-tile .lb{font-size:11px;color:var(--df-ink-500,#667085);font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.rep-tile .vl{font-size:19px;font-weight:800;margin-top:4px;line-height:1.15;color:var(--df-ink-900,#101828)}
+.rep-tile[data-tone="pos"] .vl{color:var(--df-success-ink,#15803d)}
+.rep-tile[data-tone="neg"] .vl{color:var(--df-danger-ink,#b91c1c)}
 .rep-card{background:var(--df-surface,#fff);border:1px solid var(--df-hairline,#e4e7ec);border-radius:var(--df-radius-md,12px);padding:var(--df-space-4,16px);margin:12px 0;color:var(--df-ink-900,#101828)}
 .rep-card .ttl{font-weight:800;margin-bottom:10px;font-size:14.5px;color:var(--df-ink-900,#101828)}
 .rep-bar{display:flex;align-items:center;gap:10px;margin:7px 0;font-size:13px}
@@ -429,10 +427,12 @@ table.rep-tbl tr:hover td{background:var(--df-surface-sunken,#f2f4f7)}
   body *{visibility:hidden!important}
   .rep,.rep *{visibility:visible!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .rep{position:absolute!important;left:0;top:0;width:100%;padding:0!important;color:#0f172a!important}
-  /* Ekran zaten nötr/açık (bkz. yukarısı) — print'te sadece kenarlık/gölge gibi ekrana özel
-     detaylar sadeleştirilir, kurumsal PRIMAC başlığı aynı kalır (mavi/camgöbeği hero YOK artık). */
-  .rep-hero{background:#fff!important;border:1px solid #d0d7e2!important;color:#0f172a!important}
+  /* HERO: ekranda display:none — kurumsal PRIMAC logo/başlık/oluşturma-zamanı SADECE burada, PDF/
+     yazdırma belgesinde anlamlı olduğu için. Ekranın kendi .rep-section-title'ı (düz metin) print'te
+     tekrar görünmesin diye gizlenir — aynı bilgiyi iki kez basmayalım. */
+  .rep-hero{display:flex!important;background:#fff!important;border:1px solid #d0d7e2!important;color:#0f172a!important;margin-bottom:14px}
   .rep-hero .lg{background:#f1f5f9!important;color:#1e3a8a!important}
+  .rep-section-title{display:none!important}
   .rep-card{background:#fff!important;border:1px solid #d0d7e2!important;color:#0f172a!important;page-break-inside:avoid;break-inside:avoid}
   .rep-card .ttl{color:#0f172a!important}
   .rep-tile{-webkit-print-color-adjust:exact;print-color-adjust:exact;page-break-inside:avoid;break-inside:avoid}
@@ -455,16 +455,25 @@ table.rep-tbl tr:hover td{background:var(--df-surface-sunken,#f2f4f7)}
 </style>
 <?php } ?>
 <div class="rep">
+  <!-- PRINT-ONLY: PRIMAC logo + "X Raporu" + oluşturma zamanı — ekranda .rep-hero{display:none},
+       kullanıcı zaten PRIMAC OTS içinde, bu bilgi ekranda tekrar anlamsız. Sadece PDF/yazdırmada
+       (@media print .rep-hero{display:flex!important}) görünür kurumsal belge başlığı. -->
   <div class="rep-hero">
     <div class="lg"><img src="<?=htmlspecialchars(base_url().(function_exists('brand_logo')?brand_logo():'logo.png'))?>" alt="<?=$ic?>" style="width:100%;height:100%;object-fit:contain;border-radius:inherit" onerror="this.parentNode.textContent='<?=$ic?>'"></div>
     <div style="flex:1"><h2><?=htmlspecialchars($appName)?> · <?=htmlspecialchars($R['title'])?> Raporu</h2>
       <div class="dt"><?=htmlspecialchars($from)?> — <?=htmlspecialchars($to)?> · Oluşturma: <?=date('d.m.Y H:i')?></div></div>
   </div>
 
+  <!-- APP-VIEW: sade bölüm başlığı — hero'nun ekrandaki yerini alır -->
+  <div class="rep-section-title noprint">
+    <h2><?=htmlspecialchars($R['title'])?></h2>
+    <div class="dt"><?=htmlspecialchars($from)?> — <?=htmlspecialchars($to)?></div>
+  </div>
+
   <div class="rep-tiles">
     <?php foreach($R['cards'] as $c): $col=$c[3]; $clink=$c[4] ?? null; $tag=$clink?'a':'div'; ?>
-      <<?=$tag?> class="rep-tile"<?=$clink?' href="'.htmlspecialchars($clink).'"':''?> style="border-left-color:<?=htmlspecialchars($col)?><?=$clink?';cursor:pointer':''?>">
-        <div class="ic"><?=$c[0]?></div><div class="vl"><?=htmlspecialchars($c[2])?></div><div class="lb"><?=htmlspecialchars($c[1])?></div>
+      <<?=$tag?> class="rep-tile"<?=$clink?' href="'.htmlspecialchars($clink).'"':''?> style="border-left:3px solid <?=htmlspecialchars($col)?><?=$clink?';cursor:pointer':''?>">
+        <div class="lb"><?=htmlspecialchars($c[1])?></div><div class="vl"><?=htmlspecialchars($c[2])?></div>
       </<?=$tag?>>
     <?php endforeach; ?>
   </div>

@@ -34,9 +34,9 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['send_msg'])){
     $dir=__DIR__.'/../uploads/job_files'; if(!is_dir($dir)) @mkdir($dir,0777,true);
     $fn='rapor_'.$modul.'_'.bin2hex(random_bytes(4)).'.csv';
     if(@file_put_contents($dir.'/'.$fn,$csv)!==false){
-      $body="📊 ".$R['title']." Raporu ($from – $to)\n".implode(' · ',array_map(function($c){return $c[1].': '.$c[2];},array_slice($R['cards'],0,4)));
+      $body=$R['title']." Raporu ($from – $to)\n".implode(' · ',array_map(function($c){return $c[1].': '.$c[2];},array_slice($R['cards'],0,4)));
       $pdo->prepare("INSERT INTO internal_messages(sender_user_id,receiver_user_id,message,attachment,attach_type,is_read) VALUES(?,?,?,?,'file',0)")->execute([$me,$toUser,$body,'uploads/job_files/'.$fn]);
-      if(file_exists(__DIR__.'/../push_lib.php')){ require_once __DIR__.'/../push_lib.php'; try{ push_to_user($toUser,'📊 Rapor',$R['title'].' '.$from,'messages.php?with='.$me); }catch(Throwable $e){} }
+      if(file_exists(__DIR__.'/../push_lib.php')){ require_once __DIR__.'/../push_lib.php'; try{ push_to_user($toUser,'Rapor',$R['title'].' '.$from,'messages.php?with='.$me); }catch(Throwable $e){} }
       $sent='Rapor iç mesaj olarak gönderildi (CSV ekli).';
     }
   }
@@ -62,10 +62,11 @@ topx('Rapor');
 <?php if($sent): ?><?=ds_alert('success',$sent)?><?php endif; ?>
 <?php if(!empty($R['error'])): ?><?=ds_alert('danger',$R['error'])?><?php endif; ?>
 
-<div class="noprint" style="display:flex;gap:8px;margin:10px 0">
-  <a class="df-btn <?=!$detail?'df-btn--primary':'df-btn--secondary'?>" href="report.php?modul=<?=$modul?>&from=<?=$from?>&to=<?=$to?>&ref=<?=$ref?>&mode=<?=urlencode($bmode)?>&type=<?=urlencode($btype)?>" style="flex:1;justify-content:center"><?=ds_icon('info',14)?> Özet</a>
-  <a class="df-btn <?=$detail?'df-btn--primary':'df-btn--secondary'?>" href="report.php?modul=<?=$modul?>&from=<?=$from?>&to=<?=$to?>&ref=<?=$ref?>&detay=1&mode=<?=urlencode($bmode)?>&type=<?=urlencode($btype)?>" style="flex:1;justify-content:center"><?=ds_icon('search',14)?> Detaylı</a>
-</div>
+<style>.rview-tabs{display:inline-flex;background:var(--df-surface-sunken,rgba(255,255,255,.08));border-radius:14px;padding:3px;gap:2px;margin:10px 0}.rview-tabs a{padding:7px 16px;border-radius:11px;font-size:13.5px;font-weight:700;color:var(--c-muted,#94a3b8);text-decoration:none}.rview-tabs a.is-active{background:var(--df-surface,#1e293b);color:var(--df-ink-900,#fff)}</style>
+<nav class="rview-tabs noprint">
+  <a class="<?=!$detail?'is-active':''?>" href="report.php?modul=<?=$modul?>&from=<?=$from?>&to=<?=$to?>&ref=<?=$ref?>&mode=<?=urlencode($bmode)?>&type=<?=urlencode($btype)?>">Özet</a>
+  <a class="<?=$detail?'is-active':''?>" href="report.php?modul=<?=$modul?>&from=<?=$from?>&to=<?=$to?>&ref=<?=$ref?>&detay=1&mode=<?=urlencode($bmode)?>&type=<?=urlencode($btype)?>">Detay</a>
+</nav>
 
 <div id="repArea"><?= $isAll ? report_render_all($pdo,$appName,$from,$to,$detail) : ($isCariToplu ? report_render_cari_toplu($pdo,$appName,$from,$to,$bmode,$btype,$detail) : report_render($R,$appName,$from,$to,$detail)) ?></div>
 
@@ -74,7 +75,7 @@ topx('Rapor');
   <button onclick="shareReportPDF(this)" class="df-btn df-btn--primary df-btn--lg" style="display:flex;width:100%;margin-top:10px;justify-content:center"><?=ds_icon('box',14)?> PDF Olarak Paylaş (WhatsApp/Mail)</button>
   <small class="muted" style="display:block;margin-top:6px">Tüm raporu çok-sayfalı PDF yapıp paylaşım sayfasına yollar.</small>
   <div style="display:flex;gap:8px;margin-top:10px">
-    <button onclick="window.print()" class="df-btn df-btn--secondary" style="flex:1;justify-content:center">🖨️ Yazdır / PDF</button>
+    <button onclick="window.print()" class="df-btn df-btn--secondary" style="flex:1;justify-content:center">Yazdır / PDF</button>
     <a class="df-btn df-btn--secondary" href="report.php?modul=<?=$modul?>&export=csv&from=<?=$from?>&to=<?=$to?>&ref=<?=$ref?>&mode=<?=urlencode($bmode)?>&type=<?=urlencode($btype)?>" style="flex:1;justify-content:center">Ham Veri</a>
   </div>
   <form method="post" style="margin-top:8px;display:flex;gap:8px">

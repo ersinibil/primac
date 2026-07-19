@@ -32,9 +32,17 @@ require_once __DIR__.'/layout_top.php';
 <section style="max-width:1000px">
 <style>
 @media print{.noprint{display:none!important}}
-.rfilter{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
-.rfilter>div{display:flex;flex-direction:column}
-@media(max-width:520px){.rfilter input[type=date]{width:100%;min-width:0}.rfilter>div{flex:1 1 100%}}
+/* RAPOR AİLESİ — TUR 2 KOMPAKT TOOLBAR (2026-07-19): tek satırda tarih+Uygula solda, CSV/PDF Paylaş/
+   Yazdır sağda — önceki dev boş df-card kaldırıldı. "Ham Veri (CSV)" artık kopuk bir link değil,
+   aksiyon grubunun bir parçası. */
+.rtoolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:10px 14px}
+.rtoolbar-dates{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.rtoolbar-dates input[type=date]{margin:0;padding:8px 10px;width:auto}
+.rtoolbar-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+@media(max-width:640px){.rtoolbar{flex-direction:column;align-items:stretch}.rtoolbar-dates,.rtoolbar-actions{justify-content:stretch}.rtoolbar-dates input[type=date]{flex:1;min-width:0}}
+.rview-tabs{display:inline-flex;background:var(--df-surface-sunken,#f2f4f7);border-radius:var(--df-radius-md,10px);padding:3px;gap:2px;margin-bottom:var(--df-space-3)}
+.rview-tabs a{padding:7px 16px;border-radius:calc(var(--df-radius-md,10px) - 3px);font-size:13.5px;font-weight:700;color:var(--df-ink-500,#667085);text-decoration:none}
+.rview-tabs a.is-active{background:var(--df-surface,#fff);color:var(--df-ink-900,#101828);box-shadow:var(--df-shadow-sm,0 1px 3px rgba(16,24,40,.1))}
 </style>
 
 <div class="noprint">
@@ -45,16 +53,21 @@ ds_tabs(array_map(function($k,$v) use ($modul,$from,$to){
 ?>
 </div>
 
-<section class="df-card noprint" style="margin:var(--df-space-4) 0">
-  <form method="get" class="rfilter">
+<section class="df-card noprint" style="margin:var(--df-space-4) 0;padding:0">
+  <form method="get" class="rtoolbar">
     <input type="hidden" name="modul" value="<?=htmlspecialchars($modul)?>"><input type="hidden" name="ref" value="<?=$ref?>">
     <input type="hidden" name="mode" value="<?=htmlspecialchars($bmode)?>"><input type="hidden" name="type" value="<?=htmlspecialchars($btype)?>">
-    <?php ds_form_field('Başlangıç', '<input type="date" name="from" value="'.$from.'">'); ?>
-    <?php ds_form_field('Bitiş', '<input type="date" name="to" value="'.$to.'">'); ?>
-    <button class="df-btn df-btn--primary" type="submit">Getir</button>
-    <button class="df-btn df-btn--secondary" type="button" onclick="window.print()">🖨️ Yazdır / PDF</button>
-    <button class="df-btn" type="button" onclick="shareReportPDF(this)" style="background:var(--df-success);color:#fff">📲 PDF Paylaş</button>
-    <?=ds_button('Ham Veri (CSV)','report.php?modul='.$modul.'&export=csv&from='.$from.'&to='.$to.'&ref='.$ref.'&mode='.urlencode($bmode).'&type='.urlencode($btype),'ghost','','',true)?>
+    <div class="rtoolbar-dates">
+      <input type="date" name="from" value="<?=$from?>">
+      <span style="color:var(--df-ink-500)">—</span>
+      <input type="date" name="to" value="<?=$to?>">
+      <button class="df-btn df-btn--primary df-btn--sm" type="submit">Uygula</button>
+    </div>
+    <div class="rtoolbar-actions">
+      <?=ds_button('CSV','report.php?modul='.$modul.'&export=csv&from='.$from.'&to='.$to.'&ref='.$ref.'&mode='.urlencode($bmode).'&type='.urlencode($btype),'secondary','df-btn--sm','',true)?>
+      <button class="df-btn df-btn--secondary df-btn--sm" type="button" onclick="shareReportPDF(this)">PDF Paylaş</button>
+      <button class="df-btn df-btn--secondary df-btn--sm" type="button" onclick="window.print()">Yazdır / PDF</button>
+    </div>
   </form>
 </section>
 <script>window.ACANS_REPORT_NAME='rapor_<?=$modul?>_<?=$from?>';</script>
@@ -64,10 +77,10 @@ ds_tabs(array_map(function($k,$v) use ($modul,$from,$to){
 
 <?php if(!empty($R['error'])): ?><?=ds_alert('danger',$R['error'])?><?php endif; ?>
 
-<div class="noprint" style="display:flex;gap:8px;margin-bottom:var(--df-space-3);max-width:360px">
-  <?=ds_button('📄 Özet','report.php?modul='.$modul.'&from='.$from.'&to='.$to.'&ref='.$ref.'&mode='.urlencode($bmode).'&type='.urlencode($btype), !$detail?'primary':'secondary','','style="flex:1;text-align:center"',true)?>
-  <?=ds_button('🔍 Detaylı','report.php?modul='.$modul.'&from='.$from.'&to='.$to.'&ref='.$ref.'&detay=1&mode='.urlencode($bmode).'&type='.urlencode($btype), $detail?'primary':'secondary','','style="flex:1;text-align:center"',true)?>
-</div>
+<nav class="rview-tabs noprint">
+  <a href="report.php?modul=<?=$modul?>&from=<?=$from?>&to=<?=$to?>&ref=<?=$ref?>&mode=<?=urlencode($bmode)?>&type=<?=urlencode($btype)?>" class="<?=!$detail?'is-active':''?>">Özet</a>
+  <a href="report.php?modul=<?=$modul?>&from=<?=$from?>&to=<?=$to?>&ref=<?=$ref?>&detay=1&mode=<?=urlencode($bmode)?>&type=<?=urlencode($btype)?>" class="<?=$detail?'is-active':''?>">Detay</a>
+</nav>
 <div id="repArea"><?= $isAll ? report_render_all($pdo,$appName,$from,$to,$detail) : ($isCariToplu ? report_render_cari_toplu($pdo,$appName,$from,$to,$bmode,$btype,$detail) : report_render($R,$appName,$from,$to,$detail)) ?></div>
 </section>
 <?php require_once __DIR__.'/layout_bottom.php'; ?>
