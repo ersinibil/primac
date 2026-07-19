@@ -155,8 +155,11 @@ try{
     <?=ds_button(ds_icon('wallet',15).' Ödeme','payment.php?contact_id='.$id,'secondary','','style="flex:1 1 45%;justify-content:center"',true)?>
     <?=ds_button(ds_icon('box',15).' Satış','sales.php?contact_id='.$id,'secondary','','style="flex:1 1 45%;justify-content:center"',true)?>
     <?=ds_button(ds_icon('box',15).' Alış','purchase.php?contact_id='.$id,'secondary','','style="flex:1 1 45%;justify-content:center"',true)?>
+    <?php // CARİ TEK MERKEZ (2026-07-19, P0-1) — web ile aynı, temel aksiyonlara Teklif/İş Emri eklendi. ?>
+    <?=ds_button(ds_icon('file',15).' Teklif','teklif.php?customer_id='.$id,'secondary','','style="flex:1 1 45%;justify-content:center"',true)?>
+    <?=ds_button(ds_icon('briefcase',15).' İş Emri','job_new.php?customer_id='.$id,'secondary','','style="flex:1 1 45%;justify-content:center"',true)?>
     <?=ds_button(ds_icon('chat',15).' Cari Sohbeti','thread_open.php?type=cari&ref='.$id,'secondary','','style="flex:1 1 45%;justify-content:center"',true)?>
-    <?=ds_button(ds_icon('info',15).' Cari Raporu','report.php?modul=cari_detay&ref='.$id,'secondary','','style="flex:1 1 45%;justify-content:center"',true)?>
+    <?=ds_button(ds_icon('info',15).' Cari Raporu (analiz)','report.php?modul=cari_detay&ref='.$id,'secondary','','style="flex:1 1 45%;justify-content:center"',true)?>
     <?php if($waConvId): ?>
     <?=ds_button(ds_icon('send',15).' WhatsApp','wa_conversation_view.php?id='.(int)$waConvId,'secondary','','style="flex:1 1 100%;justify-content:center"',true)?>
     <?php elseif(!empty($c['phone'])): ?>
@@ -261,41 +264,41 @@ try{
   <?php endforeach; ?>
 </div>
 
-<?php if(user_can('finance')): ?>
+<?php
+// CARİ TEK MERKEZ (2026-07-19, P0-1) — "Son Hareketler" (sadece finans) yerine SADECE bu cariye
+// ait (contact_id/customer_id=? garantili), Satış/Alış/Tahsilat/Ödeme/Çek-Senet/İş Emri/Teklif
+// birleşik kronolojik akışı — web contact_view.php ile AYNI contacts_lib.php fonksiyonları.
+// Finans satırları eskisi gibi SADECE user_can('finance') olana görünür (izin sınırı korunuyor).
+require_once __DIR__.'/../contacts_lib.php';
+$__ledgerM = contact_ledger_rows($pdo, $id, 40);
+if(!user_can('finance')){ $__ledgerM = array_filter($__ledgerM, function($__it){ return $__it['kind']!=='finance'; }); }
+?>
 <div class="df-panel" style="margin-top:10px">
-  <b>Son Hareketler</b>
-  <?php
-  $mv=db()->prepare("SELECT * FROM finance_movements WHERE contact_id=? ORDER BY id DESC LIMIT 25");
-  $mv->execute([$id]); $rows=$mv->fetchAll();
-  if(!$rows) echo '<p class="df-text-caption" style="margin:10px 0 0">Henüz hareket yok.</p>';
-  // FINANCE CRUD UX PATCH 001 (2026-07-12): "Tahsilat"/"Ödeme" etiketi direction'dan değil
-  // finance_movement_type_label()'dan (web ile aynı fonksiyon) geliyor artık — satış/alış/belge
-  // kaynaklı satırlar burada da yanlışlıkla "Tahsilat"/"Ödeme" göstermesin diye. Manuel hareketler
-  // mevcut mobil düzenleme ekranına (movement_view.php) bağlanıyor — yeni bir CRUD YAZILMADI.
-  foreach($rows as $m):
-    $in=$m['direction']==='in';
-    $actions=finance_movement_actions($m,$pdo);
-    $canEdit=$actions['editable'] && can_edit_delete();
-    $srcUrl=$actions['source_url'];
-    // P0 KAPANIŞ (2026-07-18): trade_document_view.php/finance.php sadece kökte var (/mobile/
-    // dışı) — web=1 olmadan boot.php'nin mobil-otomatik-yönlendirmesi bu linke sessizce takılıp
-    // mobile/index.php'ye geri atardı (redirect-trap).
-    if($srcUrl && in_array($actions['source_type'],['document','settlement'],true)) $srcUrl='../'.$srcUrl.(strpos($srcUrl,'?')===false?'?':'&').'web=1';
+  <b><?=ds_icon('list',16)?> Cari Hareketleri</b>
+  <?php if(!$__ledgerM): ?>
+  <p class="df-text-caption" style="margin:10px 0 0">Henüz hareket yok.</p>
+  <?php endif; ?>
+  <?php foreach($__ledgerM as $__item):
+    $__v = contact_ledger_row_view($__item, $pdo);
+    if(!$__v) continue;
+    $__openUrl = $__v['open_url'];
+    // P0 KAPANIŞ (2026-07-18) deseni: /mobile/ dışı köke web=1 olmadan gidilirse redirect-trap olur.
+    if($__openUrl && strpos($__openUrl,'trade_document_view.php')===0) $__openUrl='../'.$__openUrl.(strpos($__openUrl,'?')===false?'?':'&').'web=1';
+    $__srcUrl = $__v['source_url'];
+    if($__srcUrl && strpos($__srcUrl,'check_note_view.php')===0) $__srcUrl='../'.$__srcUrl.(strpos($__srcUrl,'?')===false?'?':'&').'web=1';
   ?>
-  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:10px;border-top:1px solid var(--df-hairline);padding-top:10px">
-    <div style="flex:1;min-width:0">
-      <b style="color:<?=$in?'var(--df-success-ink)':'var(--df-danger-ink)'?>"><?=h(finance_movement_type_label($m))?>: <?=mm($m['amount'])?></b><br>
-      <small class="df-text-caption"><?=h($m['movement_date'] ?? '')?><?=$m['description']?' · '.h($m['description']):''?></small>
+  <a href="<?=h($__openUrl ?: '#')?>" style="display:block;text-decoration:none;color:inherit;margin-top:10px;border-top:1px solid var(--df-hairline);padding-top:10px<?= $__openUrl ? '' : ';pointer-events:none' ?>">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+      <b style="<?= $__v['amount']===null ? '' : ($__v['sign']==='+' ? 'color:var(--df-success-ink)' : ($__v['sign']==='-' ? 'color:var(--df-danger-ink)' : '')) ?>">
+        <?=h($__v['type'])?><?= $__v['amount']!==null ? ': '.$__v['sign'].mm($__v['amount']) : '' ?>
+      </b>
+      <?=ds_badge($__v['status'])?>
     </div>
-    <?php if($canEdit): ?>
-    <a class="df-icon-btn" href="movement_view.php?id=<?=(int)$m['id']?>&return_context=contact&return_ref=<?=$id?>" aria-label="Düzenle"><?=ds_icon('edit',16)?></a>
-    <?php elseif($srcUrl): ?>
-    <a class="df-icon-btn" href="<?=h($srcUrl)?>" aria-label="Kaynağa git"><?=ds_icon('info',16)?></a>
-    <?php endif; ?>
-  </div>
+    <small class="df-text-caption"><?=h($__v['date'])?><?=$__v['desc']?' · '.h($__v['desc']):''?></small>
+  </a>
+  <?php if($__srcUrl && !$__openUrl): ?><a class="df-btn df-btn--secondary df-btn--sm" style="margin-top:6px" href="<?=h($__srcUrl)?>"><?=h($__v['source_label'] ?: 'Kaynağa Git')?></a><?php endif; ?>
   <?php endforeach; ?>
 </div>
-<?php endif; ?>
 
 <?php if(cpa_can_view()): ?>
 <div class="df-panel" style="margin-top:10px">

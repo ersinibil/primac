@@ -200,7 +200,10 @@ ob_start();
 // bunu okuyup carii otomatik seçer (aynı mekanizma, yeni bir akış İCAT edilmedi). ?>
 <?=ds_button('+ Satış', 'sales.php?contact_id='.$id, 'secondary', '', '', true)?>
 <?=ds_button('+ Alış', 'purchase.php?contact_id='.$id, 'secondary', '', '', true)?>
-<?=ds_button('📊 Cari Raporu', 'report.php?modul=cari_detay&ref='.$id, 'secondary', '', '', true)?>
+<?php // CARİ TEK MERKEZ (2026-07-19, P0-1) — temel aksiyonlara Teklif/İş Emri eklendi, cari bağlamı ?>
+<?=ds_button('+ Teklif', 'teklif.php?customer_id='.$id, 'secondary', '', '', true)?>
+<?=ds_button('+ İş Emri', 'job_new.php?customer_id='.$id, 'secondary', '', '', true)?>
+<?=ds_button('📊 Cari Raporu (analiz)', 'report.php?modul=cari_detay&ref='.$id, 'secondary', '', '', true)?>
 <?php if($waConvId): ?><?=ds_button('💬 WhatsApp', 'wa_conversation_view.php?id='.(int)$waConvId, 'secondary', '', '', true)?>
 <?php elseif(!empty($c['phone'])): ?><?=ds_button('💬 WhatsApp', 'wa_conversation_view.php?phone='.urlencode($c['phone']), 'secondary', '', '', true)?>
 <?php endif; ?>
@@ -246,7 +249,64 @@ ds_page_header($c['name'], ds_icon('users',24), '', $__actions, false, true);
 </div>
 <?php endif; ?>
 
+<?php
+// CARİ TEK MERKEZ (2026-07-19, Product Owner kararı, P0-1): SADECE bu cariye ait (contact_id/
+// customer_id=? ile garanti), tarihe göre birleştirilmiş tek hareket akışı — Satış/Alış/Tahsilat/
+// Ödeme/Çek-Senet/Transfer/Muhasebe/İş Emri/Teklif. Yeni bir tablo/mimari İCAT EDİLMEDİ —
+// contacts_lib.php::contact_ledger_rows() var olan 3 kaynağı (finance_movements/jobs/quotes) birleştirir
+// (bkz. o fonksiyondaki mimari not). Eskiden ayrı duran "Finans Hareketleri" tablosu bu bölümün
+// İÇİNE alındı (aşağıda ayrıca tekrar YOK) — Cari Raporu ise kasten AYRI/analiz amaçlı kaldı.
+?>
 <section class="df-card">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--df-space-3)">
+<h2 style="font-size:var(--df-type-section-size);margin:0">Cari Hareketleri</h2>
+<span class="df-muted" style="font-size:12px">Sadece bu cariye ait, kronolojik</span>
+</div>
+<?php
+$__ledger = contact_ledger_rows($pdo, $id, 50);
+// Eski "Finans Hareketleri" bölümü user_can('finance') ile korunuyordu — bu ledger onun yerini
+// aldığı için AYNI sınırı korur: finans yetkisi olmayan personel finans satırlarını (tahsilat/
+// ödeme/satış tutarı vb.) görmesin, iş emri/teklif satırları (finans DEĞİL) etkilenmez.
+if(!user_can('finance')){
+    $__ledger = array_filter($__ledger, function($__it){ return $__it['kind']!=='finance'; });
+}
+if(!$__ledger): ?>
+<?=ds_empty_state('Bu cariye ait henüz hiçbir hareket yok.')?>
+<?php else: ?>
+<div class="df-table-wrap"><table class="df-table">
+<thead><tr><th>Tarih</th><th>Tür</th><th>Açıklama</th><th style="text-align:right">Tutar</th><th>Durum</th><th>İşlem</th></tr></thead>
+<tbody>
+<?php foreach($__ledger as $__item): $__v = contact_ledger_row_view($__item, $pdo); if(!$__v) continue; ?>
+<tr>
+<td class="nowrap"><?=h($__v['date'])?></td>
+<td><?=h($__v['type'])?></td>
+<td style="font-size:12px;color:var(--df-ink-500)"><?=h($__v['desc'])?></td>
+<td style="text-align:right;font-weight:800;<?= $__v['amount']===null ? '' : ($__v['sign']==='+' ? 'color:var(--df-success-ink)' : ($__v['sign']==='-' ? 'color:var(--df-danger-ink)' : '')) ?>">
+  <?= $__v['amount']===null ? '—' : $__v['sign'].money($__v['amount']) ?>
+</td>
+<td><?=ds_badge($__v['status'])?></td>
+<td class="nowrap"><div class="row-actions">
+<?php if($__v['open_url']): ?><a class="df-btn df-btn--secondary df-btn--sm" href="<?=h($__v['open_url'])?>">Aç</a><?php endif; ?>
+<?php if($__v['edit_url'] && can_edit_delete()): ?><a class="df-btn df-btn--secondary df-btn--sm" href="<?=h($__v['edit_url'])?>">✏️</a><?php endif; ?>
+<?php if(!empty($__v['deletable']) && can_edit_delete()): ?>
+<form method="post" action="sil.php" style="display:inline" onsubmit="return confirm('Bu hareket KALICI olarak silinecek ve ilgili hesap/cari bakiyesi geri alınacak. Emin misiniz?')">
+<input type="hidden" name="t" value="finance">
+<input type="hidden" name="id" value="<?=(int)$__v['id']?>">
+<input type="hidden" name="return_context" value="contact">
+<input type="hidden" name="return_ref" value="<?=$id?>">
+<button class="df-btn df-btn--danger df-btn--sm" type="submit">🗑</button>
+</form>
+<?php endif; ?>
+<?php if($__v['source_url'] && !$__v['open_url']): ?><a class="df-btn df-btn--secondary df-btn--sm" href="<?=h($__v['source_url'])?>"><?=h($__v['source_label'] ?: 'Kaynağa Git')?></a><?php endif; ?>
+</div></td>
+</tr>
+<?php endforeach; ?>
+</tbody>
+</table></div>
+<?php endif; ?>
+</section>
+
+<section class="df-card" style="margin-top:var(--df-space-4)">
 <h2 style="font-size:var(--df-type-section-size);margin:0 0 var(--df-space-3)">Cari Profil</h2>
 
 <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:12px 0;font-size:14px">
@@ -406,60 +466,6 @@ try{
 </tbody>
 </table></div>
 </section>
-
-<?php if(user_can('finance')): ?>
-<section class="df-card" style="margin-top:var(--df-space-4)">
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--df-space-3)"><h2 style="font-size:var(--df-type-section-size);margin:0">Finans Hareketleri</h2><?=ds_button('Tümü','finance.php?contact_id='.$id,'secondary','df-btn--sm','',true)?></div>
-<div class="df-table-wrap"><table class="df-table">
-<thead><tr><th>Tarih</th><th>Tip</th><th>Hesap</th><th>Tutar</th><th>Durum</th><th>Açıklama</th><th>İşlem</th></tr></thead>
-<tbody>
-<?php
-try{
-    $st=$pdo->prepare("SELECT f.*, a.name account_name FROM finance_movements f LEFT JOIN finance_accounts a ON a.id=f.account_id WHERE f.contact_id=? ORDER BY f.id DESC LIMIT 20");
-    $st->execute([$id]);
-    $rows=$st->fetchAll();
-    foreach($rows as $r){
-        $rid=(int)$r['id'];
-        // FINANCE CRUD UX PATCH 001 (2026-07-12): daha önce burada sadece direction bazlı
-        // "Tahsilat"/"Ödeme" yazıyordu — satış/alış/belge kaynaklı satırlar da yanlışlıkla böyle
-        // etiketleniyordu (finance.php'de daha önce düzeltilmiş aynı hata, bu tabloda unutulmuştu).
-        // finance_movement_type_label() ile diğer ekranlarla tutarlı hale getirildi.
-        $actions=finance_movement_actions($r,$pdo);
-        $canEdit=$actions['editable'] && can_edit_delete();
-        echo "<tr>";
-        echo "<td>".h($r['movement_date'])."</td>";
-        echo "<td>".h(finance_movement_type_label($r))."</td>";
-        echo "<td>".h($r['account_name'] ?: $r['payment_channel'])."</td>";
-        echo "<td>".money($r['amount'])."</td>";
-        echo "<td>".ds_badge($r['status'])."</td>";
-        echo "<td>".h($r['description'])."</td>";
-        echo "<td><div class='row-actions'>";
-        if($canEdit){
-            echo "<a class='df-btn df-btn--secondary df-btn--sm' href='finance_new.php?id=".$rid."&return_context=contact&return_ref=".$id."'>✏️ Düzenle</a>";
-            echo "<form method='post' action='sil.php' style='display:inline' onsubmit=\"return confirm('Bu finans hareketi KALICI olarak silinecek ve ilgili hesap bakiyesi geri alınacak. Emin misiniz?')\">"
-                ."<input type='hidden' name='t' value='finance'>"
-                ."<input type='hidden' name='id' value='".$rid."'>"
-                ."<input type='hidden' name='return_context' value='contact'>"
-                ."<input type='hidden' name='return_ref' value='".$id."'>"
-                ."<button class='df-btn df-btn--danger df-btn--sm' type='submit'>🗑 Sil</button>"
-                ."</form>";
-        }elseif($actions['source_url']){
-            echo "<a class='df-btn df-btn--secondary df-btn--sm' href='".h($actions['source_url'])."' title='".h($actions['block_reason'])."'>".h($actions['source_label'])."</a>";
-        }else{
-            echo "<span style='color:var(--df-ink-500)' title='".h($actions['block_reason'])."'>Otomatik</span>";
-        }
-        echo "</div></td>";
-        echo "</tr>";
-    }
-    if(!$rows) echo "<tr><td colspan='7' style='color:var(--df-ink-500)'>Hareket yok.</td></tr>";
-}catch(Throwable $e){
-    echo "<tr><td colspan='7'>".ds_alert('danger',$e->getMessage())."</td></tr>";
-}
-?>
-</tbody>
-</table></div>
-</section>
-<?php endif; ?>
 
 <?php if(cpa_can_view()): ?>
 <section class="df-card" style="margin-top:var(--df-space-4)">

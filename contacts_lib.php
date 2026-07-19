@@ -85,3 +85,95 @@ function contact_balance($pdo, $contactId){
     $opening=(float)($ob->fetch()['ob'] ?? 0);
     return $opening + $net;
 }
+
+// CARİ TEK MERKEZ (2026-07-19, Product Owner kararı — "kronolojik SADECE O CARİYE ait birleşik
+// hareket akışı"). Yeni bir mimari/tablo İCAT EDİLMEDİ — finance_movements (Satış/Alış/Tahsilat/
+// Ödeme/Çek-Senet/Transfer/Muhasebe, hepsi zaten contact_id taşıyor), jobs (customer_id) ve quotes
+// (customer_id) 3 var olan kaynak WHERE contact_id/customer_id=? ile ayrı ayrı çekilip PHP'de
+// tarihe göre birleştirilir (merge-sort) — SQL UNION yerine bu yöntem seçildi çünkü 3 tablonun
+// kolon şekli çok farklı, UNION için hepsini aynı kalıba zorlamak daha kırılgan olurdu. Her sorgu
+// KESİN olarak contact_id/customer_id=? ile filtreli — başka cariye ait satır asla karışamaz.
+function contact_ledger_rows($pdo, $contactId, $limit=60){
+    $contactId=(int)$contactId;
+    $limit=max(1,(int)$limit);
+    if($contactId<1) return [];
+    $merged=[];
+
+    try{
+        $st=$pdo->prepare("SELECT fm.*, td.document_no FROM finance_movements fm
+            LEFT JOIN trade_documents td ON td.id=fm.document_id
+            WHERE fm.contact_id=? ORDER BY fm.id DESC LIMIT 300");
+        $st->execute([$contactId]);
+        foreach($st->fetchAll() as $r){
+            $ts=strtotime(($r['movement_date'] ?: $r['created_at'] ?: 'now').' 00:00:00') ?: time();
+            $merged[]=['kind'=>'finance','ts'=>$ts,'id'=>(int)$r['id'],'row'=>$r];
+        }
+    }catch(Throwable $e){}
+
+    try{
+        $st=$pdo->prepare("SELECT id,job_no,title,status,due_date,created_at FROM jobs WHERE customer_id=? ORDER BY id DESC LIMIT 300");
+        $st->execute([$contactId]);
+        foreach($st->fetchAll() as $r){
+            $ts=strtotime($r['created_at'] ?: ($r['due_date'].' 00:00:00') ?: 'now') ?: time();
+            $merged[]=['kind'=>'job','ts'=>$ts,'id'=>(int)$r['id'],'row'=>$r];
+        }
+    }catch(Throwable $e){}
+
+    try{
+        $st=$pdo->prepare("SELECT id,quote_no,total,status,quote_date,created_at FROM quotes WHERE customer_id=? ORDER BY id DESC LIMIT 300");
+        $st->execute([$contactId]);
+        foreach($st->fetchAll() as $r){
+            $ts=strtotime($r['created_at'] ?: (($r['quote_date'] ?: '').' 00:00:00') ?: 'now') ?: time();
+            $merged[]=['kind'=>'quote','ts'=>$ts,'id'=>(int)$r['id'],'row'=>$r];
+        }
+    }catch(Throwable $e){}
+
+    usort($merged, function($a,$b){
+        if($a['ts']!==$b['ts']) return $b['ts']<=>$a['ts'];
+        return $b['id']<=>$a['id'];
+    });
+
+    return array_slice($merged,0,$limit);
+}
+
+// Yukarıdaki ham (kind/row) satırını ekrana basılacak normalize alanlara çevirir — web ve mobil
+// contact_view.php AYNI bu fonksiyonu kullanır (tek yerden bakım). $pdo, finans satırlarında çek/
+// senet/belge kaynağına drill-down için finance_movement_actions()'a geçiliyor (mevcut mekanizma,
+// bu turda YENİDEN yazılmadı — sadece çağrıldı).
+function contact_ledger_row_view($item, $pdo){
+    $r=$item['row'];
+    if($item['kind']==='finance'){
+        $actions = function_exists('finance_movement_actions') ? finance_movement_actions($r,$pdo) : ['editable'=>false,'source_url'=>null,'source_label'=>null,'block_reason'=>null];
+        $isDoc=!empty($r['document_id']);
+        $mtype=$r['movement_type'];
+        $openUrl=null;
+        if($isDoc){ $openUrl='trade_document_view.php?id='.(int)$r['document_id']; }
+        elseif(in_array($mtype,['sale','mobile_sale'],true)){ $openUrl='sale_view.php?id='.(int)$r['id']; }
+        elseif($mtype==='purchase'){ $openUrl='purchase_view.php?id='.(int)$r['id']; }
+        return [
+            'kind'=>'finance','id'=>(int)$r['id'],
+            'date'=>$r['movement_date'],
+            'type'=>function_exists('finance_movement_type_label') ? finance_movement_type_label($r) : $mtype,
+            'desc'=>($isDoc ? '['.($r['document_no'] ?: 'Belge').'] ' : '').(string)$r['description'],
+            'amount'=>(float)$r['amount'],
+            'sign'=>$r['direction']==='in' ? '+' : '-',
+            'status'=>$r['status'],
+            'open_url'=>$openUrl,
+            'edit_url'=>($actions['editable'] ?? false) ? 'finance_new.php?id='.(int)$r['id'].'&return_context=contact&return_ref='.(int)($r['contact_id'] ?? 0) : null,
+            'deletable'=>($actions['editable'] ?? false),
+            'source_url'=>$actions['source_url'] ?? null,
+            'source_label'=>$actions['source_label'] ?? null,
+        ];
+    }
+    if($item['kind']==='job'){
+        return ['kind'=>'job','id'=>(int)$r['id'],'date'=>$r['created_at'] ? substr($r['created_at'],0,10) : ($r['due_date'] ?: ''),
+            'type'=>'İş Emri','desc'=>trim($r['job_no'].' — '.$r['title']),'amount'=>null,'sign'=>'','status'=>$r['status'],
+            'open_url'=>'job_view.php?id='.(int)$r['id'],'edit_url'=>null,'deletable'=>false,'source_url'=>null,'source_label'=>null];
+    }
+    if($item['kind']==='quote'){
+        return ['kind'=>'quote','id'=>(int)$r['id'],'date'=>$r['created_at'] ? substr($r['created_at'],0,10) : ($r['quote_date'] ?: ''),
+            'type'=>'Teklif','desc'=>(string)$r['quote_no'],'amount'=>(float)$r['total'],'sign'=>'','status'=>$r['status'],
+            'open_url'=>'teklif.php?id='.(int)$r['id'],'edit_url'=>null,'deletable'=>false,'source_url'=>null,'source_label'=>null];
+    }
+    return null;
+}
