@@ -2,7 +2,31 @@
 
 <!-- Açık geliştirme görevleri. Kapanan madde buradan silinip memory/features.md'ye taşınır. -->
 
-## 🔴 EN GÜNCEL CONTEXT HANDOFF — bkz. `memory/NEXT_CHAT_CONTEXT.md` (2026-07-18, HEAD `524b591`)
+## 🔴 EN GÜNCEL — 2026-07-19 pilot öncesi kapanış oturumu (aşağıdaki 2026-07-18 handoff artık ESKİ)
+Bu oturumda P0 finans/veri-bütünlüğü zinciri (çek/senet bakiye işareti doğrulama, stok hareketi
+geri alma, personel/kullanıcı orphan hesap eşleştirme, finance_accounts silme guard'ı, cari
+finans-hareketi→çek/senet drill-down) kapatıldı — bkz. git log `3f985aa..1dc49c1`. Kullanıcı bu
+oturum sırasında ardışık olarak şu BÜYÜK ölçekli işleri "mevcut P0/kapanış işleri bittikten sonra"
+sırasıyla uygulanmak üzere KUYRUĞA ekledi (henüz UYGULANMADI, sadece not edildi):
+
+1. **Cari Tek Merkez + Transaction Drill-Down** (tam IA restructuring): Cari Detay'ı Genel/
+   Hareketler/Satış-Alış/Çek-Senet/İşler/Belgeler/Notlar gibi section/tab yapısına kavuşturmak,
+   destructive aksiyonları (Pasife Al/Sil) "••• Diğer İşlemler" altına toplamak. Bu turda SADECE
+   güvenli/dar kapsamlı bir alt-küme yapıldı (finance_movement_actions() artık çek/senet kaynağına
+   linkliyor — commit `1dc49c1`) — asıl IA restructuring (yeni section/tab yapısı) YAPILMADI, çünkü
+   tek başına doğru tasarım gerektiren, riski daha yüksek bir iş.
+2. **Satışlar Operasyon Merkezi**: Ticaret → Satışlar altında gerçek liste (filtre: cari/tarih/
+   durum/ödeme durumu) + Satış Detay ekranı (cari/belge/stok/tahsilat/düzenle/iptal hepsi tek yerde).
+3. **Satın Almalar Operasyon Merkezi**: Aynısı alış tarafı için (tedarikçi/stok/CPA/ödeme/belge).
+4. **Genel "Ana Operasyon Merkezleri" standardı**: Çek/Senet, Tahsilat, Ödeme, Transfer, İş/İş
+   Emirleri, Personel için de aynı LİSTE→DETAY→AKSİYON zincirinin var olup olmadığının denetimi.
+5. **Transaction zinciri / source-integrity doğrulaması**: satış/alış oluşturma anında stok/cari/
+   finans üçlüsünün doğru ve atomik etkilendiğinin (yeniden yazmadan, sadece doğrulama amaçlı) testi.
+
+Öncelik sırası kullanıcının kendi verdiği sıra (1→5). Yeni ERP mimarisi kurulmayacak, mevcut
+modüller birbirine bağlanacak — kullanıcının kendi ifadesiyle net.
+
+## 🔴 EN GÜNCEL CONTEXT HANDOFF (ESKİ — 2026-07-18) — bkz. `memory/NEXT_CHAT_CONTEXT.md` (2026-07-18, HEAD `524b591`)
 
 Bu dosyanın altındaki bloklar (aşağıdaki "DEVAM — ikinci tur" ve "CONTEXT HANDOFF — ÖNCEKİ TUR")
 TARİHSEL referans olarak duruyor, silinmedi — ama **güncel/aktif checkpoint artık
@@ -658,10 +682,11 @@ B/C sınıfı — PO kararı gerektirdiği veya düşük öncelikli olduğu içi
   `quotes.status` günceller, `trade_documents` ile hiç bağlantısı yok; teklif kabul edilince kullanıcı
   elle `sales.php`/`trade_document_new.php` açıp aynı kalemleri tekrar giriyor. Otomatik mi, "Satışa
   Çevir" butonu mu, hiç mi olmasın — iş akışı kararı PO'ya ait.
-- **[C] `movement_type='cek_senet'` cari bakiye işareti tutarsızlığı** — `checks_notes_lib.php:362-369`
-  kendi yorumunda itiraf ediyor: kabul-anı hareketi niyeti "Tahsilat" (borç azaltan) ama kod ELSE
-  dalına düşüp "yeni borç" işareti alıyor. Geriye dönük tüm cari bakiyelerini etkileyeceği için ayrı
-  bir PO kararı + migration gerektirir, bu turun kapsamı dışında bırakıldı (kod bunu zaten biliyor).
+- ~~**[C] `movement_type='cek_senet'` cari bakiye işareti tutarsızlığı**~~ — ÇÖZÜLDÜ/YANLIŞ ALARM
+  (2026-07-19 yeniden doğrulama). Bu madde stale bir yorumdan okunmuştu — `contact_balance_case_sql()`
+  bu sorunu AYNI GÜN (2026-07-18) içinde zaten düzeltmişti, `checks_notes_lib.php`'nin o düzeltmeden
+  ÖNCE yazılmış yorumu güncellenmemiş kalmıştı. 4 senaryo kod üzerinden kanıtlandı, yorum düzeltildi
+  (commit `3f985aa`) — bkz. `checks_notes_lib.php` satır ~362.
 - **[B] `finance_movements.settles_movement_id` (migration 042) sadece okunuyor, hiç yazılmıyor** —
   migration'ın kendi yorumu "TEK BAŞINA hiçbir kod davranışını değiştirmez, sonraki adımların konusu"
   diyor; bilinçli ara adım, gerçek kopukluk değil.
