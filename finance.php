@@ -101,7 +101,7 @@ try{
         // FINANCE CRUD UX PATCH 001 (2026-07-12): buton görünürlüğü artık tek merkezden
         // (finance_movement_actions()) kararlaştırılıyor — her ekranda ayrı $canEdit mantığı
         // tekrarlanmıyor. $editableTypes/in_array deseni bu fonksiyonun içinde zaten var.
-        $actions=finance_movement_actions($r);
+        $actions=finance_movement_actions($r,$pdo);
         $canEdit=$actions['editable'] && can_edit_delete();
         // Satırın tamamı tıklanabilir → finance_new.php?id= (mevcut Düzenle/Sil hedefiyle aynı,
         // yeni bir detay sayfası icat edilmedi) — Düzenle/Sil'e tıklamak kendi davranışında kalır.

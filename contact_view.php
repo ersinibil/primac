@@ -424,7 +424,7 @@ try{
         // "Tahsilat"/"Ödeme" yazıyordu — satış/alış/belge kaynaklı satırlar da yanlışlıkla böyle
         // etiketleniyordu (finance.php'de daha önce düzeltilmiş aynı hata, bu tabloda unutulmuştu).
         // finance_movement_type_label() ile diğer ekranlarla tutarlı hale getirildi.
-        $actions=finance_movement_actions($r);
+        $actions=finance_movement_actions($r,$pdo);
         $canEdit=$actions['editable'] && can_edit_delete();
         echo "<tr>";
         echo "<td>".h($r['movement_date'])."</td>";

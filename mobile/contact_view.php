@@ -274,7 +274,7 @@ try{
   // mevcut mobil düzenleme ekranına (movement_view.php) bağlanıyor — yeni bir CRUD YAZILMADI.
   foreach($rows as $m):
     $in=$m['direction']==='in';
-    $actions=finance_movement_actions($m);
+    $actions=finance_movement_actions($m,$pdo);
     $canEdit=$actions['editable'] && can_edit_delete();
     $srcUrl=$actions['source_url'];
     // P0 KAPANIŞ (2026-07-18): trade_document_view.php/finance.php sadece kökte var (/mobile/

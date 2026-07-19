@@ -323,7 +323,7 @@ function finance_movement_is_real_cash_sql($alias='finance_movements'){
  *   'source_label'=>string|null, 'source_url'=>string|null, 'block_reason'=>string|null,
  * ]
  */
-function finance_movement_actions($row){
+function finance_movement_actions($row, $pdo=null){
     $type = $row['movement_type'] ?? '';
     $manual = in_array($type, finance_movement_editable_types(), true);
 
@@ -347,6 +347,26 @@ function finance_movement_actions($row){
         $sourceType='purchase'; $sourceLabel='🛒 Alışı Aç';
         $sourceUrl='purchase.php?edit_id='.(int)$row['id'];
         $blockReason='Bu hareket bir alıştan otomatik oluştu.';
+    }elseif(in_array($type, ['cek_senet','cek_senet_tahsil','cek_senet_ciro'], true)){
+        // CARİ DRILL-DOWN (2026-07-19, pilot öncesi kapanış — gerçek bulgu, "Bahçera 1M" örneği):
+        // önceden çek/senet kaynaklı hareketler bu else-if zincirinde HİÇ ele alınmıyordu, genel
+        // "Otomatik" etiketine düşüp tıklanabilir bir kaynak linki hiç göstermiyordu — kullanıcı
+        // 1.000.000 TL'lik tahsilatın hangi çeke ait olduğunu göremiyordu. $pdo verilmişse
+        // checks_notes'a hangi kolonla bağlı olduğunu (kabul/tahsil/ciro anı, hepsi farklı kolon)
+        // bulup gerçek Çek/Senet Detayına linkler; $pdo verilmemişse (eski çağıran) eski davranışa
+        // (genel "Otomatik" etiketi) sessizce düşer — geriye dönük uyumlu, hiçbir çağıranı bozmaz.
+        $sourceType='check_note'; $sourceLabel='📝 Çek/Senet Detayı'; $sourceUrl=null;
+        $blockReason='Bu hareket bir çek/senet kaydından otomatik oluştu.';
+        if($pdo){
+            try{
+                $rid=(int)$row['id'];
+                $cn=$pdo->prepare("SELECT id FROM checks_notes WHERE finance_movement_id=? OR settle_finance_movement_id=? OR ciro_finance_movement_id=? LIMIT 1");
+                $cn->execute([$rid,$rid,$rid]);
+                $cnRow=$cn->fetch();
+                if($cnRow) $sourceUrl='check_note_view.php?id='.(int)$cnRow['id'];
+            }catch(Throwable $e){}
+        }
+        if(!$sourceUrl){ $sourceLabel=null; }
     }elseif($hasSettles){
         $sourceType='settlement'; $sourceLabel='🔗 Bağlı Hareketi Aç';
         $sourceUrl='finance.php';

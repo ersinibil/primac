@@ -121,7 +121,7 @@ ds_form_field('Para Birimi', '<select name="currency">'.$__curOpts.'</select>');
     // ile birebir — bir kaydın cari ekranında düzenlenebilir, kasa ekranında düzenlenemez olması
     // yasak (kullanıcı talebi), tek merkezi fonksiyon bunu garanti ediyor.
     $mid=(int)$m['id'];
-    $actions=finance_movement_actions($m);
+    $actions=finance_movement_actions($m,$pdo);
     $canEdit=$actions['editable'] && can_edit_delete();
 ?>
 <tr>
