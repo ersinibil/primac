@@ -273,19 +273,24 @@ ds_page_header('Hızlı Satış', ds_icon('tag',24), '', $__actions, true, true)
     </form>
   </div><!-- /panel -->
 
-  <!-- Sağ: son satışlar (salt-okunur — JS bağımlılığı yok, güvenle DS'e taşındı) -->
+  <!-- Sağ: son 5 satış (salt-okunur, hızlı bakış) — tam yönetim (ara/filtrele/aç/düzenle/geri al)
+       artık sales_list.php'de (Satışlar Operasyon Merkezi, P0-2 2026-07-19). Bu mini tablo ARTIK
+       ana yönetim yöntemi değil, sadece "az önce ne sattım" hızlı kontrolü. -->
   <div>
     <div class="df-card">
-      <h2 style="font-size:15px;margin:0 0 var(--df-space-3)">Son Satışlar</h2>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--df-space-3)">
+        <h2 style="font-size:15px;margin:0">Son Satışlar</h2>
+        <?=ds_button('Tüm Satışlar →','sales_list.php','secondary','df-btn--sm','',true)?>
+      </div>
       <?php
       try {
           $recent = $pdo->query(
-              "SELECT fm.id, fm.movement_date, fm.amount, fm.vat_amount, fm.description, fm.status, fm.document_id, c.name AS cname, td.document_no
+              "SELECT fm.id, fm.movement_date, fm.amount, fm.description, fm.status, fm.document_id, c.name AS cname, td.document_no
                FROM finance_movements fm
                LEFT JOIN contacts c ON c.id=fm.contact_id
                LEFT JOIN trade_documents td ON td.id=fm.document_id
                WHERE fm.movement_type='sale' OR fm.movement_type='mobile_sale'
-               ORDER BY fm.id DESC LIMIT 10"
+               ORDER BY fm.id DESC LIMIT 5"
           )->fetchAll();
       } catch (Throwable $e) {
           $recent = [];
@@ -293,11 +298,9 @@ ds_page_header('Hızlı Satış', ds_icon('tag',24), '', $__actions, true, true)
       if ($recent): ?>
       <div class="df-table-wrap">
       <table class="df-table" style="min-width:600px">
-        <thead><tr><th>Tarih</th><th>Cari</th><th>Açıklama</th><th style="text-align:right">Tutar</th><th style="text-align:right">KDV</th><th>Durum</th><?php if(can_edit_delete()): ?><th>İşlem</th><?php endif; ?></tr></thead>
+        <thead><tr><th>Tarih</th><th>Cari</th><th>Açıklama</th><th style="text-align:right">Tutar</th><th>Durum</th><th>İşlem</th></tr></thead>
         <tbody>
-        <?php foreach ($recent as $row): ?>
-          <?php $isDoc = !empty($row['document_id']); ?>
-          <?php $rowEditable = !$isDoc && can_edit_delete() && stock_can_edit_sale($pdo, (int)$row['id'])['editable']; ?>
+        <?php foreach ($recent as $row): $isDoc = !empty($row['document_id']); ?>
           <tr>
             <td class="nowrap"><?= h($row['movement_date']) ?></td>
             <td><?= h($row['cname'] ?? '—') ?></td>
@@ -306,25 +309,8 @@ ds_page_header('Hızlı Satış', ds_icon('tag',24), '', $__actions, true, true)
               <?= h($row['description'] ?? '') ?>
             </td>
             <td style="text-align:right;font-weight:800;color:var(--df-success-ink)"><?= money($row['amount']) ?></td>
-            <td style="text-align:right;color:var(--df-ink-500);font-size:12px"><?= $row['vat_amount'] > 0 ? money($row['vat_amount']) : '—' ?></td>
             <td><?= ds_badge($row['status']) ?></td>
-            <?php if(can_edit_delete()): ?>
-            <td class="nowrap"><div class="row-actions">
-              <?php if ($isDoc): ?>
-              <a class="df-btn df-btn--secondary df-btn--sm" href="trade_document_view.php?id=<?= (int)$row['document_id'] ?>">🧾 Belgeyi Aç</a>
-              <?php else: ?>
-              <?php if ($rowEditable): ?>
-              <a class="df-btn df-btn--secondary df-btn--sm" href="sales.php?edit_id=<?= (int)$row['id'] ?>">✏️ Düzenle</a>
-              <?php endif; ?>
-              <form method="post" action="sil.php" style="display:inline-block;margin:0"
-                    onsubmit="return confirm('Bu satış kaydı ve bağlı verileri KALICI olarak silinecek. Emin misiniz?')">
-                <input type="hidden" name="t" value="sale">
-                <input type="hidden" name="id" value="<?= (int)$row['id'] ?>">
-                <button class="df-btn df-btn--danger df-btn--sm" type="submit">🗑 Sil</button>
-              </form>
-              <?php endif; ?>
-            </div></td>
-            <?php endif; ?>
+            <td class="nowrap"><a class="df-btn df-btn--secondary df-btn--sm" href="<?= $isDoc ? 'trade_document_view.php?id='.(int)$row['document_id'] : 'sale_view.php?id='.(int)$row['id'] ?>">Aç</a></td>
           </tr>
         <?php endforeach; ?>
         </tbody>

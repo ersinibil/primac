@@ -250,24 +250,28 @@ if(!$stockShortage && !$editMode && !empty($_GET['stock_item_id'])){
 </div>
 
 <div class="df-panel" style="margin-top:14px">
-  <b><?=ds_icon('box',16)?> Son Satışlar</b>
+  <div style="display:flex;justify-content:space-between;align-items:center">
+    <b><?=ds_icon('box',16)?> Son Satışlar</b>
+    <a class="df-btn df-btn--secondary df-btn--sm" href="sales_list.php">Tümü →</a>
+  </div>
   <?php
+  // Tam yönetim (ara/filtrele/aç/düzenle/geri al) artık sales_list.php'de (Satışlar Operasyon
+  // Merkezi, P0-2 2026-07-19) — bu panel sadece son 5 kayıtlık hızlı bakış.
   try{
       $recentM = $pdo->query(
-          "SELECT fm.id, fm.movement_date, fm.amount, fm.vat_amount, fm.description, fm.status, fm.document_id, c.name AS cname, td.document_no
+          "SELECT fm.id, fm.movement_date, fm.amount, fm.description, fm.status, fm.document_id, c.name AS cname, td.document_no
            FROM finance_movements fm
            LEFT JOIN contacts c ON c.id=fm.contact_id
            LEFT JOIN trade_documents td ON td.id=fm.document_id
            WHERE fm.movement_type='sale' OR fm.movement_type='mobile_sale'
-           ORDER BY fm.id DESC LIMIT 10"
+           ORDER BY fm.id DESC LIMIT 5"
       )->fetchAll();
   }catch(Throwable $e){ $recentM=[]; }
   if(!$recentM) ds_empty_state('Henüz kayıt yok.');
   foreach($recentM as $row):
       $isDoc = !empty($row['document_id']);
-      $rowEditable = !$isDoc && can_edit_delete() && stock_can_edit_sale($pdo,(int)$row['id'])['editable'];
   ?>
-  <div class="df-panel" style="margin-top:10px">
+  <a href="<?= $isDoc ? '../trade_document_view.php?id='.(int)$row['document_id'].'&web=1' : 'sale_view.php?id='.(int)$row['id'] ?>" class="df-panel" style="display:block;margin-top:10px;text-decoration:none;color:inherit">
     <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start">
       <div class="df-list-row-title" style="color:var(--df-success-ink)"><?=mm($row['amount'])?></div>
       <?=ds_badge($row['status'])?>
@@ -282,25 +286,7 @@ if(!$stockShortage && !$editMode && !empty($_GET['stock_item_id'])){
       <?=h($row['description'] ?? '')?>
     </div>
     <?php endif; ?>
-    <?php if($isDoc): ?>
-    <div style="display:flex;gap:6px;margin-top:10px">
-      <!-- P0 KAPANIŞ (2026-07-18): web=1 olmadan boot.php'nin mobil-otomatik-yönlendirmesi bu
-           /mobile/ dışı sayfaya sessizce takılıp mobile/index.php'ye geri atardı. -->
-      <a class="df-btn df-btn--secondary df-btn--sm" href="../trade_document_view.php?id=<?=(int)$row['document_id']?>&web=1"><?=ds_icon('box',14)?> Belge</a>
-    </div>
-    <?php elseif(can_edit_delete()): ?>
-    <div style="display:flex;gap:6px;margin-top:10px">
-      <?php if($rowEditable): ?>
-      <a class="df-btn df-btn--secondary df-btn--sm" href="sales.php?edit_id=<?=(int)$row['id']?>"><?=ds_icon('edit',14)?> Düzenle</a>
-      <?php endif; ?>
-      <form method="post" onsubmit="return confirm('Bu satış kaydı ve bağlı verileri KALICI olarak silinecek. Emin misiniz?')" style="margin:0">
-        <input type="hidden" name="delete_sale" value="1">
-        <input type="hidden" name="id" value="<?=(int)$row['id']?>">
-        <button class="df-btn df-btn--danger df-btn--sm" type="submit"><?=ds_icon('trash',14)?></button>
-      </form>
-    </div>
-    <?php endif; ?>
-  </div>
+  </a>
   <?php endforeach; ?>
 </div>
 

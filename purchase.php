@@ -201,28 +201,30 @@ ds_page_header($__title, ds_icon('box',24), '', $__actions, true, true);
 </form>
 </section>
 
-<!-- Son Alışlar (salt-okunur — JS bağımlılığı yok) -->
+<!-- Son 5 alış (salt-okunur, hızlı bakış) — tam yönetim artık purchase_list.php'de (Satın Alma
+     Operasyon Merkezi, P0-3 2026-07-19). -->
 <section class="df-card" style="margin-top:var(--df-space-4)">
-<h2 style="font-size:15px;margin:0 0 var(--df-space-3)">Son Alışlar</h2>
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--df-space-3)">
+<h2 style="font-size:15px;margin:0">Son Alışlar</h2>
+<?=ds_button('Tüm Satın Almalar →','purchase_list.php','secondary','df-btn--sm','',true)?>
+</div>
 <?php
 try{
     $recent=$pdo->query(
-        "SELECT fm.id, fm.movement_date, fm.amount, fm.vat_amount, fm.description, fm.status, fm.document_id, c.name AS cname, td.document_no
+        "SELECT fm.id, fm.movement_date, fm.amount, fm.description, fm.status, fm.document_id, c.name AS cname, td.document_no
          FROM finance_movements fm
          LEFT JOIN contacts c ON c.id=fm.contact_id
          LEFT JOIN trade_documents td ON td.id=fm.document_id
          WHERE fm.movement_type='purchase'
-         ORDER BY fm.id DESC LIMIT 10"
+         ORDER BY fm.id DESC LIMIT 5"
     )->fetchAll();
 }catch(Throwable $e){ $recent=[]; }
 if($recent): ?>
 <div class="df-table-wrap">
 <table class="df-table" style="min-width:600px">
-  <thead><tr><th>Tarih</th><th>Tedarikçi</th><th>Açıklama</th><th style="text-align:right">Tutar</th><th style="text-align:right">KDV</th><th>Durum</th><?php if(can_edit_delete()): ?><th>İşlem</th><?php endif; ?></tr></thead>
+  <thead><tr><th>Tarih</th><th>Tedarikçi</th><th>Açıklama</th><th style="text-align:right">Tutar</th><th>Durum</th><th>İşlem</th></tr></thead>
   <tbody>
-  <?php foreach($recent as $row): ?>
-    <?php $isDoc = !empty($row['document_id']); ?>
-    <?php $rowEditable = !$isDoc && can_edit_delete() && stock_can_edit_purchase($pdo, (int)$row['id'])['editable']; ?>
+  <?php foreach($recent as $row): $isDoc = !empty($row['document_id']); ?>
     <tr>
       <td class="nowrap"><?=h($row['movement_date'])?></td>
       <td><?=h($row['cname'] ?? '—')?></td>
@@ -231,25 +233,8 @@ if($recent): ?>
         <?=h($row['description'] ?? '')?>
       </td>
       <td style="text-align:right;font-weight:800;color:var(--df-danger-ink)"><?=money($row['amount'])?></td>
-      <td style="text-align:right;color:var(--df-ink-500);font-size:12px"><?=$row['vat_amount']>0?money($row['vat_amount']):'—'?></td>
       <td><?=ds_badge($row['status'])?></td>
-      <?php if(can_edit_delete()): ?>
-      <td class="nowrap"><div class="row-actions">
-        <a class="df-btn df-btn--secondary df-btn--sm" href="cpa_allocation.php?purchase_id=<?=(int)$row['id']?>">🤝 Müşteriye Ayır</a>
-        <?php if($isDoc): ?>
-        <a class="df-btn df-btn--secondary df-btn--sm" href="trade_document_view.php?id=<?=(int)$row['document_id']?>">🧾 Belgeyi Aç</a>
-        <?php else: ?>
-        <?php if($rowEditable): ?>
-        <a class="df-btn df-btn--secondary df-btn--sm" href="purchase.php?edit_id=<?=(int)$row['id']?>">✏️ Düzenle</a>
-        <?php endif; ?>
-        <form method="post" style="display:inline-block;margin:0" onsubmit="return confirm('Bu alış kaydı ve bağlı verileri KALICI olarak silinecek. Emin misiniz?')">
-          <input type="hidden" name="delete_purchase" value="1">
-          <input type="hidden" name="id" value="<?=(int)$row['id']?>">
-          <button class="df-btn df-btn--danger df-btn--sm" type="submit">🗑 Sil</button>
-        </form>
-        <?php endif; ?>
-      </div></td>
-      <?php endif; ?>
+      <td class="nowrap"><a class="df-btn df-btn--secondary df-btn--sm" href="<?= $isDoc ? 'trade_document_view.php?id='.(int)$row['document_id'] : 'purchase_view.php?id='.(int)$row['id'] ?>">Aç</a></td>
     </tr>
   <?php endforeach; ?>
   </tbody>
