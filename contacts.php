@@ -10,11 +10,16 @@ try{
 
 $type=$_GET['type'] ?? '';
 $showPassive=!empty($_GET['show_passive']);
+$q=trim($_GET['q'] ?? '');
 $where='';
 $params=[];
 $conditions=[];
 if($type){ $conditions[]="c.type=?"; $params[]=$type; }
 if(!$showPassive){ $conditions[]="(c.active IS NULL OR c.active=1)"; }
+// CARİ MODÜL İÇİ ARAMA (2026-07-19, Product Owner kararı) — 5.000+ cari ölçeği için isim/yetkili
+// kişi/telefon araması. Global arama (search.php) AYRI sistem, bu SADECE bu listeye özel filtre —
+// mevcut type/show_passive ile AYNI desen (GET → sunucu tarafı WHERE, tam sayfa yenileme).
+if($q!==''){ $conditions[]="(c.name LIKE ? OR c.authorized_person LIKE ? OR c.phone LIKE ?)"; $params[]='%'.$q.'%'; $params[]='%'.$q.'%'; $params[]='%'.$q.'%'; }
 if($conditions) $where="WHERE ".implode(' AND ',$conditions);
 ?>
 
@@ -79,17 +84,41 @@ $movementsThisMonth=safe_count("SELECT COUNT(*) c FROM finance_movements WHERE c
     </a>
 </section>
 
+<?php
+// CARİ MODÜL İÇİ ARAMA (2026-07-19) — tip/pasif filtreleriyle AYNI query-string desenini korur,
+// sadece 'q' araya eklenir/çıkarılır — hiçbir mevcut link biçimi değişmedi.
+// Tip sekmeleri (Tümü/Müşteri/Tedarikçi) orijinal davranışı korur (show_passive TAŞINMAZ, tip
+// değişince pasif filtresi sıfırlanır — mevcut davranış) — sadece yeni 'q' eklendi/korundu.
+function __cn_url($type=null){
+    global $q;
+    $qs = [];
+    if($type) $qs['type'] = $type;
+    if($q!=='') $qs['q'] = $q;
+    return 'contacts.php'.($qs ? '?'.http_build_query($qs) : '');
+}
+?>
 <section class="df-card">
 <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:var(--df-space-3)">
     <h2 style="font-size:var(--df-type-section-size);font-weight:var(--df-type-section-weight);color:var(--df-ink-900);margin:0"><?= $type ? h($type).' Listesi' : 'Cari Listesi' ?></h2>
+</div>
+<form method="get" style="margin-bottom:var(--df-space-3)">
+    <?php if($type): ?><input type="hidden" name="type" value="<?=h($type)?>"><?php endif; ?>
+    <?php if($showPassive): ?><input type="hidden" name="show_passive" value="1"><?php endif; ?>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <input type="text" name="q" value="<?=h($q)?>" placeholder="İsim, yetkili kişi veya telefon ile ara…" style="flex:1;min-width:220px">
+        <button type="submit" class="df-btn df-btn--secondary df-btn--sm">Ara</button>
+        <?php if($q!==''): ?><a class="df-btn df-btn--ghost df-btn--sm" href="contacts.php<?=$type?'?type='.urlencode($type):''?><?=$showPassive?($type?'&':'?').'show_passive=1':''?>">Temizle</a><?php endif; ?>
+    </div>
+</form>
+<div style="display:flex;justify-content:flex-end;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:var(--df-space-3)">
     <div style="display:flex;gap:6px;flex-wrap:wrap">
-        <a class="df-btn df-btn--secondary df-btn--sm" href="contacts.php">Tümü</a>
-        <a class="df-btn df-btn--secondary df-btn--sm" href="contacts.php?type=Müşteri">Müşteri</a>
-        <a class="df-btn df-btn--secondary df-btn--sm" href="contacts.php?type=Tedarikçi">Tedarikçi</a>
+        <a class="df-btn df-btn--secondary df-btn--sm" href="<?=h(__cn_url())?>">Tümü</a>
+        <a class="df-btn df-btn--secondary df-btn--sm" href="<?=h(__cn_url('Müşteri'))?>">Müşteri</a>
+        <a class="df-btn df-btn--secondary df-btn--sm" href="<?=h(__cn_url('Tedarikçi'))?>">Tedarikçi</a>
         <?php if($showPassive): ?>
-        <a class="df-btn df-btn--secondary df-btn--sm" href="contacts.php<?=$type?'?type='.urlencode($type):''?>">Sadece Aktif</a>
+        <a class="df-btn df-btn--secondary df-btn--sm" href="contacts.php<?=$type?'?type='.urlencode($type):''?><?=$q!==''?($type?'&':'?').'q='.urlencode($q):''?>">Sadece Aktif</a>
         <?php else: ?>
-        <a class="df-btn df-btn--secondary df-btn--sm" href="contacts.php?show_passive=1<?=$type?'&type='.urlencode($type):''?>">Pasif Dahil</a>
+        <a class="df-btn df-btn--secondary df-btn--sm" href="contacts.php?show_passive=1<?=$type?'&type='.urlencode($type):''?><?=$q!==''?'&q='.urlencode($q):''?>">Pasif Dahil</a>
         <?php endif; ?>
         <a class="df-btn df-btn--secondary df-btn--sm" href="contacts_report.php">Rapor</a>
     </div>
