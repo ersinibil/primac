@@ -68,8 +68,8 @@ foreach($rows as $r){ if($r['balance']>0) $totalAlacak+=$r['balance']; else $tot
 
 <div class="df-panel" style="display:flex;gap:10px;text-align:center">
   <div style="flex:1"><small class="muted">Cari</small><br><b style="font-size:20px"><?=count($rows)?></b></div>
-  <div style="flex:1"><small class="muted">Alacak</small><br><b style="font-size:16px;color:#4ade80"><?=mm($totalAlacak)?></b></div>
-  <div style="flex:1"><small class="muted">Borç</small><br><b style="font-size:16px;color:#f87171"><?=mm($totalBorc)?></b></div>
+  <div style="flex:1"><small class="muted">Alacak</small><br><b style="font-size:16px;color:var(--df-success-ink,#4ade80)"><?=mm($totalAlacak)?></b></div>
+  <div style="flex:1"><small class="muted">Borç</small><br><b style="font-size:16px;color:var(--df-danger-ink,#f87171)"><?=mm($totalBorc)?></b></div>
 </div>
 
 <div class="df-panel">

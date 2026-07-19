@@ -66,6 +66,33 @@ topx('Günlük İş Raporu');
 </div>
 <button class="noprint df-btn df-btn--primary df-btn--lg" onclick="shareReportPDF(this)" style="width:100%;background:var(--df-success);margin-bottom:12px">📄 PDF İndir / Paylaş</button>
 
+<!-- MOBİL UX/IA — RAPOR AİLESİ PASS (2026-07-19): web gunluk_rapor.php ile aynı minimum güvenli
+     ayrım — #repArea'nın iç HTML/CSS'i (= PDF çıktısı) birebir korunuyor, sadece ekrandaki DS
+     çerçeve (KPI özeti + df-panel) yeni. Bkz. web dosyasındaki uzun açıklama. -->
+<div class="df-panel noprint" style="margin-bottom:10px">
+  <div style="display:flex;flex-wrap:wrap;gap:10px;text-align:center">
+    <div style="flex:1;min-width:70px">
+      <small class="muted" style="display:block;font-size:10.5px;text-transform:uppercase;font-weight:700">Açık İş</small>
+      <b style="display:block;font-size:20px;margin-top:2px;color:var(--df-accent)"><?=htmlspecialchars($toplamIs)?></b>
+    </div>
+    <div style="flex:1;min-width:70px">
+      <small class="muted" style="display:block;font-size:10.5px;text-transform:uppercase;font-weight:700">Geciken</small>
+      <b style="display:block;font-size:20px;margin-top:2px;color:var(--df-danger-ink)"><?=htmlspecialchars($toplamGeciken)?></b>
+    </div>
+    <div style="flex:1;min-width:70px">
+      <small class="muted" style="display:block;font-size:10.5px;text-transform:uppercase;font-weight:700">Görev</small>
+      <b style="display:block;font-size:20px;margin-top:2px;color:var(--df-warning-ink)"><?=htmlspecialchars($toplamGov)?></b>
+    </div>
+    <div style="flex:1;min-width:70px">
+      <small class="muted" style="display:block;font-size:10.5px;text-transform:uppercase;font-weight:700">Teklif</small>
+      <b style="display:block;font-size:20px;margin-top:2px;color:var(--df-success-ink)"><?=htmlspecialchars($toplamTeklif)?></b>
+    </div>
+  </div>
+</div>
+<div class="noprint" style="display:flex;align-items:center;gap:6px;color:var(--df-ink-500);font-size:11.5px;font-weight:700;margin-bottom:6px">
+  <?=ds_icon('info',13)?> Aşağıdaki kutu PDF çıktısının önizlemesidir — belge görünümünü korur.
+</div>
+<div class="df-panel" style="padding:8px">
 <div id="repArea" style="max-width:100%;margin:0 auto;background:#fff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;color:#101828">
     <div style="background:#1b2431;color:#fff;padding:16px 18px;display:flex;justify-content:space-between;align-items:center">
         <div style="display:flex;align-items:center;gap:10px">
@@ -130,6 +157,7 @@ topx('Günlük İş Raporu');
     <div style="border-top:2px solid #e5e7eb;background:#f8f9fa;color:#6b7280;padding:8px 14px;text-align:center;font-size:10px">
         <?=htmlspecialchars($appName)?> · Rapor tarihi: <?=htmlspecialchars($tarihGoster)?> · Oluşturulma: <?=date('H:i')?>
     </div>
+</div>
 </div>
 
 <script>

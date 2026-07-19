@@ -360,7 +360,7 @@ function report_render($R,$appName,$from,$to,$full=true){
 .rep-tile .ic{font-size:26px;opacity:.9}
 .rep-tile .vl{font-size:23px;font-weight:1000;margin-top:6px;line-height:1.1}
 .rep-tile .lb{font-size:12.5px;opacity:.92;margin-top:3px;font-weight:600}
-.rep-card{background:var(--df-surface,#0f1d33);border:1px solid var(--df-hairline,#1e3350);border-radius:var(--df-radius-lg,18px);padding:16px;margin:12px 0;color:var(--df-ink-900,#e5edf7)}
+.rep-card{background:var(--df-surface,#0f1d33);border:1px solid var(--df-hairline,#1e3350);border-radius:var(--df-radius-md,12px);padding:var(--df-space-4,16px);margin:12px 0;color:var(--df-ink-900,#e5edf7)}
 .rep-card .ttl{font-weight:900;margin-bottom:10px;font-size:15px;color:var(--df-ink-900,#e5edf7)}
 .rep-bar{display:flex;align-items:center;gap:10px;margin:7px 0;font-size:13px}
 .rep-bar .l{width:32%;color:var(--df-ink-500,#cbd5e1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -368,12 +368,28 @@ function report_render($R,$appName,$from,$to,$full=true){
 .rep-bar .f{height:100%;border-radius:8px;background:linear-gradient(90deg,#22c55e,#a3e635)}
 .rep-bar .v{width:24%;text-align:right;font-weight:800;color:var(--df-ink-900,#fff)}
 table.rep-tbl{width:100%;border-collapse:collapse;font-size:13px;color:var(--df-ink-900,#e5edf7)}
-table.rep-tbl th{text-align:left;color:var(--df-ink-500,#93a4bf);border-bottom:2px solid var(--df-hairline,#1e3350);padding:8px 6px;font-size:11px;text-transform:uppercase;letter-spacing:.04em}
-table.rep-tbl td{padding:8px 6px;border-bottom:1px solid var(--df-hairline,rgba(255,255,255,.06));color:var(--df-ink-900,#e5edf7)}
+table.rep-tbl th{text-align:left;color:var(--df-ink-500,#93a4bf);background:var(--df-surface-sunken,transparent);border-bottom:2px solid var(--df-hairline,#1e3350);padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+table.rep-tbl td{padding:10px 12px;border-bottom:1px solid var(--df-hairline,rgba(255,255,255,.06));color:var(--df-ink-900,#e5edf7)}
 table.rep-tbl tr:nth-child(even) td{background:var(--df-surface-sunken,rgba(255,255,255,.025))}
+table.rep-tbl tr:hover td{background:var(--df-surface-sunken,rgba(255,255,255,.05))}
 .rep-tbl a{color:var(--df-accent,#60a5fa)}
 .rep-neg{color:var(--df-danger-ink,#f87171);font-weight:800}
 .rep-foot{text-align:center;color:var(--df-ink-500,#64748b);font-size:12px;margin:14px 0 4px}
+/* MOBİL/DAR EKRAN: masaüstü tabloyu küçültüp yatay kaydırmak yerine (Product Owner: "tabloyu
+   küçültmek şeklinde çözülmesin") her satır bir label:value kartına dönüşür — data-label attribute
+   render döngüsünde $R['table']['head'] karşılığı olarak zaten basılıyor. Veri/sıra hiç değişmedi. */
+@media(max-width:720px){
+  /* rep-tbl <thead> KULLANMIYOR — başlık <tr>'ı tarayıcının otomatik oluşturduğu tek <tbody>'nin
+     ilk çocuğu; thead{display:none} hiçbir şeyi eşleştirmezdi, gerçek seçici tr:first-child. */
+  table.rep-tbl tr:first-child{display:none}
+  table.rep-tbl,table.rep-tbl tbody,table.rep-tbl tr{display:block;width:100%}
+  table.rep-tbl tr{border:1px solid var(--df-hairline,#1e3350);border-radius:var(--df-radius-md,12px);margin-bottom:10px;padding:2px 10px;background:var(--df-surface-sunken,rgba(255,255,255,.03))}
+  table.rep-tbl tr:nth-child(even) td{background:transparent}
+  table.rep-tbl td{display:flex;justify-content:space-between;align-items:center;gap:12px;text-align:right;padding:8px 0;border-bottom:1px solid var(--df-hairline,rgba(255,255,255,.06))}
+  table.rep-tbl tr td:last-child{border-bottom:none}
+  table.rep-tbl td:empty{display:none}
+  table.rep-tbl td[data-label]::before{content:attr(data-label);font-weight:700;text-transform:uppercase;font-size:10.5px;letter-spacing:.04em;color:var(--df-ink-500,#93a4bf);text-align:left;margin-right:auto}
+}
 @media print{
   /* SADECE raporu yazdır — uygulama arayüzünü (üst bar, bildirim bandı, alt menü, sidebar) gizle */
   body{background:#fff!important}
@@ -425,8 +441,8 @@ table.rep-tbl tr:nth-child(even) td{background:var(--df-surface-sunken,rgba(255,
     <?php $hasLinks=!empty($R['table']['links']); ?>
     <table class="rep-tbl"><tr><?php foreach($R['table']['head'] as $h) echo '<th>'.htmlspecialchars($h).'</th>'; if($hasLinks) echo '<th></th>'; ?></tr>
     <?php foreach(array_slice($R['table']['rows'],0,$lim,true) as $i=>$row): ?>
-      <tr><?php foreach($row as $cell){ $cc=$crit($cell)?' class="rep-neg"':''; echo '<td'.$cc.'>'.htmlspecialchars((string)$cell).'</td>'; }
-      if($hasLinks){ $u=$R['table']['links'][$i] ?? null; echo '<td>'.($u?'<a href="'.htmlspecialchars($u).'" style="color:var(--df-accent,#60a5fa);font-weight:700;text-decoration:none;white-space:nowrap">Detay →</a>':'').'</td>'; } ?></tr>
+      <tr><?php foreach($row as $ci=>$cell){ $cc=$crit($cell)?' class="rep-neg"':''; $lbl=isset($R['table']['head'][$ci])?htmlspecialchars($R['table']['head'][$ci]):''; echo '<td'.$cc.' data-label="'.$lbl.'">'.htmlspecialchars((string)$cell).'</td>'; }
+      if($hasLinks){ $u=$R['table']['links'][$i] ?? null; echo '<td>'.($u?'<a href="'.htmlspecialchars($u).'" style="color:var(--df-accent,#60a5fa);font-weight:700;text-decoration:none;white-space:nowrap;margin-left:auto">Detay →</a>':'').'</td>'; } ?></tr>
     <?php endforeach; ?>
     </table>
     <?php if(!$full && $tot>$lim): ?><small style="color:var(--df-ink-500,#93a4bf)">… ve <?=$tot-$lim?> kayıt daha — "Detaylı" ile görünür</small><?php endif; ?>

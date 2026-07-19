@@ -41,6 +41,7 @@ usort($list, function($a,$b){ return strcmp($a['due_date'],$b['due_date']); });
 
 topx('Takvim');
 $today=(int)date('j'); $isThisMonth=($ym===date('Y-m'));
+$g=(int)($_GET['g']??0);
 $mn=['01'=>'Ocak','02'=>'Şubat','03'=>'Mart','04'=>'Nisan','05'=>'Mayıs','06'=>'Haziran','07'=>'Temmuz','08'=>'Ağustos','09'=>'Eylül','10'=>'Ekim','11'=>'Kasım','12'=>'Aralık'];
 ?>
 <div class="df-panel" style="padding:12px">
@@ -50,13 +51,20 @@ $mn=['01'=>'Ocak','02'=>'Şubat','03'=>'Mart','04'=>'Nisan','05'=>'Mayıs','06'=
     <a href="calendar.php?ay=<?=$next?>" class="df-btn df-btn--secondary df-btn--sm">›</a>
   </div>
   <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-top:10px;text-align:center">
-    <?php foreach(['Pzt','Sal','Çar','Per','Cum','Cmt','Paz'] as $w): ?><div style="color:#94a3b8;font-size:11px;font-weight:700"><?=$w?></div><?php endforeach; ?>
+    <?php foreach(['Pzt','Sal','Çar','Per','Cum','Cmt','Paz'] as $w): ?><div style="color:var(--df-ink-500,#94a3b8);font-size:11px;font-weight:700"><?=$w?></div><?php endforeach; ?>
     <?php for($i=0;$i<$startW;$i++) echo '<div></div>';
     for($d=1;$d<=$daysIn;$d++):
-      $has=!empty($byDay[$d]); $isToday=($isThisMonth&&$d===$today);
+      $has=!empty($byDay[$d]); $isToday=($isThisMonth&&$d===$today); $isSel=($g===$d);
       $cnt=$has?count($byDay[$d]):0;
+      // MOBİL TAKVİM KÖK NEDEN (2026-07-19): grid zaten 1..$daysIn TÜM günleri basıyordu (event-only
+      // değildi) — gerçek sorun gün numarası metninin her zaman sabit color:#fff olmasıydı; açık temada
+      // neredeyse beyaz/şeffaf hücre arka planı üstünde bu beyaz metin görünmez oluyordu, sadece
+      // koyu (bugün) veya sarı rozetli (kayıtlı gün) hücreler algılanabiliyordu. Token'lara taşındı.
+      $bg = $isToday ? 'var(--df-accent,#2563eb)' : ($has ? 'var(--df-warning-soft,rgba(234,179,8,.18))' : 'var(--df-surface-sunken,rgba(255,255,255,.05))');
+      $fg = $isToday ? 'var(--df-accent-ink,#fff)' : ($has ? 'var(--df-warning-ink,#fff)' : 'var(--df-ink-900,#fff)');
+      $ring = $isSel ? ';box-shadow:inset 0 0 0 2px var(--df-ink-900,#fff)' : '';
     ?>
-      <a href="calendar.php?ay=<?=$ym?>&g=<?=$d?>" style="text-decoration:none;aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:10px;background:<?=$isToday?'#2563eb':($has?'rgba(234,179,8,.18)':'rgba(255,255,255,.05)')?>;color:#fff;font-size:14px">
+      <a href="calendar.php?ay=<?=$ym?>&g=<?=$d?>" style="text-decoration:none;aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:10px;background:<?=$bg?>;color:<?=$fg?><?=$ring?>;font-size:14px">
         <span style="font-weight:<?=$isToday?900:500?>"><?=$d?></span>
         <?php if($has): ?><span style="font-size:9px;background:#eab308;color:#0b0b0b;border-radius:6px;padding:0 4px;font-weight:900"><?=$cnt?></span><?php endif; ?>
       </a>
@@ -65,7 +73,6 @@ $mn=['01'=>'Ocak','02'=>'Şubat','03'=>'Mart','04'=>'Nisan','05'=>'Mayıs','06'=
 </div>
 
 <?php
-$g=(int)($_GET['g']??0);
 $show = $g>0 ? ($byDay[$g]??[]) : $list;
 $baslik = $g>0 ? ($g.' '.$mn[$first->format('m')].' işleri/notları') : 'Bu ay tüm işler/notlar ('.count($list).')';
 ?>

@@ -105,6 +105,38 @@ ds_page_header('📅 Günlük İş Raporu', ds_icon('calendar',24), '', $__grAct
 ?>
 </div>
 
+<!-- MOBİL UX/IA — RAPOR AİLESİ PASS (2026-07-19): bu ekran hem uygulama-içi görünüm hem PDF çıktısı
+     için AYNI #repArea HTML'ini kullanıyordu — ekran her zaman sabit beyaz/koyu-başlıklı "belge"
+     görünümündeydi, DS'ten kopuk hissediyordu. Minimum güvenli ayrım: repArea'nın kendi iç HTML/CSS'i
+     (ve dolayısıyla PDF çıktısı) BİREBİR korunuyor — sadece EKRANDA görünen çerçeve (üstteki DS KPI
+     özeti + aşağıdaki .df-card çerçeve) yeni. print/@media print zaten sadece #repArea'yı görünür
+     bırakıyor (visibility cascade), html2canvas de sadece #repArea düğümünü klonluyor — bu yüzden
+     çerçeve PDF'e hiç karışmaz, iş mantığı/sorgu tek satır değişmedi. -->
+<section class="df-card noprint" style="margin:0 0 var(--df-space-4)">
+  <div style="display:flex;flex-wrap:wrap;gap:var(--df-space-4);text-align:center">
+    <div style="flex:1;min-width:120px">
+      <small class="df-muted" style="display:block;font-weight:700;text-transform:uppercase;font-size:11px;letter-spacing:.04em">Açık İş</small>
+      <strong style="display:block;font-size:26px;margin-top:4px;color:var(--df-accent)"><?=h($toplamIs)?></strong>
+    </div>
+    <div style="flex:1;min-width:120px">
+      <small class="df-muted" style="display:block;font-weight:700;text-transform:uppercase;font-size:11px;letter-spacing:.04em">Geciken İş</small>
+      <strong style="display:block;font-size:26px;margin-top:4px;color:var(--df-danger-ink)"><?=h($toplamGeciken)?></strong>
+    </div>
+    <div style="flex:1;min-width:120px">
+      <small class="df-muted" style="display:block;font-weight:700;text-transform:uppercase;font-size:11px;letter-spacing:.04em">Bekleyen Görev</small>
+      <strong style="display:block;font-size:26px;margin-top:4px;color:var(--df-warning-ink)"><?=h($toplamGov)?></strong>
+    </div>
+    <div style="flex:1;min-width:120px">
+      <small class="df-muted" style="display:block;font-weight:700;text-transform:uppercase;font-size:11px;letter-spacing:.04em">Bekleyen Teklif</small>
+      <strong style="display:block;font-size:26px;margin-top:4px;color:var(--df-success-ink)"><?=h($toplamTeklif)?></strong>
+    </div>
+  </div>
+</section>
+
+<div class="noprint" style="max-width:860px;margin:0 auto 8px;display:flex;align-items:center;gap:6px;color:var(--df-ink-500);font-size:12.5px;font-weight:700">
+  <?=ds_icon('info',14)?> Aşağıdaki kutu yazdırma/PDF çıktısının birebir önizlemesidir — kurumsal belge görünümünü bilerek korur.
+</div>
+<div class="df-card" style="max-width:900px;margin:0 auto 24px;padding:14px">
 <div id="repArea" style="max-width:860px;margin:0 auto;background:#fff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden">
     <!-- Başlık -->
     <div style="background:#1b2431;color:#fff;padding:20px 28px;display:flex;justify-content:space-between;align-items:center">
@@ -199,6 +231,7 @@ ds_page_header('📅 Günlük İş Raporu', ds_icon('calendar',24), '', $__grAct
     <div style="border-top:2px solid #e5e7eb;background:#f8f9fa;color:#6b7280;padding:10px 24px;text-align:center;font-size:11px">
         <?=h($appName)?> &nbsp;·&nbsp; Rapor tarihi: <?=h($tarihGoster)?> &nbsp;·&nbsp; Oluşturulma: <?=date('H:i')?>
     </div>
+</div>
 </div>
 
 <script>
