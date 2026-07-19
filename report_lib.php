@@ -3,7 +3,7 @@
 if(file_exists(__DIR__.'/contacts_lib.php')) require_once __DIR__.'/contacts_lib.php';
 if(file_exists(__DIR__.'/finance_lib.php')) require_once __DIR__.'/finance_lib.php';
 if(file_exists(__DIR__.'/stock_lib.php')) require_once __DIR__.'/stock_lib.php';
-function report_modules(){ return ['tumu'=>'🗂️ Tümü','genel'=>'📊 Yekün','tahsilat'=>'💰 Tahsilat/Finans','muhasebe'=>'📒 Muhasebe','is'=>'📋 İş Emirleri','gorevler'=>'✓ Görevler','personel'=>'👷 Personel','satis'=>'🧾 Satış','satinalma'=>'📥 Satın Alma','teklif'=>'📄 Teklif','cari'=>'👥 Cari','stok'=>'📦 Stok']; }
+function report_modules(){ return ['tumu'=>'Tümü','genel'=>'Yekün','tahsilat'=>'Tahsilat/Finans','muhasebe'=>'Muhasebe','is'=>'İş Emirleri','gorevler'=>'Görevler','personel'=>'Personel','satis'=>'Satış','satinalma'=>'Satın Alma','teklif'=>'Teklif','cari'=>'Cari','stok'=>'Stok']; }
 // "Tümü"de yer alacak modüller (özet hariç tek tek hepsi)
 function report_all_keys(){ return ['genel','tahsilat','muhasebe','is','gorevler','personel','satis','satinalma','teklif','cari','stok']; }
 // Tüm modülleri tek raporda alt alta render et
@@ -23,6 +23,26 @@ function build_csv_all($pdo,$appName,$from,$to){
     $o.="\r\n\r\n";
   }
   return $o;
+}
+
+// RAPOR AİLESİ MODERNİZASYONU (2026-07-19) — ORTAK KPI KUTUSU PRIMITIVE. report_render()'ın kendi
+// .rep-tiles/.rep-tile ile aynı nötr/beyaz+ince-renkli-kenarlık dili; contacts_report.php gibi
+// report_lib.php motorunu KULLANMAYAN ama aynı "rapor ailesi" görünümünde olması gereken sayfalar
+// için. $cards formatı report_render()'daki $R['cards'] ile birebir aynı: [ikon,label,değer,renk,link?].
+function report_kpi_grid($cards){
+  static $styled=false; $out='';
+  if(!$styled){ $styled=true;
+    $out.='<style>.rep-tiles{display:flex;flex-wrap:wrap;gap:12px;margin:14px 0}.rep-tile{position:relative;flex:1 1 150px;min-width:150px;background:var(--df-surface,#fff);border:1px solid var(--df-hairline,#e4e7ec);border-left:4px solid var(--df-accent,#2563eb);border-radius:var(--df-radius-lg,14px);padding:14px 16px;color:var(--df-ink-900,#101828);overflow:hidden;box-shadow:var(--df-shadow-sm,0 2px 8px rgba(16,24,40,.06));text-decoration:none;display:block}.rep-tile .ic{font-size:18px;opacity:.8;color:var(--df-ink-500,#667085)}.rep-tile .vl{font-size:22px;font-weight:800;margin-top:6px;line-height:1.1;color:var(--df-ink-900,#101828)}.rep-tile .lb{font-size:12px;color:var(--df-ink-500,#667085);margin-top:3px;font-weight:600;text-transform:uppercase;letter-spacing:.03em}</style>';
+  }
+  $out.='<div class="rep-tiles">';
+  foreach($cards as $c){
+    $col=$c[3]; $clink=$c[4] ?? null; $tag=$clink?'a':'div';
+    $out.='<'.$tag.' class="rep-tile"'.($clink?' href="'.htmlspecialchars($clink).'"':'').' style="border-left-color:'.htmlspecialchars($col).($clink?';cursor:pointer':'').'">';
+    $out.='<div class="ic">'.$c[0].'</div><div class="vl">'.htmlspecialchars($c[2]).'</div><div class="lb">'.htmlspecialchars($c[1]).'</div>';
+    $out.='</'.$tag.'>';
+  }
+  $out.='</div>';
+  return $out;
 }
 
 /* ===== Toplu Cari Ekstre — birden çok cariyi (mode/type ile süzülmüş) tek raporda alt alta ekstrelendirir =====
@@ -76,7 +96,7 @@ function report_render_cari_toplu($pdo,$appName,$from,$to,$mode='',$type='',$det
       $R=rpt($pdo,'cari_detay',$from,$to,$c['id'],$detail);
       $out.=report_render($R,$appName,$from,$to,$detail).'<div style="height:20px"></div>';
     }
-  }catch(Throwable $e){ $out.='<div class="rep-card" style="color:#fca5a5">'.htmlspecialchars($e->getMessage()).'</div>'; }
+  }catch(Throwable $e){ $out.='<div class="rep-card" style="color:var(--df-danger-ink,#b91c1c)">'.htmlspecialchars($e->getMessage()).'</div>'; }
   return $out;
 }
 
@@ -299,7 +319,7 @@ function rpt($pdo,$modul,$from,$to,$ref=0,$detail=false){
     foreach($jl->fetchAll() as $r){
         $tarih=$r['due_date'] ?: ($r['created_at'] ? substr($r['created_at'],0,10) : '');
         $tutar=(float)$r['sale_amount']>0 ? tl($r['sale_amount']) : '—';
-        $R['table']['rows'][]=[$tarih,'📋 İş: '.$r['status'],$tutar,$r['job_no'].' — '.$r['title']];
+        $R['table']['rows'][]=[$tarih,'İş: '.$r['status'],$tutar,$r['job_no'].' — '.$r['title']];
         $R['table']['links'][]='job_view.php?id='.(int)$r['id'];
     }
     $R['chart']=['Tahsilat / Ödeme',$cd];
@@ -344,45 +364,44 @@ function report_render($R,$appName,$from,$to,$full=true){
   ob_start();
   if($styled){ echo "\n"; } else { $styled=true; ?>
 <style>
-/* MOBİL UX/IA KONSOLİDE PASS (2026-07-19, bölüm 11, Product Owner kararı) — bu blok önceden
-   HER ZAMAN koyu tema hardcoded'du (background:#0f1d33 vb.) — sayfanın kendisi açık temadayken
-   bile rapor alanı ortasında koyu bir "ada" gibi duruyordu ("DS'den kopuk renkler"). Kart/tablo/
-   çubuk artık --df-surface/--df-ink-*/--df-hairline token'larına taşındı (web+mobil TEK kaynak,
-   bu fonksiyon ikisinde de kullanılıyor) — VERİ/hesaplama/düzen hiç değişmedi, sadece renk kaynağı.
-   Hero banner ve renkli KPI tile'ları (report_lib.php'nin kendi ürettiği aksan renkleri, $c[3])
-   bilinçli olarak gradient/vurgulu bırakıldı — infografik karakterinin parçası, "legacy" değil. */
+/* RAPOR AİLESİ MODERNİZASYONU (2026-07-19, Product Owner kararı — PO'nun canlıda "hepsi eski
+   görünüyor" bulgusu üzerine): önceki turda .rep-card/.rep-tbl zaten --df-surface/--df-ink-*
+   token'larına taşınmıştı (açık temada doğru beyaz/nötr render ediyor — bu doğrulandı, dokunulmadı).
+   Gerçek suçlu, token SİSTEMİNE HİÇ GİRMEYEN iki blok: .rep-hero (sabit mavi/camgöbeği gradient,
+   #1e3a8a/#2563eb/#06b6d4 literal hex) ve .rep-tile (her KPI için $c[3] rengiyle TAM GRADIENT blok +
+   beyaz metin) — ikisi de "eski renkli dashboard" görünümünün ta kendisi, hangi tema aktif olursa
+   olsun hep aynı hardcoded renkli kutu. Kaldırıldı: hero artık sade bir başlık şeridi (ds_page_header
+   ailesiyle akraba), KPI kutuları .ds-kpi-card (assets/css/ds-foundation.css, dashboard.php'nin
+   command-card'ıyla aynı aile) ile aynı dilde — beyaz/nötr zemin + $c[3] SADECE ince sol kenarlık
+   olarak semantik vurgu. Grafik çubukları da rastgele 6 renkli döngü yerine TEK aksan rengi. VERİ/
+   KPI/hesaplama HİÇ değişmedi — sadece bu iki blok ve grafik renk kaynağı. */
 .rep{--ink:#0f172a}
 .rep *{box-sizing:border-box}
-.rep-hero{background:linear-gradient(135deg,#1e3a8a 0%,#2563eb 55%,#06b6d4 100%);border-radius:var(--df-radius-lg,20px);padding:20px;color:#fff;display:flex;align-items:center;gap:14px;box-shadow:var(--df-shadow-md,0 12px 30px rgba(37,99,235,.35))}
-.rep-hero .lg{width:58px;height:58px;border-radius:var(--df-radius-md,16px);background:#fff;color:#1e3a8a;display:flex;align-items:center;justify-content:center;font-weight:1000;font-size:28px;flex:0 0 auto}
-.rep-hero h2{margin:0;font-size:20px}.rep-hero .dt{opacity:.9;font-size:13px;margin-top:2px}
-/* PDF EXPORT FIX (2026-07-19, pilot öncesi kapanış — gerçek USER TEST FAIL): KPI kutuları
-   önceden CSS Grid (auto-fit/minmax) ile diziliyordu — ekranda doğru görünüyordu ama html2canvas
-   (report_share.js'in PDF motoru) CSS Grid'in auto-fit/minmax gibi ileri özelliklerini güvenilir
-   hesaplayamıyor (bilinen bir html2canvas sınırlaması, gerçek bir tarayıcı layout motoru değil) —
-   PDF çıktısında kutular sıfır genişliğe çöküp içeriği kaybolmuş/boş görünebiliyordu. Flexbox'a
-   çevrildi (html2canvas'ın çok daha güvenilir desteklediği bir model) — ekran görünümü aynı kaldı
-   (aynı sarma/boşluk davranışı), sadece PDF motoruyla uyumluluk için. Veri/hesaplama değişmedi.
-   Kesin doğrulama gerçek cihazda PDF indirip bakmakla yapılmalı — buradan görsel test edilemiyor. */
+.rep-hero{background:var(--df-surface,#fff);border:1px solid var(--df-hairline,#e4e7ec);border-radius:var(--df-radius-lg,20px);padding:18px 20px;color:var(--df-ink-900,#101828);display:flex;align-items:center;gap:14px}
+.rep-hero .lg{width:46px;height:46px;border-radius:var(--df-radius-md,14px);background:var(--df-surface-sunken,#f2f4f7);color:var(--df-accent,#2563eb);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:20px;flex:0 0 auto}
+.rep-hero h2{margin:0;font-size:var(--df-type-section-size,17px);font-weight:var(--df-type-section-weight,650)}
+.rep-hero .dt{color:var(--df-ink-500,#667085);font-size:13px;margin-top:2px}
+/* PDF EXPORT FIX (2026-07-19): KPI kutuları CSS Grid yerine flexbox — html2canvas auto-fit/minmax'ı
+   güvenilir hesaplayamıyor (bilinen sınırlama). Görünüm/sarma davranışı bu turda da korunuyor. */
 .rep-tiles{display:flex;flex-wrap:wrap;gap:12px;margin:14px 0}
-.rep-tile{position:relative;flex:1 1 150px;min-width:150px;border-radius:var(--df-radius-lg,18px);padding:16px;color:#fff;overflow:hidden;box-shadow:var(--df-shadow-sm,0 8px 20px rgba(0,0,0,.18))}
-.rep-tile .ic{font-size:26px;opacity:.9}
-.rep-tile .vl{font-size:23px;font-weight:1000;margin-top:6px;line-height:1.1}
-.rep-tile .lb{font-size:12.5px;opacity:.92;margin-top:3px;font-weight:600}
-.rep-card{background:var(--df-surface,#0f1d33);border:1px solid var(--df-hairline,#1e3350);border-radius:var(--df-radius-md,12px);padding:var(--df-space-4,16px);margin:12px 0;color:var(--df-ink-900,#e5edf7)}
-.rep-card .ttl{font-weight:900;margin-bottom:10px;font-size:15px;color:var(--df-ink-900,#e5edf7)}
+.rep-tile{position:relative;flex:1 1 150px;min-width:150px;background:var(--df-surface,#fff);border:1px solid var(--df-hairline,#e4e7ec);border-left:4px solid var(--df-accent,#2563eb);border-radius:var(--df-radius-lg,14px);padding:14px 16px;color:var(--df-ink-900,#101828);overflow:hidden;box-shadow:var(--df-shadow-sm,0 2px 8px rgba(16,24,40,.06));text-decoration:none;display:block}
+.rep-tile .ic{font-size:18px;opacity:.8;color:var(--df-ink-500,#667085)}
+.rep-tile .vl{font-size:22px;font-weight:800;margin-top:6px;line-height:1.1;color:var(--df-ink-900,#101828)}
+.rep-tile .lb{font-size:12px;color:var(--df-ink-500,#667085);margin-top:3px;font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+.rep-card{background:var(--df-surface,#fff);border:1px solid var(--df-hairline,#e4e7ec);border-radius:var(--df-radius-md,12px);padding:var(--df-space-4,16px);margin:12px 0;color:var(--df-ink-900,#101828)}
+.rep-card .ttl{font-weight:800;margin-bottom:10px;font-size:14.5px;color:var(--df-ink-900,#101828)}
 .rep-bar{display:flex;align-items:center;gap:10px;margin:7px 0;font-size:13px}
-.rep-bar .l{width:32%;color:var(--df-ink-500,#cbd5e1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.rep-bar .t{flex:1;height:22px;background:var(--df-surface-sunken,rgba(255,255,255,.08));border-radius:8px;overflow:hidden}
-.rep-bar .f{height:100%;border-radius:8px;background:linear-gradient(90deg,#22c55e,#a3e635)}
-.rep-bar .v{width:24%;text-align:right;font-weight:800;color:var(--df-ink-900,#fff)}
-table.rep-tbl{width:100%;border-collapse:collapse;font-size:13px;color:var(--df-ink-900,#e5edf7)}
-table.rep-tbl th{text-align:left;color:var(--df-ink-500,#93a4bf);background:var(--df-surface-sunken,transparent);border-bottom:2px solid var(--df-hairline,#1e3350);padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.04em}
-table.rep-tbl td{padding:10px 12px;border-bottom:1px solid var(--df-hairline,rgba(255,255,255,.06));color:var(--df-ink-900,#e5edf7)}
-table.rep-tbl tr:nth-child(even) td{background:var(--df-surface-sunken,rgba(255,255,255,.025))}
-table.rep-tbl tr:hover td{background:var(--df-surface-sunken,rgba(255,255,255,.05))}
-.rep-tbl a{color:var(--df-accent,#60a5fa)}
-.rep-neg{color:var(--df-danger-ink,#f87171);font-weight:800}
+.rep-bar .l{width:32%;color:var(--df-ink-500,#667085);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rep-bar .t{flex:1;height:20px;background:var(--df-surface-sunken,#f2f4f7);border-radius:8px;overflow:hidden}
+.rep-bar .f{height:100%;border-radius:8px;background:var(--df-accent,#2563eb)}
+.rep-bar .v{width:24%;text-align:right;font-weight:700;color:var(--df-ink-900,#101828)}
+table.rep-tbl{width:100%;border-collapse:collapse;font-size:13px;color:var(--df-ink-900,#101828)}
+table.rep-tbl th{text-align:left;color:var(--df-ink-500,#667085);background:var(--df-surface-sunken,#f2f4f7);border-bottom:2px solid var(--df-hairline,#e4e7ec);padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+table.rep-tbl td{padding:10px 12px;border-bottom:1px solid var(--df-hairline,#eef2f6);color:var(--df-ink-900,#101828)}
+table.rep-tbl tr:nth-child(even) td{background:var(--df-surface-sunken,#f8fafc)}
+table.rep-tbl tr:hover td{background:var(--df-surface-sunken,#f2f4f7)}
+.rep-tbl a{color:var(--df-accent,#2563eb)}
+.rep-neg{color:var(--df-danger-ink,#b91c1c);font-weight:800}
 .rep-foot{text-align:center;color:var(--df-ink-500,#64748b);font-size:12px;margin:14px 0 4px}
 /* MOBİL/DAR EKRAN: masaüstü tabloyu küçültüp yatay kaydırmak yerine (Product Owner: "tabloyu
    küçültmek şeklinde çözülmesin") her satır bir label:value kartına dönüşür — data-label attribute
@@ -392,12 +411,12 @@ table.rep-tbl tr:hover td{background:var(--df-surface-sunken,rgba(255,255,255,.0
      ilk çocuğu; thead{display:none} hiçbir şeyi eşleştirmezdi, gerçek seçici tr:first-child. */
   table.rep-tbl tr:first-child{display:none}
   table.rep-tbl,table.rep-tbl tbody,table.rep-tbl tr{display:block;width:100%}
-  table.rep-tbl tr{border:1px solid var(--df-hairline,#1e3350);border-radius:var(--df-radius-md,12px);margin-bottom:10px;padding:2px 10px;background:var(--df-surface-sunken,rgba(255,255,255,.03))}
+  table.rep-tbl tr{border:1px solid var(--df-hairline,#e4e7ec);border-radius:var(--df-radius-md,12px);margin-bottom:10px;padding:2px 10px;background:var(--df-surface,#fff)}
   table.rep-tbl tr:nth-child(even) td{background:transparent}
-  table.rep-tbl td{display:flex;justify-content:space-between;align-items:center;gap:12px;text-align:right;padding:8px 0;border-bottom:1px solid var(--df-hairline,rgba(255,255,255,.06))}
+  table.rep-tbl td{display:flex;justify-content:space-between;align-items:center;gap:12px;text-align:right;padding:8px 0;border-bottom:1px solid var(--df-hairline,#eef2f6)}
   table.rep-tbl tr td:last-child{border-bottom:none}
   table.rep-tbl td:empty{display:none}
-  table.rep-tbl td[data-label]::before{content:attr(data-label);font-weight:700;text-transform:uppercase;font-size:10.5px;letter-spacing:.04em;color:var(--df-ink-500,#93a4bf);text-align:left;margin-right:auto}
+  table.rep-tbl td[data-label]::before{content:attr(data-label);font-weight:700;text-transform:uppercase;font-size:10.5px;letter-spacing:.04em;color:var(--df-ink-500,#667085);text-align:left;margin-right:auto}
 }
 @media print{
   /* PİLOT KAPANIŞ PAKETİ (2026-07-19) — "PDF = ekran görüntüsü olmayacak": window.print()'in
@@ -410,9 +429,10 @@ table.rep-tbl tr:hover td{background:var(--df-surface-sunken,rgba(255,255,255,.0
   body *{visibility:hidden!important}
   .rep,.rep *{visibility:visible!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .rep{position:absolute!important;left:0;top:0;width:100%;padding:0!important;color:#0f172a!important}
-  /* Ekranda koyu tema token'ları (--df-surface vb.) kağıtta okunmaz/mürekkep israfı — print'e
-     özel sabit açık palet. Kart/tablo yapısı ve veri sırası değişmiyor, sadece renk. */
-  .rep-hero{background:#1e3a8a!important;color:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  /* Ekran zaten nötr/açık (bkz. yukarısı) — print'te sadece kenarlık/gölge gibi ekrana özel
+     detaylar sadeleştirilir, kurumsal PRIMAC başlığı aynı kalır (mavi/camgöbeği hero YOK artık). */
+  .rep-hero{background:#fff!important;border:1px solid #d0d7e2!important;color:#0f172a!important}
+  .rep-hero .lg{background:#f1f5f9!important;color:#1e3a8a!important}
   .rep-card{background:#fff!important;border:1px solid #d0d7e2!important;color:#0f172a!important;page-break-inside:avoid;break-inside:avoid}
   .rep-card .ttl{color:#0f172a!important}
   .rep-tile{-webkit-print-color-adjust:exact;print-color-adjust:exact;page-break-inside:avoid;break-inside:avoid}
@@ -438,33 +458,32 @@ table.rep-tbl tr:hover td{background:var(--df-surface-sunken,rgba(255,255,255,.0
   <div class="rep-hero">
     <div class="lg"><img src="<?=htmlspecialchars(base_url().(function_exists('brand_logo')?brand_logo():'logo.png'))?>" alt="<?=$ic?>" style="width:100%;height:100%;object-fit:contain;border-radius:inherit" onerror="this.parentNode.textContent='<?=$ic?>'"></div>
     <div style="flex:1"><h2><?=htmlspecialchars($appName)?> · <?=htmlspecialchars($R['title'])?> Raporu</h2>
-      <div class="dt">📅 <?=htmlspecialchars($from)?> — <?=htmlspecialchars($to)?> · Oluşturma: <?=date('d.m.Y H:i')?></div></div>
+      <div class="dt"><?=htmlspecialchars($from)?> — <?=htmlspecialchars($to)?> · Oluşturma: <?=date('d.m.Y H:i')?></div></div>
   </div>
 
   <div class="rep-tiles">
     <?php foreach($R['cards'] as $c): $col=$c[3]; $clink=$c[4] ?? null; $tag=$clink?'a':'div'; ?>
-      <<?=$tag?> class="rep-tile"<?=$clink?' href="'.htmlspecialchars($clink).'"':''?> style="background:linear-gradient(135deg,<?=$col?> 0%,<?=$col?>cc 100%)<?=$clink?';text-decoration:none;cursor:pointer':''?>">
+      <<?=$tag?> class="rep-tile"<?=$clink?' href="'.htmlspecialchars($clink).'"':''?> style="border-left-color:<?=htmlspecialchars($col)?><?=$clink?';cursor:pointer':''?>">
         <div class="ic"><?=$c[0]?></div><div class="vl"><?=htmlspecialchars($c[2])?></div><div class="lb"><?=htmlspecialchars($c[1])?></div>
       </<?=$tag?>>
     <?php endforeach; ?>
   </div>
 
-  <?php $cols=['#22c55e,#a3e635','#3b82f6,#22d3ee','#f97316,#fbbf24','#a855f7,#ec4899','#ef4444,#f97316','#14b8a6,#22d3ee']; ?>
-  <?php if($R['chart'] && !empty($R['chart'][1])): $mx=max(array_map('floatval',$R['chart'][1]))?:1; $i=0; ?>
-  <div class="rep-card"><div class="ttl">📊 <?=htmlspecialchars($R['chart'][0])?></div>
-    <?php foreach($R['chart'][1] as $lbl=>$val): $g=$cols[$i++%count($cols)]; ?>
+  <?php if($R['chart'] && !empty($R['chart'][1])): $mx=max(array_map('floatval',$R['chart'][1]))?:1; ?>
+  <div class="rep-card"><div class="ttl"><?=htmlspecialchars($R['chart'][0])?></div>
+    <?php foreach($R['chart'][1] as $lbl=>$val): ?>
       <div class="rep-bar"><div class="l"><?=htmlspecialchars($lbl)?></div>
-        <div class="t"><div class="f" style="width:<?=max(3,round($val/$mx*100))?>%;background:linear-gradient(90deg,<?=$g?>)"></div></div>
+        <div class="t"><div class="f" style="width:<?=max(3,round($val/$mx*100))?>%"></div></div>
         <div class="v"><?=($val>=1000)?number_format($val,0,',','.'):$val?></div></div>
     <?php endforeach; ?>
   </div>
   <?php endif; ?>
 
-  <?php if(!empty($R['chart2']) && !empty($R['chart2'][1])): $mx2=max(array_map('floatval',$R['chart2'][1]))?:1; $i2=0; ?>
-  <div class="rep-card"><div class="ttl">📊 <?=htmlspecialchars($R['chart2'][0])?></div>
-    <?php foreach($R['chart2'][1] as $lbl=>$val): $g=$cols[$i2++%count($cols)]; ?>
+  <?php if(!empty($R['chart2']) && !empty($R['chart2'][1])): $mx2=max(array_map('floatval',$R['chart2'][1]))?:1; ?>
+  <div class="rep-card"><div class="ttl"><?=htmlspecialchars($R['chart2'][0])?></div>
+    <?php foreach($R['chart2'][1] as $lbl=>$val): ?>
       <div class="rep-bar"><div class="l"><?=htmlspecialchars($lbl)?></div>
-        <div class="t"><div class="f" style="width:<?=max(3,round($val/$mx2*100))?>%;background:linear-gradient(90deg,<?=$g?>)"></div></div>
+        <div class="t"><div class="f" style="width:<?=max(3,round($val/$mx2*100))?>%"></div></div>
         <div class="v"><?=($val>=1000)?number_format($val,0,',','.'):$val?></div></div>
     <?php endforeach; ?>
   </div>
@@ -472,15 +491,15 @@ table.rep-tbl tr:hover td{background:var(--df-surface-sunken,rgba(255,255,255,.0
 
   <?php if($R['table']['rows']): ?>
   <?php $lim=$full?1000:15; $tot=count($R['table']['rows']); ?>
-  <div class="rep-card" style="overflow:auto"><div class="ttl">📋 Detay (<?=$tot?> kayıt)<?=(!$full&&$tot>$lim)?' · <span style="color:var(--df-ink-500,#93a4bf);font-weight:400">özet — ilk '.$lim.'</span>':''?></div>
+  <div class="rep-card" style="overflow:auto"><div class="ttl">Detay (<?=$tot?> kayıt)<?=(!$full&&$tot>$lim)?' · <span style="color:var(--df-ink-500,#667085);font-weight:400">özet — ilk '.$lim.'</span>':''?></div>
     <?php $hasLinks=!empty($R['table']['links']); ?>
     <table class="rep-tbl"><tr><?php foreach($R['table']['head'] as $h) echo '<th>'.htmlspecialchars($h).'</th>'; if($hasLinks) echo '<th></th>'; ?></tr>
     <?php foreach(array_slice($R['table']['rows'],0,$lim,true) as $i=>$row): ?>
       <tr><?php foreach($row as $ci=>$cell){ $cc=$crit($cell)?' class="rep-neg"':''; $lbl=isset($R['table']['head'][$ci])?htmlspecialchars($R['table']['head'][$ci]):''; echo '<td'.$cc.' data-label="'.$lbl.'">'.htmlspecialchars((string)$cell).'</td>'; }
-      if($hasLinks){ $u=$R['table']['links'][$i] ?? null; echo '<td>'.($u?'<a href="'.htmlspecialchars($u).'" style="color:var(--df-accent,#60a5fa);font-weight:700;text-decoration:none;white-space:nowrap;margin-left:auto">Detay →</a>':'').'</td>'; } ?></tr>
+      if($hasLinks){ $u=$R['table']['links'][$i] ?? null; echo '<td>'.($u?'<a href="'.htmlspecialchars($u).'" style="color:var(--df-accent,#2563eb);font-weight:700;text-decoration:none;white-space:nowrap;margin-left:auto">Detay →</a>':'').'</td>'; } ?></tr>
     <?php endforeach; ?>
     </table>
-    <?php if(!$full && $tot>$lim): ?><small style="color:var(--df-ink-500,#93a4bf)">… ve <?=$tot-$lim?> kayıt daha — "Detaylı" ile görünür</small><?php endif; ?>
+    <?php if(!$full && $tot>$lim): ?><small style="color:var(--df-ink-500,#667085)">… ve <?=$tot-$lim?> kayıt daha — "Detaylı" ile görünür</small><?php endif; ?>
   </div>
   <?php endif; ?>
   <div class="rep-foot"><?=htmlspecialchars($appName)?> — Online Takip Sistemi · Bu rapor otomatik üretilmiştir</div>

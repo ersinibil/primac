@@ -98,10 +98,10 @@ ob_start();
 <input type="date" name="d" value="<?=h($tarih)?>" style="max-width:160px">
 <button type="submit" class="df-btn df-btn--secondary">Göster</button>
 </form>
-<button onclick="shareReportPDF(this)" class="df-btn df-btn--primary" style="background:var(--df-success)">📄 PDF İndir / Paylaş</button>
+<button onclick="shareReportPDF(this)" class="df-btn df-btn--primary" style="background:var(--df-success)">PDF İndir / Paylaş</button>
 <?php
 $__grActions = ob_get_clean();
-ds_page_header('📅 Günlük İş Raporu', ds_icon('calendar',24), '', $__grActions, false, true);
+ds_page_header('Günlük İş Raporu', ds_icon('calendar',24), '', $__grActions, false, true);
 ?>
 </div>
 

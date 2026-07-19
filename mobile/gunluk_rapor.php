@@ -64,7 +64,7 @@ topx('Günlük İş Raporu');
         <button type="submit" class="df-btn df-btn--secondary"><?=ds_icon('search',15)?> Göster</button>
     </form>
 </div>
-<button class="noprint df-btn df-btn--primary df-btn--lg" onclick="shareReportPDF(this)" style="width:100%;background:var(--df-success);margin-bottom:12px">📄 PDF İndir / Paylaş</button>
+<button class="noprint df-btn df-btn--primary df-btn--lg" onclick="shareReportPDF(this)" style="width:100%;background:var(--df-success);margin-bottom:12px">PDF İndir / Paylaş</button>
 
 <!-- MOBİL UX/IA — RAPOR AİLESİ PASS (2026-07-19): web gunluk_rapor.php ile aynı minimum güvenli
      ayrım — #repArea'nın iç HTML/CSS'i (= PDF çıktısı) birebir korunuyor, sadece ekrandaki DS
