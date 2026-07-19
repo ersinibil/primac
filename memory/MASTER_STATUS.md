@@ -222,15 +222,15 @@ CODE PASS / TEST PENDING:
 - **Manuel/orphan stok hareketi geri alma** (bu turdan önceki oturum) — migration 049
   (`reversed_movement_id`), `stock_reverse_manual_movement()`, `product_view.php`/
   `mobile/product_view.php`'de "Hareketi Geri Al" aksiyonu. Bu oturumda kod okunarak DOĞRULANDI
-  (fonksiyon var, çağrı zinciri tutarlı) — **primac.tr'de migrate.php çalışmadıysa (bkz. DATA
-  INTEGRITY) bu özellik SQL hatası verir.**
+  (fonksiyon var, çağrı zinciri tutarlı) — migration 049 primac.tr'de APPLIED doğrulandı (2026-07-19,
+  bkz. DATA INTEGRITY P0.1), şema önkoşulu artık KALKTI.
 - Kaynak drill-down: `product_view.php` Stok Hareketleri artık `finance_movement_id` üzerinden
   `trade_document_view.php`/`sales.php?edit_id`/`purchase.php?edit_id`'ye linkliyor.
 
 FAIL:
 - Kullanıcının orijinal "HATALI STOK HAREKETİ" senaryosu (100 adet Çıkış, cari yok, kaynak belirsiz)
-  — kod düzeltmesi yapıldı ama **canlı DB'de o spesifik satırın gerçekten düzeltilebildiği hiç
-  doğrulanmadı** (migration 049 primac.tr'de çalışmadan test edilemez).
+  — kod düzeltmesi yapıldı, şema artık uygulanmış durumda, ama **o spesifik satırın gerçekten
+  düzeltilebildiği canlıda hâlâ hiç TEST EDİLMEDİ.**
 
 OPEN:
 - Kaynak sınıflandırması (Satış/Satın Alma/Manuel/Üretim/İade/Tahsis) — şu an sadece
@@ -249,8 +249,8 @@ CODE PASS / TEST PENDING:
   tüketimi geri alıp yeniden uyguluyor (ledger-sil bazlı idempotent). Senaryo kod izi ile doğrulandı.
 
 FAIL:
-- **`primac.tr'de migrate.php çalıştırılmadan bu özellik tamamen kullanılamaz`** — yazma
-  fonksiyonları runtime CREATE TABLE yapmıyor, açık hata verir (bkz. DATA INTEGRITY).
+- Fonksiyonel gerçek kullanıcı testi (satış/alış üzerinden tahsis oluşturma/tüketme/geri alma)
+  primac.tr'de hiç yapılmadı — şema önkoşulu APPLIED (2026-07-19) ama bu USER PASS anlamına gelmez.
 
 DEFERRED:
 - Alış silme/düzenleme ile CPA tahsis referansı ilişkisi (sadece SATIŞ tarafı ele alındı,
@@ -309,14 +309,12 @@ doğrulama yapılamadı" notu, aynı sınırlama burada da geçerli.
 
 ## 13. ÇEK/SENET
 
-**Durum: FAIL (fonksiyonel olarak muhtemelen ÇALIŞMIYOR — migration 048 blocker)**
+**Durum: CODE PASS / TEST PENDING** (migration 048 blocker KALKTI — 2026-07-19 canlı kanıt, bkz. DATA INTEGRITY P0.1)
 
-⚠️ **En kritik bulgu bu turda:** `checks_notes.php:79`'da kodun KENDİSİ şu uyarıyı basıyor:
-*"Çek/Senet yaşam döngüsü (Tahsil Et / Öde / Ciro Et / İşlemi Geri Al) bu sunucuda henüz AKTİF
-DEĞİL — migration 048 çalıştırılmamış."* Yani **bu modülün tüm CODE PASS iddiaları, migration 048
-primac.tr'de çalıştırılmadıysa, canlıda FAIL'e dönüşür.** `memory/backlog.md`'nin 2026-07-18 notu
-"primac.tr'de migrate.php'nin GERÇEKTEN çalıştırılıp çalıştırılmadığı HÂLÂ TEYİT EDİLEMEDİ" diyor —
-bu tur da bunu değiştirmedi (DB erişimi yok).
+`checks_notes.php:79`'daki "migration 048 çalıştırılmamış" uyarısı artık primac.tr'de GÖRÜNMEMELİ
+(şema önkoşulu APPLIED). **Ama tahsil/ciro/karşılıksız/iptal zincirinin gerçek kullanıcı testi hâlâ
+yapılmadı** — bu sadece "artık hata VERMEMESİ gerekir" demek, "doğru çalıştığı kanıtlandı" demek
+değil.
 
 CODE PASS / TEST PENDING (migration 048 koşuluyla):
 - Durum makinesi: portfoyde→(tahsil_edildi/ciro_edildi/karsiliksiz/iptal), sadece 'portfoyde'den
@@ -330,8 +328,9 @@ CODE PASS / TEST PENDING (migration 048 koşuluyla):
   temizlendi, commit `3f985aa`, bu daha önce yanlışlıkla "hâlâ açık" raporlanmıştı — YANLIŞ ALARM).
 
 FAIL:
-- Migration 048 durumu primac.tr'de bilinmiyor — bu tek başına modülü fonksiyonel olarak
-  kullanılamaz kılabilir.
+- Migration 048 primac.tr'de APPLIED doğrulandı (bkz. DATA INTEGRITY P0.1) — şema önkoşulu KALKTI.
+  Ama tahsil/ciro/karşılıksız/iptal zincirinin GERÇEK kullanıcı testi hâlâ hiç yapılmadı — modül
+  statüsü CODE PASS/TEST PENDING'e yükseltildi, USER PASS DEĞİL.
 
 ---
 
@@ -544,13 +543,19 @@ OPEN:
 - Tek merkezi "Veri Bütünlüğü" denetim ekranı (tüm orphan tiplerini tek yerde gösteren) —
   implementasyon "KOD YAZMA" talimatıyla durduruldu, mimari analiz yapıldı, kod yazılmadı.
 
-### P0.1 — Migration 045-049 doğrulaması (2026-07-19, ayrı tur)
+### P0.1 — Migration 045-049 doğrulaması — **KAPANDI (2026-07-19, primac.tr canlı kanıt)**
 
-**DB/SCHEMA RESULT: UNKNOWN — primac.tr'ye bu ortamdan hiçbir DB/SSH/cPanel erişimi yok.** Lokal
-`config.php` var ama `db_host=localhost` (primac.tr DEĞİL) ve önceki bir oturumda `db_name`'in
-PROD (`u7883898_primacos`) ile aynı göründüğü tespit edilmişti — bu belirsizlik nedeniyle lokal DB'ye
-DE bağlanılmadı (bağlanılsa bile primac.tr'nin GERÇEK/GÜNCEL durumunu kanıtlamaz). **Varsayım
-yapılmadı, "uygulandı" denmedi.**
+**DB/SCHEMA RESULT: APPLIED / PASS.** Kullanıcı primac.tr'de `migrate.php`'yi bizzat çalıştırdı —
+sonuç: Uygulanan 0 / Atlanan 49 / Hata 0 (001'den 049'a KADAR HEPSİ zaten uygulanmışmış). **045
+(cpa_preferences), 046 (cpa_allocations), 047 (cpa_allocation_consumptions), 048 (checks_notes
+settle/ciro kolonları), 049 (stock_movements.reversed_movement_id) — hepsi APPLIED.** `migrate.php`
+kendi tasarımı gereği (hatasız bitince self-delete) kendini sildi; ardından `temizle.php` eski
+`guncelleme.zip`'i ve kendini sildi — `assets/` klasörü silinemedi, **bu BEKLENEN/DOĞRU davranış**
+(temizle.php zaten assets'i hedeflemiyor, canlı CSS/JS/upload dizini, dokunulmamalı).
+
+**Sonuç:** ÇEK/SENET, CPA, STOK-geri-alma modüllerindeki "migration onaylanmadı" koşulu KALKTI —
+bu modüllerin CODE PASS iddiaları artık şema önkoşulu açısından geçerli. **Ama bu, fonksiyonel
+USER TEST yerine geçmez** — aşağıdaki modül satırları buna göre güncellendi.
 
 **Migration mekanizması (`migrate.php`) kod okunarak DOĞRULANDI — CODE VERIFIED, güvenli/idempotent:**
 - `schema_migrations` takip tablosu (dosya adı bazlı) + SQL seviyesinde MySQL hata kodu toleransı
