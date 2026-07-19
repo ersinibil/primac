@@ -107,6 +107,7 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['reset_pw']) && trim($_PO
     }catch(Throwable $e){ $error=$e->getMessage(); }
 }
 
+$__usernameConflict = null; // dolarsa render tarafı "arşivle ve devral" onay formunu gösterir
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['update_username'])){
     // P0 (2026-07-19): personnel_lib.php::personnel_update_username() — reset_pw ile AYNI IDOR
     // korumalı hedef çözümü, id=1 dahil (ana admin username değiştirebilir, sadece silinemez/
@@ -115,10 +116,23 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['update_username'])){
         if(!$canManageAccounts) throw new Exception('Bu işlem için yönetici yetkisi gerekir.');
         $res=personnel_update_username($pdo, $id, $_POST['new_username'] ?? '', $_SESSION['user']['id'] ?? null);
         $ok = $res['changed'] ? 'Kullanıcı adı "'.$res['old_username'].'" → "'.$res['username'].'" olarak güncellendi.' : 'Kullanıcı adı zaten bu — değişiklik yapılmadı.';
+    }catch(PersonnelUsernameConflictException $e){
+        $error=$e->getMessage();
+        $__usernameConflict=['legacy_user_id'=>$e->conflictUserId,'attempted_username'=>trim($_POST['new_username']??'')];
     }catch(Throwable $e){ $error=$e->getMessage(); }
 }
 
-if($_SERVER['REQUEST_METHOD']==='POST' && !isset($_POST['regen_telegram_code']) && !isset($_POST['clear_telegram_binding']) && !isset($_POST['save_account_role']) && !isset($_POST['clear_cv']) && !isset($_POST['make_login']) && !isset($_POST['reset_pw']) && !isset($_POST['link_orphan_user_id']) && !isset($_POST['update_username'])){
+if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['reclaim_username']) && isset($_POST['confirm_reclaim'])){
+    // Admin AÇIKÇA onayladı ("Eski kullanıcı adını arşivle ve bu hesaba ata") — otomatik/sessiz
+    // devralma YOK, her adım burada kullanıcının kendi tıklamasına bağlı.
+    try{
+        if(!$canManageAccounts) throw new Exception('Bu işlem için yönetici yetkisi gerekir.');
+        $res=personnel_reclaim_username($pdo, $id, $_POST['new_username'] ?? '', (int)($_POST['legacy_user_id'] ?? 0), $_SESSION['user']['id'] ?? null);
+        $ok='Eski kullanıcı adı "'.$res['legacy_archived_username'].'" olarak arşivlendi, bu hesabın kullanıcı adı "'.$res['username'].'" oldu.';
+    }catch(Throwable $e){ $error=$e->getMessage(); }
+}
+
+if($_SERVER['REQUEST_METHOD']==='POST' && !isset($_POST['regen_telegram_code']) && !isset($_POST['clear_telegram_binding']) && !isset($_POST['save_account_role']) && !isset($_POST['clear_cv']) && !isset($_POST['make_login']) && !isset($_POST['reset_pw']) && !isset($_POST['link_orphan_user_id']) && !isset($_POST['update_username']) && !isset($_POST['reclaim_username'])){
     try{
         $cvPath = $hasCvCol ? personnel_handle_cv_upload() : null;
 
@@ -515,6 +529,19 @@ ds_form_field('Çalışma Tipi', '<select name="work_type">'.$__workOpts.'</sele
     <div style="flex:1"><?php ds_form_field('Kullanıcı Adı', '<input name="new_username" value="'.h($staffUsername).'" required minlength="3">'); ?></div>
     <button class="df-btn df-btn--secondary">Değiştir</button>
   </form>
+  <?php if($__usernameConflict): $__lg=null; try{ $__lgq=$pdo->prepare("SELECT username FROM app_users WHERE id=?"); $__lgq->execute([$__usernameConflict['legacy_user_id']]); $__lg=$__lgq->fetch(); }catch(Throwable $e){} ?>
+  <div class="df-alert df-alert--warning" style="margin:0 0 var(--df-space-5);max-width:420px">
+    <b><?=ds_icon('info',16)?> Bu kullanıcı adı pasif bir eski hesap tarafından kullanılıyor</b>
+    <p style="margin:6px 0">Hesap #<?=(int)$__usernameConflict['legacy_user_id']?> (<?=h($__lg['username']??'')?>) pasif durumda ama geçmiş sohbet/işlem kayıtları ID üzerinden ona bağlı — silinemez. İsterseniz eski hesabın kullanıcı adını arşive taşıyıp bu adı bu hesaba atayabilirsiniz.</p>
+    <form method="post" onsubmit="return confirm('Eski hesap #<?=(int)$__usernameConflict['legacy_user_id']?> kullanıcı adı arşivlenecek ve \'<?=h($__usernameConflict['attempted_username'])?>\' bu hesaba atanacak. Onaylıyor musunuz?')">
+      <input type="hidden" name="reclaim_username" value="1">
+      <input type="hidden" name="legacy_user_id" value="<?=(int)$__usernameConflict['legacy_user_id']?>">
+      <input type="hidden" name="new_username" value="<?=h($__usernameConflict['attempted_username'])?>">
+      <label style="display:flex;gap:8px;align-items:center;margin:8px 0;font-size:13px"><input type="checkbox" name="confirm_reclaim" value="1" required style="width:auto"> Onaylıyorum: eski kullanıcı adını arşivleyip bu hesaba atamak istiyorum.</label>
+      <button type="submit" class="df-btn df-btn--danger df-btn--sm">Eski Kullanıcı Adını Arşivle ve Ata</button>
+    </form>
+  </div>
+  <?php endif; ?>
 <?php endif; ?>
 
 <?php if($staffUserId===1): ?>

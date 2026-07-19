@@ -3,7 +3,7 @@ require_once 'common.php';
 require_once __DIR__.'/../share_lib.php';
 require_once __DIR__.'/../personnel_lib.php';
 block_personel('personnel');
-$pdo=db(); $id=(int)($_GET['id']??0); $ok=''; $er=''; $waCred='';
+$pdo=db(); $id=(int)($_GET['id']??0); $ok=''; $er=''; $waCred=''; $__usernameConflict=null;
 // SECURITY SPRINT-001 (2026-07-04): şifre/hesap işlemleri admin'e VEYA admin'in ayrıca
 // 'personnel_accounts' yetkisi verdiği bir "alt yönetici"ye açık — düz 'personnel' yetkisi yeterli değil.
 $canManageAccounts = $isAdmin || (function_exists('user_can') && user_can('personnel_accounts'));
@@ -121,10 +121,23 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         if(isset($_POST['update_username'])){
             // P0 (2026-07-19): web personnel_edit.php ile AYNI paylaşılan fonksiyon —
             // personnel_lib.php::personnel_update_username() (reset_pw ile aynı IDOR korumalı
-            // hedef çözümü, id=1 dahil).
+            // hedef çözümü, id=1 dahil). Çakışma pasif bir legacy hesapla ise ayrıca yakalanır —
+            // dışarıdaki genel catch'e düşerse legacy_user_id kaybolur, "arşivle ve devral"
+            // aksiyonu render edilemez.
             if(!$canManageAccounts) throw new Exception('Bu işlem için yönetici yetkisi gerekir.');
-            $res=personnel_update_username($pdo, $id, $_POST['new_username'] ?? '', $ME ?: null);
-            $ok = $res['changed'] ? 'Kullanıcı adı "'.$res['old_username'].'" → "'.$res['username'].'" olarak güncellendi.' : 'Kullanıcı adı zaten bu — değişiklik yapılmadı.';
+            try{
+                $res=personnel_update_username($pdo, $id, $_POST['new_username'] ?? '', $ME ?: null);
+                $ok = $res['changed'] ? 'Kullanıcı adı "'.$res['old_username'].'" → "'.$res['username'].'" olarak güncellendi.' : 'Kullanıcı adı zaten bu — değişiklik yapılmadı.';
+            }catch(PersonnelUsernameConflictException $puce){
+                $er=$puce->getMessage();
+                $__usernameConflict=['legacy_user_id'=>$puce->conflictUserId,'attempted_username'=>trim($_POST['new_username']??'')];
+            }
+        }
+        if(isset($_POST['reclaim_username']) && isset($_POST['confirm_reclaim'])){
+            // Admin AÇIKÇA onayladı — otomatik/sessiz devralma YOK.
+            if(!$canManageAccounts) throw new Exception('Bu işlem için yönetici yetkisi gerekir.');
+            $res=personnel_reclaim_username($pdo, $id, $_POST['new_username'] ?? '', (int)($_POST['legacy_user_id'] ?? 0), $ME ?: null);
+            $ok='Eski kullanıcı adı "'.$res['legacy_archived_username'].'" olarak arşivlendi, bu hesabın kullanıcı adı "'.$res['username'].'" oldu.';
         }
     }catch(Throwable $e){ $er=$e->getMessage(); }
 }
@@ -237,6 +250,19 @@ ds_tabs($__tabItems);
     <input name="new_username" value="<?=h($usr['username'])?>" required minlength="3" style="flex:1;margin:0">
     <button class="df-btn df-btn--secondary" type="submit">Değiştir</button>
   </form>
+  <?php if($__usernameConflict): $__lg=null; try{ $__lgq=$pdo->prepare("SELECT username FROM app_users WHERE id=?"); $__lgq->execute([$__usernameConflict['legacy_user_id']]); $__lg=$__lgq->fetch(); }catch(Throwable $e){} ?>
+  <div class="df-panel" style="background:var(--df-warning-soft,rgba(245,158,11,.18));margin:8px 0">
+    <b><?=ds_icon('info',15)?> Kullanıcı adı pasif eski hesapta</b>
+    <p class="muted" style="margin:6px 0;font-size:12.5px">Hesap #<?=(int)$__usernameConflict['legacy_user_id']?> (<?=h($__lg['username']??'')?>) pasif — geçmiş kayıtları bozmadan arşivleyip bu adı devralabilirsiniz.</p>
+    <form method="post" onsubmit="return confirm('Eski hesap arşivlenecek ve &quot;<?=h($__usernameConflict['attempted_username'])?>&quot; bu hesaba atanacak. Onaylıyor musunuz?')">
+      <input type="hidden" name="reclaim_username" value="1">
+      <input type="hidden" name="legacy_user_id" value="<?=(int)$__usernameConflict['legacy_user_id']?>">
+      <input type="hidden" name="new_username" value="<?=h($__usernameConflict['attempted_username'])?>">
+      <label style="display:flex;gap:8px;align-items:center;margin:8px 0;font-size:12.5px"><input type="checkbox" name="confirm_reclaim" value="1" required style="width:auto"> Onaylıyorum: arşivle ve bu hesaba ata.</label>
+      <button type="submit" class="df-btn df-btn--danger df-btn--sm" style="width:100%">Eski Kullanıcı Adını Arşivle ve Ata</button>
+    </form>
+  </div>
+  <?php endif; ?>
 <?php endif; ?>
 <?php if($usr && (int)$usr['id']===1): ?>
   <p class="muted" style="margin:8px 0">Bu hesap sistemin ana yöneticisi — korumalıdır, rolü buradan değiştirilemez.</p>

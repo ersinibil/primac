@@ -224,6 +224,14 @@ function personnel_reset_password($pdo, $personnelId, $newPassword){
  * personnel.user_id/app_users.personnel_id bağı dokunulmadan kalır.
  * @throws Exception boş/geçersiz/duplicate username veya bağlı hesap yok
  */
+// Kullanıcı adı BAŞKA bir hesap tarafından tutuluyor ama o hesap PASİF/legacy — admin'e kontrollü
+// "arşivle ve devral" seçeneği sunulabilir (bkz. personnel_reclaim_username()). Aktif bir hesabın
+// kullanıcı adı ASLA devralınamaz — o durumda düz Exception (bilgi taşımaz, aksiyon sunulmaz).
+class PersonnelUsernameConflictException extends Exception {
+    public $conflictUserId;
+    public function __construct($message, $conflictUserId){ parent::__construct($message); $this->conflictUserId=(int)$conflictUserId; }
+}
+
 function personnel_update_username($pdo, $personnelId, $newUsername, $adminUserId=null){
     $newUsername = trim($newUsername);
     if($newUsername==='') throw new Exception('Kullanıcı adı boş olamaz.');
@@ -248,14 +256,87 @@ function personnel_update_username($pdo, $personnelId, $newUsername, $adminUserI
     if($oldUsername === $newUsername) return ['user_id'=>$boundUid,'username'=>$newUsername,'changed'=>false];
 
     // UNIQUE — personnel_create_login() ile aynı sorgu deseni (aynı koleksiyon/collation kuralı).
-    $ex=$pdo->prepare("SELECT id FROM app_users WHERE username=? AND id<>?"); $ex->execute([$newUsername,$boundUid]);
-    if($ex->fetch()) throw new Exception('Bu kullanıcı adı zaten kullanılıyor.');
+    // active DURUMU FİLTRELENMEZ (2026-07-19, canlı bulgu): pasif/legacy bir hesap da bu kontrolde
+    // görünmeli — aksi halde iki hesap aynı username'i "eşzamanlı" tutar (biri görünmez pasif,
+    // diğeri aktif), login/username lookup'ı hangisinin döneceği belirsizleşir. Bulunan çakışma
+    // PASİFSE düz Exception yerine PersonnelUsernameConflictException — çağıran taraf admin'e
+    // "arşivle ve devral" aksiyonunu sunabilsin (otomatik devralma YOK, admin açıkça onaylamalı).
+    $ex=$pdo->prepare("SELECT id,active FROM app_users WHERE username=? AND id<>?"); $ex->execute([$newUsername,$boundUid]);
+    $exRow=$ex->fetch();
+    if($exRow){
+        if((int)$exRow['active']===1) throw new Exception('Bu kullanıcı adı zaten kullanılıyor.');
+        throw new PersonnelUsernameConflictException('Bu kullanıcı adı pasif bir eski hesap tarafından kullanılıyor.', $exRow['id']);
+    }
 
     $pdo->prepare("UPDATE app_users SET username=? WHERE id=?")->execute([$newUsername,$boundUid]);
     if(function_exists('audit_log')){
         try{ audit_log($adminUserId,'update','app_users',$boundUid,['username'=>$oldUsername],['username'=>$newUsername]); }catch(Throwable $e){}
     }
     return ['user_id'=>$boundUid,'username'=>$newUsername,'changed'=>true,'old_username'=>$oldUsername];
+}
+
+/**
+ * Kullanıcı adı PASİF bir legacy hesap tarafından tutulduğunda, admin'in AÇIKÇA onayladığı
+ * kontrollü devralma: legacy hesabın username'i deterministik bir arşiv adına ("eskiisim_arsiv_ID")
+ * taşınır, SONRA hedef (canonical) hesaba istenen username atanır — TEK transaction içinde, iki
+ * ayrı audit_log kaydıyla. Legacy hesap FİZİKSEL SİLİNMEZ, active/personnel_id/rol/şifre/geçmiş
+ * chat-audit referansları (ID üzerinden çalıştıkları için) hiç dokunulmaz — sadece username alanı
+ * değişir. Aktif bir hesabın username'i bu fonksiyonla da devralınamaz (aynı koruma tekrar edilir,
+ * TOCTOU'ya karşı transaction içinde ikinci kez doğrulanır).
+ * @throws Exception legacy hesap aktifse / bulunamazsa / username beklenenle uyuşmuyorsa / hedef
+ *                    kullanıcı adı işlem sırasında başkası tarafından alındıysa
+ */
+function personnel_reclaim_username($pdo, $personnelId, $newUsername, $legacyUserId, $adminUserId=null){
+    $newUsername = trim($newUsername);
+    if($newUsername==='') throw new Exception('Kullanıcı adı boş olamaz.');
+    $legacyUserId=(int)$legacyUserId;
+
+    $pr=$pdo->prepare("SELECT user_id FROM personnel WHERE id=?"); $pr->execute([$personnelId]); $prow=$pr->fetch();
+    $boundUid=(int)($prow['user_id'] ?? 0);
+    if($boundUid){
+        $chk=$pdo->prepare("SELECT id FROM app_users WHERE id=? AND personnel_id=?"); $chk->execute([$boundUid,$personnelId]);
+        if(!$chk->fetch()) $boundUid=0;
+    }
+    if(!$boundUid){
+        $fb=$pdo->prepare("SELECT id FROM app_users WHERE personnel_id=? ORDER BY id ASC LIMIT 1"); $fb->execute([$personnelId]);
+        $fr=$fb->fetch(); $boundUid=(int)($fr['id'] ?? 0);
+    }
+    if(!$boundUid) throw new Exception('Bu personele bağlı bir giriş hesabı yok.');
+    if($legacyUserId===$boundUid) throw new Exception('Geçersiz işlem — hedef ve eski hesap aynı.');
+
+    $lg=$pdo->prepare("SELECT id,username,active FROM app_users WHERE id=?"); $lg->execute([$legacyUserId]); $legacy=$lg->fetch();
+    if(!$legacy) throw new Exception('Arşivlenecek eski hesap bulunamadı.');
+    if((int)$legacy['active']===1) throw new Exception('Aktif bir hesabın kullanıcı adı devralınamaz.');
+    if(strcasecmp((string)$legacy['username'], $newUsername)!==0) throw new Exception('Eski hesabın kullanıcı adı beklenenle uyuşmuyor — sayfa yenilenip tekrar denenmeli.');
+
+    $archiveBase = $legacy['username'].'_arsiv_'.$legacy['id']; $archiveName=$archiveBase; $suffix=1;
+    while(true){
+        $chkA=$pdo->prepare("SELECT id FROM app_users WHERE username=? AND id<>?"); $chkA->execute([$archiveName,$legacyUserId]);
+        if(!$chkA->fetch()) break;
+        $suffix++; $archiveName=$archiveBase.'_'.$suffix;
+        if($suffix>20) throw new Exception('Arşiv adı üretilemedi — elle müdahale gerekir.');
+    }
+
+    $ownTx=!$pdo->inTransaction();
+    if($ownTx) $pdo->beginTransaction();
+    try{
+        $oldLegacyUsername=$legacy['username'];
+        $pdo->prepare("UPDATE app_users SET username=? WHERE id=?")->execute([$archiveName,$legacyUserId]);
+        if(function_exists('audit_log')){ try{ audit_log($adminUserId,'update','app_users',$legacyUserId,['username'=>$oldLegacyUsername],['username'=>$archiveName,'reason'=>'legacy_username_archive']); }catch(Throwable $e){} }
+
+        // TOCTOU: konfirmasyon ile gerçek uygulama arasında başka biri aynı adı almış olabilir.
+        $reCheck=$pdo->prepare("SELECT id FROM app_users WHERE username=? AND id<>?"); $reCheck->execute([$newUsername,$boundUid]);
+        if($reCheck->fetch()) throw new Exception('Kullanıcı adı işlem sırasında başka bir hesap tarafından alınmış — tekrar deneyin.');
+
+        $cu=$pdo->prepare("SELECT username FROM app_users WHERE id=?"); $cu->execute([$boundUid]); $cur=$cu->fetch();
+        $oldCanonicalUsername=$cur['username'] ?? '';
+        $pdo->prepare("UPDATE app_users SET username=? WHERE id=?")->execute([$newUsername,$boundUid]);
+        if(function_exists('audit_log')){ try{ audit_log($adminUserId,'update','app_users',$boundUid,['username'=>$oldCanonicalUsername],['username'=>$newUsername,'reclaimed_from_user_id'=>$legacyUserId]); }catch(Throwable $e){} }
+
+        if($ownTx) $pdo->commit();
+    }catch(Throwable $e){ if($ownTx) $pdo->rollBack(); throw $e; }
+
+    return ['user_id'=>$boundUid,'username'=>$newUsername,'legacy_user_id'=>$legacyUserId,'legacy_archived_username'=>$archiveName];
 }
 
 // $_FILES['cv'] varsa yükler, uploads/personnel_cv altına taşır ve kök-göreli yolu döner.
