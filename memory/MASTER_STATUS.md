@@ -83,14 +83,11 @@ CODE PASS / TEST PENDING:
 - 5 kategori (İşler/Ticaret/Üretim & Stok/Finans/Yönetim), `nav_lib.php` veri-güdümlü taksonomi,
   Personel+Kullanıcı+Yetki menü sadeleştirmesi (`2e98f95`).
 
-FAIL:
-- Ticaret kategorisi tamamen "create" ağırlıklı (Satış Yap/Satın Alma Yap/Teklif Hazırla) — gerçek
-  "Satışlar"/"Satın Almalar" YÖNETİM/liste girişi nav'da YOK (bkz. SATIŞ/SATIN ALMA maddeleri).
-  `trade_documents` (Alış/Satış Belgelerini Gör) var ama bu ayrı bir veri modeli (aşağı bakın).
-
-OPEN:
-- Cari Tek Merkez + Satış/Satın Alma Operasyon Merkezi eklendiğinde nav'a yeni "yönetim" girişleri
-  eklenmesi gerekiyor — henüz yapılmadı.
+CODE PASS / TEST PENDING (YENİ, P0-4, 2026-07-19, commit `8546cb2`):
+- Ticaret kategorisi artık yönetim ağırlıklı da: Cari → Yeni Cari → **Satışlar** → + Yeni Satış →
+  **Satın Almalar** → + Yeni Satın Alma → Teklifler → Belgeler → Cari Ekstresi. `sales`/`purchase`
+  eski girişleri "+ Yeni Satış"/"+ Yeni Satın Alma" olarak yeniden etiketlendi (ikincil, liste
+  öncelikli). Mevcut route/url'lere dokunulmadı. **Canlı menüde hiç görülmedi — USER PASS DEĞİL.**
 
 DEFERRED:
 - PARITY-003 (orijinal madde, çözüldü) hariç, `mobileUrl`'siz bazı satırlar (assembly/design/
@@ -100,9 +97,19 @@ DEFERRED:
 
 ## 4. CARİ
 
-**Durum: FAIL**
+**Durum: CODE PASS / TEST PENDING** (P0-1 uygulandı, 2026-07-19 — commit `ab96b6c`)
 
-USER PASS:
+CODE PASS / TEST PENDING (YENİ):
+- `contact_ledger_rows()`/`contact_ledger_row_view()` (contacts_lib.php) — finance_movements/jobs/
+  quotes'u SADECE o cariye ait (contact_id/customer_id=? garantili) tek kronolojik listede
+  birleştiriyor. Web+mobil `contact_view.php` bunu birincil "Cari Hareketleri" bölümü yaptı, eski
+  ayrı "Finans Hareketleri" tablosu bunun içine alındı (mükerrer değil). Her satır Aç/Düzenle/Sil/
+  Kaynağa Git alıyor — çek/senet drill-down (`finance_movement_actions()`) ve yeni sale_view.php/
+  purchase_view.php'ye link zinciri KOD SEVİYESİNDE doğrulandı (php -l temiz, mantık izlendi).
+  `user_can('finance')` sınırı korundu (finans satırları hâlâ o yetkiyle sınırlı). Temel aksiyonlara
+  +Teklif/+İş Emri eklendi. **Canlıda hiç açılıp bakılmadı — USER PASS DEĞİL.**
+
+USER PASS (öncekiler):
 - "Cari context: Tahsilat/Ödeme/Satış/Alış" (cariden başlatılan işlemde bağlam korunuyor,
   commit `dcf1c51`) — kullanıcı onayı var.
 - Cari listesine modül-içi arama (isim/yetkili/telefon, commit `c66148c`).
@@ -124,58 +131,55 @@ FAIL (bu oturumun kendi tespiti, kullanıcının "kaybetme" listesindeki maddele
   seviyesinde, `finance_movement_actions()` çek/senet dalı) — **canlıda hiç doğrulanmadı.**
 
 OPEN:
-- "Cari Tek Merkez" (Genel/Hareketler/Satış-Alış/Çek-Senet/İşler/Belgeler/Notlar sekme/section
-  yapısı) — kullanıcının 3 ayrı mesajda (CARİ TEK MERKEZ, TODO'ya ekle, MASTER PASS madde 1) istediği
-  tam IA restructuring **henüz kod olarak başlamadı** (bu oturumda mimari analiz yapıldı, implementasyon
-  "KOD YAZMAYI DURDUR" talimatıyla durduruldu).
+- Tam sekme/section IA restructuring (Genel/Hareketler/Satış-Alış/Çek-Senet/İşler/Belgeler/Notlar
+  ayrı sekmeler) — YAPILMADI, sadece tek birleşik ledger eklendi (daha dar, daha güvenli kapsam,
+  kullanıcının P0-1 mesajı bunu yeterli görüp görmediğini USER TEST ile bildirecek).
+- Cari Raporu/Cari Detay rol ayrımı (buton metni "Cari Raporu (analiz)" olarak netleştirildi ama
+  ikisi hâlâ aynı `report.php?modul=cari_detay` URL'ine gidiyor — gerçek ayrım yapılmadı).
 
 ---
 
 ## 5. SATIŞ
 
-**Durum: FAIL**
+**Durum: CODE PASS / TEST PENDING** (P0-2 uygulandı, 2026-07-19 — commit `59a24c8`)
 
-CODE PASS / TEST PENDING:
-- Çekirdek matematik: satış → STOK-/CARİ BORÇ+/kasa hiç etkilenmiyor (Bekliyor durumu) —
-  `stock_create_sale()`, tek ortak fonksiyon, web+mobil ortak (mobil kendi inline bloğunu kullanıyor
-  ama satır satır karşılaştırılmış, aynı davranış — bkz. Mobile Regression Sprint notu).
-  Düzenle/Sil → `stock_update_sale()`/`stock_reverse_sale()` atomik ters çevirme.
-  CPA tüketimi satışla senkron (`cpa_alloc_consume_for_sale()`).
+CODE PASS / TEST PENDING (YENİ):
+- `sales_list.php`+`mobile/sales_list.php` — arama/cari/tarih/durum filtreli, sayfalı tam liste
+  (finance_movements WHERE movement_type IN sale/mobile_sale, sales.php'nin eski "Son Satışlar"
+  sorgusuyla AYNI kaynak, yeni mimari yok).
+- `sale_view.php`+`mobile/sale_view.php` — belgesiz satış detayı: kalemler, cari bakiyesi,
+  Düzenle (`stock_can_edit_sale()`), Geri Al (`stock_reverse_sale()` — DEĞİŞMEDİ). Belgeliyse
+  `trade_document_view.php`'ye yönlendirir (mükerrer ekran yok).
+- `sales.php`'nin "Son Satışlar" tablosu 10→5 satıra indirildi, "Tüm Satışlar →" linki eklendi,
+  ana yönetim aracı olmaktan çıkarıldı.
+- Tüm yeni dosyalar `php -l` temiz; iş mantığına (stok-/cari borç+/tahsilat ayrı ekran) dokunulmadı.
 
-FAIL:
-- **Gerçek "Satışlar" liste/yönetim ekranı YOK.** `sales.php` bir "Hızlı Satış" formu + son 10
-  kayıt tablosu — filtre (arama/tarih/cari/durum) YOK, sayfalama YOK.
-- **Satış Detayı ekranı YOK** (belgesiz/quick satışlar için) — tek aksiyon satır içi Düzenle/Sil,
-  "Stok Hareketi Gör"/"Tahsilat Gör"/"Kaynak Cari" gibi bir detay sayfası hiç yok. Sadece
-  `document_id` dolu olan (trade_document_new.php'den gelen) satışlar `trade_document_view.php`
-  üzerinden tam detaya sahip.
-- **"Ödeme durumu" filtresi için veri altyapısı yok** — satış anında durum HER ZAMAN "Bekliyor"
-  (satış kendi başına ödeme durumu taşımıyor, ödeme cari bazlı ayrı bir Tahsilat kaydı) — kullanıcının
-  istediği "ödeme durumu" filtresi mevcut mimaride per-sale bir veri değil, uydurulamaz.
+FAIL (çözülmedi, mimari sınır):
+- **"Ödeme durumu" filtresi hâlâ gerçek veriye dayanmıyor** — satış durumu her zaman "Bekliyor"
+  (per-sale ödeme takibi mimaride yok, cari-seviyesinde). Filtre UI'da var (Bekliyor/İptal) ama
+  kullanıcının kastettiği "ödendi mi" anlamında bir "ödeme durumu" DEĞİL — uydurulmadı, dürüst
+  bırakıldı.
 
-OPEN:
-- Satış Operasyon Merkezi (liste+filtre+detay+aksiyon) — kullanıcının 3 ayrı mesajda istediği,
-  mimari analiz bu oturumda yapıldı (finance_movements zaten quick+belge satışları tek noktada
-  tutuyor — birleşik liste inşası için ek mimari gerekmiyor), **implementasyon başlamadı.**
+**Canlıda hiç test edilmedi — USER PASS DEĞİL.**
 
 ---
 
 ## 6. SATIN ALMA
 
-**Durum: FAIL**
+**Durum: CODE PASS / TEST PENDING** (P0-3 uygulandı, 2026-07-19 — commit `59a24c8`, SATIŞ ile birebir aynı desen)
 
 CODE PASS / TEST PENDING:
 - Çekirdek matematik: STOK+/TEDARİKÇİ CARİ BORÇ artışı/ödeme hiç etkilenmiyor — `stock_create_purchase()`,
   web+mobil ortak. Düzenle/Sil → `stock_update_purchase()`/`stock_reverse_purchase()`.
   CPA "Müşteriye Ayır" opsiyonel satır alanı satın alma anında (P0 2026-07-18).
 
-FAIL:
-- **Gerçek "Satın Almalar" liste/yönetim ekranı YOK** — SATIŞ ile birebir aynı durum (`purchase.php`
-  hızlı form + son 10 kayıt, filtre yok).
-- **Satın Alma Detayı ekranı YOK** (belgesiz alışlar için) — aynı SATIŞ maddesindeki eksiklik.
+CODE PASS / TEST PENDING (YENİ):
+- `purchase_list.php`+`mobile/purchase_list.php` + `purchase_view.php`+`mobile/purchase_view.php`
+  — SATIŞ ile birebir aynı desen (arama/tedarikçi/tarih/durum filtresi, Düzenle/Geri Al/Müşteriye
+  Ayır aksiyonları, `stock_reverse_purchase()` DEĞİŞMEDİ). `purchase.php`'nin "Son Alışlar" tablosu
+  10→5'e indirildi.
 
-OPEN:
-- Satın Alma Operasyon Merkezi — aynı SATIŞ maddesi, implementasyon başlamadı.
+**Canlıda hiç test edilmedi — USER PASS DEĞİL.**
 
 ---
 
@@ -480,30 +484,30 @@ DEFERRED:
 
 ## 22. LEGACY UI / DESIGN SYSTEM
 
-**Durum: FAIL**
+**Durum: CODE PASS / TEST PENDING** (0 MIXED / 0 LEGACY — 2026-07-19 yeniden sınıflandırma)
 
-⚠️ Kullanıcının kesin kararı ("LEGACY / ESKİ GÖRÜNÜM İÇİN KESİN PRODUCT OWNER KARARI"): sadece
-MODERN kabul edilir, MIXED=FAIL, LEGACY=FAIL. Buna göre:
+⚠️ Kullanıcının kesin kararı: sadece MODERN kabul edilir, MIXED=FAIL, LEGACY=FAIL — **AMA aynı
+turda (P0-5) müşteriye giden PDF/print belge için AÇIK istisna tanımladı**: "PDF/PRINT/müşteriye
+gönderilen teklif-belge = kurumsal belge tasarımı olabilir... Gerekirse app-view ile print/PDF
+DOM/CSS katmanını ayır." Bu, önceki turun "4 dosya MIXED, istisna kabul edilmiyor" çelişkisini ÇÖZER.
 
-CODE PASS / TEST PENDING (MODERN sayılanlar):
-- Explore agent taraması (2026-07-19): ~135 aktif route, çoğunluğu MODERN. `activity.php`+
-  `mobile/activity.php` bu turda MIXED'den MODERN'e taşındı (`ds_list_item()`/`df-list`,
-  commit `ca2c3d3`) — bu oturumda `activity_lib.php` dosya boyutu nedeniyle TAM yeniden okunamadı,
-  önceki tur özetine güveniliyor (CODE REFERENCED, yeniden doğrulanmadı).
+CODE PASS / TEST PENDING:
+- `gunluk_rapor.php`/`mobile/gunluk_rapor.php`/`teklif.php`/`mobile/teklif.php` — bu turda 4'ü de
+  TEKRAR okundu: her birinde `#repArea`/`.paper` (yazdırılan/PDF'e alınan GERÇEK belge) `.noprint`
+  ile sarılı app-chrome'dan (ds_page_header/df-card/df-form-grid-2, hepsi zaten DS) NET CSS/DOM
+  sınırıyla ayrılmış — hatta 2 dosyada bunu belgeleyen ÖNCEKİ oturum yorumu var ("Aşağıdaki .paper/
+  #repArea bloğu — yazdırılan/PDF'e alınan gerçek teklif belgesi. Bilinçli..."). Kullanıcının bu
+  turki P0-5 istisnası tam olarak bunu tarif ediyor — **KOD DEĞİŞİKLİĞİ GEREKMEDİ**, sadece
+  sınıflandırma MIXED→MODERN (belge bileşeni istisnalı) düzeltildi. `quote_approve.php` aynı
+  gerekçeyle zaten kapsam dışıydı (dış paylaşım ekranı).
+- Explore agent taraması (2026-07-19 önceki): ~135 aktif route, `activity.php`+`mobile/activity.php`
+  MIXED'den MODERN'e taşındı (`ca2c3d3`).
+- Bu turda eklenen 8 yeni dosya (sales_list/sale_view/purchase_list/purchase_view ×web+mobil)
+  baştan 100% DS bileşenleriyle yazıldı (ds_page_header/df-card/df-table/ds_button/df-panel) — YENİ
+  MIXED/LEGACY route eklenmedi.
 
-FAIL:
-- **`gunluk_rapor.php`, `mobile/gunluk_rapor.php`, `teklif.php`, `mobile/teklif.php` — 4 dosya hâlâ
-  MIXED.** Kullanıcının "MIXED=FAIL, istisna yok" kararına göre bunlar teknik olarak FAIL sayılmalı.
-  Önceki tur bunu "PDF-belge karakteri koruma" gerekçesiyle PO kararına bırakmıştı — **ama kullanıcının
-  net talimatı istisna tanımıyor.** Bu çelişki çözülmedi, aşağıdaki "Eski Dosyalarla Çelişkiler"
-  bölümünde ayrıca işaretlendi.
-- SATIŞ/SATIN ALMA'da eksik olan Liste/Detay ekranları inşa edildiğinde onlar da bu standarda
-  (MODERN, DS bileşenleri) tabi olacak — henüz yok oldukları için değerlendirme dışı.
-
-OPEN:
-- Cari Tek Merkez, Satış/Satın Alma Operasyon Merkezi implementasyonu tamamlanmadan bu modülün
-  "0 MIXED/0 LEGACY" hedefine ulaşması mümkün değil (yeni ekranlar bu standartta doğacak, ama henüz
-  yoklar).
+**Sonuç: aktif LEGACY=0, aktif MIXED=0 (belge bileşeni istisnası hariç) — ama bu sınıflandırma
+KOD OKUMASIYLA yapıldı, gerçek tarayıcıda uçtan uca gezinerek DEĞİL. USER TEST hâlâ gerekli.**
 
 ---
 
@@ -540,8 +544,19 @@ FAIL:
   orphan tam iki yönlü, trade documents→broken source links) **henüz tek bir merkezi araçta değil.**
 
 OPEN:
-- Tek merkezi "Veri Bütünlüğü" denetim ekranı (tüm orphan tiplerini tek yerde gösteren) —
-  implementasyon "KOD YAZMA" talimatıyla durduruldu, mimari analiz yapıldı, kod yazılmadı.
+- Tek merkezi "Veri Bütünlüğü" denetim ekranı (tüm orphan tiplerini tek yerde gösteren) — henüz yok.
+
+### P0-6 — Master-data fiziksel silme guard'ları — DOĞRULANDI (2026-07-19, kod değişikliği gerekmedi)
+
+Repo genelinde `DELETE FROM contacts`/`DELETE FROM finance_accounts`/`DELETE FROM personnel`/
+`DELETE FROM app_users` için tam metin taraması yapıldı: **sadece 2 fiziksel DELETE satırı var**,
+ikisi de zaten guard'lı fonksiyonların İÇİNDE (`contacts_lib.php::contact_delete_or_deactivate()` —
+finance_movements/jobs/trade_documents/checks_notes/quotes/wa_conversations kontrolü sonrası; ve
+`finance_lib.php`'nin `finance_account_delete()`'i — `finance_account_has_movements()` kontrolü
+sonrası, önceki oturumda trade_documents.account_id + checks_notes.settle_account_id da eklenmişti).
+`personnel`/`app_users` için HİÇBİR fiziksel DELETE yok (sil.php + mobile/personnel_view.php ikisi
+de önceki oturumda deactivate-only'e çevrilmişti). **Sonuç: P0-6'nın istediği koruma zaten
+tamamlanmış durumda — bu turda ek kod gerekmedi, sadece doğrulandı.**
 
 ### P0.1 — Migration 045-049 doğrulaması — **KAPANDI (2026-07-19, primac.tr canlı kanıt)**
 
