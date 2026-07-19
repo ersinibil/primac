@@ -647,6 +647,38 @@ ekranlar.
   `boot.php`'de `page_module_map()`, `user_can()`, `require_permission()` ile gerçek modül-bazlı yetki
   sistemi var ve `$__pmap` üzerinden sayfa başına otomatik koruma uygulanıyor. Madde kaldırıldı.
 
+## Otonom kapanış taraması (2026-07-19) — PO kararı gerektiren / düşük öncelikli bulgular
+2026-07-19'daki "1-2 saatlik otonom kapanış" turunda 3 paralel ajanla CPA-tipi "backend var, UI'ye
+bağlı değil" taraması yapıldı (Finans/Çek-Senet/CPA, Cari/Ticaret/Stok/Üretim, İş-Personel-İletişim-
+Takvim kapsamları). 3 net A-sınıfı bulgu bağlandı (commit `3897394` — checks_notes_overdue_count()
+dashboard'a, notif_admin_delete_global() duyurular.php'ye, contact_documents.php linkine). Aşağıdakiler
+B/C sınıfı — PO kararı gerektirdiği veya düşük öncelikli olduğu için DOKUNULMADI:
+
+- **[C] Kabul edilen teklif otomatik Satışa/Belgeye dönüşmüyor** — `quote_approve.php` sadece
+  `quotes.status` günceller, `trade_documents` ile hiç bağlantısı yok; teklif kabul edilince kullanıcı
+  elle `sales.php`/`trade_document_new.php` açıp aynı kalemleri tekrar giriyor. Otomatik mi, "Satışa
+  Çevir" butonu mu, hiç mi olmasın — iş akışı kararı PO'ya ait.
+- **[C] `movement_type='cek_senet'` cari bakiye işareti tutarsızlığı** — `checks_notes_lib.php:362-369`
+  kendi yorumunda itiraf ediyor: kabul-anı hareketi niyeti "Tahsilat" (borç azaltan) ama kod ELSE
+  dalına düşüp "yeni borç" işareti alıyor. Geriye dönük tüm cari bakiyelerini etkileyeceği için ayrı
+  bir PO kararı + migration gerektirir, bu turun kapsamı dışında bırakıldı (kod bunu zaten biliyor).
+- **[B] `finance_movements.settles_movement_id` (migration 042) sadece okunuyor, hiç yazılmıyor** —
+  migration'ın kendi yorumu "TEK BAŞINA hiçbir kod davranışını değiştirmez, sonraki adımların konusu"
+  diyor; bilinçli ara adım, gerçek kopukluk değil.
+- **[B] `contact_view.php`'de cariye bağlı çek/senet portföyü gösterilmiyor** — `checks_notes_list()`
+  contact_id filtresi desteklemiyor; önce küçük bir backend genişlemesi + UX kararı (ayrı sekme mi,
+  mevcut tabloya mı) gerekiyor, "sadece buton ekle" değil.
+- **[B] `contacts_report.php`/mobil eşdeğerinde teklif→satış gibi ek dönüştürme metrikleri yok** —
+  ilgisiz, not düşülmedi ayrıca.
+- **[B] Muhtemelen ölü kod, temizlenebilir** — `checks_notes_contact_name()` (checks_notes_lib.php,
+  hiç çağıran yok, güvenlik amaçlı bilinçli terkedilmiş görünüyor), `trade_account_resolve()`
+  (trade_core.php:26, `d518103` commit'inde bilerek kaldırılan bir akışın kalıntısı — account_id seçimi
+  artık Tahsilat/Ödeme anına bırakılıyor). Feature önerisi değil, isteğe bağlı kod temizliği.
+
+Ayrıca ajanların "sağlam/temiz" diye doğruladığı geniş kapsam (finance_account CRUD, checks_notes
+lifecycle, contacts_lib, trade_core, stock_lib, job_stages_lib, personnel_lib, wa_ fonksiyonları,
+notes_lib) — hiçbiri ayrı not gerektirmiyor, web+mobil simetrik bağlı doğrulandı.
+
 ## Diagnostik dosyalar prod sunucuda kalmış olabilir
 - `temizle.php` (kökte, admin girişi veya `?key=acans-migrate-2026` ile çalışır) install_*.php,
   kontrol.php, iz.php, bak.php, fix_login.php, ac_extract.php, dev_check.php, ac.php, eski not
