@@ -32,20 +32,27 @@ require_once __DIR__.'/layout_top.php';
 <section style="max-width:1000px">
 <style>
 @media print{.noprint{display:none!important}}
-/* RAPOR AİLESİ — TUR 2 KOMPAKT TOOLBAR (2026-07-19): tek satırda tarih+Uygula solda, CSV/PDF Paylaş/
-   Yazdır sağda — önceki dev boş df-card kaldırıldı. "Ham Veri (CSV)" artık kopuk bir link değil,
-   aksiyon grubunun bir parçası. */
-.rtoolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:10px 14px}
-.rtoolbar-dates{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+/* RAPOR AİLESİ — SON POLISH (2026-07-19, tur 3): toolbar masaüstünde TEK satıra kilitli
+   (flex-wrap:nowrap, sadece <640px'de alt alta) — önceki tur "wrap" bırakmıştı, geniş ekranda
+   bile gereksiz sarabiliyordu. Modül sekmeleri: body.nav-compact .df-tabs GLOBAL kuralı
+   (assets/css/ds-foundation.css) web'de bilinçli olarak flex-wrap:wrap kullanıyor (başka
+   sayfalarda az sekme var, sorun değil) — burada 12 modül var, wrap "Muhasebe tek başına 2.
+   satırda" gibi dengesiz kırılmaya yol açıyordu. Global kuralı DEĞİŞTİRMİYORUZ (başka sayfaları
+   bozmamak için) — sadece BU sayfaya özel .rep-modtabs sarmalayıcısıyla, global kuraldan daha
+   yüksek özgüllükte (body.nav-compact .rep-modtabs .df-tabs) yatay kaydırmaya geri döndürüyoruz. */
+.rtoolbar{display:flex;flex-wrap:nowrap;gap:10px;align-items:center;justify-content:space-between;padding:10px 14px}
+.rtoolbar-dates{display:flex;flex-wrap:nowrap;gap:8px;align-items:center;flex:0 1 auto}
 .rtoolbar-dates input[type=date]{margin:0;padding:8px 10px;width:auto}
-.rtoolbar-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-@media(max-width:640px){.rtoolbar{flex-direction:column;align-items:stretch}.rtoolbar-dates,.rtoolbar-actions{justify-content:stretch}.rtoolbar-dates input[type=date]{flex:1;min-width:0}}
+.rtoolbar-actions{display:flex;flex-wrap:nowrap;gap:8px;align-items:center;flex:0 0 auto}
+@media(max-width:760px){.rtoolbar{flex-wrap:wrap}}
+@media(max-width:640px){.rtoolbar{flex-direction:column;align-items:stretch}.rtoolbar-dates,.rtoolbar-actions{flex-wrap:wrap;justify-content:stretch}.rtoolbar-dates input[type=date]{flex:1;min-width:0}}
+body.nav-compact .rep-modtabs .df-tabs{flex-wrap:nowrap;overflow-x:auto;max-width:100%}
 .rview-tabs{display:inline-flex;background:var(--df-surface-sunken,#f2f4f7);border-radius:var(--df-radius-md,10px);padding:3px;gap:2px;margin-bottom:var(--df-space-3)}
-.rview-tabs a{padding:7px 16px;border-radius:calc(var(--df-radius-md,10px) - 3px);font-size:13.5px;font-weight:700;color:var(--df-ink-500,#667085);text-decoration:none}
+.rview-tabs a{padding:7px 16px;border-radius:calc(var(--df-radius-md,10px) - 3px);font-size:var(--df-type-caption-size,12.5px);font-weight:600;color:var(--df-ink-500,#667085);text-decoration:none}
 .rview-tabs a.is-active{background:var(--df-surface,#fff);color:var(--df-ink-900,#101828);box-shadow:var(--df-shadow-sm,0 1px 3px rgba(16,24,40,.1))}
 </style>
 
-<div class="noprint">
+<div class="noprint rep-modtabs">
 <?php
 ds_tabs(array_map(function($k,$v) use ($modul,$from,$to){
     return ['label'=>$v,'url'=>'report.php?modul='.$k.'&from='.$from.'&to='.$to,'active'=>$modul===$k];
@@ -53,7 +60,7 @@ ds_tabs(array_map(function($k,$v) use ($modul,$from,$to){
 ?>
 </div>
 
-<section class="df-card noprint" style="margin:var(--df-space-4) 0;padding:0">
+<section class="df-card noprint" style="margin:var(--df-space-3) 0;padding:0">
   <form method="get" class="rtoolbar">
     <input type="hidden" name="modul" value="<?=htmlspecialchars($modul)?>"><input type="hidden" name="ref" value="<?=$ref?>">
     <input type="hidden" name="mode" value="<?=htmlspecialchars($bmode)?>"><input type="hidden" name="type" value="<?=htmlspecialchars($btype)?>">

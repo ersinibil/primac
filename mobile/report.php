@@ -49,20 +49,33 @@ topx('Rapor');
   <?php foreach($MODULES as $k=>$v): ?><a href="report.php?modul=<?=$k?>&from=<?=$from?>&to=<?=$to?>" class="df-tab<?=$modul===$k?' df-tab--active':''?>"><?=$v?></a><?php endforeach; ?>
 </div>
 
+<style>
+/* RAPOR MOBİL P0 (2026-07-19, tur 4): önceki flex+min-width:110px iki tarih alanı+buton aynı
+   satıra sıkıştırıyordu — dar viewport'ta (375-430px) native iOS tarih input'u kendi minimum
+   rahat genişliğini isteyip taşma/çakışmaya yol açıyordu. Varsayılan: dikey (label üstte, input
+   tam genişlik) — sadece gerçekten yer olan genişlikte (mobil shell .app max-width:520px olduğu
+   için pratikte nadiren tetiklenir ama kasıtlı bırakıldı) yatay kompakt satıra döner. */
+.rfilter-m{display:flex;flex-direction:column;gap:10px}
+.rfilter-m-field{display:flex;flex-direction:column;gap:4px}
+.rfilter-m-field label{font-size:12px;font-weight:600;color:var(--c-muted,#94a3b8)}
+.rfilter-m-field input{width:100%;margin:0}
+.rfilter-m button{width:100%}
+@media(min-width:560px){.rfilter-m{flex-direction:row;align-items:end;flex-wrap:nowrap}.rfilter-m-field{flex:1;min-width:0}.rfilter-m button{width:auto;flex:0 0 auto}}
+</style>
 <div class="df-panel noprint">
-  <form method="get" style="display:flex;gap:8px;align-items:end;flex-wrap:wrap">
+  <form method="get" class="rfilter-m">
     <input type="hidden" name="modul" value="<?=h($modul)?>"><input type="hidden" name="ref" value="<?=$ref?>">
     <input type="hidden" name="mode" value="<?=h($bmode)?>"><input type="hidden" name="type" value="<?=h($btype)?>">
-    <div style="flex:1;min-width:110px"><label>Başlangıç</label><input type="date" name="from" value="<?=$from?>" style="margin:0"></div>
-    <div style="flex:1;min-width:110px"><label>Bitiş</label><input type="date" name="to" value="<?=$to?>" style="margin:0"></div>
-    <button class="df-btn df-btn--primary">Getir</button>
+    <div class="rfilter-m-field"><label>Başlangıç</label><input type="date" name="from" value="<?=$from?>"></div>
+    <div class="rfilter-m-field"><label>Bitiş</label><input type="date" name="to" value="<?=$to?>"></div>
+    <button class="df-btn df-btn--primary">Uygula</button>
   </form>
 </div>
 
 <?php if($sent): ?><?=ds_alert('success',$sent)?><?php endif; ?>
 <?php if(!empty($R['error'])): ?><?=ds_alert('danger',$R['error'])?><?php endif; ?>
 
-<style>.rview-tabs{display:inline-flex;background:var(--df-surface-sunken,rgba(255,255,255,.08));border-radius:14px;padding:3px;gap:2px;margin:10px 0}.rview-tabs a{padding:7px 16px;border-radius:11px;font-size:13.5px;font-weight:700;color:var(--c-muted,#94a3b8);text-decoration:none}.rview-tabs a.is-active{background:var(--df-surface,#1e293b);color:var(--df-ink-900,#fff)}</style>
+<style>.rview-tabs{display:inline-flex;background:var(--df-surface-sunken,rgba(255,255,255,.08));border-radius:14px;padding:3px;gap:2px;margin:10px 0}.rview-tabs a{padding:7px 16px;border-radius:11px;font-size:12.5px;font-weight:600;color:var(--c-muted,#94a3b8);text-decoration:none}.rview-tabs a.is-active{background:var(--df-surface,#1e293b);color:var(--df-ink-900,#fff)}</style>
 <nav class="rview-tabs noprint">
   <a class="<?=!$detail?'is-active':''?>" href="report.php?modul=<?=$modul?>&from=<?=$from?>&to=<?=$to?>&ref=<?=$ref?>&mode=<?=urlencode($bmode)?>&type=<?=urlencode($btype)?>">Özet</a>
   <a class="<?=$detail?'is-active':''?>" href="report.php?modul=<?=$modul?>&from=<?=$from?>&to=<?=$to?>&ref=<?=$ref?>&detay=1&mode=<?=urlencode($bmode)?>&type=<?=urlencode($btype)?>">Detay</a>

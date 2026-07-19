@@ -32,9 +32,13 @@ function build_csv_all($pdo,$appName,$from,$to){
 function report_kpi_grid($cards){
   static $styled=false; $out='';
   if(!$styled){ $styled=true;
-    $out.='<style>.rep-tiles{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0}.rep-tile{position:relative;flex:1 1 130px;min-width:120px;background:var(--df-surface,#fff);border:1px solid var(--df-hairline,#e4e7ec);border-radius:var(--df-radius-md,10px);padding:11px 13px;color:var(--df-ink-900,#101828);overflow:hidden;text-decoration:none;display:block}.rep-tile .lb{font-size:11px;color:var(--df-ink-500,#667085);font-weight:700;text-transform:uppercase;letter-spacing:.04em}.rep-tile .vl{font-size:19px;font-weight:800;margin-top:4px;line-height:1.15;color:var(--df-ink-900,#101828)}</style>';
+    // report_render()'daki .rep-tiles/.rep-tile ile BİREBİR aynı kurallar (tek kaynak niyeti —
+    // iki fonksiyon aynı sayfada asla birlikte çağrılmadığı için static-flag paylaşımı yok,
+    // CSS metni bilinçli olarak burada da tekrarlanıyor).
+    $out.='<style>.rep-tiles{display:grid;grid-template-columns:repeat(var(--rep-cols,3),1fr);gap:10px;margin:12px 0}@media(max-width:720px){.rep-tiles{grid-template-columns:repeat(2,1fr)!important}}@media(max-width:420px){.rep-tiles{grid-template-columns:1fr!important}}.rep-tile{position:relative;background:var(--df-surface,#fff);border:1px solid var(--df-hairline,#e4e7ec);border-radius:var(--df-radius-md,10px);padding:10px 13px;color:var(--df-ink-900,#101828);overflow:hidden;text-decoration:none;display:block}.rep-tile .lb{font-size:var(--df-type-micro-size,11px);font-weight:var(--df-type-micro-weight,700);color:var(--df-ink-500,#667085);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.rep-tile .vl{font-size:20px;font-weight:700;margin-top:4px;line-height:1.15;color:var(--df-ink-900,#101828);overflow-wrap:anywhere}@media(max-width:480px){.rep-tile .vl{font-size:17px}}</style>';
   }
-  $out.='<div class="rep-tiles">';
+  $n=count($cards); $cols=$n<=4 ? max(1,$n) : (int)ceil($n/2);
+  $out.='<div class="rep-tiles" style="--rep-cols:'.$cols.'">';
   foreach($cards as $c){
     $col=$c[3]; $clink=$c[4] ?? null; $tag=$clink?'a':'div';
     $out.='<'.$tag.' class="rep-tile"'.($clink?' href="'.htmlspecialchars($clink).'"':'').' style="border-left:3px solid '.htmlspecialchars($col).($clink?';cursor:pointer':'').'">';
@@ -375,32 +379,44 @@ function report_render($R,$appName,$from,$to,$full=true){
 .rep{--ink:#0f172a}
 .rep *{box-sizing:border-box}
 .rep-hero{display:none}
-.rep-section-title{margin:2px 0 14px}
+/* SON POLISH (2026-07-19, tur 3) — SPACING: başlık/tarih/KPI arası dikey boşluk sıkılaştırıldı.
+   TİPOGRAFİ: tüm font-size/weight artık --df-type-* global ölçeğine bağlı (istisna: KPI değeri —
+   token setinde "metrik rakam" ölçeği yok, bilinçli sabit 20px/700 — eski 800 ağırlıktan hafifletildi,
+   "aşırı bold dashboard" hissi kaldırıldı). Lokal font tanımı YOK, body{font-family} (layout_top.php)
+   her yerde inherit ediliyor — rapor ailesinin kendi font stack'i hiç olmadı. */
+.rep-section-title{margin:0 0 10px}
 .rep-section-title h2{margin:0;font-size:var(--df-type-section-size,17px);font-weight:var(--df-type-section-weight,650);color:var(--df-ink-900,#101828)}
-.rep-section-title .dt{color:var(--df-ink-500,#667085);font-size:13px;margin-top:2px}
-/* PDF EXPORT FIX (2026-07-19): KPI kutuları CSS Grid yerine flexbox — html2canvas auto-fit/minmax'ı
-   güvenilir hesaplayamıyor (bilinen sınırlama). Görünüm/sarma davranışı bu turda da korunuyor. */
-.rep-tiles{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0}
-.rep-tile{position:relative;flex:1 1 130px;min-width:120px;background:var(--df-surface,#fff);border:1px solid var(--df-hairline,#e4e7ec);border-radius:var(--df-radius-md,10px);padding:11px 13px;color:var(--df-ink-900,#101828);overflow:hidden;text-decoration:none;display:block}
-.rep-tile .lb{font-size:11px;color:var(--df-ink-500,#667085);font-weight:700;text-transform:uppercase;letter-spacing:.04em}
-.rep-tile .vl{font-size:19px;font-weight:800;margin-top:4px;line-height:1.15;color:var(--df-ink-900,#101828)}
+.rep-section-title .dt{color:var(--df-ink-500,#667085);font-size:var(--df-type-caption-size,12.5px);margin-top:1px}
+/* KPI GRID DENGESİ (2026-07-19, tur 3): sabit flex-wrap yerine PHP'nin bildiği gerçek kart sayısına
+   göre dinamik sütun sayısı (--rep-cols, satır içi style ile render anında hesaplanır — bkz.
+   report_render()/report_kpi_grid() çağıran taraf) — "5 kart + tek kart yalnız kalan satır" gibi
+   dengesiz kırılma böylece oluşmaz (N<=4 → tek satır N sütun, N>4 → iki dengeli satır). Sabit
+   repeat(N,1fr) kullanıyoruz (auto-fit/minmax DEĞİL) — html2canvas'ın hesaplayamadığı ileri Grid
+   özelliği bu değil, basit sabit sütun sayısı; PDF motoruyla uyumluluğu bozmaz. */
+.rep-tiles{display:grid;grid-template-columns:repeat(var(--rep-cols,3),1fr);gap:10px;margin:12px 0}
+@media(max-width:720px){.rep-tiles{grid-template-columns:repeat(2,1fr)!important}}
+@media(max-width:420px){.rep-tiles{grid-template-columns:1fr!important}}
+.rep-tile{position:relative;background:var(--df-surface,#fff);border:1px solid var(--df-hairline,#e4e7ec);border-radius:var(--df-radius-md,10px);padding:10px 13px;color:var(--df-ink-900,#101828);overflow:hidden;text-decoration:none;display:block}
+.rep-tile .lb{font-size:var(--df-type-micro-size,11px);font-weight:var(--df-type-micro-weight,700);color:var(--df-ink-500,#667085);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rep-tile .vl{font-size:20px;font-weight:700;margin-top:4px;line-height:1.15;color:var(--df-ink-900,#101828);overflow-wrap:anywhere}
+@media(max-width:480px){.rep-tile .vl{font-size:17px}}
 .rep-tile[data-tone="pos"] .vl{color:var(--df-success-ink,#15803d)}
 .rep-tile[data-tone="neg"] .vl{color:var(--df-danger-ink,#b91c1c)}
-.rep-card{background:var(--df-surface,#fff);border:1px solid var(--df-hairline,#e4e7ec);border-radius:var(--df-radius-md,12px);padding:var(--df-space-4,16px);margin:12px 0;color:var(--df-ink-900,#101828)}
-.rep-card .ttl{font-weight:800;margin-bottom:10px;font-size:14.5px;color:var(--df-ink-900,#101828)}
-.rep-bar{display:flex;align-items:center;gap:10px;margin:7px 0;font-size:13px}
+.rep-card{background:var(--df-surface,#fff);border:1px solid var(--df-hairline,#e4e7ec);border-radius:var(--df-radius-md,12px);padding:var(--df-space-4,16px);margin:10px 0;color:var(--df-ink-900,#101828)}
+.rep-card .ttl{font-weight:var(--df-type-subtitle-weight,600);margin-bottom:10px;font-size:var(--df-type-subtitle-size,15px);color:var(--df-ink-900,#101828)}
+.rep-bar{display:flex;align-items:center;gap:10px;margin:7px 0;font-size:var(--df-type-caption-size,12.5px)}
 .rep-bar .l{width:32%;color:var(--df-ink-500,#667085);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rep-bar .t{flex:1;height:20px;background:var(--df-surface-sunken,#f2f4f7);border-radius:8px;overflow:hidden}
 .rep-bar .f{height:100%;border-radius:8px;background:var(--df-accent,#2563eb)}
-.rep-bar .v{width:24%;text-align:right;font-weight:700;color:var(--df-ink-900,#101828)}
-table.rep-tbl{width:100%;border-collapse:collapse;font-size:13px;color:var(--df-ink-900,#101828)}
-table.rep-tbl th{text-align:left;color:var(--df-ink-500,#667085);background:var(--df-surface-sunken,#f2f4f7);border-bottom:2px solid var(--df-hairline,#e4e7ec);padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+.rep-bar .v{width:24%;text-align:right;font-weight:600;color:var(--df-ink-900,#101828)}
+table.rep-tbl{width:100%;border-collapse:collapse;font-size:var(--df-type-caption-size,12.5px);color:var(--df-ink-900,#101828)}
+table.rep-tbl th{text-align:left;color:var(--df-ink-500,#667085);background:var(--df-surface-sunken,#f2f4f7);border-bottom:2px solid var(--df-hairline,#e4e7ec);padding:10px 12px;font-size:var(--df-type-micro-size,11px);font-weight:var(--df-type-micro-weight,700);text-transform:uppercase;letter-spacing:.04em}
 table.rep-tbl td{padding:10px 12px;border-bottom:1px solid var(--df-hairline,#eef2f6);color:var(--df-ink-900,#101828)}
 table.rep-tbl tr:nth-child(even) td{background:var(--df-surface-sunken,#f8fafc)}
 table.rep-tbl tr:hover td{background:var(--df-surface-sunken,#f2f4f7)}
 .rep-tbl a{color:var(--df-accent,#2563eb)}
-.rep-neg{color:var(--df-danger-ink,#b91c1c);font-weight:800}
-.rep-foot{text-align:center;color:var(--df-ink-500,#64748b);font-size:12px;margin:14px 0 4px}
+.rep-neg{color:var(--df-danger-ink,#b91c1c);font-weight:700}
+.rep-foot{text-align:center;color:var(--df-ink-500,#64748b);font-size:var(--df-type-caption-size,12.5px);margin:12px 0 4px}
 /* MOBİL/DAR EKRAN: masaüstü tabloyu küçültüp yatay kaydırmak yerine (Product Owner: "tabloyu
    küçültmek şeklinde çözülmesin") her satır bir label:value kartına dönüşür — data-label attribute
    render döngüsünde $R['table']['head'] karşılığı olarak zaten basılıyor. Veri/sıra hiç değişmedi. */
@@ -414,7 +430,7 @@ table.rep-tbl tr:hover td{background:var(--df-surface-sunken,#f2f4f7)}
   table.rep-tbl td{display:flex;justify-content:space-between;align-items:center;gap:12px;text-align:right;padding:8px 0;border-bottom:1px solid var(--df-hairline,#eef2f6)}
   table.rep-tbl tr td:last-child{border-bottom:none}
   table.rep-tbl td:empty{display:none}
-  table.rep-tbl td[data-label]::before{content:attr(data-label);font-weight:700;text-transform:uppercase;font-size:10.5px;letter-spacing:.04em;color:var(--df-ink-500,#667085);text-align:left;margin-right:auto}
+  table.rep-tbl td[data-label]::before{content:attr(data-label);font-weight:var(--df-type-micro-weight,700);text-transform:uppercase;font-size:var(--df-type-micro-size,11px);letter-spacing:.04em;color:var(--df-ink-500,#667085);text-align:left;margin-right:auto}
 }
 @media print{
   /* PİLOT KAPANIŞ PAKETİ (2026-07-19) — "PDF = ekran görüntüsü olmayacak": window.print()'in
@@ -470,7 +486,8 @@ table.rep-tbl tr:hover td{background:var(--df-surface-sunken,#f2f4f7)}
     <div class="dt"><?=htmlspecialchars($from)?> — <?=htmlspecialchars($to)?></div>
   </div>
 
-  <div class="rep-tiles">
+  <?php $__n=count($R['cards']); $__cols=$__n<=4 ? max(1,$__n) : (int)ceil($__n/2); ?>
+  <div class="rep-tiles" style="--rep-cols:<?=$__cols?>">
     <?php foreach($R['cards'] as $c): $col=$c[3]; $clink=$c[4] ?? null; $tag=$clink?'a':'div'; ?>
       <<?=$tag?> class="rep-tile"<?=$clink?' href="'.htmlspecialchars($clink).'"':''?> style="border-left:3px solid <?=htmlspecialchars($col)?><?=$clink?';cursor:pointer':''?>">
         <div class="lb"><?=htmlspecialchars($c[1])?></div><div class="vl"><?=htmlspecialchars($c[2])?></div>
