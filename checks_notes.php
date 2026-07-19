@@ -39,6 +39,21 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 if($res['ok']) $ok=$res['msg']; else $error=$res['msg'];
             }
         }catch(Throwable $e){ $error=$e->getMessage(); }
+    }elseif(isset($_POST['reopen_cn'])){
+        // ÇEK/SENET SİLME REGRESYONU (2026-07-19, gerçek USER TEST) — Ciro Edildi/Tahsil Edildi/
+        // Ödendi durumundaki kayıtlar liste ekranında Sil/Düzenle GÖSTERMEZ (bilerek — kontrolsüz
+        // silme finans matematiğini bozar, checks_notes_can_delete() zaten bunu engelliyor).
+        // Kullanıcı bunu "silemiyorum" olarak yaşıyordu çünkü tek yol Detay sayfasına gidip
+        // "İşlemi Geri Al" bulmaktı — bu artık liste satırından TEK TIKLA yapılabiliyor, aynı
+        // checks_notes_reopen() (Detay sayfasıyla BİREBİR aynı fonksiyon) çağrılıyor.
+        try{
+            if(!can_edit_delete()){
+                $error='Bu işlem için yetkiniz yok.';
+            }else{
+                checks_notes_reopen($pdo,$u['id'] ?? null,(int)$_POST['id'],'');
+                $ok='İşlem geri alındı — kayıt tekrar Portföyde/Bekliyor durumunda. Şimdi Sil/Düzenle kullanılabilir.';
+            }
+        }catch(Throwable $e){ $error=$e->getMessage(); }
     }
 }
 
@@ -167,6 +182,16 @@ foreach($rows as $r){
         echo "<form method='post' style='display:inline' onsubmit=\"return confirm('Bu kaydı silmek istediğinize emin misiniz?')\">"
             ."<input type='hidden' name='id' value='".$rid."'>"
             ."<button class='df-btn df-btn--danger df-btn--sm' name='delete_cn' value='1'>🗑 Sil</button>"
+            ."</form>";
+    }
+    // ÇEK/SENET SİLME REGRESYONU (2026-07-19, gerçek USER TEST) — Ciro Edildi/Tahsil Edildi/Ödendi
+    // durumunda Sil/Düzenle GÖRÜNMEZ (bilerek), tek çıkış yolu "İşlemi Geri Al" idi ama bunun için
+    // Detay sayfasına gitmek gerekiyordu — kullanıcı bunu "silemiyorum, bin kez söyledim" olarak
+    // yaşadı. Artık liste satırından TEK TIKLA — Detay'daki checks_notes_reopen() İLE AYNI çağrı.
+    if(can_edit_delete() && in_array('reopen', checks_notes_available_actions($r), true)){
+        echo "<form method='post' style='display:inline' onsubmit=\"return confirm('Bu işlem geri alınacak, kayıt tekrar Portföyde/Bekliyor durumuna dönecek. Emin misiniz?')\">"
+            ."<input type='hidden' name='id' value='".$rid."'>"
+            ."<button class='df-btn df-btn--secondary df-btn--sm' name='reopen_cn' value='1'>↩️ Geri Al</button>"
             ."</form>";
     }
     echo "</div></td>";
