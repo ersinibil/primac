@@ -2,6 +2,7 @@
 require_once __DIR__.'/boot.php';
 require_once __DIR__.'/cpa_lib.php';
 require_once __DIR__.'/cpa_allocation_lib.php';
+require_once __DIR__.'/stock_lib.php';
 require_login();
 
 $pdo=db();
@@ -55,6 +56,21 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['add_supplier'])){
         if(function_exists('activity_log')) activity_log('Stok','Tedarikçi Ekleme','Ürün #'.$id,'','product',$id,'product_view.php?id='.$id,'🏷️');
     }catch(Throwable $e){
         $error=$e->getMessage();
+    }
+}
+
+// PİLOT ÖNCESİ KAPANIŞ (2026-07-19): kaynağı olmayan (finance_movement_id NULL — manuel/orphan,
+// bazen legacy "Peşin satış" döneminden kalma) yanlış bir stok hareketi ürün stoğunu bozduğunda
+// kullanıcının onu düzeltebilmesinin hiçbir yolu yoktu. Kaynağı bir satışa/alışa bağlı hareketler
+// zaten sales.php/purchase.php'nin "Sil" akışı üzerinden (stock_reverse_sale/purchase) geri
+// alınabiliyor — bu SADECE o bağlantısı olmayanlar için, fiziksel DELETE değil (bkz. stock_lib.php).
+if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['reverse_movement'])){
+    if(!can_edit_delete()){ $error='Bu işlem için yetkiniz yok.'; }
+    else{
+        try{
+            $res = stock_reverse_manual_movement($pdo, $_SESSION['user']['id'] ?? null, (int)$_POST['reverse_movement'], trim($_POST['reverse_reason'] ?? ''));
+            if($res['ok']) $ok=$res['message']; else $error=$res['message'];
+        }catch(Throwable $e){ $error=$e->getMessage(); }
     }
 }
 
@@ -281,10 +297,10 @@ body.nav-compact .df-stat strong{font-size:var(--df-type-subtitle-size);color:va
 <section class="df-card" style="margin-top:var(--df-space-4)">
 <h2 class="df-section-title">Stok Hareketleri</h2>
 <div class="df-table-wrap"><table class="df-table">
-<thead><tr><th>Tarih</th><th>Yön</th><th>Miktar</th><th>Sebep</th><th>Not</th></tr></thead>
+<thead><tr><th>Tarih</th><th>Yön</th><th>Miktar</th><th>Sebep</th><th>Not</th><th>İşlem</th></tr></thead>
 <tbody>
 <?php
-$mv=$pdo->prepare("SELECT * FROM stock_movements WHERE stock_item_id=? ORDER BY id DESC LIMIT 30");
+$mv=$pdo->prepare("SELECT sm.*, fm.movement_type fm_type, fm.document_id fm_document_id FROM stock_movements sm LEFT JOIN finance_movements fm ON fm.id=sm.finance_movement_id WHERE sm.stock_item_id=? ORDER BY sm.id DESC LIMIT 30");
 $mv->execute([$id]);
 $rows=$mv->fetchAll();
 foreach($rows as $r){
@@ -295,9 +311,34 @@ foreach($rows as $r){
     echo "<td>".h($r['quantity'])."</td>";
     echo "<td>".h($r['reason'])."</td>";
     echo "<td>".h($r['note'])."</td>";
+    echo "<td class='nowrap'>";
+    if(!empty($r['finance_movement_id'])){
+        if($r['fm_document_id']){
+            echo "<a class='df-btn df-btn--secondary df-btn--sm' href='trade_document_view.php?id=".(int)$r['fm_document_id']."'>Kaynağı Gör</a>";
+        }elseif(in_array($r['fm_type'],['sale','mobile_sale'],true)){
+            echo "<a class='df-btn df-btn--secondary df-btn--sm' href='sales.php?edit_id=".(int)$r['finance_movement_id']."'>Kaynak Satışı Gör</a>";
+        }elseif($r['fm_type']==='purchase'){
+            echo "<a class='df-btn df-btn--secondary df-btn--sm' href='purchase.php?edit_id=".(int)$r['finance_movement_id']."'>Kaynak Alışı Gör</a>";
+        }else{
+            echo "<span class='df-muted' style='font-size:12px'>Finans hareketine bağlı</span>";
+        }
+    }else{
+        $__rst = stock_movement_reversal_state($pdo, $r);
+        if($__rst['is_reversal']){
+            echo "<span class='df-badge df-badge--gray'>Geri alma kaydı</span>";
+        }elseif($__rst['reversed']){
+            echo "<span class='df-muted' style='font-size:12px'>Geri alındı</span>";
+        }elseif($__rst['reversible'] && can_edit_delete()){
+            echo "<form method='post' style='display:inline' onsubmit=\"return confirm('Bu hareket ters yönde yeni bir kayıtla düzeltilecek, stok miktarı geri alınacak. Emin misiniz?')\">";
+            echo "<input type='hidden' name='reverse_movement' value='".(int)$r['id']."'>";
+            echo "<button type='submit' class='df-btn df-btn--secondary df-btn--sm'>Hareketi Geri Al</button>";
+            echo "</form>";
+        }
+    }
+    echo "</td>";
     echo "</tr>";
 }
-if(!$rows) echo "<tr><td colspan='5' class='df-muted'>Hareket yok.</td></tr>";
+if(!$rows) echo "<tr><td colspan='6' class='df-muted'>Hareket yok.</td></tr>";
 ?>
 </tbody>
 </table></div>

@@ -359,14 +359,28 @@ function checks_notes_overdue_count($pdo){
  *     finance() ile geri alır — carinin borcu/alacağı yeniden açılır, çift kayıt ÜRETİLMEZ (aynı
  *     tek fonksiyon hem silmede hem burada kullanılıyor).
  *
- * NOT (Product Owner'a AYRICA bildirilecek — bu turun kapsamı DIŞINDA bırakıldı): checks_notes_
- * sync_finance()'in ürettiği kabul-anı hareketinin contact_balance_case_sql() işaretİ incelendi —
- * movement_type='cek_senet' 'normal'/'mobile' listesinde olmadığı için ELSE dalına düşüyor (satış/
- * alış gibi "yeni borç" işareti alıyor), oysa kod yorumu ve status='Tahsil Edildi' etiketi niyetin
- * "Tahsilat" (borç AZALTAN) olduğunu gösteriyor — bu, MEVCUT (bu oturumdan önceki) bir işaret
- * tutarsızlığı olabilir. Bu migration/lib bunu SESSİZCE değiştirmedi (tüm mevcut cari bakiyelerini
- * geriye dönük etkiler, bu turun "yaşam döngüsü" kapsamının dışında bir karar) — sadece MEVCUT
- * davranışla tutarlı yeni fonksiyonlar eklendi. Kesin karar Product Owner'a bırakıldı.
+ * ÇÖZÜLDÜ (2026-07-19 doğrulaması — bu not daha önce burada "PO kararı bekliyor" diyordu, GÜNCEL
+ * DEĞİLDİ): yukarıdaki paragrafın bahsettiği işaret sorunu contacts_lib.php::contact_balance_case_sql()
+ * içinde AYNI GÜN (2026-07-18, "P0 KAPANIŞ DÜZELTMESİ") içinde çözülmüştü — 'cek_senet' ve
+ * 'cek_senet_ciro' artık 'normal'/'mobile' ile AYNI dalda (direction='in' → bakiyeyi AZALTIR,
+ * direction='out' → bakiyeyi ARTIRIR), bu dosyanın eski yorumu sadece o düzeltmeden ÖNCE
+ * yazılmış ve düzeltmeden sonra silinmemiş kalıntıydı. Formül canlı SUM() ile hesaplandığı için
+ * (hiçbir satır kalıcı olarak "borç/alacak" işaretiyle saklanmıyor) düzeltme geçmiş kayıtları da
+ * otomatik kapsıyor, ayrıca bir veri migrasyonu gerekmiyor. Kanıt — dört senaryo elle izlendi:
+ *   1) Müşteriden çek ALINDI (direction='in', movement_type='cek_senet'): case → -amount, bakiye
+ *      azalır (Tahsilat gibi). 5.000 borçlu → 1.000'lık çek → 4.000. DOĞRU.
+ *   2) Tahsil Et/Öde (checks_notes_collect()/pay()): finance_movements satırı contact_id=NULL ile
+ *      oluşuyor (satır 437/473) — cari sorgusu (`WHERE contact_id=?`) bu satırı hiç görmez, cari
+ *      ikinci kez ETKİLENMEZ.
+ *   3) Ciro Et (checks_notes_endorse()): kaynak carinin contact_id'sine yeni bir satır YAZILMAZ
+ *      (sadece hedef tedarikçiye contact_id=$ciroContactId ile yazılır) — kaynak ikinci kez
+ *      ETKİLENMEZ; hedef, movement_type='cek_senet_ciro' + direction='out' → case → +amount
+ *      (Ödeme gibi, borcu azaltır). DOĞRU.
+ *   4) Kendi verdiğimiz çek (direction='verilen'): kabul anında movement_type='cek_senet' +
+ *      direction='out' → +amount (Ödeme gibi, borcu azaltır — taahhüt). checks_notes_pay() yine
+ *      contact_id=NULL ile ayrı bir kasa/banka hareketi yazar, cariyi tekrar ETKİLEMEZ. DOĞRU.
+ * contact_view.php ve mobile/contact_view.php ikisi de contact_balance() (bu formülü saran
+ * fonksiyon) üzerinden okuyor — web/mobil parite doğrulandı, ayrı bir formül kopyası yok.
  */
 
 // MİGRASYON TEK ŞEMA OTORİTESİ (2026-07-18) — cpa_allocation_lib.php::cpa_alloc_tables_ready() ile

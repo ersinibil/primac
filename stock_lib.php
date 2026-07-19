@@ -835,4 +835,83 @@ function stock_update_purchase($pdo, $purchaseId, $supplier, $ids, $qtys, $price
         return ['ok'=>false, 'message'=>'Alış güncelleme hatası: '.$e->getMessage()];
     }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════
+ * MANUEL STOK HAREKETİ GÜVENLİ GERİ ALMA (2026-07-19, pilot öncesi kapanış — Product Owner kararı)
+ * ═══════════════════════════════════════════════════════════════════════════════════════════
+ * Bir satış/alışa bağlı (finance_movement_id dolu) stok hareketleri BU mekanizmayı KULLANMAZ —
+ * onlar zaten stock_reverse_sale()/stock_reverse_purchase() üzerinden (sales.php/purchase.php'nin
+ * "Sil" akışı, sil.php't=sale/purchase') geri alınıyor. Bu fonksiyon SADECE finance_movement_id'si
+ * NULL olan (hiçbir satış/alış kaydına bağlı olmayan, elle girilmiş veya eski/legacy) hareketler
+ * içindir — migration 049'un reversed_movement_id kolonuyla iz sürülür, fiziksel DELETE YAPILMAZ.
+ */
+function stock_reversal_ready(){
+    static $ready = null;
+    if($ready === null){
+        try{ $c = db()->query("SHOW COLUMNS FROM stock_movements LIKE 'reversed_movement_id'")->fetch(); $ready = (bool)$c; }
+        catch(Throwable $e){ $ready = false; }
+    }
+    return $ready;
+}
+function stock_require_reversal(){
+    if(!stock_reversal_ready()) throw new Exception('Stok hareketi geri alma özelliği için migration henüz çalıştırılmamış (049) — migrate.php çalıştırılmalı.');
+}
+
+/** Bir manuel stok hareketinin zaten geri alınıp alınmadığını (veya kendisinin bir geri alma kaydı olup olmadığını) döner. */
+function stock_movement_reversal_state($pdo, $movement){
+    if(!stock_reversal_ready()) return ['reversible'=>false, 'reversed'=>false, 'is_reversal'=>false];
+    $isReversal = !empty($movement['reversed_movement_id']);
+    $reversedBy = null;
+    if(!$isReversal){
+        $chk = $pdo->prepare("SELECT id FROM stock_movements WHERE reversed_movement_id=? LIMIT 1");
+        $chk->execute([(int)$movement['id']]);
+        $reversedBy = $chk->fetch();
+    }
+    return [
+        'reversible' => empty($movement['finance_movement_id']) && !$isReversal && !$reversedBy,
+        'reversed'   => (bool)$reversedBy,
+        'is_reversal'=> $isReversal,
+    ];
+}
+
+/**
+ * Kaynağı olmayan (finance_movement_id NULL) bir stok hareketini ters yönde yeni bir kayıtla
+ * düzeltir — stok miktarını doğru seviyeye geri getirir, orijinal satır SİLİNMEZ (audit trail).
+ * @return array ['ok'=>bool,'message'=>string]
+ */
+function stock_reverse_manual_movement($pdo, $userId, $movementId, $reason=''){
+    stock_require_reversal();
+    $movementId = (int)$movementId;
+    $m = $pdo->prepare("SELECT * FROM stock_movements WHERE id=?");
+    $m->execute([$movementId]);
+    $row = $m->fetch();
+    if(!$row) return ['ok'=>false, 'message'=>'Hareket bulunamadı.'];
+    if(!empty($row['finance_movement_id'])) return ['ok'=>false, 'message'=>'Bu hareket bir satış/alışa bağlı — buradan değil, kaynak satış/alış kaydının "Sil" aksiyonundan geri alınmalı.'];
+    $state = stock_movement_reversal_state($pdo, $row);
+    if(!$state['reversible']){
+        if($state['reversed']) return ['ok'=>false, 'message'=>'Bu hareket zaten geri alınmış.'];
+        if($state['is_reversal']) return ['ok'=>false, 'message'=>'Bu kayıt zaten bir geri alma kaydı, tekrar geri alınamaz.'];
+        return ['ok'=>false, 'message'=>'Bu hareket geri alınamıyor.'];
+    }
+
+    $ownsTx = !$pdo->inTransaction();
+    if($ownsTx) $pdo->beginTransaction();
+    try{
+        $reverseDir = $row['direction']==='in' ? 'out' : 'in';
+        $note = 'Hareket #'.$movementId.' geri alındı'.(trim((string)$reason)!=='' ? ' — '.trim((string)$reason) : '').(($row['note']??'')!=='' ? ' (orijinal not: '.$row['note'].')' : '');
+        $pdo->prepare("INSERT INTO stock_movements(stock_item_id,job_id,finance_movement_id,reversed_movement_id,direction,quantity,reason,note,created_at) VALUES(?,?,NULL,?,?,?,?,?,NOW())")
+            ->execute([$row['stock_item_id'], $row['job_id'], $movementId, $reverseDir, $row['quantity'], 'Düzeltme (Geri Alma)', $note]);
+        if($reverseDir==='in'){
+            $pdo->prepare("UPDATE stock_items SET quantity=quantity+? WHERE id=?")->execute([$row['quantity'], $row['stock_item_id']]);
+        } else {
+            $pdo->prepare("UPDATE stock_items SET quantity=quantity-? WHERE id=?")->execute([$row['quantity'], $row['stock_item_id']]);
+        }
+        if(function_exists('audit_log')) audit_log($userId,'update','stock_movements',$movementId,['reversed'=>false],['reversed'=>true,'reason'=>trim((string)$reason)]);
+        if($ownsTx) $pdo->commit();
+    }catch(Throwable $e){
+        if($ownsTx) $pdo->rollBack();
+        throw $e;
+    }
+    return ['ok'=>true, 'message'=>'Hareket geri alındı, stok düzeltildi.'];
+}
 ?>

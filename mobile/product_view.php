@@ -2,6 +2,7 @@
 require_once 'common.php';
 require_once dirname(__DIR__).'/cpa_lib.php';
 require_once dirname(__DIR__).'/cpa_allocation_lib.php';
+require_once dirname(__DIR__).'/stock_lib.php';
 $pdo=db(); $me=(int)($_SESSION['user']['id']??0);
 $id=(int)($_GET['id']??0);
 
@@ -41,6 +42,16 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['toggle_active'])){
     try{
         $pdo->prepare("UPDATE stock_items SET active=1-COALESCE(active,1) WHERE id=?")->execute([$id]);
     }catch(Throwable $e){}
+    header('Location: product_view.php?id='.$id); exit;
+}
+/* PİLOT ÖNCESİ KAPANIŞ (2026-07-19) — web product_view.php ile aynı: kaynağı olmayan (finance_
+   movement_id NULL) bir stok hareketini fiziksel silmeden ters kayıtla düzeltir. Satış/alışa bağlı
+   hareketler bu akışı KULLANMAZ (mobile/sales.php'nin kendi Sil akışına yönlendirilir). */
+if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['reverse_movement'])){
+    require_once dirname(__DIR__).'/boot.php';
+    if(can_edit_delete()){
+        try{ stock_reverse_manual_movement($pdo, $me ?: null, (int)$_POST['reverse_movement'], trim($_POST['reverse_reason'] ?? '')); }catch(Throwable $e){}
+    }
     header('Location: product_view.php?id='.$id); exit;
 }
 /* Ürün bilgisi düzenle */
@@ -186,13 +197,36 @@ try{
 <div class="df-panel" style="margin-top:12px">
   <b><?=ds_icon('info',16)?> Hareket Geçmişi</b>
   <?php
-  $mv=$pdo->prepare("SELECT * FROM stock_movements WHERE stock_item_id=? ORDER BY id DESC LIMIT 50"); $mv->execute([$id]); $rows=$mv->fetchAll();
+  $mv=$pdo->prepare("SELECT sm.*, fm.movement_type fm_type, fm.document_id fm_document_id FROM stock_movements sm LEFT JOIN finance_movements fm ON fm.id=sm.finance_movement_id WHERE sm.stock_item_id=? ORDER BY sm.id DESC LIMIT 50"); $mv->execute([$id]); $rows=$mv->fetchAll();
   if(!$rows) ds_empty_state('Henüz hareket yok.');
   foreach($rows as $m): $in=$m['direction']==='in'; ?>
-    <div class="df-list-row-meta" style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-top:1px solid var(--df-hairline,rgba(255,255,255,.08))">
+    <div style="padding:10px 0;border-top:1px solid var(--df-hairline,rgba(255,255,255,.08))">
+    <div class="df-list-row-meta" style="display:flex;justify-content:space-between;align-items:center">
       <div><b style="color:<?=$in?'#22c55e':'#f87171'?>"><?=$in?'📥 Giriş':'📤 Çıkış'?> <?=h(rtrim(rtrim(number_format($m['quantity'],2,',','.'),'0'),','))?></b>
         <?=$m['reason']?'<br><small class="muted">'.h($m['reason']).'</small>':''?></div>
       <small class="muted"><?=h(date('d.m.Y H:i',strtotime($m['created_at'])))?></small>
+    </div>
+    <?php if(!empty($m['finance_movement_id'])): ?>
+      <?php if($m['fm_document_id']): ?>
+        <a class="df-btn df-btn--secondary df-btn--sm" style="margin-top:6px" href="../trade_document_view.php?id=<?=(int)$m['fm_document_id']?>&web=1">Kaynağı Gör</a>
+      <?php elseif(in_array($m['fm_type'],['sale','mobile_sale'],true)): ?>
+        <a class="df-btn df-btn--secondary df-btn--sm" style="margin-top:6px" href="sales.php?edit_id=<?=(int)$m['finance_movement_id']?>">Kaynak Satışı Gör</a>
+      <?php elseif($m['fm_type']==='purchase'): ?>
+        <a class="df-btn df-btn--secondary df-btn--sm" style="margin-top:6px" href="purchase.php?edit_id=<?=(int)$m['finance_movement_id']?>">Kaynak Alışı Gör</a>
+      <?php endif; ?>
+    <?php else:
+      $__rst = stock_movement_reversal_state($pdo, $m);
+      if($__rst['is_reversal']): ?>
+        <span class="df-badge" style="margin-top:6px">Geri alma kaydı</span>
+      <?php elseif($__rst['reversed']): ?>
+        <small class="muted" style="display:block;margin-top:6px">Geri alındı</small>
+      <?php elseif($__rst['reversible'] && can_edit_delete()): ?>
+        <form method="post" style="margin-top:6px" onsubmit="return confirm('Bu hareket ters yönde yeni bir kayıtla düzeltilecek, stok miktarı geri alınacak. Emin misiniz?')">
+          <input type="hidden" name="reverse_movement" value="<?=(int)$m['id']?>">
+          <button type="submit" class="df-btn df-btn--secondary df-btn--sm">Hareketi Geri Al</button>
+        </form>
+      <?php endif;
+    endif; ?>
     </div>
   <?php endforeach; ?>
 </div>
