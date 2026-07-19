@@ -149,23 +149,23 @@ topx($thread ? 'Grup' : ($with ? 'Sohbet' : 'İletişim Merkezi'), ($thread || $
 <style>
 .chat-list{display:flex;flex-direction:column;gap:8px;min-width:0}
 .chat-row-wrap{display:flex;align-items:center;gap:6px;min-width:0}
-.chat-row{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:12px;text-decoration:none;color:#fff;min-width:0}
+.chat-row{display:flex;align-items:center;gap:12px;background:var(--df-surface-sunken,rgba(255,255,255,.08));border:1px solid var(--df-hairline,rgba(255,255,255,.12));border-radius:18px;padding:12px;text-decoration:none;color:var(--df-ink-900,#fff);min-width:0}
 .av{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;flex:0 0 auto;color:#fff}
 .chat-row .meta{flex:1;min-width:0}
 .chat-row .meta b{display:block;overflow-wrap:anywhere}
-.chat-row .meta small{color:#94a3b8;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chat-row .meta small{color:var(--df-ink-500,#94a3b8);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .chat-del-btn{flex:0 0 auto;background:rgba(248,113,113,.12);color:#f87171;border:0;border-radius:14px;width:46px;height:46px;font-size:18px}
 .unread-badge{background:#22c55e;color:#06281a;border-radius:999px;min-width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:12px;padding:0 6px}
 .thread{display:flex;flex-direction:column;gap:8px}
 .bubble{max-width:80%;padding:10px 13px;border-radius:18px;font-size:15px;line-height:1.35;word-wrap:break-word}
 .bubble small{display:block;font-size:10px;opacity:.6;margin-top:3px;text-align:right}
-.mine{align-self:flex-end;background:#2563eb;border-bottom-right-radius:5px}
-.theirs{align-self:flex-start;background:rgba(255,255,255,.12);border-bottom-left-radius:5px}
-.composer{position:static;flex:0 0 auto;background:#071326;border-top:1px solid rgba(255,255,255,.12);padding:8px 8px calc(8px + env(safe-area-inset-bottom));z-index:1001}
+.mine{align-self:flex-end;background:#2563eb;color:#fff;border-bottom-right-radius:5px}
+.theirs{align-self:flex-start;background:var(--df-surface-sunken,rgba(255,255,255,.12));color:var(--df-ink-900,#fff);border-bottom-left-radius:5px}
+.composer{position:static;flex:0 0 auto;background:var(--df-canvas,#071326);border-top:1px solid var(--df-hairline,rgba(255,255,255,.12));padding:8px 8px calc(8px + env(safe-area-inset-bottom));z-index:1001}
 .composer .wrap{max-width:520px;margin:auto;display:flex;gap:8px;align-items:flex-end}
 .composer textarea{flex:1;margin:0;resize:none;max-height:120px}
 .composer button{flex:0 0 auto;width:50px;height:46px;border-radius:14px;font-size:18px}
-.peer-head{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:10px 12px;margin-bottom:10px;flex:0 0 auto}
+.peer-head{display:flex;align-items:center;gap:12px;background:var(--df-surface-sunken,rgba(255,255,255,.08));border:1px solid var(--df-hairline,rgba(255,255,255,.12));border-radius:18px;padding:10px 12px;margin-bottom:10px;flex:0 0 auto}
 /* P0 KONUŞMA EKRANI SCROLL/SHELL DÜZELTMESİ (2026-07-19, Product Owner FAIL raporu — bug SADECE
    konuşma detayında, global shell'e DOKUNULMADI) KÖK NEDEN: composer+thread+nav üçü de kendi
    position:fixed/calc() matematiğiyle VİEWPORT'a ayrı ayrı bağlanıyordu — döküman/body scroll
@@ -202,12 +202,12 @@ if ($thread):
 ?>
 <div class="peer-head">
     <div class="av" style="background:<?=avatar_color((int)$thread+99)?>"><?=$ticon?></div>
-    <div style="flex:1"><b><?=htmlspecialchars($trow['title'])?></b><br><small style="color:#94a3b8"><?=$memCount?> üye · <?=$trow['type']==='job'?'İş sohbeti':($trow['type']==='cari'?'Cari sohbeti':'Grup')?></small></div>
-    <a href="messages.php" style="background:rgba(255,255,255,.12);color:#fff;border-radius:12px;padding:8px 12px;text-decoration:none">‹</a>
+    <div style="flex:1"><b><?=htmlspecialchars($trow['title'])?></b><br><small style="color:var(--df-ink-500,#94a3b8)"><?=$memCount?> üye · <?=$trow['type']==='job'?'İş sohbeti':($trow['type']==='cari'?'Cari sohbeti':'Grup')?></small></div>
+    <a href="messages.php" style="background:var(--df-surface-sunken,rgba(255,255,255,.12));color:var(--df-ink-900,#fff);border-radius:12px;padding:8px 12px;text-decoration:none">‹</a>
 </div>
 
 <div class="thread" id="thread">
-<?php if(!$tmsgs): ?><div id="emptymsg" style="text-align:center;color:#94a3b8;padding:24px">Henüz mesaj yok. İlk mesajı sen yaz 👇</div><?php endif; ?>
+<?php if(!$tmsgs): ?><div id="emptymsg" style="text-align:center;color:var(--df-ink-500,#94a3b8);padding:24px">Henüz mesaj yok. İlk mesajı sen yaz 👇</div><?php endif; ?>
 <?php foreach($tmsgs as $m): $mine=((int)$m['sender_user_id']===$me); $snm=$m['full_name']?:$m['username']?:'?'; ?>
     <div class="bubble <?=$mine?'mine':'theirs'?>" id="msg<?=$m['id']?>" <?=$mine?'ondblclick="editMsgT('.$m['id'].')"':''?>>
         <?php if(!$mine): ?><small style="color:#60a5fa;font-weight:700;opacity:1;text-align:left;margin:0 0 2px"><?=htmlspecialchars($snm)?></small><?php endif; ?>
@@ -220,7 +220,7 @@ if ($thread):
           if($m['attach_type']==='image'): ?><img src="<?=$apath?>" onclick="ACANS_VIEW('<?=$apath?>','image')" style="max-width:200px;width:100%;border-radius:12px;display:block;margin-bottom:4px;cursor:pointer">
         <?php elseif($isAud): ?><audio controls preload="none" src="<?=$apath?>" style="max-width:230px;width:100%;margin-bottom:4px"></audio>
         <?php elseif($isVid): ?><video controls preload="none" src="<?=$apath?>" style="max-width:220px;width:100%;border-radius:12px;display:block;margin-bottom:4px" playsinline></video>
-        <?php else: ?><a href="javascript:void(0)" onclick="ACANS_VIEW('<?=$apath?>','file')" style="color:#fff;text-decoration:underline">📎 Dosya</a><br><?php endif; endif; ?>
+        <?php else: ?><a href="javascript:void(0)" onclick="ACANS_VIEW('<?=$apath?>','file')" style="color:inherit;text-decoration:underline">📎 Dosya</a><br><?php endif; endif; ?>
         <span id="msgtxt<?=$m['id']?>"><?=nl2br(htmlspecialchars($m['message']))?></span>
         <small>
           <?=htmlspecialchars(date('d.m H:i',strtotime($m['created_at'])))?>
@@ -237,10 +237,10 @@ if ($thread):
 <div id="editModalT" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.55);align-items:center;justify-content:center">
   <div style="background:#0f2035;border-radius:18px;padding:18px;width:90%;max-width:400px">
     <div style="font-weight:700;margin-bottom:10px">Mesajı Düzenle</div>
-    <textarea id="editTextT" rows="4" style="width:100%;border-radius:10px;padding:9px;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2);resize:vertical;font-size:15px"></textarea>
+    <textarea id="editTextT" rows="4" style="width:100%;border-radius:10px;padding:9px;background:var(--df-surface-sunken,rgba(255,255,255,.1));color:var(--df-ink-900,#fff);border:1px solid var(--df-hairline,rgba(255,255,255,.2));resize:vertical;font-size:15px"></textarea>
     <div style="display:flex;gap:8px;margin-top:10px">
       <button onclick="saveEditT()" class="df-btn df-btn--primary" style="flex:1">Kaydet</button>
-      <button onclick="document.getElementById('editModalT').style.display='none'" style="flex:1;background:rgba(255,255,255,.1);color:#fff;border:0;border-radius:12px;padding:10px;font-size:14px">İptal</button>
+      <button onclick="document.getElementById('editModalT').style.display='none'" style="flex:1;background:var(--df-surface-sunken,rgba(255,255,255,.1));color:var(--df-ink-900,#fff);border:0;border-radius:12px;padding:10px;font-size:14px">İptal</button>
     </div>
   </div>
 </div>
@@ -249,13 +249,13 @@ if ($thread):
     <div class="wrap">
         <input type="hidden" name="thread" value="<?=$thread?>">
         <input type="file" name="attach" id="attach" accept="image/*,application/pdf,video/*,audio/*" multiple style="display:none">
-        <label for="attach" style="flex:0 0 auto;width:44px;height:46px;background:rgba(255,255,255,.12);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer">📎</label>
-        <button type="button" class="vbtn" onclick="vrec(this)" style="flex:0 0 auto;width:44px;height:46px;background:rgba(255,255,255,.12);border:0;border-radius:14px;font-size:19px;color:#fff">🎤</button>
+        <label for="attach" style="flex:0 0 auto;width:44px;height:46px;background:var(--df-surface-sunken,rgba(255,255,255,.12));border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer">📎</label>
+        <button type="button" class="vbtn" onclick="vrec(this)" style="flex:0 0 auto;width:44px;height:46px;background:var(--df-surface-sunken,rgba(255,255,255,.12));border:0;border-radius:14px;font-size:19px;color:var(--df-ink-900,#fff)">🎤</button>
         <?=emoji_picker_html('msgTextT', true)?>
         <textarea id="msgTextT" name="message" rows="1" placeholder="Gruba yaz…" oninput="this.style.height='';this.style.height=this.scrollHeight+'px'"></textarea>
         <button class="df-btn df-btn--primary" type="submit" id="sendbtn" style="flex:0 0 auto">➤</button>
     </div>
-    <div id="attlbl" style="max-width:520px;margin:4px auto 0;color:#94a3b8;font-size:12px"></div>
+    <div id="attlbl" style="max-width:520px;margin:4px auto 0;color:var(--df-ink-500,#94a3b8);font-size:12px"></div>
 </form>
 <script>
 document.body.classList.add('chat-mode');
@@ -295,7 +295,7 @@ function vrec(btn){
     _mr.ondataavailable=function(e){ if(e.data&&e.data.size) ch.push(e.data); };
     _mr.onstop=function(){ var mime=_mr.mimeType||'audio/mp4'; var ext=mime.indexOf('webm')>=0?'webm':(mime.indexOf('ogg')>=0?'ogg':'m4a');
       var blob=new Blob(ch,{type:mime}); stream.getTracks().forEach(function(t){t.stop();});
-      btn.textContent='🎤'; btn.style.background='rgba(255,255,255,.12)';
+      btn.textContent='🎤'; btn.style.background='var(--df-surface-sunken,rgba(255,255,255,.12))';
       pendItems.push({blob:blob,name:'ses_'+Date.now()+'.'+ext}); lbl.textContent='🎤 ses gönderiliyor...';
       var f=document.getElementById('msgform'); if(f.requestSubmit)f.requestSubmit(); else f.dispatchEvent(new Event('submit',{cancelable:true,bubbles:true})); };
     _mr.start(); btn.textContent='⏹'; btn.style.background='#ef4444';
@@ -354,12 +354,12 @@ if ($with):
 ?>
 <div class="peer-head">
     <div class="av" style="background:<?=avatar_color((int)$peer['id'])?>"><?=htmlspecialchars(mb_strtoupper(mb_substr($pname,0,1)))?></div>
-    <div style="flex:1"><b><?=htmlspecialchars($pname)?></b><br><small id="peerStatus" style="color:#94a3b8"><?=htmlspecialchars($peer['role'] ?: 'Kullanıcı')?></small></div>
+    <div style="flex:1"><b><?=htmlspecialchars($pname)?></b><br><small id="peerStatus" style="color:var(--df-ink-500,#94a3b8)"><?=htmlspecialchars($peer['role'] ?: 'Kullanıcı')?></small></div>
     <button onclick="delConv(<?=$with?>)" style="background:rgba(248,113,113,.15);color:#f87171;border:0;border-radius:12px;padding:8px 12px;font-weight:700;font-size:13px">🗑 Temizle</button>
 </div>
 
 <div class="thread" id="thread">
-<?php if(!$msgs): ?><div id="emptymsg" style="text-align:center;color:#94a3b8;padding:24px">Henüz mesaj yok. İlk mesajı sen yaz 👇</div><?php endif; ?>
+<?php if(!$msgs): ?><div id="emptymsg" style="text-align:center;color:var(--df-ink-500,#94a3b8);padding:24px">Henüz mesaj yok. İlk mesajı sen yaz 👇</div><?php endif; ?>
 <?php $maxId=0; foreach($msgs as $m): $mine=((int)$m['sender_user_id']===$me); $maxId=max($maxId,(int)$m['id']); ?>
     <div class="bubble <?=$mine?'mine':'theirs'?>" id="msg<?=$m['id']?>" <?=$mine?'ondblclick="editMsg('.$m['id'].')"':''?>>
         <?php if(!empty($m['attachment'])):
@@ -375,7 +375,7 @@ if ($with):
         <?php elseif($isVid): ?>
           <video controls preload="none" src="<?=$apath?>" style="max-width:220px;width:100%;border-radius:12px;display:block;margin-bottom:4px" playsinline></video>
         <?php else: ?>
-          <a href="javascript:void(0)" onclick="ACANS_VIEW('<?=$apath?>','file')" style="color:#fff;text-decoration:underline">📎 Dosya</a><br>
+          <a href="javascript:void(0)" onclick="ACANS_VIEW('<?=$apath?>','file')" style="color:inherit;text-decoration:underline">📎 Dosya</a><br>
         <?php endif; endif; ?>
         <span id="msgtxt<?=$m['id']?>"><?=nl2br(htmlspecialchars($m['message']))?></span>
         <small>
@@ -393,10 +393,10 @@ if ($with):
 <div id="editModal" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.55);align-items:center;justify-content:center">
   <div style="background:#0f2035;border-radius:18px;padding:18px;width:90%;max-width:400px">
     <div style="font-weight:700;margin-bottom:10px">Mesajı Düzenle</div>
-    <textarea id="editText" rows="4" style="width:100%;border-radius:10px;padding:9px;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2);resize:vertical;font-size:15px"></textarea>
+    <textarea id="editText" rows="4" style="width:100%;border-radius:10px;padding:9px;background:var(--df-surface-sunken,rgba(255,255,255,.1));color:var(--df-ink-900,#fff);border:1px solid var(--df-hairline,rgba(255,255,255,.2));resize:vertical;font-size:15px"></textarea>
     <div style="display:flex;gap:8px;margin-top:10px">
       <button onclick="saveEdit()" class="df-btn df-btn--primary" style="flex:1">Kaydet</button>
-      <button onclick="document.getElementById('editModal').style.display='none'" style="flex:1;background:rgba(255,255,255,.1);color:#fff;border:0;border-radius:12px;padding:10px;font-size:14px">İptal</button>
+      <button onclick="document.getElementById('editModal').style.display='none'" style="flex:1;background:var(--df-surface-sunken,rgba(255,255,255,.1));color:var(--df-ink-900,#fff);border:0;border-radius:12px;padding:10px;font-size:14px">İptal</button>
     </div>
   </div>
 </div>
@@ -468,13 +468,13 @@ window.ACANS_ON_CONV=function(list){
     <div class="wrap">
         <input type="hidden" name="to" value="<?=$with?>">
         <input type="file" name="attach" id="attach" accept="image/*,application/pdf,video/*,audio/*" multiple style="display:none">
-        <label for="attach" style="flex:0 0 auto;width:44px;height:46px;background:rgba(255,255,255,.12);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer">📎</label>
-        <button type="button" class="vbtn" onclick="vrec(this)" style="flex:0 0 auto;width:44px;height:46px;background:rgba(255,255,255,.12);border:0;border-radius:14px;font-size:19px;color:#fff">🎤</button>
+        <label for="attach" style="flex:0 0 auto;width:44px;height:46px;background:var(--df-surface-sunken,rgba(255,255,255,.12));border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer">📎</label>
+        <button type="button" class="vbtn" onclick="vrec(this)" style="flex:0 0 auto;width:44px;height:46px;background:var(--df-surface-sunken,rgba(255,255,255,.12));border:0;border-radius:14px;font-size:19px;color:var(--df-ink-900,#fff)">🎤</button>
         <?=emoji_picker_html('msgText', true)?>
         <textarea id="msgText" name="message" rows="1" placeholder="Mesaj yaz…" oninput="this.style.height='';this.style.height=this.scrollHeight+'px'"></textarea>
         <button class="df-btn df-btn--primary" type="submit" id="sendbtn" style="flex:0 0 auto">➤</button>
     </div>
-    <div id="attlbl" style="max-width:520px;margin:4px auto 0;color:#94a3b8;font-size:12px"></div>
+    <div id="attlbl" style="max-width:520px;margin:4px auto 0;color:var(--df-ink-500,#94a3b8);font-size:12px"></div>
 </form>
 <script>
 document.body.classList.add('chat-mode');
@@ -533,7 +533,7 @@ function vrec(btn){
     _mr.ondataavailable=function(e){ if(e.data&&e.data.size) ch.push(e.data); };
     _mr.onstop=function(){ var mime=_mr.mimeType||'audio/mp4'; var ext=mime.indexOf('webm')>=0?'webm':(mime.indexOf('ogg')>=0?'ogg':'m4a');
       var blob=new Blob(ch,{type:mime}); stream.getTracks().forEach(function(t){t.stop();});
-      btn.textContent='🎤'; btn.style.background='rgba(255,255,255,.12)';
+      btn.textContent='🎤'; btn.style.background='var(--df-surface-sunken,rgba(255,255,255,.12))';
       pendItems.push({blob:blob,name:'ses_'+Date.now()+'.'+ext}); lbl.textContent='🎤 ses gönderiliyor...';
       var f=document.getElementById('msgform'); if(f.requestSubmit)f.requestSubmit(); else f.dispatchEvent(new Event('submit',{cancelable:true,bubbles:true})); };
     _mr.start(); btn.textContent='⏹'; btn.style.background='#ef4444';
@@ -644,7 +644,7 @@ document.getElementById('msgform').addEventListener('submit',function(e){
       <?php if($r['last_msg']): ?><button onclick="delConvList(<?=$r['id']?>)" class="chat-del-btn">🗑</button><?php endif; ?>
     </div>
 <?php endforeach; ?>
-<?php if(!$rows): ?><div style="text-align:center;color:#94a3b8;padding:30px">Mesajlaşılacak başka kullanıcı yok.</div><?php endif; ?>
+<?php if(!$rows): ?><div style="text-align:center;color:var(--df-ink-500,#94a3b8);padding:30px">Mesajlaşılacak başka kullanıcı yok.</div><?php endif; ?>
 </div>
 <script>
 function delConvList(uid){

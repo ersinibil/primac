@@ -23,7 +23,7 @@ ic_tabs('whatsapp');
 /* İLETİŞİM MERKEZİ — SON UI BİRLİĞİ (2026-07-18): mobile/messages.php'nin .chat-row/.av/.meta/
    .unread-badge DS diliyle BİREBİR AYNI — önceden genel-amaçlı ds_list_item() (görev/iş/stok
    listeleriyle aynı bileşen) kullanıyordu, sohbet yüzeyi kendi diline sahip değildi. */
-.chat-row{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:12px;text-decoration:none;color:#fff;min-width:0;margin-top:10px}
+.chat-row{display:flex;align-items:center;gap:12px;background:var(--df-surface-sunken,rgba(255,255,255,.08));border:1px solid var(--df-hairline,rgba(255,255,255,.12));border-radius:18px;padding:12px;text-decoration:none;color:var(--df-ink-900,#fff);min-width:0;margin-top:10px}
 .chat-row .av{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;color:#fff;flex:0 0 auto;font-size:17px}
 .chat-row .meta{flex:1;min-width:0}
 .chat-row .meta b{display:block;font-size:15px}
