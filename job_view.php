@@ -473,8 +473,56 @@ $__jdNextIcons = ['call'=>'phone','money'=>'send','check'=>'check','clock'=>'cal
     <a class="df-jd-bar-btn" href="<?=h(wa_link($__jdTxt,$__jdPhone))?>" target="_blank" rel="noopener"><span style="font-size:16px">📱</span><span>WhatsApp</span></a>
     <a class="df-jd-bar-btn" href="#df-jd-files"><span style="font-size:16px">📎</span><span>Dosya</span></a>
     <a class="df-jd-bar-btn" href="<?=h(mail_link('İş: '.$j['title'],$__jdTxt))?>"><?=ds_icon('send',18)?><span>Paylaş</span></a>
+    <?php if(!in_array($j['status'],['Tamamlandı','Teslim Edildi','İptal'],true)): ?>
     <form method="post" style="flex:1;margin:0"><input type="hidden" name="job_status" value="Tamamlandı"><button type="submit" class="df-jd-bar-btn is-done" style="width:100%;border:0;background:none"><?=ds_icon('check',18)?><span>Tamamlandı</span></button></form>
+    <?php endif; ?>
   </div>
+
+  <?php if(can_edit_delete()):
+  // İŞ EMRİ YAŞAM DÖNGÜSÜ TAMAMLAMA (2026-07-19, USER TEST bulgusu — "Tamamlandı" bir iş burada
+  // hiçbir yönetim aksiyonu SUNMUYORDU, sadece yukarıdaki "Tahsilat/Sonraki Adım" görünüyordu).
+  // Aşağıdaki form'lar YENİ bir backend kuralı İCAT ETMİYOR — save_job/job_status POST handler'ları
+  // bu dosyanın en üstünde ZATEN var (satır ~134/~35), sadece compact ekranda hiç gösterilmiyordu.
+  ?>
+  <div class="df-card" style="margin-top:16px">
+    <h2 style="font-size:15px;margin:0 0 12px">Yönetim</h2>
+    <details style="margin-bottom:12px">
+      <summary style="cursor:pointer;font-weight:700">✏️ İşi Düzenle</summary>
+      <?php $__jcs=$pdo->query("SELECT id,name FROM contacts ORDER BY name")->fetchAll(); ?>
+      <form method="post" style="margin-top:10px">
+        <?php ds_form_field('Başlık', '<input name="title" value="'.h($j['title']).'" required>'); ?>
+        <?php
+        $__jcOpts='<option value="">— Yok —</option>';
+        foreach($__jcs as $__cc){ $__jcOpts.='<option value="'.(int)$__cc['id'].'" '.((int)$j['customer_id']===(int)$__cc['id']?'selected':'').'>'.h($__cc['name']).'</option>'; }
+        ds_form_field('Müşteri', '<select name="customer_id">'.$__jcOpts.'</select>');
+        ds_form_field('Termin', '<input type="date" name="due_date" value="'.h($j['due_date']??'').'">');
+        ds_form_field('Açıklama', '<textarea name="description" rows="3">'.h($j['description']??'').'</textarea>');
+        ?>
+        <input type="hidden" name="job_type" value="<?=h($j['job_type'])?>">
+        <input type="hidden" name="priority" value="<?=h($j['priority'] ?? 'Normal')?>">
+        <button class="df-btn df-btn--primary" name="save_job" value="1">💾 Kaydet</button>
+      </form>
+    </details>
+
+    <form method="post" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px">
+      <div style="flex:1;min-width:160px">
+      <?php
+      $__jsOpts='';
+      foreach(['Yeni','Teklif','Onay Bekliyor','Planlandı','Devam Ediyor','Dışarıda','Montajda','Teslim Edildi','Tamamlandı','İptal'] as $__s){ $__jsOpts.='<option '.($j['status']===$__s?'selected':'').'>'.$__s.'</option>'; }
+      ds_form_field('Durum (İptal / Geri Al dahil, mevcut durum makinesi)', '<select name="job_status">'.$__jsOpts.'</select>');
+      ?>
+      </div>
+      <button class="df-btn df-btn--secondary" type="submit">Durumu Kaydet</button>
+    </form>
+
+    <?php if(is_admin()): ?>
+    <div style="border-top:1px solid var(--df-hairline);padding-top:12px">
+      <?=delete_button('job',$id,'🗑 İş Emrini Sil')?>
+      <p class="df-muted" style="font-size:12px;margin-top:6px">Bağlı finans/stok hareketi varsa silme engellenir — önce kaynağından (Finans/Stok Hareketleri) geri alın.</p>
+    </div>
+    <?php endif; ?>
+  </div>
+  <?php endif; ?>
 </div>
 <?php endif; ?>
 

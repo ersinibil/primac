@@ -9,22 +9,21 @@ $msg='';
 
 stage_ajax_respond($pdo,$id); // aşama butonları AJAX (tüm sayfa yenilenmesin → donma yok)
 
-// İşi sil (admin-only, topx'tan ÖNCE)
+// İşi sil (admin-only, topx'tan ÖNCE) — jobs_lib.php::job_delete_or_deactivate() (web sil.php ile
+// ORTAK, 2026-07-19 USER TEST bulgusu: bu handler önceden finans/stok etkisini HİÇ kontrol etmeden
+// kör DELETE yapıyordu, artık guard'lı ortak fonksiyona bağlandı).
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['delete_job'])){
     if(!is_admin()){
         $_SESSION['job_err']='Bu işlem için yetkiniz yok.';
         header('Location: job_view.php?id='.$id); exit;
     }
+    require_once __DIR__.'/../jobs_lib.php';
     try{
-        try{ $pdo->exec("SET FOREIGN_KEY_CHECKS=0"); }catch(Throwable $e){}
-        // Alt kayıtları sil
-        foreach(['job_stages'=>'job_id','job_files'=>'job_id','job_notes'=>'job_id','tasks'=>'job_id'] as $ct=>$cf){
-            try{ $pdo->prepare("DELETE FROM `$ct` WHERE `$cf`=?")->execute([$id]); }catch(Throwable $e){}
+        $res=job_delete_or_deactivate($pdo, $me, $id);
+        if(!$res['ok']){
+            $_SESSION['job_err']=$res['msg'];
+            header('Location: job_view.php?id='.$id); exit;
         }
-        // İşi sil
-        $pdo->prepare("DELETE FROM jobs WHERE id=?")->execute([$id]);
-        try{ $pdo->exec("SET FOREIGN_KEY_CHECKS=1"); }catch(Throwable $e){}
-        try{ if(function_exists('activity_log')) activity_log('Silme','İş silindi','jobs #'.$id,'','admin',null,'jobs.php','🗑'); }catch(Throwable $e){}
         header('Location: jobs.php?deleted=1'); exit;
     }catch(Throwable $e){
         $_SESSION['job_err']='Silinemedi: '.$e->getMessage();
@@ -128,6 +127,9 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 
 topx('İş Detayı');
 if(!empty($_SESSION['flash'])){ echo '<div class="panel" style="text-align:center;font-weight:700">'.htmlspecialchars($_SESSION['flash']).'</div>'; unset($_SESSION['flash']); }
+// job_err önceden set edilip hiç GÖSTERİLMİYORDU (sessizce kayboluyordu) — silme guard mesajının
+// kullanıcıya ulaşması için bu turda eklendi.
+if(!empty($_SESSION['job_err'])){ echo ds_alert('danger',$_SESSION['job_err']); unset($_SESSION['job_err']); }
 try{
     $s=$pdo->prepare("SELECT j.*, c.name customer, p.name responsible FROM jobs j LEFT JOIN contacts c ON c.id=j.customer_id LEFT JOIN personnel p ON p.id=j.responsible_personnel_id WHERE j.id=?");
     $s->execute([$id]); $j=$s->fetch();
@@ -404,8 +406,46 @@ $__jdNextIcons = ['call'=>'phone','money'=>'send','check'=>'check','clock'=>'cal
     <a class="df-jd-bar-btn" href="<?=h(wa_link($__jdTxt,$__jdPhone))?>" target="_blank" rel="noopener"><span style="font-size:15px">📱</span><span>WhatsApp</span></a>
     <a class="df-jd-bar-btn" href="#df-jd-files"><span style="font-size:15px">📎</span><span>Dosya</span></a>
     <a class="df-jd-bar-btn" href="<?=h(mail_link('İş: '.$j['title'],$__jdTxt))?>"><?=ds_icon('send',17)?><span>Paylaş</span></a>
+    <?php if(!in_array($j['status'],['Tamamlandı','Teslim Edildi','İptal'],true)): ?>
     <form method="post" style="flex:1;margin:0"><input type="hidden" name="set_status" value="1"><input type="hidden" name="status" value="Tamamlandı"><button type="submit" class="df-jd-bar-btn is-done" style="width:100%;border:0;background:none"><?=ds_icon('check',17)?><span>Tamamlandı</span></button></form>
+    <?php endif; ?>
   </div>
+
+  <?php if(can_edit_delete()):
+  // İŞ EMRİ YAŞAM DÖNGÜSÜ TAMAMLAMA (2026-07-19, USER TEST bulgusu) — web job_view.php ile AYNI
+  // panel, save_job/set_status POST handler'ları bu dosyanın üstünde ZATEN var, yeni kural YOK.
+  ?>
+  <div class="df-panel" style="margin-top:14px">
+    <b><?=ds_icon('edit',16)?> Yönetim</b>
+    <details style="margin-top:10px">
+      <summary style="cursor:pointer;font-weight:700">✏️ İşi Düzenle</summary>
+      <form method="post" style="margin-top:10px">
+        <label>Başlık</label><input name="title" value="<?=h($j['title'])?>" required>
+        <label>Müşteri</label>
+        <select name="customer_id"><option value="">— Yok —</option><?php foreach($cs as $__cc): ?><option value="<?=(int)$__cc['id']?>" <?=(int)$j['customer_id']===(int)$__cc['id']?'selected':''?>><?=h($__cc['name'])?></option><?php endforeach; ?></select>
+        <label>Termin</label><input type="date" name="due_date" value="<?=h($j['due_date']??'')?>">
+        <label>Açıklama</label><textarea name="description" rows="3"><?=h($j['description']??'')?></textarea>
+        <input type="hidden" name="job_type" value="<?=h($j['job_type'])?>">
+        <input type="hidden" name="priority" value="<?=h($j['priority'] ?? 'Normal')?>">
+        <button type="submit" class="df-btn df-btn--primary" name="save_job" value="1" style="width:100%;margin-top:8px">💾 Kaydet</button>
+      </form>
+    </details>
+    <form method="post" style="margin-top:10px">
+      <label>Durum (İptal / Geri Al dahil)</label>
+      <select name="status"><?php foreach(['Yeni','Teklif','Onay Bekliyor','Planlandı','Devam Ediyor','Dışarıda','Montajda','Teslim Edildi','Tamamlandı','İptal'] as $__s): ?><option <?=$j['status']===$__s?'selected':''?>><?=$__s?></option><?php endforeach; ?></select>
+      <button type="submit" class="df-btn df-btn--secondary" name="set_status" value="1" style="width:100%;margin-top:8px">Durumu Kaydet</button>
+    </form>
+    <?php if(is_admin()): ?>
+    <div style="border-top:1px solid var(--df-hairline);margin-top:12px;padding-top:12px">
+      <form method="post" onsubmit="return confirm('Bu iş emri ve bağlı alt kayıtları (aşama/dosya/not/görev) KALICI olarak silinecek. Bağlı finans/stok hareketi varsa işlem engellenecek. Emin misiniz?')">
+        <input type="hidden" name="delete_job" value="1">
+        <button type="submit" class="df-btn df-btn--danger" style="width:100%">🗑 İş Emrini Sil</button>
+      </form>
+      <p class="df-text-caption" style="margin-top:6px">Bağlı finans/stok hareketi varsa silme engellenir — önce kaynağından geri alın.</p>
+    </div>
+    <?php endif; ?>
+  </div>
+  <?php endif; ?>
 </div>
 <?php endif; ?>
 

@@ -108,6 +108,18 @@ if($t==='contact'){
     redirect($back.($res['deactivated']?'?deactivated=1':'?deleted=1'));
 }
 
+// İş emri silme: finans/stok etkisi varsa engelle (kaynağından geri alınmalı), yoksa güvenli sil —
+// jobs_lib.php::job_delete_or_deactivate() (web sil.php + mobile/job_view.php ortak, 2026-07-19
+// USER TEST bulgusu: iki ayrı guard'sız kör-DELETE yolu tek güvenli fonksiyonda birleştirildi).
+if($t==='job'){
+    require_once __DIR__.'/jobs_lib.php';
+    try{
+        $res=job_delete_or_deactivate($pdo, $_SESSION['user']['id'] ?? 0, $id);
+        if(!$res['ok']) exit(h($res['msg']));
+    }catch(Throwable $e){ exit('Silinemedi: '.htmlspecialchars($e->getMessage())); }
+    redirect($back.'?deleted=1');
+}
+
 // Ürün kategorisi silme: kulllanımda mı kontrol et, kullanılıyorsa pasife al, değilse kalıcı sil.
 if($t==='product_category'){
     try{
