@@ -343,29 +343,37 @@ function report_render($R,$appName,$from,$to,$full=true){
   ob_start();
   if($styled){ echo "\n"; } else { $styled=true; ?>
 <style>
+/* MOBİL UX/IA KONSOLİDE PASS (2026-07-19, bölüm 11, Product Owner kararı) — bu blok önceden
+   HER ZAMAN koyu tema hardcoded'du (background:#0f1d33 vb.) — sayfanın kendisi açık temadayken
+   bile rapor alanı ortasında koyu bir "ada" gibi duruyordu ("DS'den kopuk renkler"). Kart/tablo/
+   çubuk artık --df-surface/--df-ink-*/--df-hairline token'larına taşındı (web+mobil TEK kaynak,
+   bu fonksiyon ikisinde de kullanılıyor) — VERİ/hesaplama/düzen hiç değişmedi, sadece renk kaynağı.
+   Hero banner ve renkli KPI tile'ları (report_lib.php'nin kendi ürettiği aksan renkleri, $c[3])
+   bilinçli olarak gradient/vurgulu bırakıldı — infografik karakterinin parçası, "legacy" değil. */
 .rep{--ink:#0f172a}
 .rep *{box-sizing:border-box}
-.rep-hero{background:linear-gradient(135deg,#1e3a8a 0%,#2563eb 55%,#06b6d4 100%);border-radius:20px;padding:20px;color:#fff;display:flex;align-items:center;gap:14px;box-shadow:0 12px 30px rgba(37,99,235,.35)}
-.rep-hero .lg{width:58px;height:58px;border-radius:16px;background:#fff;color:#1e3a8a;display:flex;align-items:center;justify-content:center;font-weight:1000;font-size:28px;flex:0 0 auto}
+.rep-hero{background:linear-gradient(135deg,#1e3a8a 0%,#2563eb 55%,#06b6d4 100%);border-radius:var(--df-radius-lg,20px);padding:20px;color:#fff;display:flex;align-items:center;gap:14px;box-shadow:var(--df-shadow-md,0 12px 30px rgba(37,99,235,.35))}
+.rep-hero .lg{width:58px;height:58px;border-radius:var(--df-radius-md,16px);background:#fff;color:#1e3a8a;display:flex;align-items:center;justify-content:center;font-weight:1000;font-size:28px;flex:0 0 auto}
 .rep-hero h2{margin:0;font-size:20px}.rep-hero .dt{opacity:.9;font-size:13px;margin-top:2px}
 .rep-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:14px 0}
-.rep-tile{position:relative;border-radius:18px;padding:16px;color:#fff;overflow:hidden;box-shadow:0 8px 20px rgba(0,0,0,.18)}
+.rep-tile{position:relative;border-radius:var(--df-radius-lg,18px);padding:16px;color:#fff;overflow:hidden;box-shadow:var(--df-shadow-sm,0 8px 20px rgba(0,0,0,.18))}
 .rep-tile .ic{font-size:26px;opacity:.9}
 .rep-tile .vl{font-size:23px;font-weight:1000;margin-top:6px;line-height:1.1}
 .rep-tile .lb{font-size:12.5px;opacity:.92;margin-top:3px;font-weight:600}
-.rep-card{background:#0f1d33;border:1px solid #1e3350;border-radius:18px;padding:16px;margin:12px 0;color:#e5edf7}
-.rep-card .ttl{font-weight:900;margin-bottom:10px;font-size:15px;color:#e5edf7}
+.rep-card{background:var(--df-surface,#0f1d33);border:1px solid var(--df-hairline,#1e3350);border-radius:var(--df-radius-lg,18px);padding:16px;margin:12px 0;color:var(--df-ink-900,#e5edf7)}
+.rep-card .ttl{font-weight:900;margin-bottom:10px;font-size:15px;color:var(--df-ink-900,#e5edf7)}
 .rep-bar{display:flex;align-items:center;gap:10px;margin:7px 0;font-size:13px}
-.rep-bar .l{width:32%;color:#cbd5e1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.rep-bar .t{flex:1;height:22px;background:rgba(255,255,255,.08);border-radius:8px;overflow:hidden}
+.rep-bar .l{width:32%;color:var(--df-ink-500,#cbd5e1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rep-bar .t{flex:1;height:22px;background:var(--df-surface-sunken,rgba(255,255,255,.08));border-radius:8px;overflow:hidden}
 .rep-bar .f{height:100%;border-radius:8px;background:linear-gradient(90deg,#22c55e,#a3e635)}
-.rep-bar .v{width:24%;text-align:right;font-weight:800;color:#fff}
-table.rep-tbl{width:100%;border-collapse:collapse;font-size:13px;color:#e5edf7}
-table.rep-tbl th{text-align:left;color:#93a4bf;border-bottom:2px solid #1e3350;padding:8px 6px;font-size:11px;text-transform:uppercase;letter-spacing:.04em}
-table.rep-tbl td{padding:8px 6px;border-bottom:1px solid rgba(255,255,255,.06);color:#e5edf7}
-table.rep-tbl tr:nth-child(even) td{background:rgba(255,255,255,.025)}
-.rep-neg{color:#f87171;font-weight:800}
-.rep-foot{text-align:center;color:#64748b;font-size:12px;margin:14px 0 4px}
+.rep-bar .v{width:24%;text-align:right;font-weight:800;color:var(--df-ink-900,#fff)}
+table.rep-tbl{width:100%;border-collapse:collapse;font-size:13px;color:var(--df-ink-900,#e5edf7)}
+table.rep-tbl th{text-align:left;color:var(--df-ink-500,#93a4bf);border-bottom:2px solid var(--df-hairline,#1e3350);padding:8px 6px;font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+table.rep-tbl td{padding:8px 6px;border-bottom:1px solid var(--df-hairline,rgba(255,255,255,.06));color:var(--df-ink-900,#e5edf7)}
+table.rep-tbl tr:nth-child(even) td{background:var(--df-surface-sunken,rgba(255,255,255,.025))}
+.rep-tbl a{color:var(--df-accent,#60a5fa)}
+.rep-neg{color:var(--df-danger-ink,#f87171);font-weight:800}
+.rep-foot{text-align:center;color:var(--df-ink-500,#64748b);font-size:12px;margin:14px 0 4px}
 @media print{
   /* SADECE raporu yazdır — uygulama arayüzünü (üst bar, bildirim bandı, alt menü, sidebar) gizle */
   body{background:#fff!important}
@@ -413,15 +421,15 @@ table.rep-tbl tr:nth-child(even) td{background:rgba(255,255,255,.025)}
 
   <?php if($R['table']['rows']): ?>
   <?php $lim=$full?1000:15; $tot=count($R['table']['rows']); ?>
-  <div class="rep-card" style="overflow:auto"><div class="ttl">📋 Detay (<?=$tot?> kayıt)<?=(!$full&&$tot>$lim)?' · <span style="color:#93a4bf;font-weight:400">özet — ilk '.$lim.'</span>':''?></div>
+  <div class="rep-card" style="overflow:auto"><div class="ttl">📋 Detay (<?=$tot?> kayıt)<?=(!$full&&$tot>$lim)?' · <span style="color:var(--df-ink-500,#93a4bf);font-weight:400">özet — ilk '.$lim.'</span>':''?></div>
     <?php $hasLinks=!empty($R['table']['links']); ?>
     <table class="rep-tbl"><tr><?php foreach($R['table']['head'] as $h) echo '<th>'.htmlspecialchars($h).'</th>'; if($hasLinks) echo '<th></th>'; ?></tr>
     <?php foreach(array_slice($R['table']['rows'],0,$lim,true) as $i=>$row): ?>
       <tr><?php foreach($row as $cell){ $cc=$crit($cell)?' class="rep-neg"':''; echo '<td'.$cc.'>'.htmlspecialchars((string)$cell).'</td>'; }
-      if($hasLinks){ $u=$R['table']['links'][$i] ?? null; echo '<td>'.($u?'<a href="'.htmlspecialchars($u).'" style="color:#60a5fa;font-weight:700;text-decoration:none;white-space:nowrap">Detay →</a>':'').'</td>'; } ?></tr>
+      if($hasLinks){ $u=$R['table']['links'][$i] ?? null; echo '<td>'.($u?'<a href="'.htmlspecialchars($u).'" style="color:var(--df-accent,#60a5fa);font-weight:700;text-decoration:none;white-space:nowrap">Detay →</a>':'').'</td>'; } ?></tr>
     <?php endforeach; ?>
     </table>
-    <?php if(!$full && $tot>$lim): ?><small style="color:#93a4bf">… ve <?=$tot-$lim?> kayıt daha — "Detaylı" ile görünür</small><?php endif; ?>
+    <?php if(!$full && $tot>$lim): ?><small style="color:var(--df-ink-500,#93a4bf)">… ve <?=$tot-$lim?> kayıt daha — "Detaylı" ile görünür</small><?php endif; ?>
   </div>
   <?php endif; ?>
   <div class="rep-foot"><?=htmlspecialchars($appName)?> — Online Takip Sistemi · Bu rapor otomatik üretilmiştir</div>
