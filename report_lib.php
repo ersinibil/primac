@@ -400,11 +400,37 @@ table.rep-tbl tr:hover td{background:var(--df-surface-sunken,rgba(255,255,255,.0
   table.rep-tbl td[data-label]::before{content:attr(data-label);font-weight:700;text-transform:uppercase;font-size:10.5px;letter-spacing:.04em;color:var(--df-ink-500,#93a4bf);text-align:left;margin-right:auto}
 }
 @media print{
-  /* SADECE raporu yazdır — uygulama arayüzünü (üst bar, bildirim bandı, alt menü, sidebar) gizle */
+  /* PİLOT KAPANIŞ PAKETİ (2026-07-19) — "PDF = ekran görüntüsü olmayacak": window.print()'in
+     kullandığı GERÇEK tarayıcı print motoru için deterministik A4 çıktı. Veri/hesaplama AYNI —
+     sadece bu blok. Uygulama arayüzü (üst bar/filtre/sekme/butonlar zaten .noprint) ve raporun
+     KENDİ interaktif unsurları (drill-down "Detay →" linki, tıklanabilir KPI kutuları) print'te
+     anlamsız olduğu için ayrıca gizlenir — kağıtta tıklanamayan bir "buton" göstermeyelim. */
+  @page{size:A4;margin:14mm 12mm}
   body{background:#fff!important}
   body *{visibility:hidden!important}
   .rep,.rep *{visibility:visible!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  .rep{position:absolute!important;left:0;top:0;width:100%;padding:0!important}
+  .rep{position:absolute!important;left:0;top:0;width:100%;padding:0!important;color:#0f172a!important}
+  /* Ekranda koyu tema token'ları (--df-surface vb.) kağıtta okunmaz/mürekkep israfı — print'e
+     özel sabit açık palet. Kart/tablo yapısı ve veri sırası değişmiyor, sadece renk. */
+  .rep-hero{background:#1e3a8a!important;color:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .rep-card{background:#fff!important;border:1px solid #d0d7e2!important;color:#0f172a!important;page-break-inside:avoid;break-inside:avoid}
+  .rep-card .ttl{color:#0f172a!important}
+  .rep-tile{-webkit-print-color-adjust:exact;print-color-adjust:exact;page-break-inside:avoid;break-inside:avoid}
+  table.rep-tbl{color:#0f172a!important}
+  table.rep-tbl th{background:#f1f5f9!important;color:#334155!important;border-bottom:1.5px solid #cbd5e1!important}
+  table.rep-tbl td{color:#0f172a!important;border-bottom:1px solid #e2e8f0!important}
+  table.rep-tbl tr{page-break-inside:avoid;break-inside:avoid}
+  table.rep-tbl tr:nth-child(even) td{background:#f8fafc!important}
+  .rep-bar .t{background:#e2e8f0!important}
+  .rep-neg{color:#b91c1c!important}
+  .rep-tile a,a.rep-tile,.rep-tbl a{pointer-events:none;text-decoration:none!important;color:inherit!important}
+  table.rep-tbl th:last-child,table.rep-tbl td:last-child{display:none!important} /* Detay → sütunu (linkin kendisi) */
+  .rep-foot{color:#64748b!important}
+  /* Tam sayfa numarası ("Sayfa N/M") CSS Paged Media margin-box içeriği tüm tarayıcılarda
+     deterministik desteklenmiyor (bilinen Chrome print-to-PDF sınırlaması) — güvenilir alternatif
+     tarayıcının KENDİ "Üstbilgi ve altbilgiler" yazdırma seçeneği (kullanıcı Ctrl+P panelinden
+     açar/kapatır). Burada .rep-foot tek seferlik bir kapanış notu, sayfa başına tekrarlanan bir
+     "sayfa no" değil — bunu iddia etmiyoruz, yanlış vaat vermemek için bilerek böyle bırakıldı. */
 }
 </style>
 <?php } ?>

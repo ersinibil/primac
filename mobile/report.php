@@ -74,7 +74,7 @@ topx('Rapor');
   <button onclick="shareReportPDF(this)" class="df-btn df-btn--primary df-btn--lg" style="display:flex;width:100%;margin-top:10px;justify-content:center"><?=ds_icon('box',14)?> PDF Olarak Paylaş (WhatsApp/Mail)</button>
   <small class="muted" style="display:block;margin-top:6px">Tüm raporu çok-sayfalı PDF yapıp paylaşım sayfasına yollar.</small>
   <div style="display:flex;gap:8px;margin-top:10px">
-    <button onclick="shareReportPDF(this)" class="df-btn df-btn--secondary" style="flex:1;justify-content:center"><?=ds_icon('box',14)?> PDF</button>
+    <button onclick="window.print()" class="df-btn df-btn--secondary" style="flex:1;justify-content:center">🖨️ Yazdır / PDF</button>
     <a class="df-btn df-btn--secondary" href="report.php?modul=<?=$modul?>&export=csv&from=<?=$from?>&to=<?=$to?>&ref=<?=$ref?>&mode=<?=urlencode($bmode)?>&type=<?=urlencode($btype)?>" style="flex:1;justify-content:center">Ham Veri</a>
   </div>
   <form method="post" style="margin-top:8px;display:flex;gap:8px">

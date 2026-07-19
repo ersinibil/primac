@@ -26,6 +26,9 @@ if(($_GET['export']??'')==='csv'){
 
 require_once __DIR__.'/layout_top.php';
 ?>
+<section style="max-width:1000px" class="noprint">
+<?php ds_page_header('Raporlar', ds_icon('box',24), 'Modül bazlı özet + detay, PDF/CSV dışa aktarım', '', false, true); ?>
+</section>
 <section style="max-width:1000px">
 <style>
 @media print{.noprint{display:none!important}}
@@ -49,8 +52,8 @@ ds_tabs(array_map(function($k,$v) use ($modul,$from,$to){
     <?php ds_form_field('Başlangıç', '<input type="date" name="from" value="'.$from.'">'); ?>
     <?php ds_form_field('Bitiş', '<input type="date" name="to" value="'.$to.'">'); ?>
     <button class="df-btn df-btn--primary" type="submit">Getir</button>
+    <button class="df-btn df-btn--secondary" type="button" onclick="window.print()">🖨️ Yazdır / PDF</button>
     <button class="df-btn" type="button" onclick="shareReportPDF(this)" style="background:var(--df-success);color:#fff">📲 PDF Paylaş</button>
-    <button class="df-btn df-btn--secondary" type="button" onclick="shareReportPDF(this)">📄 PDF</button>
     <?=ds_button('Ham Veri (CSV)','report.php?modul='.$modul.'&export=csv&from='.$from.'&to='.$to.'&ref='.$ref.'&mode='.urlencode($bmode).'&type='.urlencode($btype),'ghost','','',true)?>
   </form>
 </section>

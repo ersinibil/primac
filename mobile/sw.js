@@ -17,7 +17,18 @@
 // eklendi (composer/nav çakışması kök neden düzeltmesi) — AYNI KURAL, bump zorunlu.
 // P0 MOBİL LAYOUT CONTRACT (2026-07-19): v30→v31 — min-height→height+overflow:hidden SERT
 // kontrata geçildi (--df-navh token) — AYNI KURAL, bump zorunlu.
-const CACHE='acans-os-v31';
+// PİLOT KAPANIŞ PAKETİ (2026-07-19) — BOTTOM NAV EDGE BUG ARAŞTIRMASI: v31→v32. Kök neden
+// taraması sırasında bulundu — commit 4a5ab5f (Tahsilat/Ödeme aranabilir cari seçici) hem
+// ds-foundation.css hem ds-foundation.js'i değiştirdi AMA bu dosyada bump YAPILMAMIŞTI (yukarıdaki
+// "HER değişiklikle birlikte bump zorunlu" kuralı bir kez daha atlanmış). Bu, "bazı cihazlarda bazı
+// sayfalarda" tutarsız/aralıklı mobil shell görünüm bozuklukları (rapor edilen: uzun sayfalarda alt
+// bar kayması) için EN GÜÇLÜ aday açıklama — bu projede AYNI hata sınıfı üç kez daha (v28→29,
+// v29→30, v30→31) yaşandı, her seferinde "farklı cihazlarda farklı görünüyor" şikayeti eşlik etti.
+// Statik kod incelemesinde .df-m-bottomnav'ın kendisinde YENİ bir yapısal hata bulunamadı (fixed
+// positioning, DOM sırası, containing-block bozucu ata transform/filter/will-change, 100vh — hepsi
+// temiz). Bu bump sonrası sorun DEVAM EDERSE kök neden CSS'te değil, gerçek cihazda canlı ölçümle
+// bulunmalı — sayfa sayfa margin patch YAPILMADI (Product Owner talimatı).
+const CACHE='acans-os-v32';
 const STATIC_ASSETS=[
   './',
   './index.php',
