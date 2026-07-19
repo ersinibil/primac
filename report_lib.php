@@ -355,8 +355,16 @@ function report_render($R,$appName,$from,$to,$full=true){
 .rep-hero{background:linear-gradient(135deg,#1e3a8a 0%,#2563eb 55%,#06b6d4 100%);border-radius:var(--df-radius-lg,20px);padding:20px;color:#fff;display:flex;align-items:center;gap:14px;box-shadow:var(--df-shadow-md,0 12px 30px rgba(37,99,235,.35))}
 .rep-hero .lg{width:58px;height:58px;border-radius:var(--df-radius-md,16px);background:#fff;color:#1e3a8a;display:flex;align-items:center;justify-content:center;font-weight:1000;font-size:28px;flex:0 0 auto}
 .rep-hero h2{margin:0;font-size:20px}.rep-hero .dt{opacity:.9;font-size:13px;margin-top:2px}
-.rep-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:14px 0}
-.rep-tile{position:relative;border-radius:var(--df-radius-lg,18px);padding:16px;color:#fff;overflow:hidden;box-shadow:var(--df-shadow-sm,0 8px 20px rgba(0,0,0,.18))}
+/* PDF EXPORT FIX (2026-07-19, pilot öncesi kapanış — gerçek USER TEST FAIL): KPI kutuları
+   önceden CSS Grid (auto-fit/minmax) ile diziliyordu — ekranda doğru görünüyordu ama html2canvas
+   (report_share.js'in PDF motoru) CSS Grid'in auto-fit/minmax gibi ileri özelliklerini güvenilir
+   hesaplayamıyor (bilinen bir html2canvas sınırlaması, gerçek bir tarayıcı layout motoru değil) —
+   PDF çıktısında kutular sıfır genişliğe çöküp içeriği kaybolmuş/boş görünebiliyordu. Flexbox'a
+   çevrildi (html2canvas'ın çok daha güvenilir desteklediği bir model) — ekran görünümü aynı kaldı
+   (aynı sarma/boşluk davranışı), sadece PDF motoruyla uyumluluk için. Veri/hesaplama değişmedi.
+   Kesin doğrulama gerçek cihazda PDF indirip bakmakla yapılmalı — buradan görsel test edilemiyor. */
+.rep-tiles{display:flex;flex-wrap:wrap;gap:12px;margin:14px 0}
+.rep-tile{position:relative;flex:1 1 150px;min-width:150px;border-radius:var(--df-radius-lg,18px);padding:16px;color:#fff;overflow:hidden;box-shadow:var(--df-shadow-sm,0 8px 20px rgba(0,0,0,.18))}
 .rep-tile .ic{font-size:26px;opacity:.9}
 .rep-tile .vl{font-size:23px;font-weight:1000;margin-top:6px;line-height:1.1}
 .rep-tile .lb{font-size:12.5px;opacity:.92;margin-top:3px;font-weight:600}
