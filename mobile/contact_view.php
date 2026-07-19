@@ -278,16 +278,22 @@ if(!user_can('finance')){ $__ledgerM = array_filter($__ledgerM, function($__it){
   <?php if(!$__ledgerM): ?>
   <p class="df-text-caption" style="margin:10px 0 0">Henüz hareket yok.</p>
   <?php endif; ?>
-  <?php foreach($__ledgerM as $__item):
+  <?php
+  // /mobile/ dışı köke web=1 olmadan gidilirse boot.php'nin mobil-otomatik-yönlendirmesi
+  // redirect-trap yapar (P0 KAPANIŞ 2026-07-18 deseni) — trade_document_view.php/
+  // trade_document_edit.php/check_note_view.php'nin mobil karşılığı yok, diğerlerinin var.
+  $__mobUrl = function($u){
+      if(!$u) return $u;
+      foreach(['trade_document_view.php','trade_document_edit.php','check_note_view.php'] as $__root){
+          if(strpos($u,$__root)===0) return '../'.$u.(strpos($u,'?')===false?'?':'&').'web=1';
+      }
+      return $u;
+  };
+  foreach($__ledgerM as $__item):
     $__v = contact_ledger_row_view($__item, $pdo);
     if(!$__v) continue;
-    $__openUrl = $__v['open_url'];
-    // P0 KAPANIŞ (2026-07-18) deseni: /mobile/ dışı köke web=1 olmadan gidilirse redirect-trap olur.
-    if($__openUrl && strpos($__openUrl,'trade_document_view.php')===0) $__openUrl='../'.$__openUrl.(strpos($__openUrl,'?')===false?'?':'&').'web=1';
-    $__srcUrl = $__v['source_url'];
-    if($__srcUrl && strpos($__srcUrl,'check_note_view.php')===0) $__srcUrl='../'.$__srcUrl.(strpos($__srcUrl,'?')===false?'?':'&').'web=1';
   ?>
-  <a href="<?=h($__openUrl ?: '#')?>" style="display:block;text-decoration:none;color:inherit;margin-top:10px;border-top:1px solid var(--df-hairline);padding-top:10px<?= $__openUrl ? '' : ';pointer-events:none' ?>">
+  <div style="margin-top:10px;border-top:1px solid var(--df-hairline);padding-top:10px">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
       <b style="<?= $__v['amount']===null ? '' : ($__v['sign']==='+' ? 'color:var(--df-success-ink)' : ($__v['sign']==='-' ? 'color:var(--df-danger-ink)' : '')) ?>">
         <?=h($__v['type'])?><?= $__v['amount']!==null ? ': '.$__v['sign'].mm($__v['amount']) : '' ?>
@@ -295,8 +301,21 @@ if(!user_can('finance')){ $__ledgerM = array_filter($__ledgerM, function($__it){
       <?=ds_badge($__v['status'])?>
     </div>
     <small class="df-text-caption"><?=h($__v['date'])?><?=$__v['desc']?' · '.h($__v['desc']):''?></small>
-  </a>
-  <?php if($__srcUrl && !$__openUrl): ?><a class="df-btn df-btn--secondary df-btn--sm" style="margin-top:6px" href="<?=h($__srcUrl)?>"><?=h($__v['source_label'] ?: 'Kaynağa Git')?></a><?php endif; ?>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+    <?php foreach($__v['actions'] as $__a): ?>
+      <?php if(!empty($__a['disabled'])): ?>
+        <span class="df-text-caption" style="align-self:center"><?=h($__a['label'])?></span>
+      <?php elseif(isset($__a['form_action'])): ?>
+        <form method="post" action="<?=h($__mobUrl($__a['form_action']))?>" style="margin:0" onsubmit="return confirm('<?=h($__a['confirm'] ?? 'Emin misiniz?')?>')">
+          <?php foreach($__a['form_fields'] as $__fk=>$__fv): ?><input type="hidden" name="<?=h($__fk)?>" value="<?=h($__fv)?>"><?php endforeach; ?>
+          <button class="df-btn <?=!empty($__a['danger'])?'df-btn--danger':'df-btn--secondary'?> df-btn--sm" type="submit"><?=h($__a['label'])?></button>
+        </form>
+      <?php else: ?>
+        <a class="df-btn df-btn--secondary df-btn--sm" href="<?=h($__mobUrl($__a['url']))?>"><?=h($__a['label'])?></a>
+      <?php endif; ?>
+    <?php endforeach; ?>
+    </div>
+  </div>
   <?php endforeach; ?>
 </div>
 

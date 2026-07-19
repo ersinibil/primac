@@ -286,18 +286,18 @@ if(!$__ledger): ?>
 </td>
 <td><?=ds_badge($__v['status'])?></td>
 <td class="nowrap"><div class="row-actions">
-<?php if($__v['open_url']): ?><a class="df-btn df-btn--secondary df-btn--sm" href="<?=h($__v['open_url'])?>">Aç</a><?php endif; ?>
-<?php if($__v['edit_url'] && can_edit_delete()): ?><a class="df-btn df-btn--secondary df-btn--sm" href="<?=h($__v['edit_url'])?>">✏️</a><?php endif; ?>
-<?php if(!empty($__v['deletable']) && can_edit_delete()): ?>
-<form method="post" action="sil.php" style="display:inline" onsubmit="return confirm('Bu hareket KALICI olarak silinecek ve ilgili hesap/cari bakiyesi geri alınacak. Emin misiniz?')">
-<input type="hidden" name="t" value="finance">
-<input type="hidden" name="id" value="<?=(int)$__v['id']?>">
-<input type="hidden" name="return_context" value="contact">
-<input type="hidden" name="return_ref" value="<?=$id?>">
-<button class="df-btn df-btn--danger df-btn--sm" type="submit">🗑</button>
-</form>
-<?php endif; ?>
-<?php if($__v['source_url'] && !$__v['open_url']): ?><a class="df-btn df-btn--secondary df-btn--sm" href="<?=h($__v['source_url'])?>"><?=h($__v['source_label'] ?: 'Kaynağa Git')?></a><?php endif; ?>
+<?php foreach($__v['actions'] as $__a): ?>
+  <?php if(!empty($__a['disabled'])): ?>
+    <span class="df-muted" style="font-size:12px" title="<?=h($__a['label'])?>"><?=h($__a['label'])?></span>
+  <?php elseif(isset($__a['form_action'])): ?>
+    <form method="post" action="<?=h($__a['form_action'])?>" style="display:inline" onsubmit="return confirm('<?=h($__a['confirm'] ?? 'Emin misiniz?')?>')">
+      <?php foreach($__a['form_fields'] as $__fk=>$__fv): ?><input type="hidden" name="<?=h($__fk)?>" value="<?=h($__fv)?>"><?php endforeach; ?>
+      <button class="df-btn <?=!empty($__a['danger'])?'df-btn--danger':'df-btn--secondary'?> df-btn--sm" type="submit"><?=h($__a['label'])?></button>
+    </form>
+  <?php else: ?>
+    <a class="df-btn df-btn--secondary df-btn--sm" href="<?=h($__a['url'])?>"><?=h($__a['label'])?></a>
+  <?php endif; ?>
+<?php endforeach; ?>
 </div></td>
 </tr>
 <?php endforeach; ?>

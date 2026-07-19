@@ -70,7 +70,12 @@ body.nav-compact .df-stat span{font-size:var(--df-type-caption-size);color:var(-
 body.nav-compact .df-stat strong{font-size:var(--df-type-subtitle-size);color:var(--df-ink-900)}
 </style>
 
-<?=ds_alert('info','Bu alış ödeme yapmadı — tedarikçiye açık borç olarak kaydedildi (kasa/banka etkilenmedi). Ödeme <a href="finance_new.php?direction=out&contact_id='.(int)$purchase['contact_id'].'">Ödeme ekranından</a> ayrıca girilir.')?>
+<?php // ds_alert() mesajı h() ile escape ediyor — içine <a> gömülemez (ham HTML sızıyordu, USER TEST
+// bulgusu 2026-07-19). purchase.php'nin AYNI amaçlı bilgi kutusuyla aynı desen: elle df-alert div'i. ?>
+<div class="df-alert df-alert--info" style="margin-bottom:var(--df-space-3)">
+Bu alış ödeme yapmadı — tedarikçiye açık borç olarak kaydedildi (kasa/banka etkilenmedi). Ödeme
+<a href="finance_new.php?direction=out&contact_id=<?=(int)$purchase['contact_id']?>">Ödeme ekranından</a> ayrıca girilir.
+</div>
 
 <section class="df-card" style="margin-top:var(--df-space-4)">
 <h2 style="font-size:var(--df-type-section-size);margin:0 0 var(--df-space-3)">Alış Kalemleri (BU İŞLEMİN ETKİSİ: stok +)</h2>

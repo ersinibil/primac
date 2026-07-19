@@ -136,44 +136,100 @@ function contact_ledger_rows($pdo, $contactId, $limit=60){
     return array_slice($merged,0,$limit);
 }
 
-// Yukarıdaki ham (kind/row) satırını ekrana basılacak normalize alanlara çevirir — web ve mobil
-// contact_view.php AYNI bu fonksiyonu kullanır (tek yerden bakım). $pdo, finans satırlarında çek/
-// senet/belge kaynağına drill-down için finance_movement_actions()'a geçiliyor (mevcut mekanizma,
-// bu turda YENİDEN yazılmadı — sadece çağrıldı).
+// CARİ HAREKETLERİ AKSİYON TAMAMLAMA (2026-07-19, USER TEST bulgusu — "Bekliyor" satırlar dead-end
+// görünüyordu). Yukarıdaki ham (kind/row) satırını ekrana basılacak normalize alanlara + kaynak
+// kaydın MEVCUT yaşam döngüsüne göre bir 'actions' listesine çevirir — web ve mobil contact_view.php
+// AYNI bu fonksiyonu kullanır (tek yerden bakım, parite garantili). Her action ya bir link
+// (['label','url']) ya bir POST formu (['label','form_action','form_fields','confirm','danger'])
+// — İKİSİ DE var olan sayfaların/fonksiyonların KENDİ handler'larına gider, burada YENİ bir iş
+// kuralı/silme/geri-alma mantığı İCAT EDİLMEDİ (trade_document_can_edit()/trade_document_cancel(),
+// stock_can_edit_sale/purchase(), sale_view.php/purchase_view.php'nin kendi delete_sale/
+// delete_purchase POST handler'ı, finance_movement_actions()).
 function contact_ledger_row_view($item, $pdo){
     $r=$item['row'];
+    $canEdit = function_exists('can_edit_delete') && can_edit_delete();
+
     if($item['kind']==='finance'){
         $actions = function_exists('finance_movement_actions') ? finance_movement_actions($r,$pdo) : ['editable'=>false,'source_url'=>null,'source_label'=>null,'block_reason'=>null];
         $isDoc=!empty($r['document_id']);
         $mtype=$r['movement_type'];
+        $rid=(int)$r['id'];
         $openUrl=null;
-        if($isDoc){ $openUrl='trade_document_view.php?id='.(int)$r['document_id']; }
-        elseif(in_array($mtype,['sale','mobile_sale'],true)){ $openUrl='sale_view.php?id='.(int)$r['id']; }
-        elseif($mtype==='purchase'){ $openUrl='purchase_view.php?id='.(int)$r['id']; }
+        $btns=[];
+
+        if($isDoc){
+            $docId=(int)$r['document_id'];
+            $openUrl='trade_document_view.php?id='.$docId;
+            $btns[]=['label'=>'Aç','url'=>$openUrl];
+            if($canEdit && $r['status']!=='İptal'){
+                if(function_exists('trade_document_can_edit')){
+                    $elig=trade_document_can_edit($pdo,$docId);
+                    if($elig['editable']) $btns[]=['label'=>'✏️ Düzenle','url'=>'trade_document_edit.php?id='.$docId];
+                }
+                $btns[]=['label'=>'✕ İptal Et','form_action'=>'trade_document_view.php?id='.$docId,'form_fields'=>['cancel_document'=>1],
+                    'confirm'=>'Bu belge iptal edilecek: bağlı stok/cari/CPA etkisi tam olarak geri alınacak. Emin misiniz?','danger'=>true];
+            }
+        }elseif(in_array($mtype,['sale','mobile_sale'],true)){
+            $openUrl='sale_view.php?id='.$rid;
+            $btns[]=['label'=>'Aç','url'=>$openUrl];
+            if($canEdit){
+                if(function_exists('stock_can_edit_sale') && stock_can_edit_sale($pdo,$rid)['editable']){
+                    $btns[]=['label'=>'✏️ Düzenle','url'=>'sales.php?edit_id='.$rid];
+                }
+                $btns[]=['label'=>'↩️ Geri Al','form_action'=>'sale_view.php?id='.$rid,'form_fields'=>['delete_sale'=>1],
+                    'confirm'=>'Bu satış geri alınacak: stok geri eklenir, cari borcu tersleşir. Emin misiniz?','danger'=>true];
+            }
+        }elseif($mtype==='purchase'){
+            $openUrl='purchase_view.php?id='.$rid;
+            $btns[]=['label'=>'Aç','url'=>$openUrl];
+            if($canEdit){
+                if(function_exists('stock_can_edit_purchase') && stock_can_edit_purchase($pdo,$rid)['editable']){
+                    $btns[]=['label'=>'✏️ Düzenle','url'=>'purchase.php?edit_id='.$rid];
+                }
+                $btns[]=['label'=>'↩️ Geri Al','form_action'=>'purchase_view.php?id='.$rid,'form_fields'=>['delete_purchase'=>1],
+                    'confirm'=>'Bu alış geri alınacak: stok geri düşülür, cari borcu tersleşir. Emin misiniz?','danger'=>true];
+            }
+        }elseif(($actions['editable'] ?? false) && $canEdit){
+            // Tahsilat/Ödeme/Transfer/Muhasebe gibi doğrudan düzenlenebilir hareketler — Düzenle+Sil.
+            $btns[]=['label'=>'✏️ Düzenle','url'=>'finance_new.php?id='.$rid.'&return_context=contact&return_ref='.(int)($r['contact_id'] ?? 0)];
+            $btns[]=['label'=>'🗑 Sil','form_action'=>'sil.php','form_fields'=>['t'=>'finance','id'=>$rid,'return_context'=>'contact','return_ref'=>(int)($r['contact_id'] ?? 0)],
+                'confirm'=>'Bu hareket KALICI olarak silinecek ve ilgili hesap/cari bakiyesi geri alınacak. Emin misiniz?','danger'=>true];
+        }elseif(!empty($actions['source_url'])){
+            // Çek/senet kabul-anı hareketi vb. — kaynağın kendi yaşam döngüsü sayfasına git
+            // (Tahsil/Ciro/Öde/Geri Al zaten o sayfada, burada TEKRARLANMADI).
+            $btns[]=['label'=>$actions['source_label'] ?: 'Detay','url'=>$actions['source_url']];
+        }else{
+            $btns[]=['label'=>'ⓘ '.($actions['block_reason'] ?: 'Otomatik oluştu'),'disabled'=>true];
+        }
+
         return [
-            'kind'=>'finance','id'=>(int)$r['id'],
+            'kind'=>'finance','id'=>$rid,
             'date'=>$r['movement_date'],
             'type'=>function_exists('finance_movement_type_label') ? finance_movement_type_label($r) : $mtype,
             'desc'=>($isDoc ? '['.($r['document_no'] ?: 'Belge').'] ' : '').(string)$r['description'],
             'amount'=>(float)$r['amount'],
             'sign'=>$r['direction']==='in' ? '+' : '-',
             'status'=>$r['status'],
-            'open_url'=>$openUrl,
-            'edit_url'=>($actions['editable'] ?? false) ? 'finance_new.php?id='.(int)$r['id'].'&return_context=contact&return_ref='.(int)($r['contact_id'] ?? 0) : null,
-            'deletable'=>($actions['editable'] ?? false),
-            'source_url'=>$actions['source_url'] ?? null,
-            'source_label'=>$actions['source_label'] ?? null,
+            'actions'=>$btns,
         ];
     }
+
     if($item['kind']==='job'){
-        return ['kind'=>'job','id'=>(int)$r['id'],'date'=>$r['created_at'] ? substr($r['created_at'],0,10) : ($r['due_date'] ?: ''),
+        $jid=(int)$r['id'];
+        $btns=[['label'=>'Aç','url'=>'job_view.php?id='.$jid]];
+        // job_view.php artık kendi Düzenle/durum/İptal-Geri Al/Sil aksiyonlarını taşıyor (bkz.
+        // job_lib.php::job_delete_or_deactivate()) — burada TEKRARLANMADI, "Aç" oraya götürüyor.
+        return ['kind'=>'job','id'=>$jid,'date'=>$r['created_at'] ? substr($r['created_at'],0,10) : ($r['due_date'] ?: ''),
             'type'=>'İş Emri','desc'=>trim($r['job_no'].' — '.$r['title']),'amount'=>null,'sign'=>'','status'=>$r['status'],
-            'open_url'=>'job_view.php?id='.(int)$r['id'],'edit_url'=>null,'deletable'=>false,'source_url'=>null,'source_label'=>null];
+            'actions'=>$btns];
     }
     if($item['kind']==='quote'){
-        return ['kind'=>'quote','id'=>(int)$r['id'],'date'=>$r['created_at'] ? substr($r['created_at'],0,10) : ($r['quote_date'] ?: ''),
+        $qid=(int)$r['id'];
+        // teklif.php'nin kendi Düzenle/Durum (Taslak/Gönderildi/Kabul/Red) akışı zaten var, burada
+        // TEKRARLANMADI — "Aç" oraya götürüyor.
+        return ['kind'=>'quote','id'=>$qid,'date'=>$r['created_at'] ? substr($r['created_at'],0,10) : ($r['quote_date'] ?: ''),
             'type'=>'Teklif','desc'=>(string)$r['quote_no'],'amount'=>(float)$r['total'],'sign'=>'','status'=>$r['status'],
-            'open_url'=>'teklif.php?id='.(int)$r['id'],'edit_url'=>null,'deletable'=>false,'source_url'=>null,'source_label'=>null];
+            'actions'=>[['label'=>'Aç','url'=>'teklif.php?id='.$qid]]];
     }
     return null;
 }
