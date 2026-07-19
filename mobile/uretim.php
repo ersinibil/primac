@@ -30,7 +30,7 @@ try{
     echo '<div style="display:flex;justify-content:space-between;gap:8px"><b>'.h($r['title']).'</b><span class="muted" style="font-size:12px">'.h($r['job_no']??'').'</span></div>';
     echo '<small class="muted">'.($r['customer']?ds_icon('user',12).' '.h($r['customer']).' · ':'').($r['responsible']?ds_icon('users',12).' '.h($r['responsible']):'').'</small>';
     if($t>0){
-      echo '<div style="height:9px;background:rgba(255,255,255,.1);border-radius:6px;overflow:hidden;margin:8px 0 4px"><div style="height:100%;width:'.$pct.'%;background:'.$col.'"></div></div>';
+      echo '<div style="height:9px;background:var(--df-surface-sunken,rgba(255,255,255,.1));border-radius:6px;overflow:hidden;margin:8px 0 4px"><div style="height:100%;width:'.$pct.'%;background:'.$col.'"></div></div>';
       echo '<small style="color:'.$col.';font-weight:700">'.$d.'/'.$t.' aşama · Şu an: '.h($cur).' (%'.$pct.')</small>';
     } else {
       echo '<div style="margin-top:6px"><small class="muted">Aşama tanımlı değil — işe girip oluştur</small></div>';

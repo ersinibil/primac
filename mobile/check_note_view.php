@@ -104,7 +104,7 @@ try{
 ?>
 <style>
 .df-cn-timeline{display:flex;flex-direction:column;gap:0}
-.df-cn-timeline-item{display:flex;gap:10px;padding:8px 0;border-left:2px solid rgba(255,255,255,.14);margin-left:5px;padding-left:14px;position:relative}
+.df-cn-timeline-item{display:flex;gap:10px;padding:8px 0;border-left:2px solid var(--df-hairline,rgba(255,255,255,.14));margin-left:5px;padding-left:14px;position:relative}
 .df-cn-timeline-item:last-child{border-left-color:transparent}
 .df-cn-timeline-dot{position:absolute;left:-6px;top:12px;width:10px;height:10px;border-radius:50%;background:#94a3b8}
 .df-cn-timeline-item--success .df-cn-timeline-dot{background:#16a34a}
@@ -140,7 +140,7 @@ try{
   </div>
 
   <?php if(in_array('tahsil',$actions,true)): ?>
-  <div id="cnCollectBox" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.1)">
+  <div id="cnCollectBox" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--df-hairline,rgba(255,255,255,.1))">
     <p class="small">Cari zaten kapandı — sadece seçilen hesaba gerçek hareket eklenir.</p>
     <form method="post">
       <input type="hidden" name="collect_cn" value="1">
@@ -156,7 +156,7 @@ try{
   <?php endif; ?>
 
   <?php if(in_array('ode',$actions,true)): ?>
-  <div id="cnPayBox" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.1)">
+  <div id="cnPayBox" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--df-hairline,rgba(255,255,255,.1))">
     <p class="small">Cari zaten kapandı — sadece seçilen hesaptan gerçek çıkış eklenir.</p>
     <form method="post">
       <input type="hidden" name="pay_cn" value="1">
@@ -172,7 +172,7 @@ try{
   <?php endif; ?>
 
   <?php if(in_array('ciro',$actions,true)): ?>
-  <div id="cnEndorseBox" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.1)">
+  <div id="cnEndorseBox" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--df-hairline,rgba(255,255,255,.1))">
     <p class="small">Kasa/banka hareketi oluşmaz — sadece seçilen tedarikçinin borcu kapanır.</p>
     <form method="post">
       <input type="hidden" name="endorse_cn" value="1">
@@ -188,7 +188,7 @@ try{
   <?php endif; ?>
 
   <?php if(in_array('karsiliksiz',$actions,true)): ?>
-  <div id="cnBounceBox" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.1)">
+  <div id="cnBounceBox" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--df-hairline,rgba(255,255,255,.1))">
     <p class="small" style="color:#f87171">Müşteri borcu YENİDEN AÇILACAK.</p>
     <form method="post" onsubmit="return confirm('Bu çek karşılıksız işaretlenecek ve müşteri borcu yeniden açılacak. Emin misiniz?')">
       <input type="hidden" name="bounce_cn" value="1">
@@ -200,7 +200,7 @@ try{
   <?php endif; ?>
 
   <?php if(in_array('reopen',$actions,true)): ?>
-  <div id="cnReopenBox" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.1)">
+  <div id="cnReopenBox" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--df-hairline,rgba(255,255,255,.1))">
     <p class="small"><?=$r['status']==='ciro_edildi'?'Ciro hareketi geri alınır, hedef tedarikçinin borcu yeniden açılır.':'Kasa/banka hareketi geri alınır, hesap bakiyesi düzeltilir.'?> Kayıt tekrar Portföyde/Bekliyor durumuna döner — cariye dokunulmaz.</p>
     <form method="post" onsubmit="return confirm('Bu işlem geri alınacak, kayıt tekrar Portföyde/Bekliyor durumuna dönecek. Emin misiniz?')">
       <input type="hidden" name="reopen_cn" value="1">
@@ -212,7 +212,7 @@ try{
   <?php endif; ?>
 
   <?php if(in_array('iptal',$actions,true)): ?>
-  <div id="cnCancelBox" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.1)">
+  <div id="cnCancelBox" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--df-hairline,rgba(255,255,255,.1))">
     <form method="post" onsubmit="return confirm('Bu kayıt iptal edilecek. Emin misiniz?')">
       <input type="hidden" name="cancel_cn" value="1">
       <label>Not <small class="muted">(opsiyonel)</small></label>
@@ -223,7 +223,7 @@ try{
   <?php endif; ?>
 
   <?php if(in_array('duzenle',$actions,true)): ?>
-  <div id="cnEditBox" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.1)">
+  <div id="cnEditBox" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--df-hairline,rgba(255,255,255,.1))">
     <form method="post" enctype="multipart/form-data">
       <input type="hidden" name="edit_cn" value="1">
       <label>Yön</label>

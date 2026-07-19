@@ -56,11 +56,11 @@ if($pid){
 <div class="df-panel">
   <b><?=ds_icon('user',16)?> Profil Bilgileri</b>
   <form method="post" style="margin-top:8px">
-    <label style="color:#94a3b8;font-size:12px">Ad Soyad</label>
+    <label style="color:var(--df-ink-500,#94a3b8);font-size:12px">Ad Soyad</label>
     <input name="full_name" value="<?=h($user['full_name'] ?? '')?>" placeholder="Ad Soyad">
-    <label style="color:#94a3b8;font-size:12px">Telefon</label>
+    <label style="color:var(--df-ink-500,#94a3b8);font-size:12px">Telefon</label>
     <input name="phone" type="tel" value="<?=h($user['phone'] ?? '')?>" placeholder="Telefon">
-    <label style="color:#94a3b8;font-size:12px">E-posta</label>
+    <label style="color:var(--df-ink-500,#94a3b8);font-size:12px">E-posta</label>
     <input name="email" type="email" value="<?=h($user['email'] ?? '')?>" placeholder="E-posta">
     <button class="df-btn df-btn--primary df-btn--lg" name="save_profile" value="1" style="width:100%"><?=ds_icon('check',16)?> Kaydet</button>
   </form>

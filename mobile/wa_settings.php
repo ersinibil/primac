@@ -55,22 +55,22 @@ topx('WhatsApp Ayarları');
       <span>WhatsApp Otomatik Gönderimi Aktif</span>
     </label>
 
-    <label style="color:#94a3b8;font-size:12px">Sağlayıcı</label>
+    <label style="color:var(--df-ink-500,#94a3b8);font-size:12px">Sağlayıcı</label>
     <select name="wa_provider" id="wa_provider" onchange="toggleProvider()">
         <option value="ultramsg" <?=($s_provider==='ultramsg'?'selected':'')?>>UltraMsg (önerilen)</option>
         <option value="custom"   <?=($s_provider==='custom'?'selected':'')?>>Özel / Custom Gateway</option>
     </select>
 
     <div id="row_instance">
-      <label style="color:#94a3b8;font-size:12px">Instance ID</label>
+      <label style="color:var(--df-ink-500,#94a3b8);font-size:12px">Instance ID</label>
       <input type="text" name="wa_instance" value="<?=h($s_instance)?>" placeholder="instance12345">
     </div>
 
-    <label style="color:#94a3b8;font-size:12px">Token / API Anahtarı</label>
+    <label style="color:var(--df-ink-500,#94a3b8);font-size:12px">Token / API Anahtarı</label>
     <input type="text" name="wa_token" value="<?=h($s_token)?>" placeholder="UltraMsg veya gateway token'ı">
 
     <div id="row_url" style="display:none">
-      <label style="color:#94a3b8;font-size:12px">Özel Gateway URL</label>
+      <label style="color:var(--df-ink-500,#94a3b8);font-size:12px">Özel Gateway URL</label>
       <input type="url" name="wa_url" value="<?=h($s_url)?>" placeholder="https://api.example.com/send">
     </div>
 
@@ -88,9 +88,9 @@ topx('WhatsApp Ayarları');
   <?php endif; ?>
   <form method="post" style="margin-top:10px">
     <input type="hidden" name="action" value="test">
-    <label style="color:#94a3b8;font-size:12px">Telefon Numarası</label>
+    <label style="color:var(--df-ink-500,#94a3b8);font-size:12px">Telefon Numarası</label>
     <input type="text" name="test_phone" placeholder="05321234567" value="<?=h($_POST['test_phone']??'')?>">
-    <label style="color:#94a3b8;font-size:12px">Mesaj</label>
+    <label style="color:var(--df-ink-500,#94a3b8);font-size:12px">Mesaj</label>
     <input type="text" name="test_text" value="<?=h($_POST['test_text']??((app_config()['app_name']??'OTS').' — WhatsApp test mesajı.'))?>">
     <button type="submit" class="df-btn df-btn--primary" style="width:100%;margin-top:8px"><?=ds_icon('send',16)?> Gönder</button>
   </form>

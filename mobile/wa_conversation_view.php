@@ -153,9 +153,9 @@ $lastMsgId = $messages ? (int)end($messages)['id'] : 0;
 .bubble{max-width:80%;padding:10px 13px;border-radius:18px;font-size:15px;line-height:1.35;word-wrap:break-word;white-space:pre-wrap}
 .bubble small{display:block;font-size:10px;opacity:.6;margin-top:3px;text-align:right}
 .bubble.mine{align-self:flex-end;background:#2563eb;color:#fff;border-bottom-right-radius:5px}
-.bubble.theirs{align-self:flex-start;background:rgba(255,255,255,.12);border-bottom-left-radius:5px}
+.bubble.theirs{align-self:flex-start;background:var(--df-surface-sunken,rgba(255,255,255,.12));color:var(--df-ink-900,#fff);border-bottom-left-radius:5px}
 .thread{display:flex;flex-direction:column;gap:8px}
-.composer{position:static;flex:0 0 auto;background:#071326;border-top:1px solid rgba(255,255,255,.12);padding:8px 8px calc(8px + env(safe-area-inset-bottom));z-index:1001}
+.composer{position:static;flex:0 0 auto;background:var(--df-canvas,#071326);border-top:1px solid var(--df-hairline,rgba(255,255,255,.12));padding:8px 8px calc(8px + env(safe-area-inset-bottom));z-index:1001}
 .composer .wrap{max-width:520px;margin:auto;display:flex;gap:8px;align-items:flex-end}
 .composer textarea{flex:1;margin:0;resize:none;max-height:100px}
 .composer button.send{flex:0 0 auto;width:50px;height:46px;border-radius:14px;font-size:18px}

@@ -72,7 +72,7 @@ try{
       <div style="font-size:26px;font-weight:900;color:<?=$krit?'#f87171':'#22c55e'?>"><?=h(rtrim(rtrim(number_format($p['quantity'],2,',','.'),'0'),','))?> <?=h($p['unit']??'')?></div>
       <?php if($krit): ?><small style="color:#f87171"><?=ds_icon('info',12)?> Kritik (≤<?=h($p['critical_level'])?>)</small><?php endif; ?>
     </div>
-    <div style="flex:1;min-width:120px;background:rgba(255,255,255,.06);border-radius:14px;padding:12px">
+    <div style="flex:1;min-width:120px;background:var(--df-surface-sunken,rgba(255,255,255,.06));border-radius:14px;padding:12px">
       <div class="muted" style="font-size:12px">Satış / Alış</div>
       <div style="font-weight:900;font-size:16px"><?=mm($p['sale_price']??0)?></div>
       <small class="muted"><?=mm($p['purchase_price']??0)?> alış</small>
@@ -139,7 +139,7 @@ try{
   <?php if(!$__cpaUsageM): ?>
   <p class="muted" style="margin:0">Tanımlı müşteri-tedarikçi tercihi yok.</p>
   <?php else: foreach($__cpaUsageM as $cu): ?>
-  <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-top:1px solid rgba(255,255,255,.08)">
+  <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-top:1px solid var(--df-hairline,rgba(255,255,255,.08))">
     <div><a href="contact_view.php?id=<?=(int)$cu['customer_id']?>"><?=h($cu['customer_name']?:'#'.$cu['customer_id'])?></a> → <?=h($cu['supplier_name']?:'#'.$cu['supplier_id'])?>
       <br><small class="muted">Öncelik <?=(int)$cu['priority']?><?=$cu['is_default']?' · Varsayılan':''?></small></div>
     <?=ds_badge($cu['status'])?>
@@ -163,7 +163,7 @@ try{
   <?php if(!$__allocUsageM): ?>
   <p class="muted" style="margin:0">Bu ürün için henüz müşteriye ayrılmamış.</p>
   <?php else: foreach($__allocUsageM as $au): $__remU=(float)$au['allocated_qty']-(float)$au['consumed_qty']; ?>
-  <div style="padding:8px 0;border-top:1px solid rgba(255,255,255,.08)">
+  <div style="padding:8px 0;border-top:1px solid var(--df-hairline,rgba(255,255,255,.08))">
     <div style="display:flex;justify-content:space-between;align-items:center">
       <div><a href="contact_view.php?id=<?=(int)$au['customer_id']?>"><?=h($au['customer_name']?:'#'.$au['customer_id'])?></a>
         <br><small class="muted">Ayrılan <?=stock_qty_fmt($au['allocated_qty'])?> · Kalan <?=stock_qty_fmt($__remU)?></small></div>
@@ -189,7 +189,7 @@ try{
   $mv=$pdo->prepare("SELECT * FROM stock_movements WHERE stock_item_id=? ORDER BY id DESC LIMIT 50"); $mv->execute([$id]); $rows=$mv->fetchAll();
   if(!$rows) ds_empty_state('Henüz hareket yok.');
   foreach($rows as $m): $in=$m['direction']==='in'; ?>
-    <div class="df-list-row-meta" style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-top:1px solid rgba(255,255,255,.08)">
+    <div class="df-list-row-meta" style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-top:1px solid var(--df-hairline,rgba(255,255,255,.08))">
       <div><b style="color:<?=$in?'#22c55e':'#f87171'?>"><?=$in?'📥 Giriş':'📤 Çıkış'?> <?=h(rtrim(rtrim(number_format($m['quantity'],2,',','.'),'0'),','))?></b>
         <?=$m['reason']?'<br><small class="muted">'.h($m['reason']).'</small>':''?></div>
       <small class="muted"><?=h(date('d.m.Y H:i',strtotime($m['created_at'])))?></small>

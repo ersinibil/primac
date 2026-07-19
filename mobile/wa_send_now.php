@@ -60,10 +60,10 @@ ic_tabs('whatsapp');
 <div class="df-panel">
 <form method="post" enctype="multipart/form-data" onsubmit="return waConfirmSubmit()">
     <div style="display:flex;justify-content:space-between;align-items:center">
-        <label style="color:#94a3b8;font-size:12px;margin:0">Personel</label>
+        <label style="color:var(--df-ink-500,#94a3b8);font-size:12px;margin:0">Personel</label>
         <button type="button" class="df-btn df-btn--secondary df-btn--sm" onclick="waToggleAll('wa-bp',this)">Tümünü Kaldır</button>
     </div>
-    <div style="max-height:160px;overflow:auto;border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:8px;margin:6px 0 10px">
+    <div style="max-height:160px;overflow:auto;border:1px solid var(--df-hairline,rgba(255,255,255,.12));border-radius:10px;padding:8px;margin:6px 0 10px">
         <?php foreach($personnel as $p): ?>
         <label style="display:flex;align-items:center;gap:8px;padding:4px 0;margin:0">
             <input type="checkbox" class="wa-bp" name="bulk_personnel[]" value="<?=h($p['phone'])?>" checked style="width:auto">
@@ -74,10 +74,10 @@ ic_tabs('whatsapp');
     </div>
 
     <div style="display:flex;justify-content:space-between;align-items:center">
-        <label style="color:#94a3b8;font-size:12px;margin:0">Cari</label>
+        <label style="color:var(--df-ink-500,#94a3b8);font-size:12px;margin:0">Cari</label>
         <button type="button" class="df-btn df-btn--secondary df-btn--sm" onclick="waToggleAll('wa-bc',this)">Tümünü Kaldır</button>
     </div>
-    <div style="max-height:160px;overflow:auto;border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:8px;margin-top:6px">
+    <div style="max-height:160px;overflow:auto;border:1px solid var(--df-hairline,rgba(255,255,255,.12));border-radius:10px;padding:8px;margin-top:6px">
         <?php foreach($contacts as $c): ?>
         <label style="display:flex;align-items:center;gap:8px;padding:4px 0;margin:0">
             <input type="checkbox" class="wa-bc" name="bulk_contacts[]" value="<?=h($c['phone'])?>" checked style="width:auto">
@@ -87,7 +87,7 @@ ic_tabs('whatsapp');
         <?php if(!$contacts): ?><p class="muted" style="margin:4px 0">Telefonlu cari yok.</p><?php endif; ?>
     </div>
 
-    <label style="color:#94a3b8;font-size:12px">Mesaj</label>
+    <label style="color:var(--df-ink-500,#94a3b8);font-size:12px">Mesaj</label>
     <textarea id="waMsg" name="message" rows="5" placeholder="Mesajınızı yazın…"><?=h($_POST['message'] ?? '')?></textarea>
 
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px">

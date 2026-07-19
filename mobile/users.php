@@ -169,7 +169,7 @@ topx('Kullanıcılar & Yetkiler');
 <?php if(!empty($res['details'])): ?>
 <div style="font-size:12px;max-height:200px;overflow-y:auto">
 <?php foreach($res['details'] as $d): ?>
-<div style="display:flex;justify-content:space-between;align-items:center;padding:8px;border-bottom:1px solid rgba(255,255,255,.1)">
+<div style="display:flex;justify-content:space-between;align-items:center;padding:8px;border-bottom:1px solid var(--df-hairline,rgba(255,255,255,.1))">
     <div><?=h($d['name'])?></div>
     <div style="background:<?=$d['ok']?'rgba(22,163,74,.3)':'rgba(239,68,68,.3)'?>;color:<?=$d['ok']?'#86efac':'#fca5a5'?>;border-radius:6px;padding:3px 8px;font-size:11px">
     <?=$d['ok']?'✓':'✗'?> <?=h($d['status'])?>
@@ -197,9 +197,9 @@ topx('Kullanıcılar & Yetkiler');
     </label>
     </div>
 
-    <div style="max-height:180px;overflow-y:auto;border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:8px;margin-bottom:10px">
+    <div style="max-height:180px;overflow-y:auto;border:1px solid var(--df-hairline,rgba(255,255,255,.12));border-radius:12px;padding:8px;margin-bottom:10px">
     <?php foreach($users as $u): if(!($u['active'] ?? true)) continue; ?>
-    <label style="display:flex;align-items:center;gap:8px;padding:8px;margin:4px 0;background:rgba(255,255,255,.05);border-radius:10px;font-size:12px">
+    <label style="display:flex;align-items:center;gap:8px;padding:8px;margin:4px 0;background:var(--df-surface-sunken,rgba(255,255,255,.05));border-radius:10px;font-size:12px">
       <input type="checkbox" name="selected_users[]" value="<?=$u['id']?>" style="width:auto">
       <span><?=h($u['full_name'] ?: $u['username'])?></span>
       <?php if(!($u['phone'] ?? '')): ?><span style="color:#ef4444;font-size:10px;margin-left:auto">Telefon yok</span><?php endif; ?>
@@ -219,21 +219,21 @@ topx('Kullanıcılar & Yetkiler');
 <details class="df-panel">
   <summary style="font-weight:900;cursor:pointer"><?=ds_icon('plus',16)?> Yeni Kullanıcı</summary>
   <form method="post" style="margin-top:10px">
-    <label style="color:#94a3b8;font-size:12px">Kullanıcı Adı</label>
+    <label style="color:var(--df-ink-500,#94a3b8);font-size:12px">Kullanıcı Adı</label>
     <input name="username" required placeholder="kullanici_adi">
-    <label style="color:#94a3b8;font-size:12px">Ad Soyad</label>
+    <label style="color:var(--df-ink-500,#94a3b8);font-size:12px">Ad Soyad</label>
     <input name="full_name" placeholder="Ad Soyad">
-    <label style="color:#94a3b8;font-size:12px">Şifre</label>
+    <label style="color:var(--df-ink-500,#94a3b8);font-size:12px">Şifre</label>
     <input type="password" name="password" minlength="6" required placeholder="En az 6 karakter">
-    <label style="color:#94a3b8;font-size:12px">Rol</label>
+    <label style="color:var(--df-ink-500,#94a3b8);font-size:12px">Rol</label>
     <select name="role">
       <option value="personel">Personel</option>
       <option value="yonetici">Yönetici</option>
       <option value="admin">Admin</option>
     </select>
-    <div style="margin:8px 0 4px;font-size:13px;color:#94a3b8">Yetkiler</div>
+    <div style="margin:8px 0 4px;font-size:13px;color:var(--df-ink-500,#94a3b8)">Yetkiler</div>
     <?php foreach($permLabels as $k=>$v): if($k==='users') continue; ?>
-    <label style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.06);border-radius:10px;padding:8px;margin:4px 0">
+    <label style="display:flex;align-items:center;gap:8px;background:var(--df-surface-sunken,rgba(255,255,255,.06));border-radius:10px;padding:8px;margin:4px 0">
       <input type="checkbox" name="permissions[]" value="<?=h($k)?>" style="width:auto">
       <?=h($v)?>
     </label>
@@ -253,16 +253,16 @@ topx('Kullanıcılar & Yetkiler');
     <div>
       <b><?=h($u['full_name'] ?: $u['username'])?></b>
       <?php if($isMe): ?><span class="df-badge df-badge--info" style="margin-left:4px">Sen</span><?php endif; ?>
-      <div style="font-size:12px;color:#94a3b8"><?=h($u['username'])?> · <?=h($u['pname'] ?? 'Personel bağlı değil')?></div>
+      <div style="font-size:12px;color:var(--df-ink-500,#94a3b8)"><?=h($u['username'])?> · <?=h($u['pname'] ?? 'Personel bağlı değil')?></div>
     </div>
     <span class="df-badge df-badge--<?=$roleTone?>"><?=h($u['role'])?></span>
   </div>
 
   <details>
-    <summary style="font-size:13px;color:#94a3b8;cursor:pointer"><?=ds_icon('settings',14)?> Yetki & Rol Düzenle</summary>
+    <summary style="font-size:13px;color:var(--df-ink-500,#94a3b8);cursor:pointer"><?=ds_icon('settings',14)?> Yetki & Rol Düzenle</summary>
     <form method="post" style="margin-top:10px">
       <input type="hidden" name="uid" value="<?=(int)$u['id']?>">
-      <label style="color:#94a3b8;font-size:12px">Rol</label>
+      <label style="color:var(--df-ink-500,#94a3b8);font-size:12px">Rol</label>
       <select name="role">
         <?php foreach(['personel','yonetici','admin'] as $r): ?>
         <option value="<?=$r?>" <?=$u['role']===$r?'selected':''?>><?=ucfirst($r)?></option>
@@ -273,7 +273,7 @@ topx('Kullanıcılar & Yetkiler');
         Aktif
       </label>
       <?php foreach($permLabels as $k=>$v): if($k==='users') continue; ?>
-      <label style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.06);border-radius:10px;padding:8px;margin:4px 0;font-size:13px">
+      <label style="display:flex;align-items:center;gap:8px;background:var(--df-surface-sunken,rgba(255,255,255,.06));border-radius:10px;padding:8px;margin:4px 0;font-size:13px">
         <input type="checkbox" name="permissions[]" value="<?=h($k)?>" <?=in_array($k,$perms,true)?'checked':''?> style="width:auto">
         <?=h($v)?>
       </label>

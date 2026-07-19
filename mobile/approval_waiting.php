@@ -4,7 +4,7 @@ require_once 'common.php';
 topx('Müşteri Onayı');
 ?>
 <div class="df-panel" style="padding:10px 12px 8px">
-  <div style="color:#94a3b8;font-size:13px">Müşteri onayı bekleyen dosyalar — <b style="color:#fbbf24">Müşteri Onayı Bekliyor</b> durumundaki kayıtlar listeleniyor.</div>
+  <div style="color:var(--df-ink-500,#94a3b8);font-size:13px">Müşteri onayı bekleyen dosyalar — <b style="color:#fbbf24">Müşteri Onayı Bekliyor</b> durumundaki kayıtlar listeleniyor.</div>
 </div>
 <?php
 try {
@@ -24,7 +24,7 @@ try {
         $tarih = h(substr($r['created_at'] ?? '', 0, 10));
         echo '<div class="df-panel" style="padding:13px">';
         // Başlık satırı: iş no + başlık
-        echo '<a href="job_view.php?id=' . (int)$r['job_id'] . '" style="text-decoration:none;color:#fff;display:block;margin-bottom:6px">';
+        echo '<a href="job_view.php?id=' . (int)$r['job_id'] . '" style="text-decoration:none;color:var(--df-ink-900,#fff);display:block;margin-bottom:6px">';
         echo '<b>' . h($r['job_title'] ?? '') . '</b>';
         echo '<small class="muted" style="display:block;margin-top:2px">';
         echo ds_icon('briefcase',13) . ' ' . h($r['job_no'] ?? '');
@@ -32,10 +32,10 @@ try {
         echo '</small>';
         echo '</a>';
         // Dosya bilgisi
-        echo '<div style="background:rgba(255,255,255,.07);border-radius:12px;padding:10px;margin-bottom:10px">';
-        echo '<div style="font-size:13px;color:#e2e8f0">' . ds_icon('box',14) . ' ' . h($r['original_name'] ?? '') . '</div>';
+        echo '<div style="background:var(--df-surface-sunken,rgba(255,255,255,.07));border-radius:12px;padding:10px;margin-bottom:10px">';
+        echo '<div style="font-size:13px;color:var(--df-ink-900,#e2e8f0)">' . ds_icon('box',14) . ' ' . h($r['original_name'] ?? '') . '</div>';
         if (!empty($r['file_type'])) {
-            echo '<div style="font-size:12px;color:#94a3b8;margin-top:3px">Tür: ' . h($r['file_type']) . '</div>';
+            echo '<div style="font-size:12px;color:var(--df-ink-500,#94a3b8);margin-top:3px">Tür: ' . h($r['file_type']) . '</div>';
         }
         echo '</div>';
         // Durum rozeti + müşteri linki

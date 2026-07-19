@@ -42,7 +42,7 @@ try{
     echo '<div style="flex:1;min-width:0"><b>'.$medal.' '.h($r['name']).'</b><br><small class="muted">'.h($r['role']?:'Personel').'</small></div>';
     echo '</div>';
     // puan barı
-    echo '<div style="height:8px;background:rgba(255,255,255,.1);border-radius:6px;margin:10px 0;overflow:hidden"><div style="height:100%;width:'.$sc.'%;background:'.$col.'"></div></div>';
+    echo '<div style="height:8px;background:var(--df-surface-sunken,rgba(255,255,255,.1));border-radius:6px;margin:10px 0;overflow:hidden"><div style="height:100%;width:'.$sc.'%;background:'.$col.'"></div></div>';
     echo '<div class="df-list-row-meta">';
     echo '<span class="df-badge df-badge--info">'.ds_icon('briefcase',12).' İş: <b>'.$r['is_top'].'</b></span>';
     echo '<span class="df-badge df-badge--success">'.ds_icon('check',12).' Tamam: <b>'.$r['is_tamam'].'</b></span>';

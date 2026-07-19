@@ -137,21 +137,21 @@ topx('Muhasebe');
 <details class="df-panel" style="margin-top:12px">
   <summary style="font-weight:900;cursor:pointer"><?=ds_icon('plus',14)?> Yeni Kayıt</summary>
   <form method="post" style="margin-top:10px">
-    <label style="color:#94a3b8;font-size:12px">Tür</label>
+    <label style="color:var(--df-ink-500,#94a3b8);font-size:12px">Tür</label>
     <select name="type" id="mtype" onchange="mToggleWizard()">
       <option value="gider">📉 Gider</option>
       <option value="gelir">📈 Gelir</option>
     </select>
     <div id="mWizardBox">
-    <label style="color:#94a3b8;font-size:12px">Ne kaydediyorsun?</label>
+    <label style="color:var(--df-ink-500,#94a3b8);font-size:12px">Ne kaydediyorsun?</label>
     <select name="record_step" id="mStep" onchange="mApplyStep()">
       <?php foreach(finance_record_type_options() as $key=>$o): ?><option value="<?=$key?>"><?=$o['icon']?> <?=h($o['label'])?></option><?php endforeach; ?>
     </select>
     </div>
-    <label style="color:#94a3b8;font-size:12px">Tarih</label>
+    <label style="color:var(--df-ink-500,#94a3b8);font-size:12px">Tarih</label>
     <input type="date" name="entry_date" value="<?=date('Y-m-d')?>">
     <div id="mCatBox">
-    <label style="color:#94a3b8;font-size:12px">Kategori</label>
+    <label style="color:var(--df-ink-500,#94a3b8);font-size:12px">Kategori</label>
     <select name="category_id" id="mcats">
       <option value="">— Seç —</option>
       <?php foreach($gelirCats as $c): ?>
@@ -159,16 +159,16 @@ topx('Muhasebe');
       <?php endforeach; ?>
     </select>
     </div>
-    <label style="color:#94a3b8;font-size:12px">Tutar (₺)</label>
+    <label style="color:var(--df-ink-500,#94a3b8);font-size:12px">Tutar (₺)</label>
     <input type="number" step="0.01" min="0.01" name="amount" id="mAmt" required placeholder="0,00" oninput="mCalcVat()">
-    <label style="color:#94a3b8;font-size:12px">KDV Durumu</label>
+    <label style="color:var(--df-ink-500,#94a3b8);font-size:12px">KDV Durumu</label>
     <select name="vat_mode" id="mVatMode" onchange="mToggleVat()">
       <option value="yok">KDV Yok / Belirtilmedi</option>
       <option value="dahil">KDV Dahil (girilen tutar toplam)</option>
       <option value="haric">KDV Hariç (girilen tutar KDV'siz taban)</option>
     </select>
     <div id="mVatRateWrap" style="display:none">
-      <label style="color:#94a3b8;font-size:12px">KDV Oranı</label>
+      <label style="color:var(--df-ink-500,#94a3b8);font-size:12px">KDV Oranı</label>
       <select name="vat_rate" id="mVatRate" onchange="mCalcVat()">
         <?php foreach(acc_vat_rates() as $vr): ?>
         <option value="<?=$vr?>" <?=$vr===20?'selected':''?>>%<?=$vr?></option>
@@ -176,22 +176,22 @@ topx('Muhasebe');
       </select>
       <div id="mVatPreview" class="small" style="margin:-6px 0 10px"></div>
     </div>
-    <label style="color:#94a3b8;font-size:12px">Açıklama</label>
+    <label style="color:var(--df-ink-500,#94a3b8);font-size:12px">Açıklama</label>
     <input name="description" id="mDesc" placeholder="İsteğe bağlı">
-    <label style="color:#94a3b8;font-size:12px">Hesap</label>
+    <label style="color:var(--df-ink-500,#94a3b8);font-size:12px">Hesap</label>
     <select name="account_id">
       <option value="">— Seçme —</option>
       <?php foreach($accounts as $a): ?><option value="<?=(int)$a['id']?>"><?=h($a['name'])?></option><?php endforeach; ?>
     </select>
     <div id="mContactBox" style="display:none">
-    <label style="color:#94a3b8;font-size:12px">Cari</label>
+    <label style="color:var(--df-ink-500,#94a3b8);font-size:12px">Cari</label>
     <select name="contact_id">
       <option value="">— Cari seçilmedi —</option>
       <?php foreach($contacts as $c): ?><option value="<?=(int)$c['id']?>"><?=h($c['name'])?></option><?php endforeach; ?>
     </select>
     </div>
     <div id="mPersBox" style="display:none">
-    <label style="color:#94a3b8;font-size:12px">Personel</label>
+    <label style="color:var(--df-ink-500,#94a3b8);font-size:12px">Personel</label>
     <select name="personnel_id">
       <option value="">— Yok —</option>
       <?php foreach($personnel as $p): ?><option value="<?=(int)$p['id']?>"><?=h($p['name'])?></option><?php endforeach; ?>
@@ -200,7 +200,7 @@ topx('Muhasebe');
     <!-- GİDER TÜRÜ CONTEXT-AWARE (2026-07-04): önceden sadece sabit bir liste sunan bu alan artık
          TÜM adımlara özel (finance_expense_type_options()), mApplyStep() ile yeniden kurulur. -->
     <div id="mTurBox" style="display:none">
-    <label style="color:#94a3b8;font-size:12px">Gider Türü</label>
+    <label style="color:var(--df-ink-500,#94a3b8);font-size:12px">Gider Türü</label>
     <select name="payment_type" id="mTurSel">
       <option value="">— Seç —</option>
     </select>
@@ -319,7 +319,7 @@ function mApplyStepEdit(id){
     <summary style="padding:10px;cursor:pointer;font-weight:900;display:flex;justify-content:space-between;align-items:center">
       <div>
         <b style="font-size:14px"><?=h($e['cat_name'] ?: 'Kategorisiz')?></b>
-        <div style="font-size:11px;color:#94a3b8;margin-top:2px">
+        <div style="font-size:11px;color:var(--df-ink-500,#94a3b8);margin-top:2px">
           <?=h(date('d.m.Y',strtotime($e['entry_date'])))?>
           <?php if($e['contact_name']): ?> · 🤝 <?=h($e['contact_name'])?><?php endif; ?>
           <?php if($e['pers_name']): ?> · <?=h($e['pers_name'])?><?php endif; ?>
@@ -334,26 +334,26 @@ function mApplyStepEdit(id){
     </summary>
     <?php if($e['description']): ?><div style="font-size:12px;color:#cbd5e1;padding:0 10px;margin-bottom:6px"><?=h($e['description'])?></div><?php endif; ?>
     <?php if(can_edit_delete()): ?>
-    <details style="margin:8px 10px 0;padding:8px 0;border-top:1px solid rgba(255,255,255,.08)">
+    <details style="margin:8px 10px 0;padding:8px 0;border-top:1px solid var(--df-hairline,rgba(255,255,255,.08))">
       <summary style="cursor:pointer;font-weight:900;color:var(--df-success-ink)"><?=ds_icon('edit',14)?> Düzenle</summary>
       <form method="post" style="margin-top:10px">
         <input type="hidden" name="id" value="<?=(int)$e['id']?>">
-        <label style="color:#94a3b8;font-size:12px">Tür</label>
+        <label style="color:var(--df-ink-500,#94a3b8);font-size:12px">Tür</label>
         <select name="type" id="medit<?=(int)$e['id']?>" onchange="mToggleWizardEdit(<?=(int)$e['id']?>)">
           <option value="gider" <?=$e['type']==='gider'?'selected':''?>>📉 Gider</option>
           <option value="gelir" <?=$e['type']==='gelir'?'selected':''?>>📈 Gelir</option>
         </select>
         <?php $eStep=finance_record_type_info($e, $e['group_name']??null, $e['account_type']??null); ?>
         <div id="meditWizardBox<?=(int)$e['id']?>" style="<?=$ig?'':'display:none'?>">
-        <label style="color:#94a3b8;font-size:12px">Ne kaydediyorsun?</label>
+        <label style="color:var(--df-ink-500,#94a3b8);font-size:12px">Ne kaydediyorsun?</label>
         <select name="record_step" id="meditStep<?=(int)$e['id']?>" onchange="mApplyStepEdit(<?=(int)$e['id']?>)">
           <?php foreach(finance_record_type_options() as $key=>$o): ?><option value="<?=$key?>" <?=$eStep===$key?'selected':''?>><?=$o['icon']?> <?=h($o['label'])?></option><?php endforeach; ?>
         </select>
         </div>
-        <label style="color:#94a3b8;font-size:12px">Tarih</label>
+        <label style="color:var(--df-ink-500,#94a3b8);font-size:12px">Tarih</label>
         <input type="date" name="entry_date" value="<?=h($e['entry_date'])?>">
         <div id="meditCatBox<?=(int)$e['id']?>" style="<?=$ig?'display:none':''?>">
-        <label style="color:#94a3b8;font-size:12px">Kategori</label>
+        <label style="color:var(--df-ink-500,#94a3b8);font-size:12px">Kategori</label>
         <select name="category_id" id="meditcats<?=(int)$e['id']?>">
           <option value="">— Seç —</option>
           <?php foreach($gelirCats as $c): ?>
@@ -361,38 +361,38 @@ function mApplyStepEdit(id){
           <?php endforeach; ?>
         </select>
         </div>
-        <label style="color:#94a3b8;font-size:12px">Tutar (₺)</label>
+        <label style="color:var(--df-ink-500,#94a3b8);font-size:12px">Tutar (₺)</label>
         <input type="number" step="0.01" min="0.01" name="amount" required value="<?=h(str_replace('.',',',$e['amount']))?>">
-        <label style="color:#94a3b8;font-size:12px">KDV Durumu</label>
+        <label style="color:var(--df-ink-500,#94a3b8);font-size:12px">KDV Durumu</label>
         <select name="vat_mode" id="meditVatMode<?=(int)$e['id']?>" onchange="mToggleVatEdit(<?=(int)$e['id']?>)">
           <option value="yok" <?=($e['vat_mode']??'yok')==='yok'?'selected':''?>>KDV Yok / Belirtilmedi</option>
           <option value="dahil" <?=($e['vat_mode']??'')==='dahil'?'selected':''?>>KDV Dahil</option>
           <option value="haric" <?=($e['vat_mode']??'')==='haric'?'selected':''?>>KDV Hariç</option>
         </select>
         <div id="meditVatRateWrap<?=(int)$e['id']?>" style="display:<?=in_array($e['vat_mode']??'yok',['dahil','haric'],true)?'block':'none'?>">
-          <label style="color:#94a3b8;font-size:12px">KDV Oranı</label>
+          <label style="color:var(--df-ink-500,#94a3b8);font-size:12px">KDV Oranı</label>
           <select name="vat_rate">
             <?php foreach(acc_vat_rates() as $vr): ?>
             <option value="<?=$vr?>" <?=(int)($e['vat_rate']??20)===$vr?'selected':''?>>%<?=$vr?></option>
             <?php endforeach; ?>
           </select>
         </div>
-        <label style="color:#94a3b8;font-size:12px">Açıklama</label>
+        <label style="color:var(--df-ink-500,#94a3b8);font-size:12px">Açıklama</label>
         <input name="description" id="meditDesc<?=(int)$e['id']?>" value="<?=h($e['description'] ?? '')?>">
-        <label style="color:#94a3b8;font-size:12px">Hesap</label>
+        <label style="color:var(--df-ink-500,#94a3b8);font-size:12px">Hesap</label>
         <select name="account_id">
           <option value="">— Seçme —</option>
           <?php foreach($accounts as $a): ?><option value="<?=(int)$a['id']?>" <?=$e['account_id']==$a['id']?'selected':''?>><?=h($a['name'])?></option><?php endforeach; ?>
         </select>
         <div id="meditContactBox<?=(int)$e['id']?>" style="<?=($ig && $eStep!=='cari')?'display:none':''?>">
-        <label style="color:#94a3b8;font-size:12px">Cari</label>
+        <label style="color:var(--df-ink-500,#94a3b8);font-size:12px">Cari</label>
         <select name="contact_id">
           <option value="">— Cari seçilmedi —</option>
           <?php foreach($contacts as $c): ?><option value="<?=(int)$c['id']?>" <?=$e['contact_id']==$c['id']?'selected':''?>><?=h($c['name'])?></option><?php endforeach; ?>
         </select>
         </div>
         <div id="meditPersBox<?=(int)$e['id']?>" style="<?=($ig && $eStep!=='personel')?'display:none':''?>">
-        <label style="color:#94a3b8;font-size:12px">Personel</label>
+        <label style="color:var(--df-ink-500,#94a3b8);font-size:12px">Personel</label>
         <select name="personnel_id">
           <option value="">— Yok —</option>
           <?php foreach($personnel as $p): ?><option value="<?=(int)$p['id']?>" <?=$e['personnel_id']==$p['id']?'selected':''?>><?=h($p['name'])?></option><?php endforeach; ?>
@@ -401,7 +401,7 @@ function mApplyStepEdit(id){
         <!-- GİDER TÜRÜ CONTEXT-AWARE (2026-07-04): payment_type-bağlı "Gider Türü" — seçenekleri
              mApplyStepEdit() ile adıma özel yeniden oluşturulur. -->
         <div id="meditTurBox<?=(int)$e['id']?>" style="<?=$ig?'':'display:none'?>">
-        <label style="color:#94a3b8;font-size:12px">Gider Türü</label>
+        <label style="color:var(--df-ink-500,#94a3b8);font-size:12px">Gider Türü</label>
         <select name="payment_type" id="meditTurSel<?=(int)$e['id']?>" data-current="<?=h($e['payment_type'] ?? '')?>">
           <option value="">— Seç —</option>
         </select>

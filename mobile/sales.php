@@ -239,7 +239,7 @@ if(!$stockShortage && !$editMode && !empty($_GET['stock_item_id'])){
   <div class="df-panel" style="background:rgba(37,99,235,.18);margin:14px 0">
     <div style="display:flex;justify-content:space-between;padding:2px 0"><small class="muted">Ara Toplam</small><b id="salesSubtotal">0,00 ₺</b></div>
     <div style="display:flex;justify-content:space-between;padding:2px 0"><small class="muted">KDV</small><b id="salesVat">0,00 ₺</b></div>
-    <div style="display:flex;justify-content:space-between;padding:6px 0 0;border-top:1px solid rgba(255,255,255,.15);margin-top:4px">
+    <div style="display:flex;justify-content:space-between;padding:6px 0 0;border-top:1px solid var(--df-hairline,rgba(255,255,255,.15));margin-top:4px">
       <span style="font-weight:800">Genel Toplam</span><span id="tot" style="font-size:24px;font-weight:900">0,00 ₺</span>
     </div>
   </div>
