@@ -265,6 +265,78 @@ function personnel_handle_cv_upload(){
     return 'uploads/personnel_cv/'.$stored;
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════════════════════
+ * PERSONEL / OTS HESABI — ORPHAN EŞLEŞTİRME (2026-07-19, pilot öncesi kapanış, Product Owner kararı)
+ * ═══════════════════════════════════════════════════════════════════════════════════════════
+ * Gerçek kullanıcı bulgusu: bir OTS hesabı (app_users) personele bağlanmadan (personnel_id NULL)
+ * açılabiliyordu; sonradan aynı kişi için personel kaydı oluşturulduğunda ikisi arasında OTOMATİK
+ * bir bağ kurulmuyordu — iki ayrı, birbirinden habersiz kayıt kalıyordu. Bu bölüm iki güvenli
+ * mekanizma sağlar: (1) olası orphan eşleşmeleri BULUP kullanıcıya göstermek (sessiz otomatik
+ * eşleştirme YAPILMAZ, admin onayı şart), (2) admin onayladığında GÜVENLİ şekilde bağlamak
+ * (çift-bağ koruması personnel_create_login() ile AYNI mantık, iki yöne de senkron yazar).
+ */
+
+// Personnel_id'si NULL olan (orphan) app_users satırlarından, verilen username/telefon/e-posta/isim
+// ile eşleşenleri döner — TAM eşleşme (case-insensitive telefon/e-posta/kullanıcı adı, isim de dahil).
+// Sadece BULMA amaçlı, hiçbir şeyi değiştirmez.
+function personnel_find_orphan_matches($pdo, $username='', $phone='', $email='', $fullName=''){
+    $username=trim($username); $phone=trim($phone); $email=trim($email); $fullName=trim($fullName);
+    $where=[]; $params=[];
+    if($username!==''){ $where[]='username=?'; $params[]=$username; }
+    if($phone!==''){ $where[]='phone=?'; $params[]=$phone; }
+    if($email!==''){ $where[]='email=?'; $params[]=$email; }
+    if($fullName!==''){ $where[]='full_name=?'; $params[]=$fullName; }
+    if(!$where) return [];
+    $sql="SELECT id,username,full_name,phone,email,role,active FROM app_users WHERE personnel_id IS NULL AND (".implode(' OR ',$where).") ORDER BY id";
+    $s=$pdo->prepare($sql);
+    $s->execute($params);
+    return $s->fetchAll();
+}
+
+/**
+ * Var olan (orphan veya zaten bu personele bağlı) bir OTS hesabını bir personele GÜVENLİ şekilde
+ * bağlar — personnel_create_login()'daki AYNI çift-bağ koruması: personel zaten BAŞKA bir hesaba
+ * bağlıysa reddeder, hesap zaten BAŞKA bir personele bağlıysa reddeder. İki yöne de yazar
+ * (personnel.user_id + app_users.personnel_id) — tek yönlü senkronsuzluk (bu turun kök bulgusu)
+ * bir daha üretilmesin diye.
+ * @throws Exception personel zaten bağlı / hesap zaten başka personele bağlı / kayıt yok
+ */
+function personnel_link_account($pdo, $personnelId, $userId, $adminUserId=null){
+    $personnelId=(int)$personnelId; $userId=(int)$userId;
+    $pr=$pdo->prepare("SELECT id,user_id FROM personnel WHERE id=?"); $pr->execute([$personnelId]); $prow=$pr->fetch();
+    if(!$prow) throw new Exception('Personel bulunamadı.');
+    $ur=$pdo->prepare("SELECT id,personnel_id FROM app_users WHERE id=?"); $ur->execute([$userId]); $urow=$ur->fetch();
+    if(!$urow) throw new Exception('Hesap bulunamadı.');
+
+    if(!empty($urow['personnel_id']) && (int)$urow['personnel_id']!==$personnelId){
+        throw new Exception('Bu hesap zaten başka bir personele bağlı.');
+    }
+    if(!empty($prow['user_id']) && (int)$prow['user_id']!==$userId){
+        // Personelin user_id'si var ama app_users tarafında hâlâ GEÇERLİ mi (personnel_create_login()
+        // ile aynı "yetim değil" doğrulaması) — geçersizse (yetim) engel değildir, üzerine yazılabilir.
+        $chk=$pdo->prepare("SELECT id FROM app_users WHERE id=? AND personnel_id=?"); $chk->execute([$prow['user_id'],$personnelId]);
+        if($chk->fetch()) throw new Exception('Bu personelin zaten bağlı bir giriş hesabı var.');
+    }
+
+    $pdo->prepare("UPDATE app_users SET personnel_id=? WHERE id=?")->execute([$personnelId,$userId]);
+    $pdo->prepare("UPDATE personnel SET user_id=?,login_enabled=1 WHERE id=?")->execute([$userId,$personnelId]);
+    if(function_exists('audit_log')) audit_log($adminUserId,'update','personnel',$personnelId,['user_id'=>$prow['user_id']],['user_id'=>$userId,'linked_existing_account'=>true]);
+    return true;
+}
+
+/**
+ * Bir personelin bağlı hesabını KOPARIR (hesabı silmez/pasifleştirmez — sadece iki yönlü bağı
+ * kaldırır, hesap "orphan" durumuna döner ve başka bir personele bağlanabilir hâle gelir).
+ */
+function personnel_unlink_account($pdo, $personnelId, $adminUserId=null){
+    $personnelId=(int)$personnelId;
+    $pr=$pdo->prepare("SELECT user_id FROM personnel WHERE id=?"); $pr->execute([$personnelId]); $prow=$pr->fetch();
+    $oldUid=(int)($prow['user_id'] ?? 0);
+    if($oldUid) $pdo->prepare("UPDATE app_users SET personnel_id=NULL WHERE id=? AND personnel_id=?")->execute([$oldUid,$personnelId]);
+    $pdo->prepare("UPDATE personnel SET user_id=NULL WHERE id=?")->execute([$personnelId]);
+    if($oldUid && function_exists('audit_log')) audit_log($adminUserId,'update','personnel',$personnelId,['user_id'=>$oldUid],['user_id'=>null,'unlinked'=>true]);
+}
+
 // personnel.cv_path kolonu henüz migration çalışmamış eski bir kurulumda olmayabilir — güvenli kontrol.
 function personnel_has_cv_column($pdo){
     static $has=null;

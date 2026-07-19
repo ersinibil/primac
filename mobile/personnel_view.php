@@ -16,22 +16,29 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['delete_personnel'])){
         header('Location: personnel_view.php?id='.$id); exit;
     }
     try{
-        // GÜVENLİK (2026-07-03 denetiminde bulundu): personel silinirken bağlı app_users hesabı
-        // pasife alınmıyordu — silinen personelin kullanıcı adı/şifresi (veya "beni hatırla" çerezi)
-        // hâlâ geçerli kalıp giriş yapabiliyordu. Personel silinmeden ÖNCE bağlı hesabı pasifleştir.
-        try{ $pdo->prepare("UPDATE app_users SET active=0 WHERE personnel_id=?")->execute([$id]); }catch(Throwable $e){}
-        try{ $pdo->exec("SET FOREIGN_KEY_CHECKS=0"); }catch(Throwable $e){}
-        // Alt kayıtları sil
-        $pdo->prepare("DELETE FROM personnel_devices WHERE personnel_id=?")->execute([$id]);
-        // Personeli sil
-        $pdo->prepare("DELETE FROM personnel WHERE id=?")->execute([$id]);
-        try{ $pdo->exec("SET FOREIGN_KEY_CHECKS=1"); }catch(Throwable $e){}
-        try{ if(function_exists('activity_log')) activity_log('Silme','Personel silindi','personnel #'.$id,'','admin',null,'personnel.php','🗑'); }catch(Throwable $e){}
-        header('Location: ../personnel.php?deleted=1'); exit;
+        // PİLOT ÖNCESİ KAPANIŞ (2026-07-19, gerçek bulgu — "Personel = Ana Varlık" kararı): bu dal
+        // bağlı app_users hesabını pasifleştirdikten SONRA personnel satırını FİZİKSEL SİLİYORDU
+        // (kör cascade DELETE) — job/task/finance_movements gibi geçmiş kayıtlar personnel_id'yi
+        // hâlâ referans ediyor, fiziksel silme onları yetim bırakırdı. Artık web sil.php?t=personnel
+        // ile AYNI davranış: sadece pasife alınır (personel + bağlı hesap), fiziksel silme yok.
+        $pdo->prepare("UPDATE app_users SET active=0 WHERE personnel_id=?")->execute([$id]);
+        $pdo->prepare("UPDATE personnel SET active=0 WHERE id=?")->execute([$id]);
+        try{ if(function_exists('activity_log')) activity_log('Pasife Alma','Personel','personnel #'.$id,'','admin',null,'personnel.php','⏸'); }catch(Throwable $e){}
+        header('Location: ../personnel.php?deactivated=1'); exit;
     }catch(Throwable $e){
-        $_SESSION['pers_err']='Silinemedi: '.$e->getMessage();
+        $_SESSION['pers_err']='İşlem başarısız: '.$e->getMessage();
         header('Location: personnel_view.php?id='.$id); exit;
     }
+}
+
+/* PİLOT ÖNCESİ KAPANIŞ (2026-07-19): web personnel_edit.php ile aynı — "Mevcut OTS Hesabını Bağla". */
+if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['link_orphan_user_id'])){
+    if(!$canManageAccounts){ $_SESSION['pers_err']='Bu işlem için yönetici yetkisi gerekir.'; }
+    else{
+        try{ personnel_link_account($pdo, $id, (int)$_POST['link_orphan_user_id'], $ME ?: null); $_SESSION['pers_ok']='Mevcut OTS hesabı bu personele bağlandı.'; }
+        catch(Throwable $e){ $_SESSION['pers_err']=$e->getMessage(); }
+    }
+    header('Location: personnel_view.php?id='.$id); exit;
 }
 
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['clear_cv'])){
@@ -63,6 +70,11 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                     ->execute([trim($_POST['name']),trim($_POST['role']??''),trim($_POST['phone']??''),trim($_POST['email']??''),
                                trim($_POST['work_type']??''),($_POST['start_date']??'')?:null,trim($_POST['iban']??''),trim($_POST['notes']??''),
                                isset($_POST['active'])?1:0,$id]);
+            }
+            // PİLOT ÖNCESİ KAPANIŞ (2026-07-19): web personnel_edit.php ile aynı — "Aktif" kutusu
+            // kapatılıp kaydedildiğinde bağlı OTS hesabı da pasife alınır.
+            if(!isset($_POST['active'])){
+                try{ $pdo->prepare("UPDATE app_users SET active=0 WHERE personnel_id=?")->execute([$id]); }catch(Throwable $e){}
             }
             $ok='Bilgiler güncellendi.';
         }
@@ -201,8 +213,8 @@ ds_tabs($__tabItems);
 
 <?php if($isAdmin): ?>
 <div class="df-panel">
-  <form method="post" onsubmit="return confirm('Bu personeli ve bağlı tüm verileri KALICI olarak silmek istediğinize emin misiniz?')" style="margin:0">
-    <button class="df-btn df-btn--danger" name="delete_personnel" value="1" style="width:100%"><?=ds_icon('trash',16)?> Personeli Sil</button>
+  <form method="post" onsubmit="return confirm('Bu personel ve bağlı OTS hesabı pasife alınacak (geçmiş iş/görev/finans kayıtları korunur, fiziksel silme yapılmaz). Devam edilsin mi?')" style="margin:0">
+    <button class="df-btn df-btn--danger" name="delete_personnel" value="1" style="width:100%"><?=ds_icon('trash',16)?> Personeli Pasife Al</button>
   </form>
 </div>
 <?php endif; ?>
@@ -225,7 +237,23 @@ ds_tabs($__tabItems);
     <?=personnel_role_permission_fields_html($__usrPreset, $__usrPerms)?>
     <button class="df-btn df-btn--primary df-btn--lg" style="width:100%;margin-top:8px"><?=ds_icon('check',16)?> Yetkileri Kaydet</button>
   </form>
-<?php else: ?>
+<?php else:
+  $__orphanMatches=[];
+  try{ $__orphanMatches = personnel_find_orphan_matches($pdo, '', $p['phone']??'', $p['email']??'', $p['name']??''); }catch(Throwable $e){}
+?>
+  <?php if($__orphanMatches): ?>
+  <div class="df-panel" style="background:var(--df-warning-soft,rgba(245,158,11,.18));margin:8px 0">
+    <b><?=ds_icon('info',15)?> Mevcut OTS hesabı bulundu</b>
+    <p class="muted" style="margin:6px 0;font-size:12.5px">Telefon/e-posta/isim eşleşen, hiçbir personele bağlı olmayan hesap var. Otomatik bağlanmadı — seçin.</p>
+    <?php foreach($__orphanMatches as $__om): ?>
+    <form method="post" style="margin-top:6px">
+      <input type="hidden" name="link_orphan_user_id" value="<?=(int)$__om['id']?>">
+      <div style="font-size:13px;margin-bottom:4px"><b><?=h($__om['username'])?></b> — <?=h($__om['full_name'])?></div>
+      <button type="submit" class="df-btn df-btn--secondary df-btn--sm" style="width:100%">Bu Hesaba Bağla</button>
+    </form>
+    <?php endforeach; ?>
+  </div>
+  <?php endif; ?>
   <p class="muted" style="margin:8px 0">Bu personelin uygulama girişi yok. Oluştur:</p>
   <form method="post"><div style="display:flex;gap:8px"><input name="username" placeholder="Kullanıcı adı" style="flex:1;margin:0"><input name="password" placeholder="Şifre" style="flex:1;margin:0"></div>
   <?=personnel_role_permission_fields_html('personel', [])?>

@@ -129,11 +129,20 @@ if($t==='product_category'){
     redirect($back.'?deleted=1');
 }
 
-// GÜVENLİK (2026-07-03 denetiminde bulundu): personel silinirken bağlı app_users hesabı pasife
-// alınmıyordu — silinen personelin kullanıcı adı/şifresi (veya "beni hatırla" çerezi) hâlâ geçerli
-// kalıp giriş yapabiliyordu. Personel silinmeden ÖNCE bağlı hesabı pasifleştir.
+// PİLOT ÖNCESİ KAPANIŞ (2026-07-19, gerçek bulgu — "Personel = Ana Varlık" kararı): bu dal önceden
+// bağlı app_users hesabını pasifleştirdikten SONRA aşağıdaki genel bloğa (satır ~139) düşüp
+// personnel satırını FİZİKSEL SİLİYORDU — "kör cascade DELETE" tam olarak bu. Personel ana varlık
+// olduğu için normal UI'dan asla fiziksel silinmez, sadece pasife alınır (bağlı hesap da pasife
+// alınır) — job/task/finance_movements gibi geçmiş kayıtlar personnel_id'yi hâlâ referans ediyor,
+// fiziksel silme onları da yetim bırakırdı. redirect ile fonksiyon burada SONLANIYOR, aşağıdaki
+// genel DELETE bloğuna hiç düşmüyor.
 if($t==='personnel'){
-    try{ $pdo->prepare("UPDATE app_users SET active=0 WHERE personnel_id=?")->execute([$id]); }catch(Throwable $e){}
+    try{
+        $pdo->prepare("UPDATE app_users SET active=0 WHERE personnel_id=?")->execute([$id]);
+        $pdo->prepare("UPDATE personnel SET active=0 WHERE id=?")->execute([$id]);
+        try{ if(function_exists('activity_log')) activity_log('Pasife Alma','Personel',$table.' #'.$id,'','admin',null,$back,'⏸'); }catch(Throwable $e){}
+    }catch(Throwable $e){ exit('İşlem başarısız: '.htmlspecialchars($e->getMessage())); }
+    redirect($back.'?deactivated=1');
 }
 
 try{

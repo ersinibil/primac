@@ -9,6 +9,7 @@ require_permission('users');
 // — bkz. personnel_sanitize_permissions()) ama açık is_admin() kontrolü kasıtlı sertleştirme.
 if(!is_admin()){ http_response_code(403); exit('Bu sayfa sadece sistem yöneticisine açıktır. Personel hesap/yetki işlemleri için ilgili personelin detay ekranındaki "OTS Hesabı & Yetkiler" sekmesini kullanın.'); }
 require_once __DIR__.'/share_lib.php';
+require_once __DIR__.'/personnel_lib.php';
 
 $pdo=db();
 $error='';
@@ -99,18 +100,33 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             }
             // Ana yönetici (ilk kullanıcı, id=1) korunur: pasifleştirilemez, admin rolü düşürülemez.
             if($uid===1){ $role='admin'; $active=1; }
-            $pdo->prepare("UPDATE app_users SET username=?, full_name=?, phone=?, email=?, role=?, personnel_id=?, permissions=?, active=? WHERE id=?")
+            // PİLOT ÖNCESİ KAPANIŞ (2026-07-19, gerçek bulgu): personnel_id burada DOĞRUDAN
+            // güncelleniyordu ama personnel.user_id (ters yön) hiç senkronlanmıyordu — admin bu
+            // formdan bir hesabı bir personele bağlasa bile personnel_reset_password()/
+            // personnel_create_login()'ın "tek doğru kaynak" saydığı personnel.user_id eski
+            // değerinde kalıyor, iki taraf birbirinden habersiz kalabiliyordu (kullanıcı bulgusu:
+            // "Muhammet" personeli sonradan oluşturulunca orphan hesapla otomatik/güvenilir bağ
+            // kurulamaması). Artık personnel_link_account()/personnel_unlink_account() ile İKİ
+            // YÖNE de yazılıyor, çift-bağ koruması da (personnel zaten başka hesaba bağlıysa
+            // reddet) bedava geliyor.
+            $__curPidQ=$pdo->prepare("SELECT personnel_id FROM app_users WHERE id=?"); $__curPidQ->execute([$uid]);
+            $__oldPid=(int)($__curPidQ->fetch()['personnel_id'] ?? 0);
+            $__newPid=(int)($_POST['personnel_id'] ?? 0) ?: 0;
+            $pdo->prepare("UPDATE app_users SET username=?, full_name=?, phone=?, email=?, role=?, permissions=?, active=? WHERE id=?")
                 ->execute([
                     trim($_POST['username']),
                     trim($_POST['full_name']),
                     trim($_POST['phone']),
                     trim($_POST['email']),
                     $role,
-                    (int)$_POST['personnel_id'] ?: null,
                     json_encode($perms,JSON_UNESCAPED_UNICODE),
                     $active,
                     $uid
                 ]);
+            if($__newPid !== $__oldPid){
+                if($__oldPid) personnel_unlink_account($pdo, $__oldPid, $_SESSION['user']['id'] ?? null);
+                if($__newPid) personnel_link_account($pdo, $__newPid, $uid, $_SESSION['user']['id'] ?? null);
+            }
             if(!empty($_POST['password'])){
                 $pdo->prepare("UPDATE app_users SET password_hash=? WHERE id=?")
                     ->execute([password_hash($_POST['password'],PASSWORD_DEFAULT),$uid]);

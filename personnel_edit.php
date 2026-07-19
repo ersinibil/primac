@@ -85,6 +85,17 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['make_login']) && trim($_
     }catch(Throwable $e){ $error=$e->getMessage(); }
 }
 
+if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['link_orphan_user_id'])){
+    // PİLOT ÖNCESİ KAPANIŞ (2026-07-19): "Mevcut OTS Hesabını Bağla" — personnel_lib.php::
+    // personnel_link_account() ile AYNI çift-bağ koruması, sessiz otomatik eşleştirme değil,
+    // admin burada AÇIKÇA seçip onaylıyor.
+    try{
+        if(!$canManageAccounts) throw new Exception('Bu işlem için yönetici yetkisi gerekir.');
+        personnel_link_account($pdo, $id, (int)$_POST['link_orphan_user_id'], $_SESSION['user']['id'] ?? null);
+        $ok='Mevcut OTS hesabı bu personele bağlandı.';
+    }catch(Throwable $e){ $error=$e->getMessage(); }
+}
+
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['reset_pw']) && trim($_POST['newpw']??'')!==''){
     // PDP-001: paylaşılan işlem personnel_lib.php::personnel_reset_password() — yetki kontrolü burada,
     // hedef hesap fonksiyon içinde her zaman $id üzerinden DB'den çözülür (IDOR'a kapalı).
@@ -96,7 +107,7 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['reset_pw']) && trim($_PO
     }catch(Throwable $e){ $error=$e->getMessage(); }
 }
 
-if($_SERVER['REQUEST_METHOD']==='POST' && !isset($_POST['regen_telegram_code']) && !isset($_POST['clear_telegram_binding']) && !isset($_POST['save_account_role']) && !isset($_POST['clear_cv']) && !isset($_POST['make_login']) && !isset($_POST['reset_pw'])){
+if($_SERVER['REQUEST_METHOD']==='POST' && !isset($_POST['regen_telegram_code']) && !isset($_POST['clear_telegram_binding']) && !isset($_POST['save_account_role']) && !isset($_POST['clear_cv']) && !isset($_POST['make_login']) && !isset($_POST['reset_pw']) && !isset($_POST['link_orphan_user_id'])){
     try{
         $cvPath = $hasCvCol ? personnel_handle_cv_upload() : null;
 
@@ -164,6 +175,12 @@ if($_SERVER['REQUEST_METHOD']==='POST' && !isset($_POST['regen_telegram_code']) 
                 $id
             ]);
         }
+        // PİLOT ÖNCESİ KAPANIŞ (2026-07-19): "Aktif personel" kutusu kapatılıp kaydedildiğinde bağlı
+        // OTS hesabı da pasife alınsın — önceden sadece personnel.active değişiyordu, hesap aktif
+        // kalmaya devam edip giriş yapılabiliyordu (sil.php?t=personnel ile AYNI tutarlılık kuralı).
+        if(!isset($_POST['active'])){
+            try{ $pdo->prepare("UPDATE app_users SET active=0 WHERE personnel_id=?")->execute([$id]); }catch(Throwable $e){}
+        }
         $ok='Personel profili güncellendi.';
     }catch(Throwable $e){
         $error=$e->getMessage();
@@ -192,6 +209,12 @@ $staffUserId=0; $staffPerms=[]; $staffRole=''; $staffUsername='';
 try{ $uu=$pdo->prepare("SELECT id,permissions,role,username FROM app_users WHERE personnel_id=? ORDER BY id LIMIT 1"); $uu->execute([$id]);
     if($su=$uu->fetch()){ $staffUserId=(int)$su['id']; $staffRole=$su['role']??''; $staffUsername=$su['username']??''; $dp=json_decode($su['permissions']??'[]',true); $staffPerms=is_array($dp)?$dp:[]; }
 }catch(Throwable $e){}
+// PİLOT ÖNCESİ KAPANIŞ (2026-07-19): henüz hesabı olmayan bir personel için olası orphan (personnel_id
+// NULL) hesap eşleşmesi var mı bak — telefon/e-posta/isim ile. Sadece BULMA, hiçbir şey değiştirmez.
+$__orphanMatches=[];
+if(!$staffUserId){
+    try{ $__orphanMatches = personnel_find_orphan_matches($pdo, '', $p['phone']??'', $p['email']??'', $p['name']??''); }catch(Throwable $e){}
+}
 
 // --- Sekmeli görünüm için ek, salt-okunur veriler (mevcut sorgu desenleriyle birebir aynı,
 // yeni bir iş mantığı icat edilmedi — sadece bu personele filtrelenmiş görünümler). ---
@@ -476,8 +499,21 @@ ds_form_field('Çalışma Tipi', '<select name="work_type">'.$__workOpts.'</sele
 <?php if($staffUserId===1): ?>
   <p class="df-section-hint">Bu hesap sistemin ana yöneticisi — korumalıdır, rolü buradan değiştirilemez.</p>
 <?php elseif(!$staffUserId): ?>
+  <?php if($__orphanMatches): ?>
+  <div class="df-alert df-alert--warning" style="margin-bottom:var(--df-space-4)">
+    <b><?=ds_icon('info',16)?> Mevcut OTS hesabı bulundu</b>
+    <p style="margin:6px 0">Bu personelin telefon/e-posta/isim bilgisiyle eşleşen, hiçbir personele bağlı olmayan hesap(lar) var. Yeni bir hesap açmak yerine mevcut hesabı bağlayabilirsiniz — otomatik eşleştirme yapılmadı, seçim size ait.</p>
+    <?php foreach($__orphanMatches as $__om): ?>
+    <form method="post" style="display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap">
+      <input type="hidden" name="link_orphan_user_id" value="<?=(int)$__om['id']?>">
+      <span><b><?=h($__om['username'])?></b> — <?=h($__om['full_name'])?><?=$__om['phone']?' · '.h($__om['phone']):''?><?=$__om['email']?' · '.h($__om['email']):''?> <?=$__om['active']?ds_badge('Aktif','green'):ds_badge('Pasif','gray')?></span>
+      <button type="submit" class="df-btn df-btn--secondary df-btn--sm">Bu Hesaba Bağla</button>
+    </form>
+    <?php endforeach; ?>
+  </div>
+  <?php endif; ?>
   <h3 class="df-section-subtitle"><?=ds_icon('plus',16)?> OTS Hesabı Aç</h3>
-  <p class="df-section-hint">Bu personelin henüz OTS hesabı yok.</p>
+  <p class="df-section-hint">Bu personelin henüz OTS hesabı yok<?=$__orphanMatches?' — yukarıdaki eşleşme uygun değilse yeni hesap açabilirsiniz':''?>.</p>
   <form method="post" style="max-width:420px;margin-bottom:var(--df-space-5)">
     <input type="hidden" name="make_login" value="1">
     <?php ds_form_field('Kullanıcı Adı', '<input name="username" required>'); ?>
