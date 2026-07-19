@@ -155,11 +155,19 @@ function trade_apply_document($documentId, $confirmed=false){
  * tersleme fonksiyonlarıyla TAM geri alınır — hiçbir yerde orphan kayıt bırakılmaz.
  */
 
-/** Bir belgenin bağlı olduğu TEK finance_movements satırını bulur (document_id + doğru movement_type). */
+/** Bir belgenin bağlı olduğu TEK finance_movements satırını bulur (document_id + doğru movement_type).
+ * KÖK NEDEN DÜZELTMESİ (2026-07-19, USER TEST — canlı örnek ALI-20260707-1249): Flow Unification 001
+ * (2026-07-11) ÖNCESİ oluşturulan belgeler finance_movements'ı movement_type='document' ile
+ * yazıyordu (yeni kayıtlarda artık hiç oluşmuyor — trade_apply_document() üstündeki not — ama ESKİ
+ * belgeler DB'de hâlâ bu değerle duruyor). Sadece 'purchase'/'sale' arayan eski sorgu bu satırları
+ * hiç bulamıyor, "Belgeye bağlı finans hareketi bulunamadı" hatasıyla İptal/Düzenle'yi TAMAMEN
+ * bloke ediyordu — oysa gerçek stok/cari etkisi VARDI, sadece görünmüyordu. Arama artık legacy
+ * 'document' değerini de kapsıyor (mobile_sale de eklendi, mobil hızlı-satış-belgesi simetrisi için). */
 function trade_document_movement($pdo, $documentId, $documentType){
-    $mt = $documentType==='purchase' ? 'purchase' : 'sale';
-    $s = $pdo->prepare("SELECT * FROM finance_movements WHERE document_id=? AND movement_type=?");
-    $s->execute([(int)$documentId, $mt]);
+    $types = $documentType==='purchase' ? ['purchase','document'] : ['sale','mobile_sale','document'];
+    $in = implode(',', array_fill(0, count($types), '?'));
+    $s = $pdo->prepare("SELECT * FROM finance_movements WHERE document_id=? AND movement_type IN ($in)");
+    $s->execute(array_merge([(int)$documentId], $types));
     return $s->fetch() ?: null;
 }
 
@@ -285,17 +293,26 @@ function trade_document_cancel($pdo, $userId, $documentId){
     if(!$doc) throw new Exception('Belge bulunamadı.');
     if($doc['status']==='İptal') throw new Exception('Bu belge zaten iptal edilmiş.');
 
+    // KÖK NEDEN DÜZELTMESİ (2026-07-19): önceden $mv bulunamazsa (bkz. trade_document_movement()
+    // üstündeki not) İPTAL TAMAMEN reddediliyordu — belge sonsuza dek iptal edilemez kalıyordu.
+    // Artık: bağlı hareket VARSA (legacy 'document' dahil) mevcut güvenli reversal zinciri
+    // (stock_reverse_purchase/sale — DEĞİŞMEDİ, double-delete/double-reversal koruması kendi
+    // içinde zaten var, bkz. o fonksiyonlar) kullanılır; hiç YOKSA (izlenebilir bir stok/finans
+    // etkisi hiç oluşmamış) oluşmamış bir hareketi geri almaya ÇALIŞILMAZ, sadece belge durumu
+    // işaretlenir. Her iki durumda da $doc['status']==='İptal' kapısı (yukarıda) ikinci bir
+    // çalıştırmayı zaten engeller — double reversal riski yok.
     $mv = trade_document_movement($pdo, $documentId, $doc['document_type']);
-    if(!$mv) throw new Exception('Belgeye bağlı finans hareketi bulunamadı.');
 
     $pdo->beginTransaction();
     try{
-        if($doc['document_type']==='purchase'){
-            $res = stock_reverse_purchase($pdo, $mv['id'], true);
-        }else{
-            $res = stock_reverse_sale($pdo, $mv['id'], true);
+        if($mv){
+            if($doc['document_type']==='purchase'){
+                $res = stock_reverse_purchase($pdo, $mv['id'], true);
+            }else{
+                $res = stock_reverse_sale($pdo, $mv['id'], true);
+            }
+            if(!$res['ok']) throw new Exception($res['message']);
         }
-        if(!$res['ok']) throw new Exception($res['message']);
 
         $pdo->prepare("UPDATE trade_documents SET status='İptal' WHERE id=?")->execute([(int)$documentId]);
 

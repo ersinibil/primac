@@ -175,8 +175,9 @@ function stock_reverse_sale($pdo, $saleId, $viaDocument=false){
         $saleId = (int)$saleId;
         if($saleId < 1) return ['ok'=>false, 'message'=>'Geçersiz satış kaydı.'];
 
-        // Satış kaydını bul
-        $s = $pdo->prepare("SELECT * FROM finance_movements WHERE id=? AND (movement_type='sale' OR movement_type='mobile_sale')");
+        // Satış kaydını bul — 'document' legacy movement_type dahil (bkz. trade_core.php::
+        // trade_document_movement() üstündeki kök neden notu, 2026-07-19).
+        $s = $pdo->prepare("SELECT * FROM finance_movements WHERE id=? AND movement_type IN ('sale','mobile_sale','document')");
         $s->execute([$saleId]);
         $sale = $s->fetch();
         if(!$sale) return ['ok'=>false, 'message'=>'Satış kaydı bulunamadı.'];
@@ -447,7 +448,7 @@ function stock_create_sale($pdo, $contact, $ids, $qtys, $prices, $vatRates, $not
  */
 function stock_can_edit_sale($pdo, $saleId, $viaDocument=false){
     $saleId = (int)$saleId;
-    $s = $pdo->prepare("SELECT * FROM finance_movements WHERE id=? AND (movement_type='sale' OR movement_type='mobile_sale')");
+    $s = $pdo->prepare("SELECT * FROM finance_movements WHERE id=? AND movement_type IN ('sale','mobile_sale','document')");
     $s->execute([$saleId]);
     $sale = $s->fetch();
     if(!$sale) return ['editable'=>false, 'reason'=>'Satış kaydı bulunamadı.', 'sale'=>null, 'lines'=>[]];
@@ -520,7 +521,7 @@ function stock_update_sale($pdo, $saleId, $contact, $ids, $qtys, $prices, $vatRa
         if($saleId < 1) return ['ok'=>false, 'message'=>'Geçersiz satış kaydı.'];
         if(!$contact) throw new Exception('Cari seçin.');
 
-        $old = $pdo->prepare("SELECT * FROM finance_movements WHERE id=? AND (movement_type='sale' OR movement_type='mobile_sale')");
+        $old = $pdo->prepare("SELECT * FROM finance_movements WHERE id=? AND movement_type IN ('sale','mobile_sale','document')");
         $old->execute([$saleId]);
         $oldSale = $old->fetch();
         if(!$oldSale) return ['ok'=>false, 'message'=>'Satış kaydı bulunamadı.'];
@@ -671,7 +672,7 @@ function stock_reverse_purchase($pdo, $purchaseId, $viaDocument=false){
         $purchaseId = (int)$purchaseId;
         if($purchaseId < 1) return ['ok'=>false, 'message'=>'Geçersiz alış kaydı.'];
 
-        $s = $pdo->prepare("SELECT * FROM finance_movements WHERE id=? AND movement_type='purchase'");
+        $s = $pdo->prepare("SELECT * FROM finance_movements WHERE id=? AND movement_type IN ('purchase','document')");
         $s->execute([$purchaseId]);
         $purchase = $s->fetch();
         if(!$purchase) return ['ok'=>false, 'message'=>'Alış kaydı bulunamadı.'];
@@ -720,7 +721,7 @@ function stock_reverse_purchase($pdo, $purchaseId, $viaDocument=false){
 function stock_can_edit_purchase($pdo, $purchaseId, $viaDocument=false){
     require_once __DIR__.'/cpa_allocation_lib.php';
     $purchaseId = (int)$purchaseId;
-    $s = $pdo->prepare("SELECT * FROM finance_movements WHERE id=? AND movement_type='purchase'");
+    $s = $pdo->prepare("SELECT * FROM finance_movements WHERE id=? AND movement_type IN ('purchase','document')");
     $s->execute([$purchaseId]);
     $purchase = $s->fetch();
     if(!$purchase) return ['editable'=>false, 'reason'=>'Alış kaydı bulunamadı.', 'purchase'=>null, 'lines'=>[]];
@@ -792,7 +793,7 @@ function stock_update_purchase($pdo, $purchaseId, $supplier, $ids, $qtys, $price
         if($purchaseId < 1) return ['ok'=>false, 'message'=>'Geçersiz alış kaydı.'];
         if(!$supplier) throw new Exception('Tedarikçi seçin.');
 
-        $old = $pdo->prepare("SELECT * FROM finance_movements WHERE id=? AND movement_type='purchase'");
+        $old = $pdo->prepare("SELECT * FROM finance_movements WHERE id=? AND movement_type IN ('purchase','document')");
         $old->execute([$purchaseId]);
         $oldPurchase = $old->fetch();
         if(!$oldPurchase) return ['ok'=>false, 'message'=>'Alış kaydı bulunamadı.'];
