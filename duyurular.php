@@ -14,6 +14,14 @@ $ME=(int)(current_user()['id'] ?? 0);
 
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['del'])){ notif_dismiss($pdo,$ME,(int)$_POST['del']); header('Location: duyurular.php'); exit; }
 
+// OTONOM KAPANIŞ PASS (2026-07-19): notif_admin_delete_global() zaten yazılmıştı ama hiçbir UI'ye
+// bağlanmamıştı — "Sil" (notif_dismiss) genel duyuruda SADECE o admin için gizliyor, satır DB'de
+// kalıcı kalıyor. Yanlışlıkla yayınlanan bir duyuruyu herkes için geri almanın hiçbir yolu yoktu.
+if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['del_global'])){
+    if(is_admin()) notif_admin_delete_global($pdo,(int)$_POST['del_global']);
+    header('Location: duyurular.php'); exit;
+}
+
 // P0 DÜZELTME (2026-07-18, Product Owner): "Duyurular = Yönetim tarafından yayınlanan şirket
 // duyuruları" — önceden bu sekme SADECE var olan target_user_id=NULL bildirimleri filtreliyordu,
 // ama hiçbir yerde gerçek bir "duyuru yayınla" akışı yoktu (tek kaynak public_file.php'nin müşteri
@@ -80,7 +88,10 @@ try{
         </div>
         <div style="display:flex;gap:6px;flex:0 0 auto">
             <a class="df-btn df-btn--secondary df-btn--sm" href="duyurular.php?read=<?=(int)$n['id']?>">Aç</a>
-            <form method="post" style="display:inline"><input type="hidden" name="del" value="<?=(int)$n['id']?>"><button type="submit" class="df-btn df-btn--secondary df-btn--sm" title="Sil"><?=ds_icon('trash',14)?></button></form>
+            <form method="post" style="display:inline"><input type="hidden" name="del" value="<?=(int)$n['id']?>"><button type="submit" class="df-btn df-btn--secondary df-btn--sm" title="Benden gizle"><?=ds_icon('trash',14)?></button></form>
+            <?php if(is_admin()): ?>
+            <form method="post" style="display:inline" onsubmit="return confirm('Bu duyuru HERKES için kalıcı olarak silinecek. Emin misin?')"><input type="hidden" name="del_global" value="<?=(int)$n['id']?>"><button type="submit" class="df-btn df-btn--secondary df-btn--sm" title="Herkes için kalıcı sil"><?=ds_icon('trash',14)?> Tümü</button></form>
+            <?php endif; ?>
         </div>
     </div>
     <p style="margin:var(--df-space-2) 0 0"><?=nl2br(h($n['message']))?></p>

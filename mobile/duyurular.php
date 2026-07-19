@@ -8,6 +8,14 @@ $pdo=db();
 
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['del'])){ notif_dismiss($pdo,$ME,(int)$_POST['del']); header('Location: duyurular.php'); exit; }
 
+// OTONOM KAPANIŞ PASS (2026-07-19): web duyurular.php ile aynı — notif_admin_delete_global() zaten
+// yazılmıştı ama mobilde de hiçbir UI'ye bağlanmamıştı. Buton mobile/notification_view.php'de
+// (PROJECT_RULES.md UX standardı: tekil aksiyonlar detay ekranında).
+if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['del_global'])){
+    if(is_admin()) notif_admin_delete_global($pdo,(int)$_POST['del_global']);
+    header('Location: duyurular.php'); exit;
+}
+
 // P0 DÜZELTME (2026-07-18, Product Owner): web duyurular.php ile aynı — admin şirket duyurusu
 // yayınlayabilsin (önceden bu akış hiçbir yerde yoktu, bkz. web duyurular.php'deki not).
 if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['publish_announcement'])){

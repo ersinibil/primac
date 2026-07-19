@@ -230,6 +230,37 @@ try{
   <?php endforeach; ?>
 </div>
 
+<!-- OTONOM KAPANIŞ PASS (2026-07-19): web contact_view.php'de "Alış / Satış Belgeleri" bölümü var,
+     mobilde hiç yoktu — tek erişim yolu aşağıdaki 'finance' yetkisi gerektiren "Son Hareketler"
+     kaynak linkiydi. 'contacts' yetkisi olup 'finance' yetkisi olmayan bir kullanıcı carinin
+     belgelerini hiç göremiyordu (web/mobil parite kırıktı). Yeni sorgu yok — contact_documents.php
+     (web) ile aynı trade_documents okuma. -->
+<div class="df-panel" style="margin-top:10px">
+  <div style="display:flex;justify-content:space-between;align-items:center">
+    <b><?=ds_icon('file',16)?> Belgeler</b>
+    <a class="df-btn df-btn--secondary df-btn--sm" href="../contact_documents.php?id=<?=$id?>&web=1">Tümünü Gör</a>
+  </div>
+  <?php
+  try{
+    $tdq=db()->prepare("SELECT id,document_no,document_type,document_date,grand_total,status FROM trade_documents WHERE contact_id=? ORDER BY id DESC LIMIT 10");
+    $tdq->execute([$id]); $tdocs=$tdq->fetchAll();
+  }catch(Throwable $e){ $tdocs=[]; }
+  if(!$tdocs) echo '<p class="df-text-caption" style="margin:10px 0 0">Bu cariye ait belge yok.</p>';
+  foreach($tdocs as $td):
+  ?>
+  <a href="../trade_document_view.php?id=<?=(int)$td['id']?>&web=1" style="display:block;text-decoration:none;color:inherit;margin-top:10px;border-top:1px solid var(--df-hairline);padding-top:10px">
+    <div style="display:flex;justify-content:space-between;gap:8px;align-items:center">
+      <b><?=h($td['document_no'])?></b><?=ds_badge($td['status'])?>
+    </div>
+    <div class="df-list-row-meta" style="margin-top:4px">
+      <span><?=$td['document_type']==='purchase'?'Alış':'Satış'?></span>
+      <span><?=h($td['document_date'])?></span>
+      <span><?=mm($td['grand_total'])?></span>
+    </div>
+  </a>
+  <?php endforeach; ?>
+</div>
+
 <?php if(user_can('finance')): ?>
 <div class="df-panel" style="margin-top:10px">
   <b>Son Hareketler</b>

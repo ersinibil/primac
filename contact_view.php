@@ -376,7 +376,10 @@ try{
 </section>
 
 <section class="df-card" style="margin-top:var(--df-space-4)">
-<h2 style="font-size:var(--df-type-section-size);margin:0 0 var(--df-space-3)">Alış / Satış Belgeleri</h2>
+<div style="display:flex;justify-content:space-between;align-items:center;margin:0 0 var(--df-space-3);gap:var(--df-space-3)">
+<h2 style="font-size:var(--df-type-section-size);margin:0">Alış / Satış Belgeleri</h2>
+<?=ds_button('Tümünü Gör','contact_documents.php?id='.$id,'secondary','','',true)?>
+</div>
 <div class="df-table-wrap"><table class="df-table">
 <thead><tr><th>Belge No</th><th>Tür</th><th>Tarih</th><th style="text-align:right">Genel Toplam</th><th>Durum</th><th>Aç</th></tr></thead>
 <tbody>

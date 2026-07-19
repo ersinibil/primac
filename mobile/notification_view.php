@@ -36,6 +36,9 @@ topx('Bildirim Detayı', 'notifications.php', 'Bildirimler');
 </div>
 <div class="df-panel" style="display:flex;flex-direction:column;gap:8px">
   <a class="df-btn df-btn--primary df-btn--lg" style="width:100%" href="<?=h($go)?>">İlgili Modüle Git</a>
-  <form method="post" action="notifications.php" onsubmit="return confirm('Bu bildirim silinsin mi?')"><?=csrf_field()?><input type="hidden" name="del" value="<?=(int)$n['id']?>"><button type="submit" class="df-btn df-btn--danger" style="width:100%"><?=ds_icon('trash',16)?> Sil</button></form>
+  <form method="post" action="notifications.php" onsubmit="return confirm('Bu bildirim silinsin mi?')"><?=csrf_field()?><input type="hidden" name="del" value="<?=(int)$n['id']?>"><button type="submit" class="df-btn df-btn--danger" style="width:100%"><?=ds_icon('trash',16)?> <?=$n['target_user_id']===null?'Benden Gizle':'Sil'?></button></form>
+  <?php if($n['target_user_id']===null && $isAdmin): ?>
+  <form method="post" action="duyurular.php" onsubmit="return confirm('Bu duyuru HERKES için kalıcı olarak silinecek. Emin misin?')"><?=csrf_field()?><input type="hidden" name="del_global" value="<?=(int)$n['id']?>"><button type="submit" class="df-btn df-btn--danger" style="width:100%"><?=ds_icon('trash',16)?> Herkes İçin Kalıcı Sil</button></form>
+  <?php endif; ?>
 </div>
 <?php botx(); ?>

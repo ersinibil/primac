@@ -7,6 +7,7 @@ require_once __DIR__.'/user_prefs_lib.php';
 // kullanıyor; dashboard.php bu dosyayı daha önce hiç require etmiyordu (mobile/index.php zaten
 // ediyordu, mytasks.php'den beri).
 if(is_file(__DIR__.'/tasks_lib.php')) require_once __DIR__.'/tasks_lib.php';
+if(is_file(__DIR__.'/checks_notes_lib.php')) require_once __DIR__.'/checks_notes_lib.php';
 
 $today=date('Y-m-d');
 $pdo=db();
@@ -112,6 +113,10 @@ try {
 // Gecikme analizi
 $overdue_count = safe_count("SELECT COUNT(*) c FROM jobs WHERE due_date IS NOT NULL AND due_date<CURDATE() AND status NOT IN ('Tamamlandı','İptal','Teslim Edildi')");
 $critical_stock = safe_count("SELECT COUNT(*) c FROM stock_items WHERE quantity <= critical_level");
+// OTONOM KAPANIŞ PASS (2026-07-19): checks_notes_overdue_count() zaten yazılmıştı (checks_notes_lib.php)
+// ama hiçbir dashboard/alert paneline bağlanmamıştı — vadesi geçmiş portföydeki çek/senet sayısı
+// hiçbir yerde görünmüyordu. jobs/stok ile aynı desene (Gecikme Uyarı Panosu) üçüncü kart olarak eklendi.
+$checks_overdue_count = function_exists('checks_notes_overdue_count') ? checks_notes_overdue_count($pdo) : 0;
 
 // UX SPRINT 002 — PHASE B3: Nabız Satırı verisi — safe_count() hatayı sessizce 0'a çevirdiği için
 // (yukarıdaki $overdue_count/$critical_stock TEKRAR kullanılmıyor), burada ayrı, hataya duyarlı
@@ -526,7 +531,7 @@ ob_start();
 <div class="panel-head">
     <h2><span class="section-icon">⚠️</span> Dikkat - Geciken İşler & Kritik Stok</h2>
 </div>
-<?php if($overdue_count > 0 || $critical_stock > 0): ?>
+<?php if($overdue_count > 0 || $critical_stock > 0 || $checks_overdue_count > 0): ?>
 <div class="alert-panel <?=$overdue_count > 0 ? 'critical' : ''?>">
     <h3>⚠️ Acil Dikkat Gerektiren Maddeler</h3>
     <div class="alert-summary">
@@ -550,6 +555,17 @@ ob_start();
         <div class="alert-stat">
             <div class="stat-value" style="color:#a0aec0"><?=$critical_stock?></div>
             <div class="stat-label">Kritik Stok</div>
+        </div>
+        <?php endif; ?>
+        <?php if($checks_overdue_count > 0): ?>
+        <a class="alert-stat alert-stat-link" href="checks_notes.php?status=portfoyde">
+            <div class="stat-value" style="color:#eab308"><?=$checks_overdue_count?></div>
+            <div class="stat-label">Vadesi Geçen Çek/Senet</div>
+        </a>
+        <?php else: ?>
+        <div class="alert-stat">
+            <div class="stat-value" style="color:#a0aec0"><?=$checks_overdue_count?></div>
+            <div class="stat-label">Vadesi Geçen Çek/Senet</div>
         </div>
         <?php endif; ?>
     </div>
