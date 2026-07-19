@@ -32,6 +32,18 @@ require_once __DIR__.'/layout_top.php';
 <section style="max-width:1000px">
 <style>
 @media print{.noprint{display:none!important}}
+/* P0 PDF MİMARİSİ (2026-07-19, tur 4): #repArea artık ekranda GÖRÜNMEZ (ayrı, hep-açık kurumsal
+   belge katmanı — report_render_pdf()) — display:none KULLANMIYORUZ çünkü html2canvas
+   display:none düğümü yakalayamaz (sıfır layout kutusu); bunun yerine viewport dışına, sayfa
+   akışını/scroll'u hiç etkilemeyecek şekilde konumlandırıyoruz. @media print'te (report_lib.php)
+   position:static'e döner ve tek görünür içerik olur. */
+/* .repdoc-offscreen SARMALAYICI (id DEĞİL, class) BİLEREK #repArea'nın DIŞINDA — report_share.js
+   html2canvas için #repArea'yı cloneNode(true) ile klonlayıp AYRI bir off-screen holder'a
+   ekliyor; off-screen konumlandırma id="repArea" üzerinde olsaydı klonlanan kopya da (aynı id
+   CSS seçicisiyle eşleştiği için) kendini holder İÇİNDE tekrar -99999px'e itip capture'ı
+   bozardı. Wrapper klonlanmıyor (sadece #repArea ve altı klonlanıyor) — bu yüzden güvenli. */
+.repdoc-offscreen{position:absolute;left:-99999px;top:0}
+@media print{.repdoc-offscreen{position:static!important;left:auto!important}}
 /* RAPOR AİLESİ — SON POLISH (2026-07-19, tur 3): toolbar masaüstünde TEK satıra kilitli
    (flex-wrap:nowrap, sadece <640px'de alt alta) — önceki tur "wrap" bırakmıştı, geniş ekranda
    bile gereksiz sarabiliyordu. Modül sekmeleri: body.nav-compact .df-tabs GLOBAL kuralı
@@ -77,7 +89,14 @@ ds_tabs(array_map(function($k,$v) use ($modul,$from,$to){
     </div>
   </form>
 </section>
-<script>window.ACANS_REPORT_NAME='rapor_<?=$modul?>_<?=$from?>';</script>
+<script>
+window.ACANS_REPORT_NAME='<?=($isAll||$isCariToplu) ? 'rapor_'.$modul.'_'.$from : report_pdf_filename($appName,$R['title'],$from,$to)?>';
+// P0 PDF MİMARİSİ (2026-07-19): PDF Paylaş (html2canvas) her zaman ekranın O ANKİ görünümünü
+// yakalıyordu (koyu tema dahil) — #repArea artık ayrı, hep-açık-renkli belge katmanı olduğu için
+// html2canvas'ın klonlama holder'ı da varsayılan koyu arka planı (report_share.js'in eski
+// ACANS_PDF_BG='#0b1220' varsayılanı) EZMELİ.
+window.ACANS_PDF_BG='#ffffff'; window.ACANS_PDF_FG='#0f172a';
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="report_share.js"></script>
@@ -88,6 +107,13 @@ ds_tabs(array_map(function($k,$v) use ($modul,$from,$to){
   <a href="report.php?modul=<?=$modul?>&from=<?=$from?>&to=<?=$to?>&ref=<?=$ref?>&mode=<?=urlencode($bmode)?>&type=<?=urlencode($btype)?>" class="<?=!$detail?'is-active':''?>">Özet</a>
   <a href="report.php?modul=<?=$modul?>&from=<?=$from?>&to=<?=$to?>&ref=<?=$ref?>&detay=1&mode=<?=urlencode($bmode)?>&type=<?=urlencode($btype)?>" class="<?=$detail?'is-active':''?>">Detay</a>
 </nav>
-<div id="repArea"><?= $isAll ? report_render_all($pdo,$appName,$from,$to,$detail) : ($isCariToplu ? report_render_cari_toplu($pdo,$appName,$from,$to,$bmode,$btype,$detail) : report_render($R,$appName,$from,$to,$detail)) ?></div>
+<div class="noprint"><?= $isAll ? report_render_all($pdo,$appName,$from,$to,$detail) : ($isCariToplu ? report_render_cari_toplu($pdo,$appName,$from,$to,$bmode,$btype,$detail) : report_render($R,$appName,$from,$to,$detail)) ?></div>
+<!-- P0 PDF MİMARİSİ (2026-07-19): #repArea artık EKRANDA GÖSTERİLMEYEN, ayrı kurumsal belge
+     katmanı (report_render_pdf(), .pdf-doc — hep açık renk, tema token'ı yok, interaktif eleman
+     yok). window.print() VE html2canvas ("PDF Paylaş", report_share.js) İKİSİ DE bu düğümü
+     hedefler — ekranda görünen .rep app-view'ı ASLA yazdırılmaz/screenshot alınmaz. Sadece TEK
+     modül (Yekün dahil) için — Tümü/Toplu Cari Ekstre şimdilik eski app-view tabanlı PDF'e
+     düşer (bu turun kapsamı dışında, bilinçli). -->
+<div class="repdoc-offscreen"><div id="repArea"><?= (!$isAll && !$isCariToplu) ? report_render_pdf($R,$appName,$from,$to) : ($isAll ? report_render_all($pdo,$appName,$from,$to,$detail) : report_render_cari_toplu($pdo,$appName,$from,$to,$bmode,$btype,$detail)) ?></div></div>
 </section>
 <?php require_once __DIR__.'/layout_bottom.php'; ?>

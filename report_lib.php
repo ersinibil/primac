@@ -359,6 +359,107 @@ function build_csv($R,$appName,$from,$to){
   return $o;
 }
 
+/* ===== PDF/PRINT DOCUMENT — APP-VIEW'DAN TAMAMEN AYRI PRESENTATION KATMANI (2026-07-19, P0) =====
+   KÖK NEDEN (önceki PDF'in "web ekran görüntüsü" gibi görünmesi): "PDF Paylaş" (html2canvas) her
+   zaman #repArea'nın O ANKİ EKRAN GÖRÜNÜMÜNÜ yakalıyordu — @media print kuralları html2canvas'ın
+   render yolunda HİÇ devreye girmiyor (html2canvas normal ekran/screen render'ı fotoğraflar, print
+   media simülasyonu yapmaz). Yani aktif koyu tema, .rep-tile'ın DS kart görünümü, "Detay →" linki —
+   hepsi doğrudan PDF'e "screenshot" olarak giriyordu; @media print bloğu SADECE window.print()'i
+   etkiliyordu, PDF Paylaş'ı hiç etkilemiyordu. ÇÖZÜM: iki ayrı render — report_render() ekran için
+   (interaktif, tema-duyarlı, drill-down), report_render_pdf() BELGE için (report.php/mobile'de
+   #repArea İÇİNE konur — ekranda off-screen'de durur, hem window.print() hem html2canvas AYNI bu
+   düğümü hedefler). Belge render'ı HİÇBİR --df-* tema token'ı KULLANMAZ (hepsi sabit hex) — aktif
+   tema ne olursa olsun (koyu/açık) belge her zaman aynı: beyaz zemin, koyu metin, PRIMAC aksanı.
+   Interaktif hiçbir eleman (buton, link, segmented control) belgeye HİÇ girmiyor — gerçek <table>
+   + düz metin. thead{display:table-header-group} ile çok sayfalı tablo başlığı her sayfada tekrar
+   eder (tarayıcı print motorunun kendi mekanizması). Sadece TEK MODÜL (Yekün dahil) $R yapısı için
+   —Tümü/Toplu Cari Ekstre agregaları bu turun kapsamı dışında, mevcut app-view fallback'i kullanır. */
+function report_render_pdf($R,$appName,$from,$to){
+  ob_start(); ?>
+<style>
+.pdf-doc{width:760px;max-width:100%;background:#ffffff;color:#0f172a;padding:34px 38px;box-sizing:border-box;font-family:inherit}
+.pdf-doc *{box-sizing:border-box}
+.pdf-doc-header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #1e3a8a;padding-bottom:14px;margin-bottom:20px}
+.pdf-doc-brand{display:flex;align-items:center;gap:12px}
+.pdf-doc-brand img{width:42px;height:42px;object-fit:contain}
+.pdf-doc-brand-text b{display:block;font-size:17px;font-weight:800;color:#0f172a}
+.pdf-doc-brand-text span{display:block;font-size:12.5px;color:#475467;margin-top:1px}
+.pdf-doc-meta{text-align:right;font-size:11px;color:#475467;line-height:1.6}
+.pdf-doc-meta b{color:#0f172a;font-weight:700}
+.pdf-doc-h{font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#1e3a8a;margin:20px 0 8px}
+table.pdf-doc-tbl{width:100%;border-collapse:collapse;font-size:12px}
+table.pdf-doc-tbl th{text-align:left;background:#f1f5f9;color:#334155;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;padding:7px 10px;border-bottom:1.5px solid #cbd5e1}
+table.pdf-doc-tbl td{padding:6px 10px;border-bottom:1px solid #e2e8f0;color:#0f172a}
+table.pdf-doc-tbl tr{page-break-inside:avoid;break-inside:avoid}
+table.pdf-doc-tbl thead{display:table-header-group}
+.pdf-doc-neg{color:#b91c1c;font-weight:700}
+.pdf-doc-foot{margin-top:22px;padding-top:10px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;font-size:10px;color:#94a3b8}
+</style>
+<div class="pdf-doc">
+  <div class="pdf-doc-header">
+    <div class="pdf-doc-brand">
+      <img src="<?=h(base_url().(function_exists('brand_logo')?brand_logo():'logo.png'))?>" alt="" onerror="this.style.display='none'">
+      <div class="pdf-doc-brand-text"><b><?=h($appName)?> OTS</b><span><?=h($R['title'])?> Raporu</span></div>
+    </div>
+    <div class="pdf-doc-meta">
+      <div>Rapor Dönemi<br><b><?=h($from)?> – <?=h($to)?></b></div>
+      <div style="margin-top:6px">Oluşturma<br><b><?=date('d.m.Y H:i')?></b></div>
+    </div>
+  </div>
+
+  <?php if(!empty($R['cards'])): ?>
+  <div class="pdf-doc-h">Yönetici Özeti</div>
+  <table class="pdf-doc-tbl"><tbody>
+  <?php foreach($R['cards'] as $c): $neg=(strpos((string)$c[2],'-')===0); ?>
+    <tr><td style="font-weight:600;color:#475467"><?=h($c[1])?></td><td style="text-align:right;font-weight:800<?=$neg?';color:#b91c1c':''?>"><?=h($c[2])?></td></tr>
+  <?php endforeach; ?>
+  </tbody></table>
+  <?php endif; ?>
+
+  <?php if($R['chart'] && !empty($R['chart'][1])): ?>
+  <div class="pdf-doc-h"><?=h($R['chart'][0])?></div>
+  <table class="pdf-doc-tbl"><tbody>
+  <?php foreach($R['chart'][1] as $lbl=>$val): ?>
+    <tr><td><?=h($lbl)?></td><td style="text-align:right;font-weight:700"><?=($val>=1000)?h(number_format((float)$val,0,',','.')):h($val)?></td></tr>
+  <?php endforeach; ?>
+  </tbody></table>
+  <?php endif; ?>
+
+  <?php if(!empty($R['chart2']) && !empty($R['chart2'][1])): ?>
+  <div class="pdf-doc-h"><?=h($R['chart2'][0])?></div>
+  <table class="pdf-doc-tbl"><tbody>
+  <?php foreach($R['chart2'][1] as $lbl=>$val): ?>
+    <tr><td><?=h($lbl)?></td><td style="text-align:right;font-weight:700"><?=($val>=1000)?h(number_format((float)$val,0,',','.')):h($val)?></td></tr>
+  <?php endforeach; ?>
+  </tbody></table>
+  <?php endif; ?>
+
+  <?php if(!empty($R['table']['rows'])): ?>
+  <div class="pdf-doc-h">Detay Kayıtlar (<?=count($R['table']['rows'])?>)</div>
+  <table class="pdf-doc-tbl">
+    <thead><tr><?php foreach($R['table']['head'] as $th) echo '<th>'.h($th).'</th>'; ?></tr></thead>
+    <tbody>
+    <?php foreach($R['table']['rows'] as $row): ?>
+      <tr><?php foreach($row as $cell){ $s=(string)$cell; $isNeg=(strpos($s,'-')===0 && strpos($s,'₺')!==false); echo '<td'.($isNeg?' class="pdf-doc-neg"':'').'>'.h($s).'</td>'; } ?></tr>
+    <?php endforeach; ?>
+    </tbody>
+  </table>
+  <?php endif; ?>
+
+  <div class="pdf-doc-foot">
+    <span>Oluşturma: <?=date('d.m.Y H:i')?></span>
+    <span><?=h($appName)?> OTS — Online Takip ve Yönetim Sistemi</span>
+  </div>
+</div>
+<?php
+  return ob_get_clean();
+}
+// Belgeye uygun, kurumsal dosya adı — "PRIMAC_OTS_Yekun_Raporu_2026-07-01_2026-07-31" gibi.
+function report_pdf_filename($appName,$title,$from,$to){
+  $slug = function($s){ $s = preg_replace('/[^A-Za-z0-9İıĞğÜüŞşÖöÇç]+/u','_',$s); $s = strtr($s,['İ'=>'I','ı'=>'i','Ğ'=>'G','ğ'=>'g','Ü'=>'U','ü'=>'u','Ş'=>'S','ş'=>'s','Ö'=>'O','ö'=>'o','Ç'=>'C','ç'=>'c']); return trim($s,'_'); };
+  return $slug($appName).'_OTS_'.$slug($title).'_'.$from.'_'.$to;
+}
+
 /* ===== Görsel infografik render (mobil + web ORTAK) ===== */
 function report_render($R,$appName,$from,$to,$full=true){
   static $styled=false;          // <style> sadece bir kez çıksın (Tümü'de 7 kez tekrarlanmasın)
@@ -368,17 +469,13 @@ function report_render($R,$appName,$from,$to,$full=true){
   ob_start();
   if($styled){ echo "\n"; } else { $styled=true; ?>
 <style>
-/* RAPOR AİLESİ — GERÇEK YENİDEN TASARIM (2026-07-19, tur 2, Product Owner canlı ret kararı sonrası):
-   Tur 1 sadece renk/gradient kaldırıp kart iskeletini korumuştu ("reskin") — PO bunu kabul etmedi.
-   Bu turda bilgi mimarisi değişti: PRIMAC logo+"X Raporu"+oluşturma-zamanı HERO'su artık APP-VIEW'DA
-   HİÇ GÖSTERİLMİYOR (display:none) — sadece @media print'te görünür (o bağlamda anlamlı: kurumsal
-   belge başlığı). Ekranda onun yerini .rep-section-title (düz metin: "Modül Adı" + tarih aralığı)
-   alıyor. KPI kutuları da .rep-tile'dan ikon satırı kaldırılıp daha kompakt hale getirildi (etiket +
-   değer, sade kart — dashboard.php'nin command-card ailesiyle aynı dilde). VERİ/KPI/hesaplama HİÇ
-   değişmedi — sadece bu bilgi mimarisi ve render. */
+/* RAPOR AİLESİ — GERÇEK YENİDEN TASARIM (2026-07-19, tur 2→4): ekran (.rep) artık SADECE interaktif
+   app-view — kurumsal logo/belge başlığı hiç burada değil (bkz. report_render_pdf(), ayrı belge
+   katmanı). Ekranda .rep-section-title (düz metin: "Modül Adı" + tarih aralığı) tek başlık. KPI
+   kutuları .rep-tile'dan ikon satırı kaldırılıp kompakt hale getirildi (etiket+değer, sade kart —
+   dashboard.php'nin command-card ailesiyle aynı dilde). VERİ/KPI/hesaplama HİÇ değişmedi. */
 .rep{--ink:#0f172a}
 .rep *{box-sizing:border-box}
-.rep-hero{display:none}
 /* SON POLISH (2026-07-19, tur 3) — SPACING: başlık/tarih/KPI arası dikey boşluk sıkılaştırıldı.
    TİPOGRAFİ: tüm font-size/weight artık --df-type-* global ölçeğine bağlı (istisna: KPI değeri —
    token setinde "metrik rakam" ölçeği yok, bilinçli sabit 20px/700 — eski 800 ağırlıktan hafifletildi,
@@ -433,55 +530,28 @@ table.rep-tbl tr:hover td{background:var(--df-surface-sunken,#f2f4f7)}
   table.rep-tbl td[data-label]::before{content:attr(data-label);font-weight:var(--df-type-micro-weight,700);text-transform:uppercase;font-size:var(--df-type-micro-size,11px);letter-spacing:.04em;color:var(--df-ink-500,#667085);text-align:left;margin-right:auto}
 }
 @media print{
-  /* PİLOT KAPANIŞ PAKETİ (2026-07-19) — "PDF = ekran görüntüsü olmayacak": window.print()'in
-     kullandığı GERÇEK tarayıcı print motoru için deterministik A4 çıktı. Veri/hesaplama AYNI —
-     sadece bu blok. Uygulama arayüzü (üst bar/filtre/sekme/butonlar zaten .noprint) ve raporun
-     KENDİ interaktif unsurları (drill-down "Detay →" linki, tıklanabilir KPI kutuları) print'te
-     anlamsız olduğu için ayrıca gizlenir — kağıtta tıklanamayan bir "buton" göstermeyelim. */
+  /* P0 PDF MİMARİSİ (2026-07-19, tur 4) — APP-VIEW ARTIK HİÇ YAZDIRILMIYOR/YAKALANMIYOR: .rep
+     (ekran) ve onun içeriği (.rep-hero/.rep-tile/.rep-tbl) print'ten TAMAMEN çekildi — belge artık
+     #repArea içine ayrıca render edilen report_render_pdf() çıktısı (.pdf-doc, her zaman sabit açık
+     renk, tema token'ı YOK). window.print() BU bloğu görünür kılar; html2canvas ("PDF Paylaş") de
+     zaten #repArea'yı hedefliyor (report_share.js değişmedi) — ikisi AYNI belgeyi kullanır. */
   @page{size:A4;margin:14mm 12mm}
   body{background:#fff!important}
   body *{visibility:hidden!important}
-  .rep,.rep *{visibility:visible!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  .rep{position:absolute!important;left:0;top:0;width:100%;padding:0!important;color:#0f172a!important}
-  /* HERO: ekranda display:none — kurumsal PRIMAC logo/başlık/oluşturma-zamanı SADECE burada, PDF/
-     yazdırma belgesinde anlamlı olduğu için. Ekranın kendi .rep-section-title'ı (düz metin) print'te
-     tekrar görünmesin diye gizlenir — aynı bilgiyi iki kez basmayalım. */
-  .rep-hero{display:flex!important;background:#fff!important;border:1px solid #d0d7e2!important;color:#0f172a!important;margin-bottom:14px}
-  .rep-hero .lg{background:#f1f5f9!important;color:#1e3a8a!important}
-  .rep-section-title{display:none!important}
-  .rep-card{background:#fff!important;border:1px solid #d0d7e2!important;color:#0f172a!important;page-break-inside:avoid;break-inside:avoid}
-  .rep-card .ttl{color:#0f172a!important}
-  .rep-tile{-webkit-print-color-adjust:exact;print-color-adjust:exact;page-break-inside:avoid;break-inside:avoid}
-  table.rep-tbl{color:#0f172a!important}
-  table.rep-tbl th{background:#f1f5f9!important;color:#334155!important;border-bottom:1.5px solid #cbd5e1!important}
-  table.rep-tbl td{color:#0f172a!important;border-bottom:1px solid #e2e8f0!important}
-  table.rep-tbl tr{page-break-inside:avoid;break-inside:avoid}
-  table.rep-tbl tr:nth-child(even) td{background:#f8fafc!important}
-  .rep-bar .t{background:#e2e8f0!important}
-  .rep-neg{color:#b91c1c!important}
-  .rep-tile a,a.rep-tile,.rep-tbl a{pointer-events:none;text-decoration:none!important;color:inherit!important}
-  table.rep-tbl th:last-child,table.rep-tbl td:last-child{display:none!important} /* Detay → sütunu (linkin kendisi) */
-  .rep-foot{color:#64748b!important}
+  #repArea,#repArea *{visibility:visible!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  #repArea{position:static!important;left:auto!important;width:100%!important}
   /* Tam sayfa numarası ("Sayfa N/M") CSS Paged Media margin-box içeriği tüm tarayıcılarda
      deterministik desteklenmiyor (bilinen Chrome print-to-PDF sınırlaması) — güvenilir alternatif
      tarayıcının KENDİ "Üstbilgi ve altbilgiler" yazdırma seçeneği (kullanıcı Ctrl+P panelinden
-     açar/kapatır). Burada .rep-foot tek seferlik bir kapanış notu, sayfa başına tekrarlanan bir
+     açar/kapatır). .pdf-doc-foot tek seferlik bir kapanış notu, sayfa başına tekrarlanan bir
      "sayfa no" değil — bunu iddia etmiyoruz, yanlış vaat vermemek için bilerek böyle bırakıldı. */
 }
 </style>
 <?php } ?>
 <div class="rep">
-  <!-- PRINT-ONLY: PRIMAC logo + "X Raporu" + oluşturma zamanı — ekranda .rep-hero{display:none},
-       kullanıcı zaten PRIMAC OTS içinde, bu bilgi ekranda tekrar anlamsız. Sadece PDF/yazdırmada
-       (@media print .rep-hero{display:flex!important}) görünür kurumsal belge başlığı. -->
-  <div class="rep-hero">
-    <div class="lg"><img src="<?=htmlspecialchars(base_url().(function_exists('brand_logo')?brand_logo():'logo.png'))?>" alt="<?=$ic?>" style="width:100%;height:100%;object-fit:contain;border-radius:inherit" onerror="this.parentNode.textContent='<?=$ic?>'"></div>
-    <div style="flex:1"><h2><?=htmlspecialchars($appName)?> · <?=htmlspecialchars($R['title'])?> Raporu</h2>
-      <div class="dt"><?=htmlspecialchars($from)?> — <?=htmlspecialchars($to)?> · Oluşturma: <?=date('d.m.Y H:i')?></div></div>
-  </div>
-
-  <!-- APP-VIEW: sade bölüm başlığı — hero'nun ekrandaki yerini alır -->
-  <div class="rep-section-title noprint">
+  <!-- Belge başlığı artık burada değil — report_render_pdf() kendi kurumsal başlığını üretiyor
+       (#repArea, ayrı belge). Burada sadece ekran için sade bölüm başlığı. -->
+  <div class="rep-section-title">
     <h2><?=htmlspecialchars($R['title'])?></h2>
     <div class="dt"><?=htmlspecialchars($from)?> — <?=htmlspecialchars($to)?></div>
   </div>

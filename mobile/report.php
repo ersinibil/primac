@@ -81,7 +81,19 @@ topx('Rapor');
   <a class="<?=$detail?'is-active':''?>" href="report.php?modul=<?=$modul?>&from=<?=$from?>&to=<?=$to?>&ref=<?=$ref?>&detay=1&mode=<?=urlencode($bmode)?>&type=<?=urlencode($btype)?>">Detay</a>
 </nav>
 
-<div id="repArea"><?= $isAll ? report_render_all($pdo,$appName,$from,$to,$detail) : ($isCariToplu ? report_render_cari_toplu($pdo,$appName,$from,$to,$bmode,$btype,$detail) : report_render($R,$appName,$from,$to,$detail)) ?></div>
+<div class="noprint"><?= $isAll ? report_render_all($pdo,$appName,$from,$to,$detail) : ($isCariToplu ? report_render_cari_toplu($pdo,$appName,$from,$to,$bmode,$btype,$detail) : report_render($R,$appName,$from,$to,$detail)) ?></div>
+<!-- P0 PDF MİMARİSİ (2026-07-19): #repArea ekranda görünmez (off-screen) — ayrı, hep-açık
+     kurumsal belge katmanı. window.print() + "PDF Olarak Paylaş" (html2canvas) İKİSİ DE bu
+     düğümü hedefler, ekrandaki app-view asla yazdırılmaz/screenshot alınmaz. -->
+<style>
+/* .repdoc-offscreen wrapper (id DEĞİL) BİLEREK #repArea'nın DIŞINDA — report_share.js #repArea'yı
+   cloneNode(true) ile ayrı bir holder'a klonluyor; off-screen konumlandırma #repArea'nın
+   ÜZERİNDE olsaydı klon da aynı id CSS kuralıyla eşleşip kendini holder içinde tekrar
+   -99999px'e iterdi. Wrapper klonlanmadığı için güvenli. */
+.repdoc-offscreen{position:absolute;left:-99999px;top:0}
+@media print{.repdoc-offscreen{position:static!important;left:auto!important}}
+</style>
+<div class="repdoc-offscreen"><div id="repArea"><?= (!$isAll && !$isCariToplu) ? report_render_pdf($R,$appName,$from,$to) : ($isAll ? report_render_all($pdo,$appName,$from,$to,$detail) : report_render_cari_toplu($pdo,$appName,$from,$to,$bmode,$btype,$detail)) ?></div></div>
 
 <div class="df-panel noprint" style="margin-top:14px">
   <b><?=ds_icon('send',16)?> Bu raporu paylaş</b>
@@ -98,7 +110,10 @@ topx('Rapor');
     <button class="df-btn df-btn--primary" name="send_msg" value="1"><?=ds_icon('chat',16)?></button>
   </form>
 </div>
-<script>window.ACANS_REPORT_NAME='rapor_<?=$modul?>_<?=$from?>';</script>
+<script>
+window.ACANS_REPORT_NAME='<?=($isAll||$isCariToplu) ? 'rapor_'.$modul.'_'.$from : report_pdf_filename($appName,$R['title'],$from,$to)?>';
+window.ACANS_PDF_BG='#ffffff'; window.ACANS_PDF_FG='#0f172a';
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="../report_share.js"></script>
