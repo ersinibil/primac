@@ -358,25 +358,32 @@ FAIL:
 
 ## 15. PERSONEL / OTS HESABI / YETKİ
 
-**Durum: CODE PASS / TEST PENDING**
+**Durum: USER PASS (pilot öncesi seçici temizlik, 2026-07-19)**
 
 USER PASS:
+- **Personel/OTS hesap bire-bir eşleştirme (2026-07-19, canlı kanıtlı)** — `pilot_temizlik_uygula.php`
+  geçici aracıyla primac.tr'de gerçek uygulama yapıldı, kullanıcı sonucu canlı sayılarla doğruladı:
+  Aktif personel=6, personelle eşleşmiş aktif OTS kullanıcı=6, orphan aktif kullanıcı=0, hesapsız
+  aktif personel=0. Ömer Şahin↔ömer, Ahmet Emir İbil↔AhmetEmir, Ersin İbil↔ersin#1 çift yönlü
+  bağlandı (`personnel_link_account()`, mevcut fonksiyon). Sema Nur Sağır + eski/test/duplicate
+  hesaplar (deneme#10, muhammet#3, ersinibil#9, primac#6) güvenli şekilde PASİFE alındı (fiziksel
+  silme yok, audit bozulmadı). id=1 ana admin korundu.
 - "Personel + Kullanıcı + Yetki tekleştirme ana UX" — kullanıcı onayı var (commit `2e98f95` +
   önceki oturumun sticky kimlik başlığı/sekme birleştirmesi).
+- Muhammet orphan personel/user senaryosu — **çözüldü**: Muhammet Fışkın'ın canonical hesabı
+  fışkın#13, orphan muhammet#3 artık pasif (yukarıdaki seçici temizlikle birlikte).
 
 CODE PASS / TEST PENDING:
 - Orphan OTS hesabı tespiti+eşleştirme (`personnel_find_orphan_matches()`/`personnel_link_account()`,
   web+mobil), kör cascade DELETE'in KALDIRILMASI (2 yerde: `sil.php`, `mobile/personnel_view.php` —
-  artık sadece pasife alma), `users.php`'nin tek-yönlü senkron hatası düzeltildi (commit `9798fe3`,
-  bu turda `contact_view.php`/`personnel.php` gibi dosyalar okunarak dolaylı doğrulandı).
+  artık sadece pasife alma), `users.php`'nin tek-yönlü senkron hatası düzeltildi (commit `9798fe3`).
 - P0-AUTH-01 (mükerrer hesap/stale user_id şifre sıfırlama hedefi) — kod düzeltildi (`91d0567`),
   **gerçek cihaz testi hiç yapılmadı.**
 - P0-AUTH-02 (Şifre Sıfırla WA gönderimi başarısızsa hesabı kilitlemesin) — kod düzeltildi
   (`b0f8ec6`), **gerçek cihaz testi hiç yapılmadı.**
-
-FAIL:
-- Muhammet orphan personel/user senaryosu (kullanıcının "kaybetme" listesinde) — genel orphan-eşleme
-  mekanizması kod olarak var, ama **bu spesifik canlı kaydın düzeldiği doğrulanmadı** (DB erişimi yok).
+- Pasif hesapların login olamaması — `index.php` login sorgusu `WHERE username=? AND active=1`
+  ile zaten filtreliyor (kod izlemesiyle doğrulandı, bu turda), canlı login denemesiyle
+  ayrıca doğrulanmadı.
 
 DEFERRED:
 - `app_users.personnel_id` üzerinde DB-seviyeli UNIQUE kısıt yok (teorik TOCTOU, düşük risk,
