@@ -128,10 +128,11 @@ if(is_admin()){
     <?php endif;
     }catch(Throwable $e){}
 }
-// KÖK NEDEN DÜZELTMESİ (2026-07-19, P0 — canlıda ekrana ham PHP kodu basılıyordu): burada fazladan
-// bir "?>" vardı, PHP modunu erken kapatıp aşağıdaki yorum satırlarını/$typeIsOther/ds_tabs()
-// çağrısını (önceden buraya doğru şekilde bağlı, hiç değişmemiş kod) düz HTML metni olarak
-// bastırıyordu. Kaldırıldı — bu blok satır 144'teki gerçek kapanışa kadar TEK PHP bloğu.
+// KOK NEDEN DUZELTMESI (2026-07-19, P0): burada fazladan bir PHP kapanis etiketi vardi, PHP
+// modunu erken kapatip asagidaki yorum satirlarini/typeIsOther/ds_tabs cagrisini (onceden buraya
+// dogru sekilde bagli, hic degismemis kod) duz HTML metni olarak bastiriyordu. Kaldirildi.
+// UYARI: Bu yorum blogunda kapanis etiketinin iki karakterini yan yana YAZMA — PHP tek satirlik
+// yorumlari tirnak/baglam tanimadan o iki karakter dizisini gorunce yorumu ve PHP modunu kapatir.
 // Eski derin linkler (finance.php'nin ?type=POS gibi) "Diğer" havuzuna giren GERÇEK bir
 // account_type ile gelebilir — bu durumda da "Diğer" sekmesi aktif görünsün (kozmetik, Ece'nin
 // code review notu). Tanınmayan/garbage bir değer burada YOK sayılır (WHERE tarafı zaten onu
