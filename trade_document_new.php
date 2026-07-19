@@ -269,12 +269,12 @@ ds_form_field('Cari', '<select name="contact_id" required>'.$__contactOpts.'</se
 </table>
 </div>
 
-<div class="panel" style="background:#f0f9ff;border:1px solid #bae6fd;margin:16px 0;padding:16px 18px">
-<div style="display:flex;justify-content:space-between;padding:3px 0"><span class="muted">Ara Toplam</span><b id="tradeSubtotal">0,00 ₺</b></div>
-<div style="display:flex;justify-content:space-between;padding:3px 0"><span class="muted">KDV</span><b id="tradeVat">0,00 ₺</b></div>
-<div style="display:flex;justify-content:space-between;padding:8px 0 0;border-top:1px solid #bae6fd;margin-top:6px">
+<div class="df-card" style="background:var(--df-accent-soft);border-color:transparent;margin:16px 0;padding:16px 18px">
+<div style="display:flex;justify-content:space-between;padding:3px 0"><span class="df-muted">Ara Toplam</span><b id="tradeSubtotal">0,00 ₺</b></div>
+<div style="display:flex;justify-content:space-between;padding:3px 0"><span class="df-muted">KDV</span><b id="tradeVat">0,00 ₺</b></div>
+<div style="display:flex;justify-content:space-between;padding:8px 0 0;border-top:1px solid var(--df-hairline);margin-top:6px">
 <span style="font-size:15px;font-weight:800">Genel Toplam</span>
-<span id="tradeTotal" style="font-size:26px;font-weight:900;color:#0369a1">0,00 ₺</span>
+<span id="tradeTotal" style="font-size:26px;font-weight:900;color:var(--df-accent)">0,00 ₺</span>
 </div>
 </div>
 </div>
