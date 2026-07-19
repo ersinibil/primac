@@ -63,14 +63,14 @@ FROM management_requests r
 LEFT JOIN personnel p ON p.id=r.personnel_id
 LEFT JOIN jobs j ON j.id=r.related_job_id
 $where
-ORDER BY FIELD(r.status,'Yeni','İnceleniyor','Onaylandı','Reddedildi','Tamamlandı'), r.id DESC");
+ORDER BY FIELD(r.status,'Yeni','İnceleniyor','Onaylandı','Reddedildi','Tamamlandı','İptal Edildi'), r.id DESC");
 $stmt->execute($params);
 $rows=$stmt->fetchAll();
 ?>
 
 <?php
 ds_page_header('Talep Merkezi', ds_icon('send',24), '', ds_button('Yeni Talep','request_new.php','primary','','',true), false, true);
-$__reqStatuses=['','Yeni','İnceleniyor','Onaylandı','Reddedildi','Tamamlandı'];
+$__reqStatuses=['','Yeni','İnceleniyor','Onaylandı','Reddedildi','Tamamlandı','İptal Edildi'];
 $__reqTabItems=[];
 foreach($__reqStatuses as $__s){ $__reqTabItems[]=['label'=>$__s===''?'Tümü':$__s,'url'=>$__s===''?'requests.php':'requests.php?status='.urlencode($__s),'active'=>($status===$__s)]; }
 ds_tabs($__reqTabItems);

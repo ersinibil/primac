@@ -72,7 +72,7 @@ try{
     LEFT JOIN personnel p ON p.id=r.personnel_id
     LEFT JOIN jobs j ON j.id=r.related_job_id
     $where
-    ORDER BY FIELD(r.status,'Yeni','İnceleniyor','Onaylandı','Reddedildi','Tamamlandı'), r.id DESC");
+    ORDER BY FIELD(r.status,'Yeni','İnceleniyor','Onaylandı','Reddedildi','Tamamlandı','İptal Edildi'), r.id DESC");
   $stmt->execute($params);
   $rows=$stmt->fetchAll();
 }catch(Throwable $e){ $er=$e->getMessage(); }
