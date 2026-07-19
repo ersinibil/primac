@@ -257,7 +257,7 @@ function setMobileTheme(btn,theme){
 ?>
 <a class="df-panel" href="more.php?open=<?=h($__cat)?>" style="display:flex;align-items:center;gap:12px;margin-bottom:10px;text-decoration:none;color:inherit">
   <span style="flex:0 0 auto;width:44px;height:44px;border-radius:var(--df-radius-md);background:var(--df-surface-sunken);display:flex;align-items:center;justify-content:center"><?=ds_icon($__catIconMapM[$__cat] ?? 'menu', 22)?></span>
-  <div style="flex:1;min-width:0"><b><?=h(nav_category_label($__cat))?></b><div class="small"><?=count($__catItems)?> aksiyon</div></div>
+  <div style="flex:1;min-width:0"><b><?=h(nav_category_label($__cat))?></b><div class="small"><?=h(nav_category_short_desc($__cat, count($__catItems)))?></div></div>
   <?=ds_icon('chevron-right',18)?>
 </a>
 <?php endforeach; ?>
@@ -269,13 +269,24 @@ function setMobileTheme(btn,theme){
      ($backUrl='more.php', bkz. dosya başı) — burada İKİNCİ bir "‹ Menü" linki YAZILMADI
      (P0 MOBİL NAVİGASYON, 2026-07-18: "Menü içinde gereksiz ikinci navigasyon/geri karmaşası
      oluşturma"). -->
-<h2 style="margin:0 0 12px;display:flex;align-items:center;gap:10px"><?=ds_icon($__catIconMapM[$__openCat] ?? 'menu', 22)?> <?=h(nav_category_label($__openCat))?></h2>
 <?php if(!$__catItems): ?>
 <?php ds_empty_state('Bu kategoride yetkili aksiyon yok.'); ?>
-<?php else: ?>
-<div class="df-panel" style="padding:6px">
-<?php foreach($__catItems as $__item): ?>
+<?php else:
+// MOBİL UX/IA KONSOLİDE PASS (2026-07-19, bölüm 5) — tek düz kart yerine anlamlı alt gruplar
+// (Hızlı İşlemler/Cariler/Operasyon vb., bkz. nav_lib.php::nav_category_menu_groups()). Markup
+// için YENİ bir class İCAT EDİLMEDİ — .df-nav-launcher-group/.df-nav-launcher-group-title/
+// .df-nav-row zaten ds-foundation.css'te tanımlıydı (eski Web Module Launcher'dan kalma, hiç
+// PHP'den çağrılmıyordu) — tam ihtiyaca uyan, kullanılmayan bir bileşen burada bağlandı.
+$__groups = nav_group_category_items($__catItems, $__openCat);
+?>
+<div class="df-panel">
+<?php foreach($__groups as $__g): ?>
+<div class="df-nav-launcher-group">
+<?php if($__g['label']): ?><div class="df-nav-launcher-group-title"><?=h($__g['label'])?></div><?php endif; ?>
+<?php foreach($__g['items'] as $__item): ?>
 <a class="df-nav-row" href="<?=h(nav_url_for_platform($__item,'mobile'))?>"><?=h($__item['actionLabel'] ?? $__item['label'])?></a>
+<?php endforeach; ?>
+</div>
 <?php endforeach; ?>
 </div>
 <?php endif; ?>

@@ -31,17 +31,21 @@ function nav_taxonomy(){
     return [
         // ── ÇALIŞMA (primary adayları + iletişim) ───────────────────────────
         ['key'=>'dashboard','label'=>'Komuta Merkezi','url'=>'dashboard.php','mobileUrl'=>'index.php','group'=>'çalışma','perm'=>null,'primary'=>true,'category'=>null,'categoryOrder'=>null,'isPrimaryAction'=>false,'searchKeywords'=>['ana sayfa','home','komuta merkezi']],
-        ['key'=>'mytasks','label'=>'Görevlerim','url'=>'mytasks.php','group'=>'çalışma','perm'=>null,'primary'=>true,'actionLabel'=>'Görevlerimi Gör','category'=>'isler','categoryOrder'=>2,'isPrimaryAction'=>false,'searchKeywords'=>['görev','task','yapılacak']],
-        ['key'=>'jobs','label'=>'İş / Üretim','url'=>'jobs.php','group'=>'çalışma','perm'=>'jobs','primary'=>true,'actionLabel'=>'İş Emirlerini Gör','category'=>'isler','categoryOrder'=>3,'isPrimaryAction'=>false,'searchKeywords'=>['iş emri','iş listesi']],
+        // MOBİL UX/IA KONSOLİDE PASS (2026-07-19, bölüm 6, Product Owner kararı) — "Görevlerimi Gör"/
+        // "İş Emirlerini Gör"/"Takvime Bak"/"Onay Bekleyenleri Gör" gibi fiilli eski link dili kısa
+        // isimlere çevrildi (Görevlerim/İş Emirleri/Takvim/Onaylar) — SADECE görüntü metni, key/url/
+        // perm/category değişmedi. label ile aynı hale gelen actionLabel'lar (artık gereksiz) kaldırıldı.
+        ['key'=>'mytasks','label'=>'Görevlerim','url'=>'mytasks.php','group'=>'çalışma','perm'=>null,'primary'=>true,'category'=>'isler','categoryOrder'=>2,'isPrimaryAction'=>false,'searchKeywords'=>['görev','task','yapılacak']],
+        ['key'=>'jobs','label'=>'İş / Üretim','url'=>'jobs.php','group'=>'çalışma','perm'=>'jobs','primary'=>true,'actionLabel'=>'İş Emirleri','category'=>'isler','categoryOrder'=>3,'isPrimaryAction'=>false,'searchKeywords'=>['iş emri','iş listesi']],
         ['key'=>'job_new','label'=>'Yeni İş Aç','url'=>'job_new.php','group'=>'is_takip','perm'=>'jobs','primary'=>false,'category'=>'isler','categoryOrder'=>1,'isPrimaryAction'=>true,'searchKeywords'=>['yeni iş','iş aç','sipariş']],
         ['key'=>'production','label'=>'Üretimdeki İşleri Gör','url'=>'production.php','mobileUrl'=>'uretim.php','group'=>'is_takip','perm'=>'jobs','primary'=>false,'category'=>'uretim_stok','categoryOrder'=>1,'isPrimaryAction'=>true,'searchKeywords'=>['üretim','üretim başlat','aşama','üretim panosu']],
         ['key'=>'assembly','label'=>'Montajdaki İşleri Gör','url'=>'assembly.php','mobileHide'=>true,'group'=>'is_takip','perm'=>'jobs','primary'=>false,'category'=>'uretim_stok','categoryOrder'=>2,'isPrimaryAction'=>false,'searchKeywords'=>['montaj']],
         ['key'=>'external','label'=>'Dış Atölye İşlerini Gör','url'=>'external.php','group'=>'is_takip','perm'=>'jobs','primary'=>false,'category'=>'isler','categoryOrder'=>6,'isPrimaryAction'=>false,'searchKeywords'=>['dış atölye','dış tedarik']],
         ['key'=>'design','label'=>'Tasarımdaki İşleri Gör','url'=>'design.php','mobileHide'=>true,'group'=>'is_takip','perm'=>'jobs','primary'=>false,'category'=>'uretim_stok','categoryOrder'=>3,'isPrimaryAction'=>false,'searchKeywords'=>['tasarım','grafik']],
         ['key'=>'work_center','label'=>'İş İstasyonunu Gör','url'=>'work_center.php','mobileHide'=>true,'group'=>'is_takip','perm'=>'jobs','primary'=>false,'category'=>'uretim_stok','categoryOrder'=>4,'isPrimaryAction'=>false,'searchKeywords'=>['iş istasyonu','iş motoru']],
-        ['key'=>'approval_waiting','label'=>'Onay Bekleyen Dosyaları Gör','url'=>'approval_waiting.php','group'=>'is_takip','perm'=>'jobs','primary'=>false,'actionLabel'=>'Onay Bekleyenleri Gör','category'=>'isler','categoryOrder'=>5,'isPrimaryAction'=>false,'searchKeywords'=>['onay','müşteri onayı']],
+        ['key'=>'approval_waiting','label'=>'Onay Bekleyen Dosyaları Gör','url'=>'approval_waiting.php','group'=>'is_takip','perm'=>'jobs','primary'=>false,'actionLabel'=>'Onaylar','category'=>'isler','categoryOrder'=>5,'isPrimaryAction'=>false,'searchKeywords'=>['onay','müşteri onayı']],
         ['key'=>'tasks','label'=>'Tüm Görevleri Gör','url'=>'tasks.php','group'=>'is_takip','perm'=>'tasks','primary'=>false,'category'=>'isler','categoryOrder'=>7,'isPrimaryAction'=>false,'searchKeywords'=>['tüm görevler','ekip görevi']],
-        ['key'=>'takvim','label'=>'Takvim','url'=>'takvim.php','mobileUrl'=>'calendar.php','group'=>'çalışma','perm'=>'jobs','primary'=>true,'actionLabel'=>'Takvime Bak','category'=>'isler','categoryOrder'=>4,'isPrimaryAction'=>false,'searchKeywords'=>['takvim','termin','tarih']],
+        ['key'=>'takvim','label'=>'Takvim','url'=>'takvim.php','mobileUrl'=>'calendar.php','group'=>'çalışma','perm'=>'jobs','primary'=>true,'category'=>'isler','categoryOrder'=>4,'isPrimaryAction'=>false,'searchKeywords'=>['takvim','termin','tarih']],
         ['key'=>'messages','label'=>'İletişim Merkezi','url'=>'messages.php','group'=>'çalışma','perm'=>null,'primary'=>true,'category'=>null,'categoryOrder'=>null,'isPrimaryAction'=>false,'searchKeywords'=>['mesaj','yazış','chat','iletişim']],
         ['key'=>'notifications','label'=>'Bildirimler','url'=>'notifications.php','group'=>'çalışma','perm'=>null,'primary'=>true,'category'=>null,'categoryOrder'=>null,'isPrimaryAction'=>false,'searchKeywords'=>['bildirim','uyarı']],
         ['key'=>'notes','label'=>'Notlarım','url'=>'notes.php','mobileUrl'=>'mytasks.php','group'=>'çalışma','perm'=>null,'primary'=>true,'category'=>'isler','categoryOrder'=>10,'isPrimaryAction'=>false,'searchKeywords'=>['not','hatırlatma']],
@@ -159,6 +163,76 @@ function nav_items_for_category($canSee, $isAdmin, $category, $platform = 'web')
         if($ap !== $bp) return $ap <=> $bp;
         return ($a['categoryOrder'] ?? 999) <=> ($b['categoryOrder'] ?? 999);
     });
+    return $out;
+}
+
+// MOBİL UX/IA KONSOLİDE PASS (2026-07-19, Product Owner kararı, bölüm 4) — Menü ana ekranındaki
+// kategori kutularında "N aksiyon" gibi kullanıcı açısından anlamsız sayaçlar yerine kısa, somut
+// içerik özeti. Yeni bir alan/route İCAT EDİLMEDİ, sadece sunum metni — nav_taxonomy() değişmedi.
+function nav_category_short_desc($category, $fallbackCount = 0){
+    $map = [
+        'isler'      => 'Görevler · İş Emirleri · Takvim',
+        'ticaret'    => 'Satış · Alış · Teklif · Belgeler',
+        'uretim_stok'=> 'Ürünler · Stok · Üretim · Dış Atölye',
+        'finans'     => 'Tahsilat · Ödeme · Kasa/Banka · Çek/Senet',
+        'yonetim'    => 'Personel · Sistem · Raporlama',
+    ];
+    return $map[$category] ?? ($fallbackCount.' aksiyon');
+}
+
+// MOBİL UX/IA KONSOLİDE PASS (2026-07-19, Product Owner kararı, bölüm 5) — kategori içi ekranlar
+// düz alt alta link listesiydi ("eski launcher hissi", günlük işlem ile yönetim aksiyonu aynı
+// görsel ağırlıkta). Bu SADECE bir SUNUM gruplaması — nav_taxonomy()'nin key/perm/category/url
+// alanlarına dokunmaz, yeni bir route YOK. Haritada karşılığı olmayan (yeni eklenen ama burada
+// unutulan) bir satır sessizce "Diğer" grubuna düşer — kırılma yok, sadece gruplanmamış görünür.
+function nav_category_menu_groups(){
+    return [
+        'ticaret' => [
+            'Hızlı İşlemler' => ['sales','purchase','teklif'],
+            'Cariler'        => ['contacts','contact_new','contacts_report'],
+            'Belgeler'       => ['trade_documents'],
+        ],
+        'uretim_stok' => [
+            'Operasyon' => ['production','assembly','design','work_center','stock','stock_movement_new'],
+            'Tanımlar'  => ['product_new','product_categories','product_taxonomy'],
+        ],
+        'finans' => [
+            'Günlük İşlemler'  => ['finance_new_in','finance_new_out','finance_transfer'],
+            'Hesaplar'         => ['finance','finance_accounts'],
+            'Belge/Enstrüman'  => ['checks_notes'],
+            'Muhasebe'         => ['accounting','accounting_categories'],
+        ],
+        'yonetim' => [
+            'Personel'   => ['personnel','kpi'],
+            'Raporlama'  => ['report','gunluk_rapor'],
+            'Sistem'     => ['users','audit_log','wa_settings','brand_settings','temizle_veri'],
+        ],
+        'isler' => [
+            'Bugün'        => ['mytasks','jobs','takvim'],
+            'Talep & Onay' => ['approval_waiting','requests','request_new'],
+            'Diğer'        => ['job_new','external','tasks','notes'],
+        ],
+    ];
+}
+
+// $items = nav_items_for_category() sonucu. Dönüş: [['label'=>string|null,'items'=>[...]], ...].
+// Haritalanmamış bir kategori gelirse (bugün hepsi haritalı) eski düz-liste davranışına (tek grup,
+// label=null) sessizce döner — çağıran taraf (mobile/more.php) label null ise başlık basmaz.
+function nav_group_category_items($items, $category){
+    $map = nav_category_menu_groups()[$category] ?? null;
+    if(!$map) return $items ? [['label'=>null,'items'=>$items]] : [];
+    $byKey = [];
+    foreach($items as $it){ $byKey[$it['key']] = $it; }
+    $used = [];
+    $out = [];
+    foreach($map as $groupLabel=>$keys){
+        $groupItems = [];
+        foreach($keys as $k){ if(isset($byKey[$k])){ $groupItems[] = $byKey[$k]; $used[$k] = true; } }
+        if($groupItems) $out[] = ['label'=>$groupLabel,'items'=>$groupItems];
+    }
+    $rest = [];
+    foreach($items as $it){ if(empty($used[$it['key']])) $rest[] = $it; }
+    if($rest) $out[] = ['label'=>'Diğer','items'=>$rest];
     return $out;
 }
 
