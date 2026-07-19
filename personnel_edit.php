@@ -107,7 +107,18 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['reset_pw']) && trim($_PO
     }catch(Throwable $e){ $error=$e->getMessage(); }
 }
 
-if($_SERVER['REQUEST_METHOD']==='POST' && !isset($_POST['regen_telegram_code']) && !isset($_POST['clear_telegram_binding']) && !isset($_POST['save_account_role']) && !isset($_POST['clear_cv']) && !isset($_POST['make_login']) && !isset($_POST['reset_pw']) && !isset($_POST['link_orphan_user_id'])){
+if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['update_username'])){
+    // P0 (2026-07-19): personnel_lib.php::personnel_update_username() — reset_pw ile AYNI IDOR
+    // korumalı hedef çözümü, id=1 dahil (ana admin username değiştirebilir, sadece silinemez/
+    // pasife alınamaz — o kısıt burada değil, id=1'in delete/deactivate akışlarında).
+    try{
+        if(!$canManageAccounts) throw new Exception('Bu işlem için yönetici yetkisi gerekir.');
+        $res=personnel_update_username($pdo, $id, $_POST['new_username'] ?? '', $_SESSION['user']['id'] ?? null);
+        $ok = $res['changed'] ? 'Kullanıcı adı "'.$res['old_username'].'" → "'.$res['username'].'" olarak güncellendi.' : 'Kullanıcı adı zaten bu — değişiklik yapılmadı.';
+    }catch(Throwable $e){ $error=$e->getMessage(); }
+}
+
+if($_SERVER['REQUEST_METHOD']==='POST' && !isset($_POST['regen_telegram_code']) && !isset($_POST['clear_telegram_binding']) && !isset($_POST['save_account_role']) && !isset($_POST['clear_cv']) && !isset($_POST['make_login']) && !isset($_POST['reset_pw']) && !isset($_POST['link_orphan_user_id']) && !isset($_POST['update_username'])){
     try{
         $cvPath = $hasCvCol ? personnel_handle_cv_upload() : null;
 
@@ -496,6 +507,16 @@ ds_form_field('Çalışma Tipi', '<select name="work_type">'.$__workOpts.'</sele
 <section class="df-card" style="margin-top:var(--df-space-4)">
 <h2 class="df-section-title"><?=ds_icon('user',20)?> Hesap ve Yetki</h2>
 
+<?php if($staffUserId): ?>
+  <h3 class="df-section-subtitle"><?=ds_icon('edit',16)?> Kullanıcı Adı</h3>
+  <p class="df-section-hint">Değiştirildiğinde giriş yeni kullanıcı adıyla yapılır — hesap ID'si, personel bağı ve geçmiş kayıtlar bozulmaz.</p>
+  <form method="post" style="max-width:360px;margin-bottom:var(--df-space-5);display:flex;gap:8px;align-items:end">
+    <input type="hidden" name="update_username" value="1">
+    <div style="flex:1"><?php ds_form_field('Kullanıcı Adı', '<input name="new_username" value="'.h($staffUsername).'" required minlength="3">'); ?></div>
+    <button class="df-btn df-btn--secondary">Değiştir</button>
+  </form>
+<?php endif; ?>
+
 <?php if($staffUserId===1): ?>
   <p class="df-section-hint">Bu hesap sistemin ana yöneticisi — korumalıdır, rolü buradan değiştirilemez.</p>
 <?php elseif(!$staffUserId): ?>
@@ -523,7 +544,6 @@ ds_form_field('Çalışma Tipi', '<select name="work_type">'.$__workOpts.'</sele
   </form>
 <?php else: ?>
   <h3 class="df-section-subtitle"><?=ds_icon('settings',16)?> Şifre Sıfırla</h3>
-  <p class="df-section-hint">Kullanıcı adı: <b><?=h($staffUsername)?></b></p>
   <form method="post" style="max-width:360px;margin-bottom:var(--df-space-5)">
     <input type="hidden" name="reset_pw" value="1">
     <?php ds_form_field('Yeni Şifre', '<input type="password" name="newpw" required minlength="4">'); ?>

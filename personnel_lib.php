@@ -215,6 +215,49 @@ function personnel_reset_password($pdo, $personnelId, $newPassword){
     return ['user_id'=>$boundUid,'username'=>$cr['username']??'','phone'=>$ppr['phone']??''];
 }
 
+/**
+ * OTS kullanıcı adı değiştirme (2026-07-19, P0 — "Personel Detayı → OTS Hesabı & Yetkiler"da
+ * daha önce komutlanmış ama hiç eklenmemişti). Hedef hesap personnel_reset_password() ile
+ * BİREBİR AYNI deterministik çözümleme (personnel.user_id, hâlâ bu personele ait mi doğrulanır,
+ * yoksa ORDER BY id ASC LIMIT 1 yedek) — IDOR'a kapalı, çağıran taraftan ham user_id'ye
+ * güvenilmez. Mevcut app_users satırı UPDATE edilir — user ID DEĞİŞMEZ, yeni kayıt açılmaz,
+ * personnel.user_id/app_users.personnel_id bağı dokunulmadan kalır.
+ * @throws Exception boş/geçersiz/duplicate username veya bağlı hesap yok
+ */
+function personnel_update_username($pdo, $personnelId, $newUsername, $adminUserId=null){
+    $newUsername = trim($newUsername);
+    if($newUsername==='') throw new Exception('Kullanıcı adı boş olamaz.');
+    if(mb_strlen($newUsername) < 3) throw new Exception('Kullanıcı adı en az 3 karakter olmalı.');
+    if(!preg_match('/^[\p{L}\p{N}_.\-]+$/u', $newUsername)) throw new Exception('Kullanıcı adı sadece harf, rakam, nokta, alt çizgi ve tire içerebilir (boşluk olamaz).');
+
+    $pr=$pdo->prepare("SELECT user_id FROM personnel WHERE id=?"); $pr->execute([$personnelId]); $prow=$pr->fetch();
+    $boundUid=(int)($prow['user_id'] ?? 0);
+    if($boundUid){
+        $chk=$pdo->prepare("SELECT id FROM app_users WHERE id=? AND personnel_id=?"); $chk->execute([$boundUid,$personnelId]);
+        if(!$chk->fetch()) $boundUid=0;
+    }
+    if(!$boundUid){
+        $fb=$pdo->prepare("SELECT id FROM app_users WHERE personnel_id=? ORDER BY id ASC LIMIT 1"); $fb->execute([$personnelId]);
+        $fr=$fb->fetch();
+        $boundUid=(int)($fr['id'] ?? 0);
+    }
+    if(!$boundUid) throw new Exception('Bu personele bağlı bir giriş hesabı yok.');
+
+    $cu=$pdo->prepare("SELECT username FROM app_users WHERE id=?"); $cu->execute([$boundUid]); $cur=$cu->fetch();
+    $oldUsername = $cur['username'] ?? '';
+    if($oldUsername === $newUsername) return ['user_id'=>$boundUid,'username'=>$newUsername,'changed'=>false];
+
+    // UNIQUE — personnel_create_login() ile aynı sorgu deseni (aynı koleksiyon/collation kuralı).
+    $ex=$pdo->prepare("SELECT id FROM app_users WHERE username=? AND id<>?"); $ex->execute([$newUsername,$boundUid]);
+    if($ex->fetch()) throw new Exception('Bu kullanıcı adı zaten kullanılıyor.');
+
+    $pdo->prepare("UPDATE app_users SET username=? WHERE id=?")->execute([$newUsername,$boundUid]);
+    if(function_exists('audit_log')){
+        try{ audit_log($adminUserId,'update','app_users',$boundUid,['username'=>$oldUsername],['username'=>$newUsername]); }catch(Throwable $e){}
+    }
+    return ['user_id'=>$boundUid,'username'=>$newUsername,'changed'=>true,'old_username'=>$oldUsername];
+}
+
 // $_FILES['cv'] varsa yükler, uploads/personnel_cv altına taşır ve kök-göreli yolu döner.
 // Dosya seçilmediyse null döner (mevcut CV korunur). Gerçek bir yükleme hatası olursa Exception fırlatır.
 function personnel_handle_cv_upload(){

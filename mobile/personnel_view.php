@@ -118,6 +118,14 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             $ok='Şifre güncellendi.';
             $waCred=cred_wa($res['phone']??'',$res['username']??'',$_POST['newpw']);
         }
+        if(isset($_POST['update_username'])){
+            // P0 (2026-07-19): web personnel_edit.php ile AYNI paylaşılan fonksiyon —
+            // personnel_lib.php::personnel_update_username() (reset_pw ile aynı IDOR korumalı
+            // hedef çözümü, id=1 dahil).
+            if(!$canManageAccounts) throw new Exception('Bu işlem için yönetici yetkisi gerekir.');
+            $res=personnel_update_username($pdo, $id, $_POST['new_username'] ?? '', $ME ?: null);
+            $ok = $res['changed'] ? 'Kullanıcı adı "'.$res['old_username'].'" → "'.$res['username'].'" olarak güncellendi.' : 'Kullanıcı adı zaten bu — değişiklik yapılmadı.';
+        }
     }catch(Throwable $e){ $er=$e->getMessage(); }
 }
 
@@ -222,10 +230,18 @@ ds_tabs($__tabItems);
 
 <?php if($canManageAccounts && $tab==='giris'): ?>
 <div class="df-panel" style="margin-top:10px"><b><?=ds_icon('user',16)?> OTS Hesabı & Yetkiler</b>
+<?php if($usr): ?>
+  <p class="muted" style="margin:8px 0;font-size:12px">Kullanıcı Adı</p>
+  <form method="post" style="display:flex;gap:8px;margin-bottom:12px">
+    <input type="hidden" name="update_username" value="1">
+    <input name="new_username" value="<?=h($usr['username'])?>" required minlength="3" style="flex:1;margin:0">
+    <button class="df-btn df-btn--secondary" type="submit">Değiştir</button>
+  </form>
+<?php endif; ?>
 <?php if($usr && (int)$usr['id']===1): ?>
   <p class="muted" style="margin:8px 0">Bu hesap sistemin ana yöneticisi — korumalıdır, rolü buradan değiştirilemez.</p>
 <?php elseif($usr): ?>
-  <p class="muted" style="margin:8px 0">Kullanıcı: <b><?=h($usr['username'])?></b> · durum: <?=$usr['active']?ds_badge('Aktif','green'):ds_badge('Pasif','red')?></p>
+  <p class="muted" style="margin:8px 0">durum: <?=$usr['active']?ds_badge('Aktif','green'):ds_badge('Pasif','red')?></p>
   <form method="post" style="display:flex;gap:8px;margin-bottom:12px"><input name="newpw" placeholder="Yeni şifre" style="flex:1;margin:0"><button class="df-btn df-btn--secondary" name="reset_pw" value="1">Şifre Sıfırla</button></form>
   <?php
     $__usrPerms=json_decode($usr['permissions']??'[]',true); if(!is_array($__usrPerms)) $__usrPerms=[];
