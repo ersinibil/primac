@@ -120,8 +120,62 @@ function finance_account_has_movements($pdo, $id){
             $a->execute([$id]);
             if((int)$a->fetch()['c'] > 0) return true;
         }catch(Throwable $e){} // accounting_entries yoksa (eski kurulum) yok say
+        // P0 VERİ BÜTÜNLÜĞÜ (2026-07-19, pilot öncesi kapanış — gerçek bulgu): bu fonksiyon önceden
+        // SADECE finance_movements + accounting_entries'e bakıyordu — trade_documents.account_id
+        // (006_trade.sql) ve checks_notes.settle_account_id (048_checks_notes_lifecycle.sql) da
+        // finance_accounts.id'ye referans veren GERÇEK şema alanları ama hiç kontrol edilmiyordu.
+        // Normal akışta bu ikisi zaten finance_movements'ta da bir satırla eşleşir (yukarıdaki kontrol
+        // zaten yakalar) — ama tutarsız/eski/elle düzeltilmiş bir kayıtta SADECE bu referans kalmış
+        // olabilir. "Emin olunamıyorsa güvenli tarafta kal" ilkesiyle ayrıca kontrol ediliyor.
+        try{
+            $td=$pdo->prepare("SELECT COUNT(*) c FROM trade_documents WHERE account_id=?");
+            $td->execute([$id]);
+            if((int)$td->fetch()['c'] > 0) return true;
+        }catch(Throwable $e){}
+        try{
+            $cn=$pdo->prepare("SELECT COUNT(*) c FROM checks_notes WHERE settle_account_id=?");
+            $cn->execute([$id]);
+            if((int)$cn->fetch()['c'] > 0) return true;
+        }catch(Throwable $e){}
         return false;
     }catch(Throwable $e){ return true; } // emin olunamıyorsa güvenli tarafta kal, silmeyi engelle
+}
+
+/**
+ * VERİ BÜTÜNLÜĞÜ RAPORU (2026-07-19, pilot öncesi kapanış — salt-okunur, hiçbir şeyi değiştirmez).
+ * Gerçek şemadaki finance_accounts.id referanslarından (finance_movements.account_id/
+ * target_account_id, trade_documents.account_id, checks_notes.settle_account_id) artık VAR OLMAYAN
+ * bir hesaba işaret edenleri bulur — yani hesabı silinmiş ama kaydı yetim kalmış satırlar. Otomatik
+ * onarım YAPMAZ ("otomatik uydurma hesap oluşturma" — Product Owner kararı), sadece raporlar.
+ * @return array ['finance_movements'=>[...], 'trade_documents'=>[...], 'checks_notes'=>[...]]
+ */
+function finance_account_orphan_report($pdo){
+    $out=['finance_movements'=>[],'trade_documents'=>[],'checks_notes'=>[]];
+    try{
+        $s=$pdo->query("SELECT fm.id,fm.movement_date,fm.description,fm.amount,fm.direction,fm.account_id,fm.target_account_id,fm.contact_id,c.name contact_name
+            FROM finance_movements fm LEFT JOIN contacts c ON c.id=fm.contact_id
+            WHERE (fm.account_id IS NOT NULL AND NOT EXISTS(SELECT 1 FROM finance_accounts fa WHERE fa.id=fm.account_id))
+               OR (fm.target_account_id IS NOT NULL AND NOT EXISTS(SELECT 1 FROM finance_accounts fa WHERE fa.id=fm.target_account_id))
+            ORDER BY fm.id DESC LIMIT 200");
+        $out['finance_movements']=$s->fetchAll();
+    }catch(Throwable $e){}
+    try{
+        $s=$pdo->query("SELECT id,document_no,document_type,document_date,grand_total,account_id FROM trade_documents
+            WHERE account_id IS NOT NULL AND NOT EXISTS(SELECT 1 FROM finance_accounts fa WHERE fa.id=trade_documents.account_id)
+            ORDER BY id DESC LIMIT 200");
+        $out['trade_documents']=$s->fetchAll();
+    }catch(Throwable $e){}
+    try{
+        $s=$pdo->query("SELECT cn.id,cn.type,cn.number,cn.amount,cn.status,cn.settle_account_id,c.name contact_name FROM checks_notes cn LEFT JOIN contacts c ON c.id=cn.contact_id
+            WHERE cn.settle_account_id IS NOT NULL AND NOT EXISTS(SELECT 1 FROM finance_accounts fa WHERE fa.id=cn.settle_account_id)
+            ORDER BY cn.id DESC LIMIT 200");
+        $out['checks_notes']=$s->fetchAll();
+    }catch(Throwable $e){}
+    return $out;
+}
+function finance_account_orphan_count($pdo){
+    $r=finance_account_orphan_report($pdo);
+    return count($r['finance_movements'])+count($r['trade_documents'])+count($r['checks_notes']);
 }
 
 // Hesap bilgilerini günceller (ad/tür/banka/IBAN/kart/para birimi/not/aktif). Bakiye alanlarına dokunmaz.

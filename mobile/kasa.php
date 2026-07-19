@@ -21,6 +21,19 @@ if(isset($_GET['ok'])) echo ds_alert('success','Hesap eklendi.');
 if(isset($_GET['deleted'])) echo ds_alert('success','Hesap silindi.');
 if(!empty($_SESSION['kasa_err'])){ echo ds_alert('danger',$_SESSION['kasa_err']); unset($_SESSION['kasa_err']); }
 
+// P0 VERİ BÜTÜNLÜĞÜ (2026-07-19): web finance_accounts.php ile aynı — salt-okunur uyarı, otomatik
+// onarım yok. Mobilde özet (sayı) + detay için web'e link — aynı tabloyu mobilde tekrar kurmadan.
+if($isAdmin){
+    try{
+        $__orphanTotal = finance_account_orphan_count($pdo);
+        if($__orphanTotal > 0){
+            echo '<div class="df-panel" style="border-color:var(--df-danger)"><b style="color:var(--df-danger-ink)">'.ds_icon('info',15).' Veri bütünlüğü uyarısı</b>';
+            echo '<p class="muted" style="margin:6px 0;font-size:13px">'.$__orphanTotal.' kayıt artık var olmayan bir hesaba işaret ediyor. Detay ve düzeltme için web panelini kullanın.</p>';
+            echo '<a class="df-btn df-btn--secondary df-btn--sm" href="../finance_accounts.php?web=1">Detayı Gör (Web)</a></div>';
+        }
+    }catch(Throwable $e){}
+}
+
 function acc_sum($pdo,$type){ try{ $s=$pdo->prepare("SELECT COALESCE(SUM(current_balance),0) s FROM finance_accounts WHERE active=1 AND account_type=?"); $s->execute([$type]); return (float)$s->fetch()['s']; }catch(Throwable $e){ return 0; } }
 $kasa=acc_sum($pdo,'Kasa'); $banka=acc_sum($pdo,'Banka'); $kart=acc_sum($pdo,'Kredi Kartı'); $pos=acc_sum($pdo,'POS');
 // FİNANS ÇEKİRDEK DÜZELTMESİ (2026-07-10): sadece GERÇEK kasa/banka hareketleri sayılır —

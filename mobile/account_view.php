@@ -55,12 +55,23 @@ try{
     <small style="color:#4ade80">↓ Giriş: <?=mm($t['tin'])?></small>
     <small style="color:#f87171">↑ Çıkış: <?=mm($t['tout'])?></small>
   </div>
-  <?php if(can_edit_delete()): ?>
+  <?php if(can_edit_delete()):
+    // FİNANS UX NETLEŞTİRME (2026-07-19, P0 kapanış): web finance_accounts.php ile aynı — kullanılmış
+    // hesapta kırmızı "Sil" varsayılan aksiyon olarak durmasın, buton dili gerçek davranışı yansıtsın.
+    $__used = finance_account_has_movements($pdo,$id);
+  ?>
   <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
-    <form method="post" style="margin:0" onsubmit="return confirm('Bu hesabı silmek istediğinize emin misiniz? Hareketi olan hesaplar kalıcı silinmez, pasife alınır.')">
+    <?php if($__used): ?>
+    <form method="post" style="margin:0" onsubmit="return confirm('Bu hesap geçmiş finans hareketlerinde kullanıldığı için kalıcı silinemez, pasife alınacak. Devam edilsin mi?')">
+      <input type="hidden" name="delete_account" value="1">
+      <button class="df-btn df-btn--secondary"><?=ds_icon('trash',16)?> Pasife Al</button>
+    </form>
+    <?php else: ?>
+    <form method="post" style="margin:0" onsubmit="return confirm('Bu hesabı kalıcı olarak silmek istediğinize emin misiniz? Hiç kullanılmadığı için geri dönüşü olmayan gerçek bir silme olacak.')">
       <input type="hidden" name="delete_account" value="1">
       <button class="df-btn df-btn--danger"><?=ds_icon('trash',16)?> Sil</button>
     </form>
+    <?php endif; ?>
   </div>
   <?php endif; ?>
 </div>

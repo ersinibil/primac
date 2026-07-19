@@ -85,6 +85,50 @@ ds_page_header('Banka / Kasa / Kart Hesapları', ds_icon('wallet',24), '', $__fa
 <?php if($ok): ?><?=ds_alert('success',$ok)?><?php endif; ?>
 
 <?php
+// P0 VERİ BÜTÜNLÜĞÜ (2026-07-19, pilot öncesi kapanış): salt-okunur entegrasyon raporu — bir
+// finans hareketi/belge/çek-senet kaydının işaret ettiği hesap artık yoksa (silinmiş) burada
+// gösterilir. Otomatik onarım YAPILMAZ (Product Owner kararı: "otomatik uydurma hesap oluşturma") —
+// sadece admin'e görünür kılınır, karar admin'e ait.
+if(is_admin()){
+    try{
+        $__orphanReport = finance_account_orphan_report($pdo);
+        $__orphanTotal = count($__orphanReport['finance_movements'])+count($__orphanReport['trade_documents'])+count($__orphanReport['checks_notes']);
+        if($__orphanTotal > 0):
+    ?>
+    <section class="df-card" style="margin-bottom:var(--df-space-4);border-color:var(--df-danger)">
+    <details>
+    <summary style="cursor:pointer;font-weight:800;color:var(--df-danger-ink)"><?=ds_icon('info',16)?> Veri bütünlüğü uyarısı — <?=$__orphanTotal?> kayıt artık var olmayan bir hesaba işaret ediyor</summary>
+    <p style="margin:10px 0;color:var(--df-ink-500)">Bu kayıtların işaret ettiği hesap silinmiş. Otomatik düzeltme yapılmadı — aşağıdaki kayıtları inceleyip gerekirse elle (yeni hesap oluşturup ilgili kaydı düzenleyerek) ilişkilendirin.</p>
+    <?php if($__orphanReport['finance_movements']): ?>
+    <b>Finans Hareketleri (<?=count($__orphanReport['finance_movements'])?>)</b>
+    <div class="df-table-wrap"><table class="df-table"><thead><tr><th>Tarih</th><th>Açıklama</th><th>Tutar</th><th>Cari</th></tr></thead><tbody>
+    <?php foreach($__orphanReport['finance_movements'] as $__r): ?>
+    <tr><td><?=h($__r['movement_date'])?></td><td><?=h($__r['description'])?></td><td><?=money($__r['amount'])?></td><td><?=h($__r['contact_name']??'—')?></td></tr>
+    <?php endforeach; ?>
+    </tbody></table></div>
+    <?php endif; ?>
+    <?php if($__orphanReport['trade_documents']): ?>
+    <b>Alış/Satış Belgeleri (<?=count($__orphanReport['trade_documents'])?>)</b>
+    <div class="df-table-wrap"><table class="df-table"><thead><tr><th>Belge No</th><th>Tür</th><th>Tarih</th><th>Toplam</th></tr></thead><tbody>
+    <?php foreach($__orphanReport['trade_documents'] as $__r): ?>
+    <tr><td><a href="trade_document_view.php?id=<?=(int)$__r['id']?>"><?=h($__r['document_no'])?></a></td><td><?=h($__r['document_type']==='purchase'?'Alış':'Satış')?></td><td><?=h($__r['document_date'])?></td><td><?=money($__r['grand_total'])?></td></tr>
+    <?php endforeach; ?>
+    </tbody></table></div>
+    <?php endif; ?>
+    <?php if($__orphanReport['checks_notes']): ?>
+    <b>Çek/Senet (<?=count($__orphanReport['checks_notes'])?>)</b>
+    <div class="df-table-wrap"><table class="df-table"><thead><tr><th>No</th><th>Tutar</th><th>Durum</th><th>Cari</th></tr></thead><tbody>
+    <?php foreach($__orphanReport['checks_notes'] as $__r): ?>
+    <tr><td><a href="check_note_view.php?id=<?=(int)$__r['id']?>"><?=h($__r['number']?:'#'.$__r['id'])?></a></td><td><?=money($__r['amount'])?></td><td><?=h($__r['status'])?></td><td><?=h($__r['contact_name']??'—')?></td></tr>
+    <?php endforeach; ?>
+    </tbody></table></div>
+    <?php endif; ?>
+    </details>
+    </section>
+    <?php endif;
+    }catch(Throwable $e){}
+}
+?>
 // Eski derin linkler (finance.php'nin ?type=POS gibi) "Diğer" havuzuna giren GERÇEK bir
 // account_type ile gelebilir — bu durumda da "Diğer" sekmesi aktif görünsün (kozmetik, Ece'nin
 // code review notu). Tanınmayan/garbage bir değer burada YOK sayılır (WHERE tarafı zaten onu
@@ -188,10 +232,21 @@ foreach($rows as $a){
         ."<a class='df-btn df-btn--secondary df-btn--sm' href='finance_account_view.php?id=".$aid.h($returnQsStr)."'>📄 Ekstre</a>";
     if(can_edit_delete()){
         echo "<button type='button' class='df-btn df-btn--secondary df-btn--sm' onclick=\"document.getElementById('edit-acc-".$aid."').style.display=(document.getElementById('edit-acc-".$aid."').style.display==='none'?'table-row':'none')\">✏️ Düzenle</button>";
-        echo "<form method='post' style='display:inline' onsubmit=\"return confirm('Bu hesabı silmek istediğinize emin misiniz? Hareketleri olan hesaplar kalıcı silinmez, pasife alınır.')\">"
-            ."<input type='hidden' name='id' value='".$aid."'>"
-            ."<button class='df-btn df-btn--danger df-btn--sm' name='delete_account' value='1'>🗑 Sil</button>"
-            ."</form>";
+        // FİNANS UX NETLEŞTİRME (2026-07-19, P0 kapanış): kullanılmış (geçmiş hareketi olan) bir
+        // hesapta kırmızı "Sil" varsayılan aksiyon olarak durmasın — geri uçta zaten soft-delete
+        // (pasife alma) yapılıyordu, buton dili artık bunu ÖNCEDEN doğru yansıtıyor.
+        $__used = finance_account_has_movements($pdo,$aid);
+        if($__used){
+            echo "<form method='post' style='display:inline' onsubmit=\"return confirm('Bu hesap geçmiş finans hareketlerinde kullanıldığı için kalıcı silinemez, pasife alınacak. Devam edilsin mi?')\">"
+                ."<input type='hidden' name='id' value='".$aid."'>"
+                ."<button class='df-btn df-btn--secondary df-btn--sm' name='delete_account' value='1'>⏸ Pasife Al</button>"
+                ."</form>";
+        } else {
+            echo "<form method='post' style='display:inline' onsubmit=\"return confirm('Bu hesabı kalıcı olarak silmek istediğinize emin misiniz? Hiç kullanılmadığı için geri dönüşü olmayan gerçek bir silme olacak.')\">"
+                ."<input type='hidden' name='id' value='".$aid."'>"
+                ."<button class='df-btn df-btn--danger df-btn--sm' name='delete_account' value='1'>🗑 Sil</button>"
+                ."</form>";
+        }
     }
     echo "</div></td>";
     echo "</tr>";
